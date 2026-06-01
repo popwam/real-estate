@@ -1,0 +1,71 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import type { CreateReservationRequestInput } from "@/types/lead-reservations";
+
+const schema = z.object({
+  leadClaimId: z.string().min(1, "Lead claim id is required."),
+  unitId: z.string(),
+  notes: z.string(),
+});
+type Values = z.infer<typeof schema>;
+
+export function ReservationRequestForm({
+  defaultLeadClaimId = "",
+  isPending,
+  error,
+  onSubmit,
+}: {
+  defaultLeadClaimId?: string;
+  isPending?: boolean;
+  error?: Error | null;
+  onSubmit: (input: CreateReservationRequestInput) => Promise<unknown>;
+}) {
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<Values>({
+    resolver: zodResolver(schema),
+    values: { leadClaimId: defaultLeadClaimId, unitId: "", notes: "" },
+  });
+
+  async function submit(values: Values) {
+    await onSubmit({
+      leadClaimId: values.leadClaimId,
+      unitId: values.unitId || undefined,
+      notes: values.notes || undefined,
+    });
+    reset({ leadClaimId: defaultLeadClaimId, unitId: "", notes: "" });
+  }
+
+  return (
+    <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(submit)}>
+      <div className="space-y-2">
+        <Label>Lead claim ID</Label>
+        <Input {...register("leadClaimId")} />
+        {errors.leadClaimId ? <p className="text-sm text-red-600">{errors.leadClaimId.message}</p> : null}
+      </div>
+      <div className="space-y-2">
+        <Label>Unit ID (optional)</Label>
+        <Input {...register("unitId")} />
+      </div>
+      <div className="space-y-2 md:col-span-2">
+        <Label>Notes</Label>
+        <Textarea {...register("notes")} />
+      </div>
+      {error ? (
+        <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 md:col-span-2">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{error.message}</span>
+        </div>
+      ) : null}
+      <div className="md:col-span-2">
+        <Button disabled={isPending} type="submit">{isPending ? "Creating" : "Create reservation request"}</Button>
+      </div>
+    </form>
+  );
+}

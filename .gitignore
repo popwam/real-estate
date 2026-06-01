@@ -36,3 +36,44 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# PNPM
+.pnpm-store/
+
+# Staging/local env examples are allowed
+!.env.example
+!.env.staging.example
+!apps/api/.env.staging.example
+!apps/admin-web/.env.staging.example
+!apps/public-web/.env.staging.example
+
+# Logs / smoke outputs
+*.log
+*.out.log
+*.err.log
+stage*-smoke*.log
+stage*-smoke*.err.log
+stage*-smoke*.out.log
+stage-ui-*.log
+stage-ui-*.err.log
+stage-ui-*.out.log
+
+# Playwright
+playwright-report/
+playwright-report-stage2/
+playwright-report-stage4/
+test-results/
+
+# Editors
+.vscode/
+.idea/
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Accidental local files/folders
+dir

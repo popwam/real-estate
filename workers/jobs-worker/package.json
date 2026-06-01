@@ -1,0 +1,11 @@
+{
+  "name": "@popwam/jobs-worker",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "claim-expiry:dry-run": "node src/index.js claim-expiry --dry-run",
+    "health": "node src/index.js health",
+    "start": "node src/index.js start",
+    "start:once": "node src/index.js start --once"
+  }
+}

@@ -1,0 +1,401 @@
+export const NOTIFICATION_EVENT_NAMES = {
+  ORGANIZATION_SUBMITTED_FOR_VERIFICATION:
+    'organization.submitted_for_verification',
+  ORGANIZATION_VERIFICATION_APPROVED: 'organization.verification_approved',
+  ORGANIZATION_VERIFICATION_REJECTED: 'organization.verification_rejected',
+  ORGANIZATION_VERIFICATION_MORE_REQUESTED:
+    'organization.verification_more_requested',
+  ORGANIZATION_SUSPENDED: 'organization.suspended',
+  ORGANIZATION_REACTIVATED: 'organization.reactivated',
+  USER_CREATED: 'user.created',
+  USER_DEACTIVATED: 'user.deactivated',
+  FILE_METADATA_CREATED: 'file.metadata_created',
+  LEAD_CLAIM_CREATED: 'lead_claim.created',
+  LEAD_CLAIM_DUPLICATE_DETECTED: 'lead_claim.duplicate_detected',
+  LEAD_CLAIM_CONFLICT_CREATED: 'lead_claim.conflict_created',
+  LEAD_CLAIM_RELEASED: 'lead_claim.released',
+  RESERVATION_REQUEST_CREATED: 'reservation_request.created',
+  RESERVATION_REQUEST_APPROVED: 'reservation_request.approved',
+  RESERVATION_REQUEST_REJECTED: 'reservation_request.rejected',
+  RESERVATION_REQUEST_CANCELLED: 'reservation_request.cancelled',
+  UNIT_HELD_FOR_RESERVATION: 'unit.held_for_reservation',
+  DEAL_ROOM_CREATED: 'deal_room.created',
+  DEAL_ROOM_PARTICIPANT_ADDED: 'deal_room.participant_added',
+  DEAL_ROOM_CLIENT_INVITED: 'deal_room.client_invited',
+  DEAL_ROOM_STATUS_CHANGED: 'deal_room.status_changed',
+  DEAL_ROOM_MESSAGE_CREATED: 'deal_room.message_created',
+  DEAL_CREATED: 'deal.created',
+  DEAL_APPROVED: 'deal.approved',
+  DEAL_CANCELLED: 'deal.cancelled',
+  DEAL_MARKED_SOLD: 'deal.marked_sold',
+  COMMISSION_CREATED: 'commission.created',
+  COMMISSION_APPROVED: 'commission.approved',
+  COMMISSION_REJECTED: 'commission.rejected',
+  INVENTORY_MARKED_SOLD: 'inventory.marked_sold',
+} as const;
+
+export type NotificationEventName =
+  (typeof NOTIFICATION_EVENT_NAMES)[keyof typeof NOTIFICATION_EVENT_NAMES];
+
+export interface NotificationEventContract {
+  eventName: NotificationEventName;
+  payloadShape: Record<string, string>;
+  intendedConsumer: string;
+  whenEmitted: string;
+}
+
+export const NOTIFICATION_EVENT_CONTRACTS: NotificationEventContract[] = [
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.ORGANIZATION_SUBMITTED_FOR_VERIFICATION,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      documentTypes: 'string[]',
+      documentCount: 'number',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After an owner/admin submits verification documents.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.ORGANIZATION_VERIFICATION_APPROVED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      verificationId: 'string | null',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a platform reviewer approves a verification item or organization.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.ORGANIZATION_VERIFICATION_REJECTED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      verificationId: 'string | null',
+      reason: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a platform reviewer rejects a verification item or organization.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.ORGANIZATION_VERIFICATION_MORE_REQUESTED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      verificationId: 'string',
+      reason: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a platform reviewer requests more verification information.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.ORGANIZATION_SUSPENDED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reason: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a platform reviewer suspends an organization.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.ORGANIZATION_REACTIVATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reason: 'string | null',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a platform reviewer reactivates an organization.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.USER_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      userId: 'string',
+      role: 'string',
+      invitePlaceholder: 'boolean',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a user is created or invite placeholder is recorded.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.USER_DEACTIVATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      userId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After an organization/platform admin deactivates a user.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.FILE_METADATA_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      uploadedFileId: 'string',
+      objectKey: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After file metadata is created for future storage integration.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.LEAD_CLAIM_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      leadClaimId: 'string',
+      projectId: 'string',
+      unitId: 'string | null',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a broker creates a new active lead claim.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.LEAD_CLAIM_DUPLICATE_DETECTED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      leadClaimId: 'string',
+      projectId: 'string',
+      sameBroker: 'boolean',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a lead claim request matches an existing active claim.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.LEAD_CLAIM_CONFLICT_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      conflictId: 'string',
+      projectId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a duplicate lead claim attempt by another broker is blocked.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.LEAD_CLAIM_RELEASED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      leadClaimId: 'string',
+      projectId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a broker or platform user releases a lead claim.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.RESERVATION_REQUEST_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reservationRequestId: 'string',
+      projectId: 'string',
+      unitId: 'string',
+      leadClaimId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a broker creates a reservation request from an active lead claim.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.RESERVATION_REQUEST_APPROVED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reservationRequestId: 'string',
+      projectId: 'string',
+      unitId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a developer approver approves a pending reservation request.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.RESERVATION_REQUEST_REJECTED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reservationRequestId: 'string',
+      reason: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a developer approver rejects a pending reservation request.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.RESERVATION_REQUEST_CANCELLED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reservationRequestId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a broker cancels a pending reservation request.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.UNIT_HELD_FOR_RESERVATION,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      reservationRequestId: 'string',
+      unitId: 'string',
+      availabilityId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After reservation approval places a hold on an inventory unit.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_ROOM_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealRoomId: 'string',
+      reservationRequestId: 'string',
+      projectId: 'string',
+      unitId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a deal room is created from an approved reservation request.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_ROOM_PARTICIPANT_ADDED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealRoomId: 'string',
+      participantId: 'string',
+      role: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a participant is added to a deal room.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_ROOM_CLIENT_INVITED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealRoomId: 'string',
+      participantId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After the client invite placeholder is created for a deal room.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_ROOM_STATUS_CHANGED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealRoomId: 'string',
+      previousStatus: 'string',
+      status: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a deal room status transition is recorded.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_ROOM_MESSAGE_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealRoomId: 'string',
+      messageId: 'string',
+      messageType: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a placeholder deal room message is created.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealId: 'string',
+      dealRoomId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a deal record is created from a deal room.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_APPROVED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealId: 'string',
+      dealRoomId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a developer approver approves a pending deal.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_CANCELLED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealId: 'string',
+      reason: 'string | null',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a developer approver cancels a non-sold deal.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.DEAL_MARKED_SOLD,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      dealId: 'string',
+      unitId: 'string',
+      finalPrice: 'string | null',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After finalization marks a deal, deal room, and inventory unit sold.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.COMMISSION_CREATED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      commissionEntryId: 'string',
+      dealId: 'string',
+      amount: 'string',
+      partyType: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a pending commission entry is created for a sold deal.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.COMMISSION_APPROVED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      commissionEntryId: 'string',
+      dealId: 'string',
+      amount: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a developer approver approves a pending commission entry.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.COMMISSION_REJECTED,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      commissionEntryId: 'string',
+      dealId: 'string',
+      reason: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After a developer approver rejects a pending commission entry.',
+  },
+  {
+    eventName: NOTIFICATION_EVENT_NAMES.INVENTORY_MARKED_SOLD,
+    payloadShape: {
+      organizationId: 'string',
+      actorUserId: 'string',
+      unitId: 'string',
+      dealId: 'string',
+    },
+    intendedConsumer: 'notification-worker',
+    whenEmitted: 'After finalization marks an inventory unit sold.',
+  },
+];

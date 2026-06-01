@@ -1,0 +1,25 @@
+{
+  "name": "@popwam/notification-worker",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "health": "node src/index.js health",
+    "sample:organization-approved": "node src/index.js sample organization-approved",
+    "sample:organization-rejected": "node src/index.js sample organization-rejected",
+    "sample:lead-claim-created": "node src/index.js sample lead-claim-created",
+    "sample:lead-claim-conflict-created": "node src/index.js sample lead-claim-conflict-created",
+    "sample:deal-room-created": "node src/index.js sample deal-room-created",
+    "sample:deal-room-participant-added": "node src/index.js sample deal-room-participant-added",
+    "sample:deal-room-client-invited": "node src/index.js sample deal-room-client-invited",
+    "sample:deal-room-status-changed": "node src/index.js sample deal-room-status-changed",
+    "sample:deal-room-message-created": "node src/index.js sample deal-room-message-created",
+    "sample:reservation-created": "node src/index.js sample reservation-created",
+    "sample:reservation-approved": "node src/index.js sample reservation-approved",
+    "sample:reservation-rejected": "node src/index.js sample reservation-rejected",
+    "sample:reservation-cancelled": "node src/index.js sample reservation-cancelled",
+    "sample:unit-held-for-reservation": "node src/index.js sample unit-held-for-reservation",
+    "sample:user-created": "node src/index.js sample user-created",
+    "start": "node src/index.js start",
+    "start:once": "node src/index.js start --once"
+  }
+}

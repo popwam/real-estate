@@ -1,0 +1,10 @@
+{
+  "name": "@popwam/lead-sync-worker",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "health": "node src/index.js health",
+    "start": "node src/index.js start",
+    "start:once": "node src/index.js start --once"
+  }
+}

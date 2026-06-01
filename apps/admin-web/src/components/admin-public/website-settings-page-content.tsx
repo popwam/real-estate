@@ -1,0 +1,31 @@
+"use client";
+
+import { WebsiteSettingsForm } from "@/components/admin-public/website-settings-form";
+import { LoadingState } from "@/components/loading-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { DetailCard } from "@/components/platform/detail-card";
+import { useUpdateWebsiteSettings, useWebsiteSettings } from "@/hooks/use-admin-public";
+import type { WebsiteSettingsInput } from "@/types/admin-public";
+
+export function WebsiteSettingsPageContent() {
+  const { data, isLoading, error } = useWebsiteSettings();
+  const update = useUpdateWebsiteSettings();
+
+  return (
+    <>
+      <PageHeader title="Website settings" description="Manage public website identity, contact fields, publishing, and domain-facing metadata." />
+      <DetailCard title="Public website">
+        {isLoading ? <LoadingState label="Loading website settings" /> : null}
+        {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
+        {!isLoading && !error ? (
+          <WebsiteSettingsForm
+            error={update.error}
+            isPending={update.isPending}
+            settings={data}
+            onSubmit={(input: WebsiteSettingsInput) => update.mutateAsync(input)}
+          />
+        ) : null}
+      </DetailCard>
+    </>
+  );
+}
