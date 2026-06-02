@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/public/project-card";
-import { listFeaturedPublicProjects } from "@/lib/public-data";
+import { safeListFeaturedPublicProjects } from "@/lib/public-data";
 import { createSeoMetadata } from "@/lib/seo";
 
 export const metadata = createSeoMetadata({
@@ -10,7 +10,7 @@ export const metadata = createSeoMetadata({
 });
 
 export default async function Home() {
-  const projects = await listFeaturedPublicProjects();
+  const projects = await safeListFeaturedPublicProjects();
 
   return (
     <div className="bg-slate-50">

@@ -67,6 +67,20 @@ export async function listFeaturedPublicProjects() {
   return featured.length ? featured : projects.slice(0, 2);
 }
 
+export async function safeListFeaturedPublicProjects() {
+  try {
+    return await listFeaturedPublicProjects();
+  } catch {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[public-data] Featured public projects skipped because public API data could not be loaded.",
+      );
+    }
+
+    return [];
+  }
+}
+
 export async function listPublicProjectsByFilters(filters: MarketplacePageFilters) {
   return withPublicData(
     () =>
