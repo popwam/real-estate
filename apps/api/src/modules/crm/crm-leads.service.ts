@@ -27,6 +27,13 @@ export class CrmLeadsService {
     const where = this.andWhere(
       {
         status: { in: [CrmLeadStatus.NEW, CrmLeadStatus.IN_CONVERSATION, CrmLeadStatus.CLAIMED] },
+        OR: [
+          { assignmentType: null },
+          { claimedByBrokerUserId: currentUser.userId },
+          ...(currentUser.organizationId
+            ? [{ claimedByOrganizationId: currentUser.organizationId }]
+            : []),
+        ],
         project: {
           status: 'ACTIVE',
           visibility: 'OPEN_MARKETPLACE',
@@ -77,7 +84,8 @@ export class CrmLeadsService {
 
   async findOne(id: string, currentUser: AuthenticatedRequestUser) {
     const lead = await this.findAccessibleLead(id, currentUser);
-    return this.toResponse(lead);
+    const visitorBehavior = await this.visitorBehaviorSummary(lead.publicLeadId);
+    return { ...this.toResponse(lead), visitorBehavior };
   }
 
   async claim(id: string, currentUser: AuthenticatedRequestUser) {
@@ -87,13 +95,16 @@ export class CrmLeadsService {
     const result = await this.prisma.$transaction(async (tx) => {
       const target = await tx.crmLead.findUnique({
         where: { id },
-        select: { id: true, status: true, claimedByBrokerUserId: true },
+        select: { id: true, status: true, claimedByBrokerUserId: true, assignmentType: true },
       });
       if (!target) {
         throw new NotFoundException('CRM lead not found.');
       }
       if (target.claimedByBrokerUserId) {
         throw new ConflictException('CRM lead has already been claimed.');
+      }
+      if (target.assignmentType === 'COMPANY') {
+        throw new ConflictException('Company-owned lead cannot be claimed by a broker.');
       }
 
       const updated = await tx.crmLead.updateMany({
@@ -283,6 +294,8 @@ export class CrmLeadsService {
       status: lead.status,
       statusNote: lead.statusNote,
       preferredContactMethod: lead.preferredContactMethod,
+      assignmentType: lead.assignmentType,
+      assignmentReason: lead.assignmentReason,
       pipelineStageId: lead.pipelineStageId,
       claimedByBrokerUserId: options.masked ? null : lead.claimedByBrokerUserId,
       claimedByOrganizationId: options.masked ? null : lead.claimedByOrganizationId,
@@ -458,5 +471,49 @@ export class CrmLeadsService {
   private cleanStatusNote(value: string | undefined) {
     const trimmed = value?.trim();
     return trimmed ? trimmed.slice(0, 1000) : null;
+  }
+
+  private async visitorBehaviorSummary(publicLeadId: string | null) {
+    if (!publicLeadId) return null;
+    const publicLead = await this.prisma.publicLead.findUnique({
+      where: { id: publicLeadId },
+      include: {
+        visitor: { select: { firstSeenAt: true, lastSeenAt: true } },
+        visitorSession: { select: { firstTouchSource: true, lastTouchSource: true } },
+      },
+    });
+    if (!publicLead?.visitorId) return null;
+    const events = await this.prisma.publicVisitorEvent.findMany({
+      where: { visitorId: publicLead.visitorId },
+      select: {
+        eventType: true,
+        path: true,
+        searchQuery: true,
+        filters: true,
+        durationMs: true,
+        scrollDepth: true,
+        sectionId: true,
+        createdAt: true,
+        project: { select: { id: true, name: true, slug: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    return {
+      firstSeenAt: publicLead.visitor?.firstSeenAt ?? null,
+      lastSeenAt: publicLead.visitor?.lastSeenAt ?? null,
+      firstTouch: publicLead.firstTouchAttribution ?? publicLead.visitorSession?.firstTouchSource ?? null,
+      lastTouch: publicLead.lastTouchAttribution ?? publicLead.visitorSession?.lastTouchSource ?? null,
+      assignmentType: publicLead.assignmentType,
+      assignmentReason: publicLead.assignmentReason,
+      viewedPaths: [...new Set(events.map((event) => event.path))].slice(0, 50),
+      viewedProjects: [...new Map(events.filter((event) => event.project).map((event) => [event.project!.id, event.project!])).values()],
+      searchTerms: [...new Set(events.map((event) => event.searchQuery).filter(Boolean))].slice(0, 25),
+      filters: events.filter((event) => event.filters).slice(0, 25).map((event) => event.filters),
+      totalTimeOnPageMs: events.reduce((sum, event) => sum + (event.durationMs ?? 0), 0),
+      maxScrollDepth: events.reduce((max, event) => Math.max(max, event.scrollDepth ?? 0), 0),
+      sectionsReached: [...new Set(events.map((event) => event.sectionId).filter(Boolean))].slice(0, 25),
+      eventCount: events.length,
+    };
   }
 }

@@ -1,3 +1,20 @@
+## Stage 8 Marketplace Governance Update
+
+Closed gaps:
+
+- Copyable, expiring, one-time company invitations with hashed tokens.
+- Explicit project selling modes and revocable broker/brokerage authorizations.
+- First-touch lead assignment with company ownership protection and broker scope.
+- Pseudonymous first-party visitor/session/event tracking and scoped CRM summaries.
+
+Remaining gaps:
+
+- Real invite delivery, broker search/picker UI, retention/erasure automation, analytics consent management, and background analytics aggregation.
+- `brokerSlug` resolves at organization level until individual broker slugs are modeled.
+- Database-backed Stage 8 e2e and browser smoke must be rerun when local PostgreSQL/smoke services are available.
+
+---
+
 ## Current Slice
 
 Backend Slice 7 - Final Backend Freeze, QA, Contracts, and Smoke

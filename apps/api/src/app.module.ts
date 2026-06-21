@@ -22,6 +22,7 @@ import { DeveloperBrokerageAgreementsModule } from './modules/developer-brokerag
 import { FilesModule } from './modules/files/files.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ImportExportModule } from './modules/import-export/import-export.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
 import { LeadClaimsModule } from './modules/lead-claims/lead-claims.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
@@ -69,6 +70,7 @@ import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rul
     ProjectPhasesModule,
     InventoryModule,
     ImportExportModule,
+    InvitationsModule,
     UnitAvailabilityModule,
     PaymentPlansModule,
     VisibilityRulesModule,

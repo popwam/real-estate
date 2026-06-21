@@ -148,6 +148,8 @@ export type SubmitPublicLeadPayload = {
   companyWebsite?: string;
   preferredContactMethod?: PreferredContactMethod;
   consent: boolean;
+  visitorId?: string;
+  visitorSessionId?: string;
 };
 
 export type PreferredContactMethod = "CALL" | "CHAT" | "WHATSAPP";

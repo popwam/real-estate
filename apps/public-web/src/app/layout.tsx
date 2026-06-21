@@ -4,6 +4,8 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { PublicBottomNav } from "@/components/public/public-bottom-nav";
 import { PublicHeader } from "@/components/public/public-header";
 import { TrackingPlaceholders } from "@/components/tracking/tracking-placeholders";
+import { FirstPartyVisitorTracking } from "@/components/tracking/first-party-visitor-tracking";
+import { Suspense } from "react";
 import { PublicWebProviders } from "@/app/providers";
 import { defaultMetadata } from "@/lib/seo";
 import "./globals.css";
@@ -33,6 +35,7 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <PublicWebProviders>
           <TrackingPlaceholders />
+          <Suspense fallback={null}><FirstPartyVisitorTracking /></Suspense>
           <PublicHeader />
           <main className="flex-1 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] md:pb-0">
             {children}

@@ -15,6 +15,8 @@ import type {
   ProjectPhase,
   ProjectPhaseInput,
   ProjectVisibility,
+  ProjectSellingMode,
+  ProjectBrokerAuthorization,
 } from "@/types/developer";
 
 function qs(params: Record<string, string | undefined>) {
@@ -46,6 +48,30 @@ export function updateProjectVisibilityApi(id: string, visibility: ProjectVisibi
   return apiRequest<Project>(`/projects/${id}/visibility`, {
     method: "PATCH",
     body: JSON.stringify({ visibility }),
+  });
+}
+
+export function updateProjectSellingModeApi(id: string, sellingMode: ProjectSellingMode) {
+  return apiRequest<Project>(`/projects/${id}/selling-mode`, {
+    method: "PATCH",
+    body: JSON.stringify({ sellingMode }),
+  });
+}
+
+export function listProjectBrokerAuthorizationsApi(id: string) {
+  return apiRequest<ProjectBrokerAuthorization[]>(`/projects/${id}/broker-authorizations`);
+}
+
+export function createProjectBrokerAuthorizationApi(id: string, input: { organizationId?: string; brokerUserId?: string }) {
+  return apiRequest<ProjectBrokerAuthorization>(`/projects/${id}/broker-authorizations`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeProjectBrokerAuthorizationApi(id: string, authorizationId: string) {
+  return apiRequest<ProjectBrokerAuthorization>(`/projects/${id}/broker-authorizations/${authorizationId}`, {
+    method: "DELETE",
   });
 }
 

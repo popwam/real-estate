@@ -107,6 +107,28 @@ export function CrmLeadDetailView({
             ]}
           />
         </DetailCard>
+        <DetailCard title="Visitor behavior">
+          {lead.visitorBehavior ? (
+            <div className="space-y-4">
+              <DetailGrid items={[
+                { label: "First seen", value: formatDate(lead.visitorBehavior.firstSeenAt) },
+                { label: "Last seen", value: formatDate(lead.visitorBehavior.lastSeenAt) },
+                { label: "Assigned owner", value: lead.visitorBehavior.assignmentType ?? lead.assignmentType ?? "Unknown" },
+                { label: "Assignment reason", value: lead.visitorBehavior.assignmentReason ?? lead.assignmentReason ?? "Unknown" },
+                { label: "Time on page", value: `${Math.round(lead.visitorBehavior.totalTimeOnPageMs / 1000)} seconds` },
+                { label: "Max scroll depth", value: `${lead.visitorBehavior.maxScrollDepth}%` },
+                { label: "Events", value: lead.visitorBehavior.eventCount },
+                { label: "Search terms", value: lead.visitorBehavior.searchTerms.join(", ") || "None" },
+                { label: "Viewed projects", value: lead.visitorBehavior.viewedProjects.map((project) => project.name).join(", ") || "None" },
+                { label: "Sections reached", value: lead.visitorBehavior.sectionsReached.join(", ") || "None" },
+              ]} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <pre className="overflow-auto rounded-md bg-zinc-100 p-3 text-xs">{JSON.stringify({ firstTouch: lead.visitorBehavior.firstTouch, lastTouch: lead.visitorBehavior.lastTouch }, null, 2)}</pre>
+                <pre className="overflow-auto rounded-md bg-zinc-100 p-3 text-xs">{JSON.stringify({ paths: lead.visitorBehavior.viewedPaths, filters: lead.visitorBehavior.filters }, null, 2)}</pre>
+              </div>
+            </div>
+          ) : <p className="text-sm text-zinc-500">No pseudonymous visitor context is attached to this lead.</p>}
+        </DetailCard>
         <DetailCard title="Update lead status">
           <CrmLeadStatusUpdateDialog leadId={lead.id} currentStatus={lead.status} />
         </DetailCard>

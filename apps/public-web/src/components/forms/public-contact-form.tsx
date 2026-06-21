@@ -12,6 +12,7 @@ import {
   captureUtmFromCurrentUrl,
   type CapturedUtmParams,
 } from "@/lib/utm-capture";
+import { ensureVisitorSession, trackPublicEvent } from "@/lib/visitor-tracking";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -55,6 +56,11 @@ export function PublicContactForm({
       ]
         .filter(Boolean)
         .join("\n\n");
+      const visitorContext = await ensureVisitorSession(projectSlug);
+      trackPublicEvent({
+        eventType: preferredContactMethod === "CHAT" ? "START_CHAT_CLICKED" : "REQUEST_CALL_CLICKED",
+        projectSlug,
+      });
 
       const response = await submitLead({
         organizationSlug,
@@ -72,12 +78,15 @@ export function PublicContactForm({
         utm,
         preferredContactMethod,
         consent: formData.get("consent") === "on",
+        visitorId: visitorContext?.visitorId,
+        visitorSessionId: visitorContext?.sessionId,
       });
 
       if (isDev) {
         console.info("POPWAM public contact form submitted", {
-          values: Object.fromEntries(formData.entries()),
-          utm,
+          projectSlug,
+          preferredContactMethod,
+          hasVisitorContext: Boolean(visitorContext),
         });
       }
 

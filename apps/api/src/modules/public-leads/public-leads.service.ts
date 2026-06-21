@@ -152,7 +152,16 @@ export class PublicLeadsService {
       throw new ForbiddenException('Missing public_leads.view_own permission.');
     }
 
-    return { organizationId: requireCurrentOrganizationId(currentUser) };
+    const organizationId = requireCurrentOrganizationId(currentUser);
+    if (['BROKERAGE', 'INDIVIDUAL_BROKER'].includes(currentUser.organizationType ?? '')) {
+      return {
+        OR: [
+          { assignedBrokerUserId: currentUser.userId },
+          { assignedOrganizationId: organizationId },
+        ],
+      };
+    }
+    return { OR: [{ organizationId }, { project: { developerId: organizationId } }] };
   }
 
   private leadManageScope(currentUser: AuthenticatedRequestUser) {
@@ -167,7 +176,16 @@ export class PublicLeadsService {
       throw new ForbiddenException('Missing public_leads.manage_own permission.');
     }
 
-    return { organizationId: requireCurrentOrganizationId(currentUser) };
+    const organizationId = requireCurrentOrganizationId(currentUser);
+    if (['BROKERAGE', 'INDIVIDUAL_BROKER'].includes(currentUser.organizationType ?? '')) {
+      return {
+        OR: [
+          { assignedBrokerUserId: currentUser.userId },
+          { assignedOrganizationId: organizationId },
+        ],
+      };
+    }
+    return { OR: [{ organizationId }, { project: { developerId: organizationId } }] };
   }
 
   private assertTransition(
@@ -275,6 +293,12 @@ export class PublicLeadsService {
       userAgentHash: lead.userAgentHash,
       normalizedEmail: lead.normalizedEmail,
       consentAt: lead.consentAt,
+      visitorId: lead.visitorId,
+      visitorSessionId: lead.visitorSessionId,
+      assignmentType: lead.assignmentType,
+      assignmentReason: lead.assignmentReason,
+      assignedOrganizationId: lead.assignedOrganizationId,
+      assignedBrokerUserId: lead.assignedBrokerUserId,
       createdAt: lead.createdAt,
       updatedAt: lead.updatedAt,
       organization: lead.organization,

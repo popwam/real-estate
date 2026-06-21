@@ -26,6 +26,7 @@ import { PrismaService } from '../database/prisma.service';
 import { CrmConversionService } from '../crm/crm-conversion.service';
 import { CreatePublicLeadDto } from './dto/create-public-lead.dto';
 import { PublicProjectFiltersDto } from './dto/public-project-filters.dto';
+import { PublicVisitorsService } from './public-visitors.service';
 
 type OrganizationWithPublicProfile = Organization & {
   profile: OrganizationProfile | null;
@@ -38,6 +39,7 @@ export class PublicService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crmConversion: CrmConversionService,
+    private readonly visitors: PublicVisitorsService,
     @Inject(RATE_LIMITER) private readonly rateLimiter: RateLimiter,
   ) {}
 
@@ -179,6 +181,11 @@ export class PublicService {
 
     const organizationId = organization?.id ?? project?.developerId;
     const projectId = project?.id;
+    const assignment = await this.visitors.resolveLeadAssignment(
+      this.optionalString(dto.visitorId),
+      this.optionalString(dto.visitorSessionId),
+      project,
+    );
     const normalizedPhone = this.normalizePhone(dto.phone);
     const phoneHash = this.hashPhone(normalizedPhone);
     const phoneLast4 = normalizedPhone.slice(-4) || null;
@@ -252,8 +259,32 @@ export class PublicService {
         sourceIpHash: source.ipHash,
         userAgentHash: source.userAgentHash,
         preferredContactMethod,
+        visitorId: assignment.visitorId,
+        visitorSessionId: assignment.visitorSessionId,
+        assignmentType: assignment.assignmentType,
+        assignmentReason: assignment.assignmentReason,
+        assignedOrganizationId: assignment.assignedOrganizationId,
+        assignedBrokerUserId: assignment.assignedBrokerUserId,
+        firstTouchAttribution: assignment.firstTouchAttribution,
+        lastTouchAttribution: assignment.lastTouchAttribution,
       },
     });
+
+    if (assignment.visitorId && assignment.visitorSessionId) {
+      await this.prisma.publicVisitorEvent.create({
+        data: {
+          visitorId: assignment.visitorId,
+          sessionId: assignment.visitorSessionId,
+          eventType: 'LEAD_SUBMITTED',
+          projectId,
+          path: this.optionalString(dto.sourcePage)?.slice(0, 500) ?? '/',
+          metadata: {
+            assignmentType: assignment.assignmentType,
+            assignmentReason: assignment.assignmentReason,
+          },
+        },
+      });
+    }
 
     const contact =
       preferredContactMethod === PreferredContactMethod.WHATSAPP
@@ -470,7 +501,7 @@ export class PublicService {
           websiteSettings: { isPublished: true },
         },
       },
-      select: { id: true, developerId: true },
+      select: { id: true, developerId: true, sellingMode: true },
     });
 
     if (!project) {

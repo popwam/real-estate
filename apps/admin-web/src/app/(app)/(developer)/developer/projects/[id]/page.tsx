@@ -11,6 +11,7 @@ import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { useProject, useUpdateProject } from "@/hooks/use-developer";
 import { formatDate, formatPlainDate } from "@/lib/format";
+import { ProjectSellingPermissions } from "@/components/developer/project-selling-permissions";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,9 @@ export default function ProjectDetailPage() {
               error={update.error}
               onSubmit={(input) => update.mutateAsync({ id, input })}
             />
+          </DetailCard>
+          <DetailCard title="Selling permissions">
+            <ProjectSellingPermissions projectId={id} sellingMode={project.sellingMode} />
           </DetailCard>
         </div>
         <DetailCard title="Project Workflows">

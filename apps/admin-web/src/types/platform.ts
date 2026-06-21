@@ -77,3 +77,22 @@ export type ReviewActionInput = {
   reason?: string;
   notes?: string;
 };
+
+export type PlatformOrganizationInput = {
+  name: string;
+  type: "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  country?: string;
+  city?: string;
+};
+
+export type OrganizationInvitation = {
+  id: string;
+  organizationId: string;
+  email: string;
+  intendedRole: string;
+  status: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+  expiresAt: string;
+  acceptedAt?: string | null;
+  createdAt: string;
+  inviteUrl?: string;
+};

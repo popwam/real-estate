@@ -54,6 +54,10 @@ export class CrmConversionService {
 
     const preferredContactMethod =
       publicLead.preferredContactMethod ?? PreferredContactMethod.CALL;
+    const assignmentNote =
+      publicLead.assignmentType === 'BROKER' || publicLead.assignmentType === 'BROKERAGE'
+        ? `Stage 8 first-touch assignment was preserved (${publicLead.assignmentReason ?? publicLead.assignmentType}).`
+        : `Lead remains company-owned (${publicLead.assignmentReason ?? 'PROJECT_OWNER_DEFAULT'}).`;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const existingLead = await tx.crmLead.findUnique({
@@ -110,7 +114,20 @@ export class CrmConversionService {
           status:
             publicLead.status === PublicLeadStatus.SPAM
               ? CrmLeadStatus.SPAM
-              : CrmLeadStatus.NEW,
+              : publicLead.assignmentType === 'BROKER' || publicLead.assignmentType === 'BROKERAGE'
+                ? CrmLeadStatus.CLAIMED
+                : CrmLeadStatus.NEW,
+          claimedByBrokerUserId: publicLead.assignedBrokerUserId,
+          claimedByOrganizationId:
+            publicLead.assignmentType === 'COMPANY'
+              ? null
+              : publicLead.assignedOrganizationId,
+          claimedAt:
+            publicLead.assignmentType === 'BROKER' || publicLead.assignmentType === 'BROKERAGE'
+              ? new Date()
+              : undefined,
+          assignmentType: publicLead.assignmentType,
+          assignmentReason: publicLead.assignmentReason,
           preferredContactMethod,
           sourcePage: publicLead.sourcePage,
           utm: publicLead.utm as Prisma.InputJsonValue | undefined,
@@ -129,6 +146,8 @@ export class CrmConversionService {
             publicLeadId,
             preferredContactMethod,
             source: 'PUBLIC_LEAD',
+            assignmentType: publicLead.assignmentType,
+            assignmentReason: publicLead.assignmentReason,
           },
         },
         tx,
@@ -139,7 +158,7 @@ export class CrmConversionService {
         data: {
           status: PublicLeadStatus.CONVERTED,
           statusNote:
-            'Conversion placeholder upgraded to CRM foundation. Converted to CRM client and CRM lead. No LeadClaim, ReservationRequest, DealRoom, broker assignment, deal, or commission was created.',
+            `Conversion placeholder upgraded to CRM foundation. Converted to CRM client and CRM lead. ${assignmentNote} No LeadClaim, ReservationRequest, DealRoom, deal, or commission was created.`,
         },
       });
 
@@ -179,7 +198,7 @@ export class CrmConversionService {
       id: publicLeadId,
       status: PublicLeadStatus.CONVERTED,
       statusNote:
-        'Conversion placeholder upgraded to CRM foundation. No LeadClaim, ReservationRequest, DealRoom, broker assignment, deal, or commission was created.',
+        `Conversion placeholder upgraded to CRM foundation. ${assignmentNote} No LeadClaim, ReservationRequest, DealRoom, deal, or commission was created.`,
       converted: true,
       idempotent: !result.created,
       publicLeadId,
@@ -190,7 +209,7 @@ export class CrmConversionService {
         : undefined,
       contact: this.contactResponse(preferredContactMethod, publicLead.organization?.websiteSettings?.whatsappUrl),
       safety:
-        'No LeadClaim, ReservationRequest, DealRoom, broker assignment, deal, or commission was created.',
+        `${assignmentNote} No LeadClaim, ReservationRequest, DealRoom, deal, or commission was created.`,
     };
   }
 
@@ -304,6 +323,8 @@ export class CrmConversionService {
       claimedByBrokerUserId: lead.claimedByBrokerUserId,
       claimedByOrganizationId: lead.claimedByOrganizationId,
       claimedAt: lead.claimedAt,
+      assignmentType: lead.assignmentType,
+      assignmentReason: lead.assignmentReason,
       sourcePage: lead.sourcePage,
       utm: lead.utm,
       createdAt: lead.createdAt,

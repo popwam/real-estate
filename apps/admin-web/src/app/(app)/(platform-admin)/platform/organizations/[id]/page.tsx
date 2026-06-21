@@ -18,6 +18,7 @@ import {
   useSuspendOrganization,
 } from "@/hooks/use-platform-admin";
 import { formatDate, formatPlainDate } from "@/lib/format";
+import { OrganizationInvitationsCard } from "@/components/platform/organization-invitations-card";
 
 export default function OrganizationReviewPage() {
   const params = useParams<{ id: string }>();
@@ -86,6 +87,9 @@ export default function OrganizationReviewPage() {
           </DetailCard>
           <DetailCard title="Verification Documents">
             <DocumentMetadataList documents={verifications} />
+          </DetailCard>
+          <DetailCard title="Company invitations">
+            <OrganizationInvitationsCard id={id} organizationType={data.type} />
           </DetailCard>
           <DetailCard title="Audit / Status Timeline">
             <div className="space-y-3">

@@ -81,7 +81,7 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 
 | Purpose | Email | Password | Organization Type | Role |
 | --- | --- | --- | --- | --- |
-| Platform owner | `ceo@popwam.com` | `30@@mmMM` | `PLATFORM` | `platform_owner` |
+| Platform owner | `cd ` | `30@@mmMM` | `PLATFORM` | `platform_owner` |
 | Developer owner | `developer.demo@popwam.local` | `Demo@123456` | `DEVELOPER` | `developer_owner` |
 | Brokerage owner | `brokerage.demo@popwam.local` | `Demo@123456` | `BROKERAGE` | `brokerage_owner` |
 | Broker user | `broker.demo@popwam.local` | `Demo@123456` | `BROKERAGE` | `broker` |

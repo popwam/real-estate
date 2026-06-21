@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, ProjectStatus, ProjectType, ProjectVisibility } from '@prisma/client';
+import { Prisma, ProjectSellingMode, ProjectStatus, ProjectType, ProjectVisibility } from '@prisma/client';
 import { isPlatformUser, requireCurrentOrganizationId } from '../../common/organization-scope';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
@@ -13,6 +13,8 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { ProjectFiltersDto } from './dto/project-filters.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { UpdateProjectVisibilityDto } from './dto/update-project-visibility.dto';
+import { UpdateProjectSellingModeDto } from './dto/update-project-selling-mode.dto';
+import { CreateProjectBrokerAuthorizationDto } from './dto/create-project-broker-authorization.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -188,6 +190,130 @@ export class ProjectsService {
     return updated;
   }
 
+  async updateSellingMode(
+    id: string,
+    dto: UpdateProjectSellingModeDto,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    if (!Object.values(ProjectSellingMode).includes(dto.sellingMode as ProjectSellingMode)) {
+      throw new BadRequestException('sellingMode is invalid.');
+    }
+    const existing = await this.findOne(id, currentUser);
+    this.assertCanManageSelling(existing.developerId, currentUser);
+    const updated = await this.prisma.project.update({
+      where: { id },
+      data: { sellingMode: dto.sellingMode as ProjectSellingMode },
+      include: this.projectInclude(),
+    });
+    await this.auditLogs.record({
+      action: 'project.selling_mode_changed',
+      entityType: 'Project',
+      entityId: id,
+      organizationId: existing.developerId,
+      actor: currentUser,
+      metadata: { previousMode: existing.sellingMode, sellingMode: updated.sellingMode },
+    });
+    return updated;
+  }
+
+  async listBrokerAuthorizations(id: string, currentUser: AuthenticatedRequestUser) {
+    const project = await this.findOne(id, currentUser);
+    this.assertCanManageSelling(project.developerId, currentUser);
+    return this.prisma.projectBrokerAuthorization.findMany({
+      where: { projectId: id, status: { not: 'REVOKED' } },
+      include: {
+        organization: { select: { id: true, name: true, slug: true, type: true, status: true } },
+        brokerUser: { select: { id: true, firstName: true, lastName: true, email: true, organizationId: true, isActive: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async addBrokerAuthorization(
+    id: string,
+    dto: CreateProjectBrokerAuthorizationDto,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const project = await this.findOne(id, currentUser);
+    this.assertCanManageSelling(project.developerId, currentUser);
+    if (Boolean(dto.organizationId) === Boolean(dto.brokerUserId)) {
+      throw new BadRequestException('Provide exactly one organizationId or brokerUserId.');
+    }
+
+    if (dto.organizationId) {
+      const organization = await this.prisma.organization.findUnique({ where: { id: dto.organizationId } });
+      if (!organization || !['BROKERAGE', 'INDIVIDUAL_BROKER'].includes(organization.type) || organization.status !== 'APPROVED') {
+        throw new BadRequestException('organizationId must be an approved brokerage organization.');
+      }
+    }
+    if (dto.brokerUserId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: dto.brokerUserId },
+        include: { organization: true, brokerProfile: true },
+      });
+      if (!user || !user.isActive || !['BROKER', 'INDIVIDUAL_BROKER'].includes(user.userRole)) {
+        throw new BadRequestException('brokerUserId must identify an active broker.');
+      }
+      if (user.organization?.status !== 'APPROVED') {
+        throw new BadRequestException('Broker organization must be approved.');
+      }
+    }
+
+    const existing = await this.prisma.projectBrokerAuthorization.findFirst({
+      where: { projectId: id, organizationId: dto.organizationId, brokerUserId: dto.brokerUserId },
+    });
+    const authorization = existing
+      ? await this.prisma.projectBrokerAuthorization.update({
+          where: { id: existing.id },
+          data: { status: 'ACTIVE', createdByUserId: currentUser.userId },
+          include: { organization: true, brokerUser: true },
+        })
+      : await this.prisma.projectBrokerAuthorization.create({
+          data: {
+            projectId: id,
+            organizationId: dto.organizationId,
+            brokerUserId: dto.brokerUserId,
+            createdByUserId: currentUser.userId,
+          },
+          include: { organization: true, brokerUser: true },
+        });
+    await this.auditLogs.record({
+      action: 'project.broker_authorized',
+      entityType: 'ProjectBrokerAuthorization',
+      entityId: authorization.id,
+      organizationId: project.developerId,
+      actor: currentUser,
+      metadata: { projectId: id, organizationId: dto.organizationId, brokerUserId: dto.brokerUserId },
+    });
+    return authorization;
+  }
+
+  async removeBrokerAuthorization(
+    id: string,
+    authorizationId: string,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const project = await this.findOne(id, currentUser);
+    this.assertCanManageSelling(project.developerId, currentUser);
+    const authorization = await this.prisma.projectBrokerAuthorization.findFirst({
+      where: { id: authorizationId, projectId: id },
+    });
+    if (!authorization) throw new NotFoundException('Project broker authorization not found.');
+    const updated = await this.prisma.projectBrokerAuthorization.update({
+      where: { id: authorizationId },
+      data: { status: 'REVOKED' },
+    });
+    await this.auditLogs.record({
+      action: 'project.broker_authorization_revoked',
+      entityType: 'ProjectBrokerAuthorization',
+      entityId: authorizationId,
+      organizationId: project.developerId,
+      actor: currentUser,
+      metadata: { projectId: id },
+    });
+    return updated;
+  }
+
   assertCanManageDeveloper(
     developerId: string,
     currentUser: AuthenticatedRequestUser,
@@ -201,6 +327,17 @@ export class ProjectsService {
       currentUser.organizationId !== developerId
     ) {
       throw new ForbiddenException('Cannot manage another developer organization.');
+    }
+  }
+
+  private assertCanManageSelling(developerId: string, currentUser: AuthenticatedRequestUser) {
+    if (isPlatformUser(currentUser)) return;
+    if (
+      currentUser.organizationType !== 'DEVELOPER' ||
+      currentUser.organizationId !== developerId ||
+      !currentUser.permissions?.includes('projects.edit')
+    ) {
+      throw new ForbiddenException('Cannot manage selling permissions for this project.');
     }
   }
 
@@ -356,6 +493,13 @@ export class ProjectsService {
       phases: true,
       paymentPlans: true,
       _count: { select: { inventoryUnits: true } },
+      brokerAuthorizations: {
+        where: { status: { not: 'REVOKED' as const } },
+        include: {
+          organization: { select: { id: true, name: true, slug: true, type: true } },
+          brokerUser: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      },
     };
   }
 

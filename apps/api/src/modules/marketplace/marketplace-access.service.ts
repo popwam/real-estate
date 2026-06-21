@@ -3,6 +3,7 @@ import {
   AgreementStatus,
   BrokerAccessGranteeType,
   ProjectVisibility,
+  ProjectSellingMode,
   UnitVisibility,
 } from '@prisma/client';
 import { isPlatformUser } from '../../common/organization-scope';
@@ -14,6 +15,7 @@ type ProjectForAccess = {
   developerId: string;
   status: string;
   visibility: ProjectVisibility;
+  sellingMode: ProjectSellingMode;
 };
 
 type UnitForAccess = {
@@ -39,12 +41,13 @@ export class MarketplaceAccessService {
       return false;
     }
 
-    return this.canViewVisibility(
+    const visible = await this.canViewVisibility(
       currentUser,
       project.id,
       project.developerId,
       project.visibility,
     );
+    return visible && this.canSellProject(currentUser, project);
   }
 
   async canViewUnitForMarketplace(
@@ -109,6 +112,35 @@ export class MarketplaceAccessService {
     return ['BROKERAGE', 'INDIVIDUAL_BROKER'].includes(
       currentUser.organizationType ?? '',
     );
+  }
+
+  private async canSellProject(
+    currentUser: AuthenticatedRequestUser,
+    project: ProjectForAccess,
+  ) {
+    if (project.sellingMode === ProjectSellingMode.OWNER_ONLY) return false;
+    if (project.sellingMode === ProjectSellingMode.OPEN_BROKERAGE) {
+      if (!currentUser.organizationId) return false;
+      return Boolean(await this.prisma.organization.findFirst({
+        where: {
+          id: currentUser.organizationId,
+          status: 'APPROVED',
+          type: { in: ['BROKERAGE', 'INDIVIDUAL_BROKER'] },
+        },
+      }));
+    }
+    return Boolean(await this.prisma.projectBrokerAuthorization.findFirst({
+      where: {
+        projectId: project.id,
+        status: 'ACTIVE',
+        OR: [
+          { brokerUserId: currentUser.userId },
+          ...(currentUser.organizationId
+            ? [{ organizationId: currentUser.organizationId }]
+            : []),
+        ],
+      },
+    }));
   }
 
   private async hasBrokerageProjectAccess(

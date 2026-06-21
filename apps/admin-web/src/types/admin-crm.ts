@@ -72,6 +72,8 @@ export type CrmLead = {
     color?: string | null;
   } | null;
   preferredContactMethod?: PreferredContactMethod | null;
+  assignmentType?: "COMPANY" | "BROKER" | "BROKERAGE" | null;
+  assignmentReason?: string | null;
   claimedByBrokerUserId?: string | null;
   claimedByOrganizationId?: string | null;
   claimedAt?: string | null;
@@ -86,6 +88,22 @@ export type CrmLead = {
   publicLead?: { id: string; status: string } | null;
   claimedByBroker?: CrmUserSummary | null;
   claimedByOrganization?: Organization | null;
+  visitorBehavior?: {
+    firstSeenAt?: string | null;
+    lastSeenAt?: string | null;
+    firstTouch?: Record<string, unknown> | null;
+    lastTouch?: Record<string, unknown> | null;
+    assignmentType?: string | null;
+    assignmentReason?: string | null;
+    viewedPaths: string[];
+    viewedProjects: Array<{ id: string; name: string; slug: string }>;
+    searchTerms: string[];
+    filters: unknown[];
+    totalTimeOnPageMs: number;
+    maxScrollDepth: number;
+    sectionsReached: string[];
+    eventCount: number;
+  } | null;
 };
 
 export type CrmPipelineStage = {

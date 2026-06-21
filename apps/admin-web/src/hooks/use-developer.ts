@@ -24,6 +24,10 @@ import {
   updateProjectApi,
   updateProjectPhaseApi,
   updateProjectVisibilityApi,
+  updateProjectSellingModeApi,
+  listProjectBrokerAuthorizationsApi,
+  createProjectBrokerAuthorizationApi,
+  removeProjectBrokerAuthorizationApi,
 } from "@/lib/developer-api";
 import type {
   BrokerAccessRuleInput,
@@ -32,6 +36,7 @@ import type {
   ProjectInput,
   ProjectPhaseInput,
   ProjectVisibility,
+  ProjectSellingMode,
 } from "@/types/developer";
 
 export function useProjects(filters: Record<string, string | undefined> = {}) {
@@ -57,6 +62,34 @@ export function useUpdateProjectVisibility() {
     void qc.invalidateQueries({ queryKey: ["developer", "projects"] });
     void qc.invalidateQueries({ queryKey: ["developer", "projects", v.id] });
   } });
+}
+export function useProjectBrokerAuthorizations(projectId: string) {
+  return useQuery({
+    queryKey: ["developer", "projects", projectId, "broker-authorizations"],
+    queryFn: () => listProjectBrokerAuthorizationsApi(projectId),
+    enabled: Boolean(projectId),
+  });
+}
+export function useUpdateProjectSellingMode(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sellingMode: ProjectSellingMode) => updateProjectSellingModeApi(projectId, sellingMode),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["developer", "projects", projectId] }),
+  });
+}
+export function useCreateProjectBrokerAuthorization(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { organizationId?: string; brokerUserId?: string }) => createProjectBrokerAuthorizationApi(projectId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["developer", "projects", projectId, "broker-authorizations"] }),
+  });
+}
+export function useRemoveProjectBrokerAuthorization(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (authorizationId: string) => removeProjectBrokerAuthorizationApi(projectId, authorizationId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["developer", "projects", projectId, "broker-authorizations"] }),
+  });
 }
 export function useProjectPhases(projectId: string) {
   return useQuery({ queryKey: ["developer", "projects", projectId, "phases"], queryFn: () => listProjectPhasesApi(projectId), enabled: Boolean(projectId) });

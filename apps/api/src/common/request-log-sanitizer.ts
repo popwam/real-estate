@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 const BY_TOKEN_PATTERN = /^\/conversations\/by-token\/[^/?#]+(\/messages)?$/;
 const ORGANIZATION_DOMAIN_PATTERN = /^\/organization-domains\/[^/?#]+(\/[^/?#]+)?$/;
 const PLATFORM_DOMAIN_PATTERN = /^\/platform-admin\/domains\/[^/?#]+(\/[^/?#]+)?$/;
+const INVITATION_TOKEN_PATTERN = /^\/invitations\/[^/?#]+(\/accept)?$/;
 
 export function sanitizeRequestPath(path: string | undefined): string {
   if (!path) {
@@ -15,6 +16,12 @@ export function sanitizeRequestPath(path: string | undefined): string {
     return pathname.endsWith('/messages')
       ? '/conversations/by-token/:shareToken/messages'
       : '/conversations/by-token/:shareToken';
+  }
+
+  if (INVITATION_TOKEN_PATTERN.test(pathname)) {
+    return pathname.endsWith('/accept')
+      ? '/invitations/:token/accept'
+      : '/invitations/:token';
   }
 
   if (ORGANIZATION_DOMAIN_PATTERN.test(pathname)) {

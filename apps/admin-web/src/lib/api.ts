@@ -7,6 +7,8 @@ import type {
   OrganizationReview,
   ReviewActionInput,
   Verification,
+  PlatformOrganizationInput,
+  OrganizationInvitation,
 } from "@/types/platform";
 
 const API_BASE_URL =
@@ -129,7 +131,27 @@ function logApiErrorDiagnostic(input: {
 }
 
 function sanitizeDiagnosticPath(path: string) {
-  return path.split("?")[0] || "/";
+  const clean = path.split("?")[0] || "/";
+  return clean.replace(/^\/invitations\/[^/]+/, "/invitations/:token");
+}
+
+export function getInvitationApi(token: string) {
+  return apiRequest<{
+    organization: { id: string; name: string; type: string };
+    email: string;
+    intendedRole: string;
+    status: string;
+    expiresAt: string;
+    canAccept: boolean;
+  }>(`/invitations/${encodeURIComponent(token)}`, { auth: false });
+}
+
+export function acceptInvitationApi(token: string, input: { password: string; firstName?: string; lastName?: string; phone?: string }) {
+  return apiRequest<{ accepted: boolean; organization: Organization }>(`/invitations/${encodeURIComponent(token)}/accept`, {
+    method: "POST",
+    body: JSON.stringify(input),
+    auth: false,
+  });
 }
 
 export function loginApi(input: { email: string; password: string }) {
@@ -146,6 +168,27 @@ export function getCurrentUserApi() {
 
 export function listOrganizationsApi() {
   return apiRequest<Organization[]>("/organizations");
+}
+
+export function createPlatformOrganizationApi(input: PlatformOrganizationInput) {
+  return apiRequest<Organization>("/platform-admin/organizations", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationInvitationsApi(id: string) {
+  return apiRequest<OrganizationInvitation[]>(`/platform-admin/organizations/${id}/invitations`);
+}
+
+export function createOrganizationInvitationApi(
+  id: string,
+  input: { email: string; intendedRole: string; expiresInHours?: number },
+) {
+  return apiRequest<OrganizationInvitation>(`/platform-admin/organizations/${id}/invitations`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export function getOrganizationReviewApi(id: string) {

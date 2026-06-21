@@ -12,4 +12,6 @@ export class CreatePublicLeadDto {
   companyWebsite?: string;
   preferredContactMethod?: string;
   consent!: boolean;
+  visitorId?: string;
+  visitorSessionId?: string;
 }

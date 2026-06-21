@@ -8,6 +8,7 @@ export type ProjectVisibility =
   | "SELECTED_BROKERS"
   | "HIDDEN";
 export type ProjectType = "COMPOUND" | "BUILDING" | "TOWER" | "VILLA_COMPOUND" | "COMMERCIAL" | "MIXED_USE";
+export type ProjectSellingMode = "OWNER_ONLY" | "AUTHORIZED_BROKERS" | "OPEN_BROKERAGE";
 
 export type UnitStatus = "AVAILABLE" | "RESERVED" | "SOLD" | "HELD" | "UNAVAILABLE";
 export type UnitType = "APARTMENT" | "VILLA" | "TOWNHOUSE" | "OFFICE" | "SHOP" | "STUDIO" | "LAND" | "CHALET";
@@ -40,6 +41,7 @@ export type Project = {
   deliveryDate?: string | null;
   description?: string | null;
   visibility: ProjectVisibility;
+  sellingMode: ProjectSellingMode;
   isFeatured?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -47,6 +49,17 @@ export type Project = {
   phases?: ProjectPhase[];
   paymentPlans?: PaymentPlan[];
   _count?: { inventoryUnits?: number };
+  brokerAuthorizations?: ProjectBrokerAuthorization[];
+};
+
+export type ProjectBrokerAuthorization = {
+  id: string;
+  projectId: string;
+  organizationId?: string | null;
+  brokerUserId?: string | null;
+  status: "ACTIVE" | "SUSPENDED" | "REVOKED";
+  organization?: { id: string; name: string; slug: string; type: string } | null;
+  brokerUser?: { id: string; firstName?: string | null; lastName?: string | null; email?: string | null } | null;
 };
 
 export type ProjectPhase = {

@@ -8,6 +8,7 @@ import { OrganizationStatusBadge } from "@/components/platform/organization-stat
 import { DataTable } from "@/components/tables/data-table";
 import { useOrganizations } from "@/hooks/use-platform-admin";
 import type { Organization } from "@/types/platform";
+import { CreateOrganizationForm } from "@/components/platform/create-organization-form";
 
 export default function PlatformOrganizationsPage() {
   const { data = [], isLoading, error } = useOrganizations();
@@ -29,6 +30,7 @@ export default function PlatformOrganizationsPage() {
         title="Organizations"
         description="Platform-wide registry for developers, brokerages, individual brokers, and POPWAM entities."
       />
+      <CreateOrganizationForm />
       <div className="mb-4 flex flex-col gap-3 rounded-md border border-zinc-200 bg-white p-4 sm:flex-row sm:items-center">
         <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
           Type

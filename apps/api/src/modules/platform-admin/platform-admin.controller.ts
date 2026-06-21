@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -11,6 +11,8 @@ import { PermissionsGuard } from '../../common/permissions.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
 import { PlatformReviewDto } from './dto/platform-review.dto';
+import { CreatePlatformOrganizationDto } from './dto/create-platform-organization.dto';
+import { CreateOrganizationInvitationDto } from './dto/create-organization-invitation.dto';
 import { PlatformAdminService } from './platform-admin.service';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -78,5 +80,33 @@ export class PlatformAdminController {
     @CurrentUser() currentUser: AuthenticatedRequestUser,
   ) {
     return this.platformAdminService.reactivateOrganization(id, dto, currentUser);
+  }
+
+  @Post('organizations')
+  @ApiOperation({ summary: 'Create a company organization as a platform admin.' })
+  createOrganization(
+    @Body() dto: CreatePlatformOrganizationDto,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.platformAdminService.createOrganization(dto, currentUser);
+  }
+
+  @Get('organizations/:id/invitations')
+  @ApiOperation({ summary: 'List company invitations for platform administration.' })
+  listInvitations(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.platformAdminService.listInvitations(id, currentUser);
+  }
+
+  @Post('organizations/:id/invitations')
+  @ApiOperation({ summary: 'Create an expiring company invitation link.' })
+  createInvitation(
+    @Param('id') id: string,
+    @Body() dto: CreateOrganizationInvitationDto,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.platformAdminService.createInvitation(id, dto, currentUser);
   }
 }

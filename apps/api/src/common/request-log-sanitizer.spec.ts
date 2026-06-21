@@ -26,4 +26,13 @@ describe('request log sanitizers', () => {
     expect(hash).not.toBe('192.0.2.10');
     expect(hash).toHaveLength(64);
   });
+
+  it('redacts invitation tokens from request paths', () => {
+    expect(sanitizeRequestPath('/invitations/super-secret-token/accept')).toBe(
+      '/invitations/:token/accept',
+    );
+    expect(sanitizeRequestPath('/invitations/super-secret-token')).toBe(
+      '/invitations/:token',
+    );
+  });
 });

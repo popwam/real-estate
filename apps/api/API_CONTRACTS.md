@@ -1,3 +1,32 @@
+## Stage 8 Additive Contracts — Marketplace Governance
+
+Stage 4 routes remain frozen. Stage 8 adds organization invitations, project selling permissions, first-touch lead assignment, and private visitor behavior summaries without renaming existing routes.
+
+Platform/company onboarding:
+
+- `POST /platform-admin/organizations` creates a draft developer/brokerage organization.
+- `GET /platform-admin/organizations/:id/invitations` lists safe invitation metadata.
+- `POST /platform-admin/organizations/:id/invitations` returns a one-time copyable `inviteUrl`; the raw token is never returned again.
+- `GET /invitations/:token` returns masked email, organization, role, status, expiry, and `canAccept` only.
+- `POST /invitations/:token/accept` creates the intended organization user once.
+
+Selling permissions:
+
+- `PATCH /projects/:id/selling-mode` accepts `OWNER_ONLY`, `AUTHORIZED_BROKERS`, or `OPEN_BROKERAGE`.
+- `GET /projects/:id/broker-authorizations` is owner/platform scoped.
+- `POST /projects/:id/broker-authorizations` accepts exactly one of `organizationId` or `brokerUserId`.
+- `DELETE /projects/:id/broker-authorizations/:authorizationId` revokes rather than physically deleting the audit-relevant authorization.
+
+Lead/CRM additions:
+
+- `PublicLead` responses now include assignment type/reason and assigned organization/broker IDs in authenticated scope.
+- `GET /crm/leads/:id` includes a bounded `visitorBehavior` summary when a visitor is attached.
+- Platform sees all; project developers see their project leads; broker users see only assigned broker/organization leads.
+
+See `STAGE8_MARKETPLACE_GOVERNANCE_STATUS.md` and `PUBLIC_API_CONTRACTS.md` for payload/privacy details.
+
+---
+
 ## Current Slice
 
 Backend Slice 7 - Final Backend Freeze, QA, Contracts, and Smoke

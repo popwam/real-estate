@@ -12,6 +12,7 @@ import {
   captureUtmFromCurrentUrl,
   type CapturedUtmParams,
 } from "@/lib/utm-capture";
+import { ensureVisitorSession, trackPublicEvent } from "@/lib/visitor-tracking";
 
 type PublicLeadFormProps = {
   ctaLabel: string;
@@ -54,6 +55,12 @@ export function PublicLeadForm({
     try {
       const formData = new FormData(event.currentTarget);
       const consent = formData.get("consent") === "on";
+      const visitorContext = await ensureVisitorSession(projectSlug);
+
+      trackPublicEvent({
+        eventType: preferredContactMethod === "CHAT" ? "START_CHAT_CLICKED" : "REQUEST_CALL_CLICKED",
+        projectSlug,
+      });
 
       const response = await submitLead({
         organizationSlug,
@@ -71,12 +78,15 @@ export function PublicLeadForm({
         utm,
         preferredContactMethod,
         consent,
+        visitorId: visitorContext?.visitorId,
+        visitorSessionId: visitorContext?.sessionId,
       });
 
       if (isDev) {
         console.info("POPWAM public lead form submitted", {
-          values: Object.fromEntries(formData.entries()),
-          utm,
+          projectSlug,
+          preferredContactMethod,
+          hasVisitorContext: Boolean(visitorContext),
         });
       }
 

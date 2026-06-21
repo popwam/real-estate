@@ -49,6 +49,51 @@ enum ProjectVisibility {
   HIDDEN
 }
 
+enum ProjectSellingMode {
+  OWNER_ONLY
+  AUTHORIZED_BROKERS
+  OPEN_BROKERAGE
+}
+
+enum ProjectBrokerAuthorizationStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum LeadAssignmentType {
+  COMPANY
+  BROKER
+  BROKERAGE
+}
+
+enum VisitorAttributionType {
+  UNKNOWN
+  COMPANY
+  BROKER
+  BROKERAGE
+}
+
+enum PublicVisitorEventType {
+  PAGE_VIEW
+  PROJECT_VIEW
+  SEARCH
+  FILTER_CHANGE
+  SECTION_REACHED
+  SCROLL_DEPTH
+  TIME_ON_PAGE
+  LEAD_SUBMITTED
+  START_CHAT_CLICKED
+  REQUEST_CALL_CLICKED
+}
+
 enum ProjectType {
   COMPOUND
   BUILDING
@@ -508,6 +553,10 @@ model Organization {
   adsCampaigns     AdsCampaign[]
   cameraDevices    CameraDevice[]
   operationsActivities OperationsActivity[]
+  invitations       OrganizationInvitation[]
+  projectBrokerAuthorizations ProjectBrokerAuthorization[]
+  assignedPublicLeads PublicLead[]            @relation("PublicLeadAssignedOrganization")
+  attributedVisitorSessions PublicVisitorSession[] @relation("VisitorAttributedOrganization")
 
   @@index([type, status])
   @@map("organizations")
@@ -654,6 +703,12 @@ model User {
   operationsActivities            OperationsActivity[]             @relation("OperationsActivityActorUser")
   approvedAccountingTransactions  AccountingTransaction[]          @relation("AccountingTransactionApprovedBy")
   reviewedLegalDocuments          LegalDocument[]                  @relation("LegalDocumentReviewedBy")
+  createdOrganizationInvitations  OrganizationInvitation[]         @relation("InvitationCreatedBy")
+  acceptedOrganizationInvitations OrganizationInvitation[]         @relation("InvitationAcceptedBy")
+  createdProjectBrokerAuthorizations ProjectBrokerAuthorization[]  @relation("ProjectBrokerAuthorizationCreatedBy")
+  brokerProjectAuthorizations     ProjectBrokerAuthorization[]      @relation("ProjectBrokerAuthorizationBroker")
+  assignedPublicLeads             PublicLead[]                      @relation("PublicLeadAssignedBroker")
+  attributedVisitorSessions       PublicVisitorSession[]            @relation("VisitorAttributedBroker")
 
   @@index([organizationId, userRole])
   @@map("users")
@@ -844,6 +899,7 @@ model Project {
   brochureUrl           String?
   amenities             String[]
   visibility            ProjectVisibility   @default(PRIVATE)
+  sellingMode           ProjectSellingMode  @default(OWNER_ONLY)
   isFeatured            Boolean             @default(false)
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
@@ -866,11 +922,59 @@ model Project {
   conversations         Conversation[]
   legalDocuments        LegalDocument[]
   cameraDevices         CameraDevice[]
+  brokerAuthorizations  ProjectBrokerAuthorization[]
+  visitorSessions       PublicVisitorSession[]
+  visitorEvents         PublicVisitorEvent[]
 
   @@unique([developerId, slug])
   @@index([developerId, status])
   @@index([city, district])
   @@map("projects")
+}
+
+model OrganizationInvitation {
+  id               String           @id @default(cuid())
+  organizationId   String
+  email            String
+  intendedRole     UserRole
+  tokenHash        String           @unique
+  status           InvitationStatus @default(PENDING)
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  createdByUserId  String
+  acceptedByUserId String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy        User             @relation("InvitationCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  acceptedBy       User?            @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([email, status])
+  @@index([expiresAt, status])
+  @@map("organization_invitations")
+}
+
+model ProjectBrokerAuthorization {
+  id                 String                           @id @default(cuid())
+  projectId          String
+  organizationId     String?
+  brokerUserId       String?
+  status             ProjectBrokerAuthorizationStatus @default(ACTIVE)
+  createdByUserId    String
+  createdAt          DateTime                         @default(now())
+  updatedAt          DateTime                         @updatedAt
+  project            Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization       Organization?                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brokerUser         User?                            @relation("ProjectBrokerAuthorizationBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  createdBy          User                             @relation("ProjectBrokerAuthorizationCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, organizationId])
+  @@unique([projectId, brokerUserId])
+  @@index([projectId, status])
+  @@index([organizationId, status])
+  @@index([brokerUserId, status])
+  @@map("project_broker_authorizations")
 }
 
 model ProjectPhase {
@@ -1388,11 +1492,23 @@ model PublicLead {
   sourceIpHash    String?
   userAgentHash   String?
   preferredContactMethod PreferredContactMethod?
+  visitorId       String?
+  visitorSessionId String?
+  assignmentType  LeadAssignmentType @default(COMPANY)
+  assignmentReason String?
+  assignedOrganizationId String?
+  assignedBrokerUserId String?
+  firstTouchAttribution Json?
+  lastTouchAttribution Json?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   organization    Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   project         Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
   crmLead         CrmLead?
+  visitor         PublicVisitor?        @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  visitorSession  PublicVisitorSession? @relation(fields: [visitorSessionId], references: [id], onDelete: SetNull)
+  assignedOrganization Organization?    @relation("PublicLeadAssignedOrganization", fields: [assignedOrganizationId], references: [id], onDelete: SetNull)
+  assignedBroker  User?                 @relation("PublicLeadAssignedBroker", fields: [assignedBrokerUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@index([projectId, status])
@@ -1400,7 +1516,77 @@ model PublicLead {
   @@index([organizationId, projectId, idempotencyKey])
   @@index([sourceIpHash, createdAt])
   @@index([spamScore, status])
+  @@index([visitorId, createdAt])
+  @@index([visitorSessionId, createdAt])
+  @@index([assignedOrganizationId, status])
+  @@index([assignedBrokerUserId, status])
   @@map("public_leads")
+}
+
+model PublicVisitor {
+  id               String                 @id @default(cuid())
+  anonymousKeyHash String                 @unique
+  firstSeenAt      DateTime               @default(now())
+  lastSeenAt       DateTime               @default(now())
+  userAgentHash    String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  sessions         PublicVisitorSession[]
+  events           PublicVisitorEvent[]
+  leads            PublicLead[]
+
+  @@index([lastSeenAt])
+  @@map("public_visitors")
+}
+
+model PublicVisitorSession {
+  id                       String                 @id @default(cuid())
+  visitorId                String
+  clientSessionKeyHash     String                 @unique
+  projectId                String?
+  startedAt                DateTime               @default(now())
+  lastSeenAt               DateTime               @default(now())
+  firstTouchSource         Json?
+  lastTouchSource          Json?
+  firstTouchType           VisitorAttributionType @default(UNKNOWN)
+  firstTouchOrganizationId String?
+  firstTouchBrokerUserId   String?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  visitor                  PublicVisitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  project                  Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  firstTouchOrganization   Organization?          @relation("VisitorAttributedOrganization", fields: [firstTouchOrganizationId], references: [id], onDelete: SetNull)
+  firstTouchBroker         User?                  @relation("VisitorAttributedBroker", fields: [firstTouchBrokerUserId], references: [id], onDelete: SetNull)
+  events                   PublicVisitorEvent[]
+  leads                    PublicLead[]
+
+  @@index([visitorId, lastSeenAt])
+  @@index([projectId, firstTouchType])
+  @@map("public_visitor_sessions")
+}
+
+model PublicVisitorEvent {
+  id          String                 @id @default(cuid())
+  visitorId   String
+  sessionId   String
+  eventType   PublicVisitorEventType
+  projectId   String?
+  path        String
+  searchQuery String?
+  filters     Json?
+  durationMs  Int?
+  scrollDepth Int?
+  sectionId   String?
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+  visitor     PublicVisitor          @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  session     PublicVisitorSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  project     Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([visitorId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([projectId, eventType, createdAt])
+  @@map("public_visitor_events")
 }
 
 model CrmClient {
@@ -1438,6 +1624,8 @@ model CrmLead {
   claimedByBrokerUserId     String?
   claimedByOrganizationId   String?
   claimedAt                 DateTime?
+  assignmentType            LeadAssignmentType?
+  assignmentReason          String?
   sourcePage                String?
   utm                       Json?
   createdAt                 DateTime                @default(now())

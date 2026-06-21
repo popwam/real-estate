@@ -301,7 +301,7 @@ export class MarketplaceService {
     return where;
   }
 
-  private async filterProjectsForUser<T extends { id: string; developerId: string; status: string; visibility: ProjectVisibility }>(
+  private async filterProjectsForUser<T extends { id: string; developerId: string; status: string; visibility: ProjectVisibility; sellingMode: any }>(
     projects: T[],
     currentUser: AuthenticatedRequestUser,
   ) {

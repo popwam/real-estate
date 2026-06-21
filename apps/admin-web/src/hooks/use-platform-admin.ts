@@ -13,13 +13,41 @@ import {
   rejectVerificationApi,
   requestMoreVerificationApi,
   suspendOrganizationApi,
+  createPlatformOrganizationApi,
+  listOrganizationInvitationsApi,
+  createOrganizationInvitationApi,
 } from "@/lib/api";
-import type { ReviewActionInput } from "@/types/platform";
+import type { PlatformOrganizationInput, ReviewActionInput } from "@/types/platform";
 
 export function useOrganizations() {
   return useQuery({
     queryKey: ["platform", "organizations"],
     queryFn: listOrganizationsApi,
+  });
+}
+
+export function useCreatePlatformOrganization() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PlatformOrganizationInput) => createPlatformOrganizationApi(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] }),
+  });
+}
+
+export function useOrganizationInvitations(id: string) {
+  return useQuery({
+    queryKey: ["platform", "organizations", id, "invitations"],
+    queryFn: () => listOrganizationInvitationsApi(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateOrganizationInvitation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { email: string; intendedRole: string; expiresInHours?: number }) =>
+      createOrganizationInvitationApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "invitations"] }),
   });
 }
 

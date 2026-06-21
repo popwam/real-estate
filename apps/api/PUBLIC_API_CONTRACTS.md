@@ -1,5 +1,37 @@
 # POPWAM Public API Contracts
 
+## Stage 8 Visitor and Attribution Additions
+
+`POST /public/visitors/session`
+
+Creates or updates a pseudonymous first-party session. Required fields are client-generated `anonymousKey` and `sessionKey`; both are hashed in storage. Optional `projectSlug`, broker/brokerage URL parameters, `ref`, path, and primitive `utm` values are sanitized and bounded. The response contains opaque `visitorId` and `sessionId` values for later lead/event attachment.
+
+`POST /public/visitors/events`
+
+Accepts 1-25 events with `visitorId`, `sessionId`, an allowlisted event type, safe path, and event-specific bounded fields. Supported types: `PAGE_VIEW`, `PROJECT_VIEW`, `SEARCH`, `FILTER_CHANGE`, `SECTION_REACHED`, `SCROLL_DEPTH`, `TIME_ON_PAGE`, `LEAD_SUBMITTED`, `START_CHAT_CLICKED`, and `REQUEST_CALL_CLICKED`.
+
+The endpoint has dedicated rate limiting. It never exposes events for reading.
+
+`POST /public/leads` additive fields:
+
+```json
+{
+  "visitorId": "opaque_visitor_id",
+  "visitorSessionId": "opaque_session_id"
+}
+```
+
+Invalid or mismatched visitor context is ignored for ownership and falls back safely. Public responses do not expose project selling mode, broker authorizations, internal assignment rationale, visitor events, or token hashes.
+
+First-touch rules:
+
+- `OWNER_ONLY` always assigns to the project developer.
+- A valid authorized broker/brokerage first touch can own the lead for broker-enabled projects.
+- A direct/company first touch is immutable for that visitor session and project.
+- Unauthorized or unknown broker parameters are ignored and assignment falls back to the project owner.
+
+---
+
 Stage 2 Slice 1 added a backend-only public API foundation for organization websites, domain resolution, public marketplace reads, and safe lead capture.
 
 Stage 2 Slice 2 adds authenticated public lead management, duplicate/idempotency handling for public lead capture, and domain verification workflow foundations. It does not add CRM automation, broker assignment, reservations, Cloudflare/DNS mutation, or real notification providers.

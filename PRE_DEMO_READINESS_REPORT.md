@@ -1,5 +1,19 @@
 # Pre-Demo Readiness Report
 
+## Stage 8 Addendum — 2026-06-19
+
+Stage 8 marketplace governance is implemented and passes API unit/build plus both web build/lint gates. The demo should not rely on Stage 8 persistence until the additive migration has been applied and the new database-backed e2e suite has passed in staging. The e2e command was attempted, but 22 database-backed suites stopped at their first Prisma query with `ECONNREFUSED`; local PostgreSQL at `localhost:5432` and local browser-smoke services were unavailable during this verification pass.
+
+New demo-safe UI after migration verification:
+
+- Platform company creation and copyable invitations.
+- Developer project selling-mode and authorization controls.
+- CRM lead visitor behavior summaries.
+
+Privacy guardrails: hashed invite/visitor keys, redacted token paths, bounded event payloads, no browser fingerprinting, no raw analytics read endpoint, and existing lead/project scope checks.
+
+---
+
 ## Date
 
 2026-06-01
