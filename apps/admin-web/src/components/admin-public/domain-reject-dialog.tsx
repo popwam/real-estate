@@ -28,6 +28,7 @@ export function DomainRejectDialog({
     resolver: zodResolver(schema),
     defaultValues: { reason: "" },
   });
+  const dialogTitleId = "domain-reject-title";
 
   async function submit(values: Values) {
     await onConfirm(values.reason.trim());
@@ -39,31 +40,33 @@ export function DomainRejectDialog({
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 px-4 py-6">
-          <div className="w-full max-w-lg rounded-md bg-white shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] px-4 py-6">
+          <div className="ui-dialog w-full max-w-lg" role="dialog" aria-modal="true" aria-labelledby={dialogTitleId}>
             <form onSubmit={handleSubmit(submit)}>
-              <div className="border-b border-zinc-200 px-5 py-4">
-                <h2 className="text-base font-semibold text-zinc-950">Reject domain</h2>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">Store a reason for the organization. No DNS provider is contacted.</p>
+              <div className="border-b border-[var(--color-border)] px-5 py-4">
+                <h2 id={dialogTitleId} className="text-base font-semibold text-[var(--color-foreground)]">Reject domain</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+                  Store a clear reason for the organization before this domain is rejected.
+                </p>
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
-                  <Label>Reason</Label>
-                  <Textarea {...register("reason")} />
-                  {errors.reason ? <p className="text-sm text-red-600">{errors.reason.message}</p> : null}
+                  <Label htmlFor="domain-reject-reason">Reason</Label>
+                  <Textarea id="domain-reject-reason" {...register("reason")} aria-invalid={Boolean(errors.reason)} />
+                  {errors.reason ? <p className="text-sm text-[var(--color-danger)]">{errors.reason.message}</p> : null}
                 </div>
                 {error ? (
-                  <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="ui-feedback ui-feedback-error flex gap-2" role="alert">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                     <span>{error.message}</span>
                   </div>
                 ) : null}
               </div>
-              <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4">
-                <Button className="bg-white text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" onClick={() => setOpen(false)}>
+              <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
+                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button className="bg-red-600 hover:bg-red-700" disabled={isPending} type="submit">
+                <Button className="bg-[var(--color-danger)] text-[var(--color-danger-foreground)] hover:opacity-90" disabled={isPending} type="submit">
                   {isPending ? "Rejecting" : "Reject"}
                 </Button>
               </div>

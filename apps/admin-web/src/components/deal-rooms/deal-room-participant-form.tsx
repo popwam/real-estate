@@ -57,7 +57,7 @@ export function DealRoomParticipantForm({
       <Field label="Client ID"><Input {...register("clientId")} /></Field>
       <Field label="Organization ID"><Input {...register("organizationId")} /></Field>
       <Field label="Role">
-        <select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" {...register("role")}>
+        <select className="ui-input" {...register("role")}>
           <option value="BROKER">BROKER</option>
           <option value="DEVELOPER_SALES">DEVELOPER_SALES</option>
           <option value="SALES_MANAGER">SALES_MANAGER</option>
@@ -66,7 +66,7 @@ export function DealRoomParticipantForm({
         </select>
       </Field>
       <Field label="Status">
-        <select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" {...register("status")}>
+        <select className="ui-input" {...register("status")}>
           <option value="INVITED">INVITED</option>
           <option value="ACTIVE">ACTIVE</option>
           <option value="LEFT">LEFT</option>
@@ -74,7 +74,7 @@ export function DealRoomParticipantForm({
         </select>
       </Field>
       {error ? (
-        <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 md:col-span-2">
+        <div className="ui-feedback ui-feedback-error flex gap-2 text-sm md:col-span-2" role="alert">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{error.message}</span>
         </div>
@@ -91,7 +91,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-[var(--color-danger)]" role="alert">{error}</p> : null}
     </div>
   );
 }

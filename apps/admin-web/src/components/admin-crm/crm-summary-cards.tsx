@@ -1,38 +1,26 @@
 "use client";
 
+import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
-import { DetailCard } from "@/components/platform/detail-card";
 import { useCrmSummary } from "@/hooks/use-admin-crm";
 
 export function CrmSummaryCards() {
   const { data, isLoading, error } = useCrmSummary();
 
   if (isLoading) return <LoadingState label="Loading CRM summary" />;
-  if (error) return <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p>;
+  if (error) return <FeedbackState tone="error" title="CRM summary could not be loaded" description={error.message} />;
   if (!data) return null;
 
   const cards = [
     { label: "Total leads", value: data.leads.total },
-    { label: "New leads", value: data.leads.new },
+    { label: "New", value: data.leads.new },
     { label: "Claimed", value: data.leads.claimed },
     { label: "Qualified", value: data.leads.qualified },
     { label: "Converted", value: data.leads.converted },
-    { label: "Spam", value: data.leads.spam },
     { label: "Open conversations", value: data.conversations.open },
-    { label: "Today's new", value: data.today.newLeads },
-    { label: "Today's messages", value: data.today.newMessages },
+    { label: "New today", value: data.today.newLeads },
+    { label: "Messages today", value: data.today.newMessages },
   ];
 
-  return (
-    <DetailCard title="CRM summary">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map((card) => (
-          <div key={card.label} className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{card.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-zinc-950">{card.value}</p>
-          </div>
-        ))}
-      </div>
-    </DetailCard>
-  );
+  return <section aria-labelledby="crm-summary-title"><h2 id="crm-summary-title" className="sr-only">CRM summary</h2><div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-8">{cards.map((card) => <div key={card.label} className="ui-card p-4"><p className="text-xs font-semibold text-[var(--color-muted)]">{card.label}</p><p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">{card.value.toLocaleString()}</p></div>)}</div></section>;
 }

@@ -95,4 +95,5 @@ export type OrganizationInvitation = {
   acceptedAt?: string | null;
   createdAt: string;
   inviteUrl?: string;
+  delivery?: "MANUAL_LINK";
 };

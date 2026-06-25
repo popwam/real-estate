@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { DealActionDialog } from "@/components/commercial/deal-action-dialog";
 import { DealTable } from "@/components/commercial/deal-table";
 import { LoadingState } from "@/components/loading-state";
+import { FeedbackState } from "@/components/feedback-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { useCreateDealFromRoom, useDeals } from "@/hooks/use-commercial";
+import { CommercialSummaryStrip } from "@/components/commercial/commercial-summary-strip";
 
 export function DealsPageContent({ basePath }: { basePath: string }) {
   const router = useRouter();
@@ -18,13 +20,13 @@ export function DealsPageContent({ basePath }: { basePath: string }) {
     <>
       <PageHeader
         title="Deals"
-        description="Deal finalization records scoped by backend authorization. No payment or ledger actions are available."
+        description="Review the commercial outcomes created from eligible negotiation rooms."
         actions={
           <DealActionDialog
             action="finalize"
             isPending={create.isPending}
             error={create.error}
-            trigger={<Button>Finalize from deal room</Button>}
+            trigger={<Button>Finalize eligible room</Button>}
             onConfirm={async (input) => {
               const deal = await create.mutateAsync({
                 dealRoomId: input.dealRoomId ?? "",
@@ -36,9 +38,10 @@ export function DealsPageContent({ basePath }: { basePath: string }) {
           />
         }
       />
-      <DetailCard title="Deals">
+      {!isLoading && !error ? <CommercialSummaryStrip items={[{ label: "All deals", value: data.length, description: "Authorized deal records" }, { label: "Awaiting approval", value: data.filter((deal) => deal.status === "PENDING_APPROVAL").length, description: "Deals ready for review" }, { label: "Approved", value: data.filter((deal) => deal.status === "APPROVED").length, description: "Approved commercial outcomes" }, { label: "Sold", value: data.filter((deal) => deal.status === "SOLD").length, description: "Completed sale outcomes" }]} /> : null}
+      <DetailCard title="Deal pipeline">
         {isLoading ? <LoadingState label="Loading deals" /> : null}
-        {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
+        {error ? <FeedbackState tone="error" title="Deals could not be loaded" description={error.message} /> : null}
         {!isLoading && !error ? <DealTable deals={data} basePath={basePath} /> : null}
       </DetailCard>
     </>

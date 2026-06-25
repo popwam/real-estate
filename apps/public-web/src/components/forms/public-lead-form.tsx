@@ -2,16 +2,18 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { FormPrivacyNotice } from "@/components/forms/form-privacy-notice";
-import { FormSuccessPlaceholder } from "@/components/forms/form-success-placeholder";
+import { PublicLeadSuccess } from "@/components/forms/public-lead-success";
 import { isPublicLeadRateLimitError, submitLead } from "@/lib/public-data";
-import type {
-  PreferredContactMethod,
-  SubmitPublicLeadResponse,
+import {
+  PublicApiError,
+  type PreferredContactMethod,
+  type SubmitPublicLeadResponse,
 } from "@/lib/public-api";
 import {
   captureUtmFromCurrentUrl,
   type CapturedUtmParams,
 } from "@/lib/utm-capture";
+import { useI18n } from "@/i18n";
 import { ensureVisitorSession, trackPublicEvent } from "@/lib/visitor-tracking";
 
 type PublicLeadFormProps = {
@@ -20,6 +22,7 @@ type PublicLeadFormProps = {
   organizationSlug?: string;
   projectSlug?: string;
   whatsappUrl?: string | null;
+  compact?: boolean;
 };
 
 const isDev = process.env.NODE_ENV === "development";
@@ -30,7 +33,9 @@ export function PublicLeadForm({
   organizationSlug,
   projectSlug,
   whatsappUrl,
+  compact = false,
 }: PublicLeadFormProps) {
+  const { t } = useI18n();
   const [submitted, setSubmitted] = useState<SubmitPublicLeadResponse | null>(null);
   const [preferredContactMethod, setPreferredContactMethod] =
     useState<PreferredContactMethod>("CALL");
@@ -38,6 +43,8 @@ export function PublicLeadForm({
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [utm, setUtm] = useState<CapturedUtmParams>({});
+  const errorId = projectSlug ? `${projectSlug}-lead-error` : "public-lead-error";
+  const contactOptions = buildContactOptions(Boolean(whatsappUrl), t);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -58,7 +65,10 @@ export function PublicLeadForm({
       const visitorContext = await ensureVisitorSession(projectSlug);
 
       trackPublicEvent({
-        eventType: preferredContactMethod === "CHAT" ? "START_CHAT_CLICKED" : "REQUEST_CALL_CLICKED",
+        eventType:
+          preferredContactMethod === "CHAT"
+            ? "START_CHAT_CLICKED"
+            : "REQUEST_CALL_CLICKED",
         projectSlug,
       });
 
@@ -100,11 +110,7 @@ export function PublicLeadForm({
         window.open(safeWhatsAppUrl, "_blank", "noopener,noreferrer");
       }
     } catch (caughtError) {
-      setError(
-        isPublicLeadRateLimitError(caughtError)
-          ? "Too many requests. Please try again shortly."
-          : "We could not send your request right now. Please try again.",
-      );
+      setError(publicLeadErrorMessage(caughtError, t));
     } finally {
       setSubmitting(false);
     }
@@ -112,7 +118,7 @@ export function PublicLeadForm({
 
   if (submitted) {
     return (
-      <ContactSuccess
+      <PublicLeadSuccess
         response={submitted}
         preferredContactMethod={preferredContactMethod}
         fallbackWhatsappUrl={whatsappUrl}
@@ -126,61 +132,67 @@ export function PublicLeadForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 rounded border border-slate-200 bg-white p-6">
+    <form
+      onSubmit={handleSubmit}
+      className={compact ? "grid gap-4" : "ui-card grid gap-4 p-6"}
+      aria-describedby={error ? errorId : undefined}
+    >
       <div>
-        <h3 className="text-2xl font-semibold text-slate-950">Register interest</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Visual lead form placeholder for public landing pages.
+        <h3 className="text-xl font-semibold text-[var(--color-foreground)]">
+          {t("lead.title")}
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+          {projectInterest
+            ? t("lead.projectIntro", { name: projectInterest })
+            : t("lead.defaultIntro")}
         </p>
       </div>
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Name
+
+      <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+        {t("lead.fullName")}
         <input
           name="name"
           required
-          className="rounded border border-slate-300 px-3 py-2 text-slate-950"
-          placeholder="Your name"
+          className="ui-input"
+          placeholder={t("lead.yourName")}
+          autoComplete="name"
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Phone
+      <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+        {t("lead.phone")}
         <input
           name="phone"
           required
-          className="rounded border border-slate-300 px-3 py-2 text-slate-950"
+          className="ui-input"
           placeholder="+20..."
+          autoComplete="tel"
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Email optional
+      <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+        {t("lead.emailOptional")}
         <input
           name="email"
           type="email"
-          className="rounded border border-slate-300 px-3 py-2 text-slate-950"
+          className="ui-input"
           placeholder="name@example.com"
+          autoComplete="email"
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Project interest optional
-        <input
-          name="projectInterest"
-          defaultValue={projectInterest ?? ""}
-          className="rounded border border-slate-300 px-3 py-2 text-slate-950"
-        />
-      </label>
+
       <fieldset className="grid gap-3">
-        <legend className="text-sm font-semibold text-slate-950">
-          Preferred contact
+        <legend className="text-sm font-semibold text-[var(--color-foreground)]">
+          {t("lead.preferredContact")}
         </legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           {contactOptions.map((option) => (
             <label
               key={option.value}
-              className={`rounded border px-3 py-3 text-sm ${
+              className={[
+                "rounded-[var(--radius-md)] border px-3 py-3 text-sm font-semibold transition",
                 preferredContactMethod === option.value
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-950"
-                  : "border-slate-200 bg-white text-slate-700"
-              }`}
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-foreground)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)]",
+              ].join(" ")}
             >
               <input
                 type="radio"
@@ -188,175 +200,99 @@ export function PublicLeadForm({
                 value={option.value}
                 checked={preferredContactMethod === option.value}
                 onChange={() => setPreferredContactMethod(option.value)}
-                className="mr-2"
+                className="me-2"
               />
               {option.label}
             </label>
           ))}
         </div>
       </fieldset>
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Message optional
+
+      <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+        {t("lead.messageOptional")}
         <textarea
           name="message"
-          className="min-h-24 rounded border border-slate-300 px-3 py-2 text-slate-950"
-          placeholder="Tell us what you are looking for"
+          className="ui-input"
+          placeholder={t("lead.messagePlaceholder")}
         />
       </label>
-      <label className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+
+      <label className="flex items-start gap-3 text-sm leading-6 text-[var(--color-muted)]">
         <input
           name="consent"
           type="checkbox"
           required
-          className="mt-1 h-4 w-4 rounded border-slate-300"
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border-strong)]"
         />
-        <span>
-          I consent to POPWAM sharing this request with the relevant verified
-          organization for follow-up.
-        </span>
+        <span>{t("lead.consent")}</span>
       </label>
+
       <div className="sr-only" aria-hidden="true">
         <label>
-          Website
+          {t("lead.website")}
           <input name="website" tabIndex={-1} autoComplete="off" />
         </label>
         <label>
-          Company website
+          {t("lead.companyWebsite")}
           <input name="companyWebsite" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
-      {isDev && (
-        <pre className="overflow-auto rounded bg-slate-100 p-3 text-xs text-slate-600">
-          {JSON.stringify({ utm }, null, 2)}
-        </pre>
-      )}
-      {error && (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+
+      {error ? (
+        <p id={errorId} className="ui-feedback ui-feedback-error" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
+
       <button
         type="submit"
         disabled={submitting}
-        className="rounded bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+        className="ui-button ui-button-primary w-full"
       >
-        {submitting ? "Sending..." : submitLabel(ctaLabel, preferredContactMethod)}
+        {submitting ? t("lead.sending") : submitLabel(ctaLabel, preferredContactMethod, t)}
       </button>
       <FormPrivacyNotice />
     </form>
   );
 }
 
-const contactOptions: Array<{ value: PreferredContactMethod; label: string }> = [
-  { value: "CALL", label: "Request Call" },
-  { value: "CHAT", label: "Start Chat" },
-  { value: "WHATSAPP", label: "WhatsApp" },
-];
+function buildContactOptions(
+  includeWhatsapp: boolean,
+  t: (key: string) => string,
+) {
+  const options: Array<{ value: PreferredContactMethod; label: string }> = [
+    { value: "CALL", label: t("lead.requestCall") },
+    { value: "CHAT", label: t("lead.messageOnline") },
+  ];
 
-function submitLabel(baseLabel: string, method: PreferredContactMethod) {
-  if (method === "CALL") return "Request call";
-  if (method === "CHAT") return "Start chat";
-  if (method === "WHATSAPP") return "Contact via WhatsApp";
+  if (includeWhatsapp) {
+    options.push({ value: "WHATSAPP", label: t("lead.whatsapp") });
+  }
+
+  return options;
+}
+
+function submitLabel(
+  baseLabel: string,
+  method: PreferredContactMethod,
+  t: (key: string) => string,
+) {
+  if (method === "CALL") return t("lead.requestCall");
+  if (method === "CHAT") return t("lead.sendMessage");
+  if (method === "WHATSAPP") return t("lead.continueWhatsapp");
   return baseLabel;
 }
 
-function ContactSuccess({
-  response,
-  preferredContactMethod,
-  fallbackWhatsappUrl,
-  copied,
-  onCopy,
-}: {
-  response: SubmitPublicLeadResponse;
-  preferredContactMethod: PreferredContactMethod;
-  fallbackWhatsappUrl?: string | null;
-  copied: boolean;
-  onCopy: (value: string) => Promise<void>;
-}) {
-  const conversationUrl = conversationLink(response);
-  const whatsapp = response.contact?.whatsappUrl ?? fallbackWhatsappUrl ?? null;
-
-  if (preferredContactMethod === "CALL") {
-    return <FormSuccessPlaceholder title="Your call request was sent" />;
+function publicLeadErrorMessage(error: unknown, t: (key: string) => string) {
+  if (isPublicLeadRateLimitError(error)) {
+    return t("lead.error.rateLimit");
   }
 
-  if (preferredContactMethod === "CHAT") {
-    return (
-      <div className="rounded border border-emerald-200 bg-emerald-50 p-5">
-        <h3 className="text-lg font-semibold text-emerald-950">
-          Your chat request was created.
-        </h3>
-        {conversationUrl ? (
-          <div className="mt-4 grid gap-3">
-            {response.isMock && (
-              <p className="text-sm text-emerald-800">
-                Demo/mock conversation link.
-              </p>
-            )}
-            <a
-              href={conversationUrl}
-              className="inline-flex rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
-            >
-              Open conversation
-            </a>
-            <button
-              type="button"
-              onClick={() => onCopy(absoluteUrl(conversationUrl))}
-              className="rounded border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-900"
-            >
-              {copied ? "Copied" : "Copy link"}
-            </button>
-          </div>
-        ) : (
-          <p className="mt-2 text-sm leading-6 text-emerald-800">
-            The request was sent. Conversation links depend on the backend returning
-            a public share token from lead submission.
-          </p>
-        )}
-      </div>
-    );
+  if (error instanceof PublicApiError && (error.status === 400 || error.status === 422)) {
+    return t("lead.error.validation");
   }
 
-  if (preferredContactMethod === "WHATSAPP") {
-    return (
-      <div className="rounded border border-emerald-200 bg-emerald-50 p-5">
-        <h3 className="text-lg font-semibold text-emerald-950">
-          WhatsApp request received
-        </h3>
-        {whatsapp ? (
-          <a
-            href={whatsapp}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-4 inline-flex rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
-          >
-            Open WhatsApp
-          </a>
-        ) : (
-          <p className="mt-2 text-sm leading-6 text-emerald-800">
-            WhatsApp is not configured for this organization yet.
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  return <FormSuccessPlaceholder />;
-}
-
-function conversationLink(response: SubmitPublicLeadResponse) {
-  const token = response.conversation?.shareToken ?? response.shareToken;
-  const url = response.conversation?.shareUrl ?? response.conversationUrl;
-
-  if (url) return url;
-  if (token) return `/c/${token}`;
-  return null;
-}
-
-function absoluteUrl(path: string) {
-  if (path.startsWith("http")) return path;
-  if (typeof window === "undefined") return path;
-  return `${window.location.origin}${path}`;
+  return t("lead.error.generic");
 }
 
 function optionalString(value: FormDataEntryValue | null) {

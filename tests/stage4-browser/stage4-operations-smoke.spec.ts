@@ -42,13 +42,14 @@ test("developer operations pages render and expose foundation controls", async (
 
   await page.goto(`${ADMIN_URL}/developer/crm/pipeline`);
   await expect(page.getByRole("heading", { name: "CRM pipeline" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Move lead" })).toBeVisible();
-  await expect(page.getByPlaceholder("Search by lead, status, or project")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pipeline controls" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Lead to move" })).toBeVisible();
+  await expect(page.getByPlaceholder("Lead, status, or project")).toBeVisible();
 
   await page.goto(`${ADMIN_URL}/developer/crm/tasks`);
   await expect(page.getByRole("heading", { name: "CRM tasks" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Create task" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Task list" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create follow-up task" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tasks", exact: true })).toBeVisible();
 
   await expectOperationsPage(page, "/developer/hr/employees", "HR employees", "Create record", "Records");
   await expectOperationsPage(page, "/developer/hr/departments", "HR departments", "Create record", "Records");
@@ -117,7 +118,7 @@ async function expectDetailPage(page: Page, path: string, heading: string) {
 async function loginAdmin(page: Page, email: string, password: string) {
   await page.goto(`${ADMIN_URL}/login`);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.locator('input[name="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForFunction(() => Boolean(window.localStorage.getItem("popwam.admin.accessToken")));
   await expect(page).not.toHaveURL(/\/login$/);

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PublicPreferences } from "@/components/public/public-preferences";
 
 type PublicNavItem = {
   href: string;
@@ -13,99 +14,80 @@ type PublicNavItem = {
 
 const visibleItems: PublicNavItem[] = [
   { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/projects", label: "Search", icon: SearchIcon },
-  { href: "/developers/demo-developer", label: "Developers", icon: BuildingIcon },
-];
-
-const overflowItems: PublicNavItem[] = [
-  { href: "/brokerages/demo-brokerage", label: "Brokerages", icon: BriefcaseIcon },
+  { href: "/projects", label: "Projects", icon: SearchIcon },
 ];
 
 export function PublicBottomNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!moreOpen) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMoreOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
   }, [moreOpen]);
 
   return (
-    <div ref={menuRef} className="md:hidden">
-      {moreOpen && (
+    <div className="md:hidden">
+      {moreOpen ? (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-[39] bg-black/20"
+          <button
+            type="button"
+            className="fixed inset-0 z-[39] cursor-default bg-[var(--color-overlay)]"
             onClick={() => setMoreOpen(false)}
-            aria-hidden="true"
+            aria-label="Close more options"
           />
-
-          {/* Bottom Sheet */}
-          <div
-            className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom))] z-40 max-h-[min(70vh,calc(100vh-var(--bottom-nav-height)-env(safe-area-inset-bottom)-1rem))] overflow-y-auto rounded-t-2xl border-t border-[var(--color-border)] bg-[var(--color-background)] shadow-2xl"
-            role="menu"
-            aria-label="More public navigation"
+          <section
+            className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom))] z-40 rounded-t-[var(--radius-xl)] border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 pb-5 pt-4 shadow-[var(--shadow-xl)]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="public-more-title"
           >
-            {/* Header */}
-            <div className="sticky top-0 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-4">
-              <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-                More Navigation
-              </h2>
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--color-border-strong)]" aria-hidden="true" />
+            <h2 id="public-more-title" className="text-lg font-semibold text-[var(--color-foreground)]">Display & language</h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">Choose a comfortable theme, text size, and reading direction.</p>
+            <div className="mt-4">
+              <PublicPreferences expanded />
             </div>
-
-            {/* Content */}
-            <div className="px-4 py-4">
-              <div className="space-y-2">
-                {overflowItems.map((item) => (
-                  <PublicBottomNavLink
-                    key={item.href}
-                    item={item}
-                    active={isActive(pathname, item.href)}
-                    onClick={() => setMoreOpen(false)}
-                    role="menuitem"
-                    isInSheet={true}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+          </section>
         </>
-      )}
+      ) : null}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-[var(--z-fixed)] border-t border-[var(--color-border)] bg-[var(--color-background)] shadow-lg"
+        className="fixed inset-x-0 bottom-0 z-[var(--z-fixed)] border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        aria-label="Mobile public navigation"
+        aria-label="Mobile marketplace navigation"
       >
-        <div className="grid h-[var(--bottom-nav-height)] grid-cols-4">
-          {visibleItems.map((item) => (
-            <PublicBottomNavLink
-              key={item.href}
-              item={item}
-              active={isActive(pathname, item.href)}
-              onClick={() => setMoreOpen(false)}
-            />
-          ))}
-
+        <div className="grid h-[var(--bottom-nav-height)] grid-cols-3">
+          {visibleItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMoreOpen(false)}
+                className={navClass(active)}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
           <button
             type="button"
             className={navClass(moreOpen)}
             onClick={() => setMoreOpen((open) => !open)}
-            aria-label="More public navigation"
+            aria-label="Display and language options"
             aria-expanded={moreOpen}
           >
             <MoreIcon className="h-5 w-5 shrink-0" />
-            <span className="max-w-full truncate">More</span>
+            <span>More</span>
           </button>
         </div>
       </nav>
@@ -113,61 +95,12 @@ export function PublicBottomNav() {
   );
 }
 
-function PublicBottomNavLink({
-  item,
-  active,
-  onClick,
-  role,
-  isInSheet,
-}: {
-  item: PublicNavItem;
-  active: boolean;
-  onClick: () => void;
-  role?: string;
-  isInSheet?: boolean;
-}) {
-  const Icon = item.icon;
-
-  if (isInSheet) {
-    return (
-      <Link
-        href={item.href}
-        onClick={onClick}
-        className={[
-          "flex min-w-0 items-center gap-3 rounded-md px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]",
-          "text-[var(--color-foreground)] hover:bg-[var(--color-surface)]",
-          active ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]" : "",
-        ].join(" ")}
-        aria-label={item.label}
-        aria-current={active ? "page" : undefined}
-        role={role}
-      >
-        <Icon className="h-5 w-5 shrink-0" />
-        <span className="min-w-0 truncate font-medium">{item.label}</span>
-      </Link>
-    );
-  }
-
-  return (
-    <Link
-      href={item.href}
-      onClick={onClick}
-      className={navClass(active)}
-      aria-label={item.label}
-      aria-current={active ? "page" : undefined}
-      role={role}
-    >
-      <Icon className="h-5 w-5 shrink-0" />
-      <span className="max-w-full truncate">{item.label}</span>
-    </Link>
-  );
-}
-
 function navClass(active: boolean) {
   return [
-    "mx-1 my-1 flex min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]",
-    "text-[var(--color-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-foreground)]",
-    active ? "bg-[var(--color-surface)] text-[var(--color-primary)]" : "",
+    "mx-1 my-1 flex min-w-0 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-1 text-[11px] font-semibold transition-colors",
+    active
+      ? "bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+      : "text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
   ].join(" ");
 }
 
@@ -188,22 +121,6 @@ function SearchIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="m20 20-4.2-4.2M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function BuildingIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 21V4h10v17M3 21h18M9 8h2M9 12h2M9 16h2M15 10h4v11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function BriefcaseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M4 10h16M5 7h14a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

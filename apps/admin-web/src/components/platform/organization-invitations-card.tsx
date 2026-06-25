@@ -2,13 +2,18 @@
 
 import { FormEvent, useState } from "react";
 import { useCreateOrganizationInvitation, useOrganizationInvitations } from "@/hooks/use-platform-admin";
+import { EmptyState } from "@/components/empty-state";
+import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format";
 
 export function OrganizationInvitationsCard({ id, organizationType }: { id: string; organizationType: string }) {
   const invitations = useOrganizationInvitations(id);
   const create = useCreateOrganizationInvitation(id);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const roles = organizationType === "DEVELOPER"
     ? ["DEVELOPER_OWNER", "DEVELOPER_ADMIN", "DEVELOPER_SALES_MANAGER", "DEVELOPER_SALES_AGENT"]
     : organizationType === "BROKERAGE"
@@ -24,32 +29,75 @@ export function OrganizationInvitationsCard({ id, organizationType }: { id: stri
       expiresInHours: 72,
     });
     setInviteUrl(result.inviteUrl ?? null);
+    setCopied(false);
   }
 
   return (
     <div className="space-y-4">
-      <form className="grid gap-3 md:grid-cols-[1fr_220px_auto]" onSubmit={submit}>
-        <input required type="email" name="email" placeholder="owner@company.com" aria-label="Invite email" className="h-10 rounded-md border border-zinc-300 px-3 text-sm" />
-        <select name="intendedRole" aria-label="Intended role" className="h-10 rounded-md border border-zinc-300 px-3 text-sm">
-          {roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
+      <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+        <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Create invitation link</h3>
+        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+          This creates an invite token and link for the recipient. Share the link manually if email delivery is not configured.
+        </p>
+      </div>
+      <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]" onSubmit={submit}>
+        <div className="space-y-2">
+          <Label htmlFor="organization-invite-email">Recipient email</Label>
+          <Input required type="email" id="organization-invite-email" name="email" placeholder="owner@company.com" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="organization-invite-role">Intended role</Label>
+          <select id="organization-invite-role" name="intendedRole" className="ui-input">
+            {roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
         </select>
-        <Button disabled={create.isPending} type="submit">{create.isPending ? "Creating" : "Create invite"}</Button>
+        </div>
+        <div className="flex items-end">
+          <Button className="w-full" disabled={create.isPending} type="submit">
+            {create.isPending ? "Creating" : "Create invite"}
+          </Button>
+        </div>
       </form>
-      {create.error ? <p className="text-sm text-red-700">{create.error.message}</p> : null}
+      {create.error ? (
+        <FeedbackState tone="error" title="Could not create invitation" description={create.error.message} />
+      ) : null}
       {inviteUrl ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3">
-          <code className="min-w-0 flex-1 break-all text-xs text-emerald-950">{inviteUrl}</code>
-          <Button type="button" onClick={() => void navigator.clipboard.writeText(inviteUrl)}>Copy invite link</Button>
+        <div className="ui-feedback ui-feedback-success space-y-2" role="status">
+          <p className="text-sm font-medium">Invitation link created. Share this link manually with the recipient.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="min-w-0 flex-1 break-all text-xs">{inviteUrl}</code>
+            <Button
+              className="ui-button-secondary"
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(inviteUrl);
+                setCopied(true);
+              }}
+            >
+              {copied ? "Copied" : "Copy invite link"}
+            </Button>
+          </div>
         </div>
       ) : null}
       <div className="space-y-2">
         {(invitations.data ?? []).map((invite) => (
-          <div className="grid gap-1 rounded-md border border-zinc-200 p-3 text-sm md:grid-cols-4" key={invite.id}>
-            <span>{invite.email}</span><span>{invite.intendedRole.replaceAll("_", " ")}</span>
-            <span>{invite.status}</span><span>Expires {formatDate(invite.expiresAt)}</span>
+          <div className="grid gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-sm md:grid-cols-[minmax(0,1fr)_180px_130px_170px]" key={invite.id}>
+            <span className="min-w-0 break-all font-medium text-[var(--color-foreground)]">{invite.email}</span>
+            <span className="text-[var(--color-muted)]">{invite.intendedRole.replaceAll("_", " ")}</span>
+            <span className="ui-badge w-fit">{invite.status.replaceAll("_", " ")}</span>
+            <span className="text-[var(--color-muted)]">
+              {invite.acceptedAt ? `Accepted ${formatDate(invite.acceptedAt)}` : `Expires ${formatDate(invite.expiresAt)}`}
+            </span>
           </div>
         ))}
-        {!invitations.isLoading && !invitations.data?.length ? <p className="text-sm text-zinc-500">No invitations yet.</p> : null}
+        {invitations.isLoading ? (
+          <p className="text-sm text-[var(--color-muted)]">Loading invitations...</p>
+        ) : null}
+        {!invitations.isLoading && !invitations.data?.length ? (
+          <EmptyState
+            title="No invitations yet"
+            description="Create an invite when the organization is ready for an owner or admin to join."
+          />
+        ) : null}
       </div>
     </div>
   );

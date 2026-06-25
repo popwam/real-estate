@@ -6,17 +6,25 @@ import { Textarea } from "@/components/ui/textarea";
 export function Field({
   label,
   error,
+  hint,
+  required = false,
   children,
 }: {
   label: string;
   error?: string;
+  hint?: string;
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
     <label className="block space-y-2">
-      <Label>{label}</Label>
+      <Label>
+        {label}
+        {required ? <span className="ms-1 text-[var(--color-danger)]" aria-hidden="true">*</span> : null}
+      </Label>
       {children}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {hint && !error ? <p className="text-xs leading-5 text-[var(--color-muted)]">{hint}</p> : null}
+      {error ? <p className="text-sm text-[var(--color-danger)]" role="alert">{error}</p> : null}
     </label>
   );
 }
@@ -32,7 +40,7 @@ export function TextAreaInput(props: ComponentProps<typeof Textarea>) {
 export function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+      className="ui-input appearance-none pe-9"
       {...props}
     />
   );

@@ -3,6 +3,7 @@ import { OrganizationContactSection } from "@/components/organization/organizati
 import { OrganizationHero } from "@/components/organization/organization-hero";
 import { OrganizationProjectsSection } from "@/components/organization/organization-projects-section";
 import { OrganizationPublicShell } from "@/components/organization/organization-public-shell";
+import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
 import {
   resolvePublicDomainContext,
   resolvePublicOrganizationByDomain,
@@ -41,25 +42,15 @@ export default async function DomainHomePage({ params }: DomainPageProps) {
 
   return (
     <OrganizationPublicShell domain={domain} organization={organization}>
-      <OrganizationHero organization={organization} domainLabel={resolution.canonicalHost} />
-      <section className="mx-auto grid max-w-7xl gap-6 px-6 py-10 md:grid-cols-3">
-        <div className="rounded border border-slate-200 p-5">
-          <p className="text-sm font-semibold text-slate-950">Resolution mode</p>
-          <p className="mt-2 text-sm text-slate-600">{resolution.kind}</p>
-        </div>
-        <div className="rounded border border-slate-200 p-5">
-          <p className="text-sm font-semibold text-slate-950">Public profile</p>
-          <p className="mt-2 text-sm text-slate-600">
-            {organization.type === "DEVELOPER" ? "Developer" : "Brokerage"} mock site
-          </p>
-        </div>
-        <div className="rounded border border-slate-200 p-5">
-          <p className="text-sm font-semibold text-slate-950">Inventory policy</p>
-          <p className="mt-2 text-sm text-slate-600">
-            Active open-marketplace projects only
-          </p>
-        </div>
-      </section>
+      <OrganizationHero
+        organization={organization}
+        domain={domain}
+        domainLabel={resolution.canonicalHost}
+      />
+      <OrganizationTrustStrip
+        organization={organization}
+        projectCount={organization.projects.length}
+      />
       <OrganizationProjectsSection domain={domain} projects={organization.projects} />
       <OrganizationContactSection organization={organization} />
     </OrganizationPublicShell>

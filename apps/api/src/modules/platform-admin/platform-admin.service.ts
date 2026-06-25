@@ -97,7 +97,12 @@ export class PlatformAdminService {
     }
     this.assertRoleMatchesOrganization(intendedRole, organization.type);
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    if (existingUser) throw new ConflictException('Email is already registered.');
+    if (
+      existingUser &&
+      (existingUser.passwordHash || existingUser.organizationId !== organizationId)
+    ) {
+      throw new ConflictException('Email is already registered.');
+    }
 
     const hours = dto.expiresInHours ?? 72;
     if (!Number.isInteger(hours) || hours < 1 || hours > 24 * 30) {
@@ -130,7 +135,8 @@ export class PlatformAdminService {
 
     return {
       ...this.toInvitationResponse(invitation),
-      inviteUrl: `${(process.env.ADMIN_WEB_URL ?? 'http://localhost:3001').replace(/\/$/, '')}/invite/${token}`,
+      delivery: 'MANUAL_LINK',
+      inviteUrl: `${this.adminWebBaseUrl()}/invite/${token}`,
     };
   }
 
@@ -385,5 +391,13 @@ export class PlatformAdminService {
 
   private optionalString(value?: string) {
     return value?.trim() || undefined;
+  }
+
+  private adminWebBaseUrl() {
+    return (
+      process.env.ADMIN_WEB_URL ??
+      process.env.ADMIN_WEB_BASE_URL ??
+      'http://localhost:3203'
+    ).replace(/\/$/, '');
   }
 }

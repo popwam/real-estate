@@ -2,10 +2,10 @@ export function WhatsAppPlaceholderButton() {
   return (
     <a
       href="#lead-form"
-      aria-label="Open the placeholder lead form for WhatsApp contact"
-      className="rounded border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800"
+      aria-label="Open the contact form to request WhatsApp contact"
+      className="ui-button ui-button-accent"
     >
-      WhatsApp placeholder
+      WhatsApp contact
     </a>
   );
 }

@@ -1,76 +1,108 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
-type Theme = "light" | "dark" | "comfort";
-type FontScale = "normal" | "large" | "extra-large";
+export type Theme = "light" | "dark" | "comfort";
+export type FontScale = "normal" | "large" | "extra-large";
+export type InterfaceLocale = "en" | "ar" | "fr";
 
 const THEME_STORAGE_KEY = "popwam-theme";
 const FONT_SCALE_STORAGE_KEY = "popwam-font-scale";
+const LOCALE_STORAGE_KEY = "popwam-locale";
+const PREFERENCES_EVENT = "popwam-preferences-change";
+
+type Preferences = {
+  theme: Theme;
+  fontScale: FontScale;
+  locale: InterfaceLocale;
+};
+
+const defaults: Preferences = {
+  theme: "light",
+  fontScale: "normal",
+  locale: "en",
+};
+
+function readPreferences(): Preferences {
+  if (typeof window === "undefined") return defaults;
+
+  const theme = localStorage.getItem(THEME_STORAGE_KEY);
+  const fontScale = localStorage.getItem(FONT_SCALE_STORAGE_KEY);
+  const locale = localStorage.getItem(LOCALE_STORAGE_KEY);
+
+  return {
+    theme: theme === "dark" || theme === "comfort" ? theme : "light",
+    fontScale:
+      fontScale === "large" || fontScale === "extra-large" ? fontScale : "normal",
+    locale: locale === "ar" || locale === "fr" ? locale : "en",
+  };
+}
+
+function applyPreferences(preferences: Preferences) {
+  const root = document.documentElement;
+  root.dataset.theme = preferences.theme;
+  root.dataset.fontScale = preferences.fontScale;
+  root.lang = preferences.locale;
+  root.dir = preferences.locale === "ar" ? "rtl" : "ltr";
+}
+
+function announcePreferenceChange() {
+  window.dispatchEvent(new Event(PREFERENCES_EVENT));
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
-    // Get saved theme from localStorage
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-    const savedFontScale = localStorage.getItem(FONT_SCALE_STORAGE_KEY) as FontScale | null;
-
-    // Set theme on document
-    const theme = savedTheme ?? "light";
-    document.documentElement.setAttribute("data-theme", theme);
-
-    // Set font scale on html element
-    const fontScale = savedFontScale ?? "normal";
-    document.documentElement.setAttribute("data-font-scale", fontScale);
+    applyPreferences(readPreferences());
   }, []);
 
-  // Return children with theme applied via layout effect
   return <>{children}</>;
 }
 
-/**
- * Hook to get current theme and set theme
- * Use this in client components to read/write theme
- */
 export function useTheme() {
-  type ThemeState = {
-    theme: Theme;
-    fontScale: FontScale;
-    mounted: boolean;
-  };
-
-  const [state, setState] = useState<ThemeState>({
-    theme: "light",
-    fontScale: "normal",
+  const [state, setState] = useState<Preferences & { mounted: boolean }>({
+    ...defaults,
     mounted: false,
   });
 
   useLayoutEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Valid hydration pattern: reading from localStorage and initializing state
-    setState({
-      theme: (localStorage.getItem(THEME_STORAGE_KEY) as Theme) ?? "light",
-      fontScale: (localStorage.getItem(FONT_SCALE_STORAGE_KEY) as FontScale) ?? "normal",
-      mounted: true,
-    });
+    const sync = () => {
+      const next = readPreferences();
+      applyPreferences(next);
+      setState({ ...next, mounted: true });
+    };
+
+    sync();
+    window.addEventListener(PREFERENCES_EVENT, sync);
+    return () => window.removeEventListener(PREFERENCES_EVENT, sync);
   }, []);
 
-  const setTheme = (newTheme: Theme) => {
-    setState((prev) => ({ ...prev, theme: newTheme }));
-    localStorage.setItem(THEME_STORAGE_KEY, newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
+  useEffect(() => {
+    const syncAcrossTabs = () => announcePreferenceChange();
+    window.addEventListener("storage", syncAcrossTabs);
+    return () => window.removeEventListener("storage", syncAcrossTabs);
+  }, []);
+
+  const setTheme = (theme: Theme) => {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    announcePreferenceChange();
   };
 
-  const setFontScale = (scale: FontScale) => {
-    setState((prev) => ({ ...prev, fontScale: scale }));
-    localStorage.setItem(FONT_SCALE_STORAGE_KEY, scale);
-    document.documentElement.setAttribute("data-font-scale", scale);
+  const setFontScale = (fontScale: FontScale) => {
+    localStorage.setItem(FONT_SCALE_STORAGE_KEY, fontScale);
+    announcePreferenceChange();
+  };
+
+  const setLocale = (locale: InterfaceLocale) => {
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    announcePreferenceChange();
   };
 
   return {
-    theme: state.theme,
+    ...state,
     setTheme,
-    fontScale: state.fontScale,
     setFontScale,
-    mounted: state.mounted,
+    setLocale,
+    direction: state.locale === "ar" ? ("rtl" as const) : ("ltr" as const),
   };
 }

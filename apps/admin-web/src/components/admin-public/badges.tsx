@@ -2,16 +2,16 @@ import { cn } from "@/lib/utils";
 import type { DomainVerificationStatus, PublicLeadStatus } from "@/types/admin-public";
 
 const leadClasses: Record<PublicLeadStatus, string> = {
-  NEW: "bg-blue-50 text-blue-700 ring-blue-200",
-  REVIEWED: "bg-amber-50 text-amber-700 ring-amber-200",
-  CONVERTED: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  SPAM: "bg-red-50 text-red-700 ring-red-200",
+  NEW: "border-[color-mix(in_srgb,var(--color-info)_35%,var(--color-border))] bg-[var(--color-info-soft)] text-[var(--color-info)]",
+  REVIEWED: "border-[color-mix(in_srgb,var(--color-warning)_35%,var(--color-border))] bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+  CONVERTED: "border-[color-mix(in_srgb,var(--color-success)_35%,var(--color-border))] bg-[var(--color-success-soft)] text-[var(--color-success)]",
+  SPAM: "border-[color-mix(in_srgb,var(--color-danger)_35%,var(--color-border))] bg-[var(--color-danger-soft)] text-[var(--color-danger)]",
 };
 
 const domainClasses: Record<DomainVerificationStatus, string> = {
-  PENDING: "bg-amber-50 text-amber-700 ring-amber-200",
-  VERIFIED: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  FAILED: "bg-red-50 text-red-700 ring-red-200",
+  PENDING: "border-[color-mix(in_srgb,var(--color-warning)_35%,var(--color-border))] bg-[var(--color-warning-soft)] text-[var(--color-warning)]",
+  VERIFIED: "border-[color-mix(in_srgb,var(--color-success)_35%,var(--color-border))] bg-[var(--color-success-soft)] text-[var(--color-success)]",
+  FAILED: "border-[color-mix(in_srgb,var(--color-danger)_35%,var(--color-border))] bg-[var(--color-danger-soft)] text-[var(--color-danger)]",
 };
 
 export function PublicLeadStatusBadge({ status }: { status: PublicLeadStatus }) {
@@ -24,7 +24,7 @@ export function DomainStatusBadge({ status }: { status: DomainVerificationStatus
 
 function Badge({ className, children }: { className: string; children: string }) {
   return (
-    <span className={cn("inline-flex rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset", className)}>
+    <span className={cn("inline-flex rounded-[var(--radius-sm)] border px-2 py-1 text-xs font-medium", className)}>
       {children.replace("_", " ")}
     </span>
   );

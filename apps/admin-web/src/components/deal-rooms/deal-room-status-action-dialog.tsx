@@ -42,33 +42,33 @@ export function DealRoomStatusActionDialog({
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 px-4 py-6">
-          <div className="w-full max-w-lg rounded-md bg-white shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] px-4 py-6" role="dialog" aria-modal="true" aria-label="Update deal room status">
+          <div className="ui-card w-full max-w-lg shadow-xl">
             <form onSubmit={handleSubmit(submit)}>
-              <div className="border-b border-zinc-200 px-5 py-4">
-                <h2 className="text-base font-semibold text-zinc-950">Update deal room status</h2>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">
+              <div className="border-b border-[var(--color-border)] px-5 py-4">
+                <h2 className="text-base font-semibold text-[var(--color-text)]">Update deal room status</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
                   SOLD is intentionally hidden in Team 3 Slice 5; finalization belongs to the later deal/commission flow.
                 </p>
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" {...register("status")}>
+                  <select className="ui-input" {...register("status")}>
                     <option value="NEGOTIATION">NEGOTIATION</option>
                     <option value="PENDING_APPROVAL">PENDING_APPROVAL</option>
                     <option value="APPROVED">APPROVED</option>
                   </select>
                 </div>
                 {error ? (
-                  <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="ui-feedback ui-feedback-error flex gap-2 text-sm" role="alert">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                     <span>{error.message}</span>
                   </div>
                 ) : null}
               </div>
-              <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4">
-                <Button className="bg-white text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" onClick={() => setOpen(false)}>
+              <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
+                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
                 <Button disabled={isPending} type="submit">{isPending ? "Updating" : "Update status"}</Button>

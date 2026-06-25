@@ -5,8 +5,8 @@ import type { DealRoomMessage } from "@/types/deal-rooms";
 export function DealRoomMessagesTimeline({ messages = [] }: { messages?: DealRoomMessage[] }) {
   if (!messages.length) {
     return (
-      <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-500">
-        No messages yet.
+      <div className="ui-empty-state">
+        <p>No negotiation messages yet. Start the discussion when the parties are ready.</p>
       </div>
     );
   }
@@ -14,13 +14,13 @@ export function DealRoomMessagesTimeline({ messages = [] }: { messages?: DealRoo
   return (
     <ol className="space-y-3">
       {messages.map((message) => (
-        <li key={message.id} className={cn("rounded-md border p-4", message.messageType === "TEXT" ? "border-zinc-200 bg-white" : "border-zinc-200 bg-zinc-50")}>
+        <li key={message.id} className={cn("rounded-[var(--radius-lg)] border p-4", message.messageType === "TEXT" ? "border-[var(--color-border)] bg-[var(--color-surface)]" : "border-[var(--color-border)] bg-[var(--color-surface-muted)]")}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-medium uppercase text-zinc-500">{message.messageType}</div>
-            <div className="text-xs text-zinc-400">{formatDate(message.createdAt)}</div>
+            <div className="text-xs font-medium uppercase text-[var(--color-text-muted)]">{message.messageType.replace("_", " ")}</div>
+            <div className="text-xs text-[var(--color-text-muted)]">{formatDate(message.createdAt)}</div>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-900">{message.body}</p>
-          <p className="mt-2 text-xs text-zinc-500">{senderLabel(message)}</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">{message.body}</p>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">{senderLabel(message)}</p>
         </li>
       ))}
     </ol>

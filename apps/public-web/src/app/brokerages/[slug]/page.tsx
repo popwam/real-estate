@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
+import { OrganizationContactPanel } from "@/components/organization/organization-contact-panel";
+import { OrganizationProfileHero } from "@/components/organization/organization-profile-hero";
+import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
 import { getPublicBrokerageBySlug } from "@/lib/public-data";
+import { PublicApiError } from "@/lib/public-api";
 import { createSeoMetadata } from "@/lib/seo";
 
 type BrokeragePageProps = {
@@ -8,84 +12,100 @@ type BrokeragePageProps = {
 
 export async function generateMetadata({ params }: BrokeragePageProps) {
   const { slug } = await params;
-  const brokerage = await getPublicBrokerageBySlug(slug);
+  const brokerage = await getBrokerageOrNull(slug);
 
   return createSeoMetadata({
     title: brokerage?.name ?? "Brokerage not found",
     description:
       brokerage?.summary ?? "The requested public brokerage profile could not be found.",
     path: `/brokerages/${slug}`,
+    image: brokerage?.ogImageUrl,
   });
 }
 
 export default async function BrokerageProfilePage({ params }: BrokeragePageProps) {
   const { slug } = await params;
-  const brokerage = await getPublicBrokerageBySlug(slug);
+  const brokerage = await getBrokerageOrNull(slug);
 
   if (!brokerage) {
     notFound();
   }
 
   return (
-    <div className="bg-white">
-      <section className="border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            Brokerage profile
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold text-slate-950">
-            {brokerage.name}
-          </h1>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-            {brokerage.summary}
-          </p>
-          <p className="mt-4 text-sm font-medium text-slate-700">
-            {brokerage.city}, {brokerage.country}
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <span className="rounded border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
-              {brokerage.verifiedLabel}
-            </span>
-            <span className="rounded border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
-              {brokerage.brokerCountLabel}
-            </span>
-          </div>
-        </div>
-      </section>
+    <div className="bg-[var(--color-background)]">
+      <OrganizationProfileHero
+        organization={brokerage}
+        eyebrow="Brokerage profile"
+        primaryHref="#contact"
+        primaryLabel="Contact brokerage"
+      />
+      <OrganizationTrustStrip organization={brokerage} />
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[0.75fr_1.25fr]">
-        <aside className="rounded border border-slate-200 bg-slate-50 p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.36fr_0.64fr]">
+        <aside className="ui-card p-5 sm:p-6">
+          <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
             Brokerage overview
           </h2>
-          <dl className="mt-5 grid gap-4 text-sm text-slate-700">
-            <div>
-              <dt className="font-semibold text-slate-950">Market coverage</dt>
-              <dd>{brokerage.serviceAreas?.join(", ")}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-slate-950">Broker count</dt>
-              <dd>{brokerage.brokerCountLabel}</dd>
-            </div>
+          <dl className="mt-5 grid gap-4 text-sm text-[var(--color-muted)]">
+            {brokerage.serviceAreas?.length ? (
+              <div>
+                <dt className="font-semibold text-[var(--color-foreground)]">
+                  Market coverage
+                </dt>
+                <dd>{brokerage.serviceAreas.join(", ")}</dd>
+              </div>
+            ) : null}
+            {brokerage.brokerCountLabel ? (
+              <div>
+                <dt className="font-semibold text-[var(--color-foreground)]">
+                  Team
+                </dt>
+                <dd>{brokerage.brokerCountLabel}</dd>
+              </div>
+            ) : null}
           </dl>
         </aside>
+
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">
-            Public brokerage placeholder
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+            Services
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold text-[var(--color-foreground)]">
+            Brokerage services
           </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            This profile is visual only. Broker rosters, lead routing, and
-            authenticated brokerage dashboards are outside Slice 2.
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+            Explore the brokerage&apos;s public service areas and contact the
+            team for follow-up.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {brokerage.highlights.map((highlight) => (
-              <div key={highlight} className="rounded border border-slate-200 p-5">
-                <p className="text-sm leading-6 text-slate-700">{highlight}</p>
-              </div>
+              <article key={highlight} className="ui-card p-5">
+                <p className="text-sm leading-6 text-[var(--color-muted)]">
+                  {highlight}
+                </p>
+              </article>
             ))}
           </div>
         </div>
       </section>
+
+      <section id="contact" className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6">
+          <OrganizationContactPanel organization={brokerage} />
+        </div>
+      </section>
     </div>
   );
+}
+
+async function getBrokerageOrNull(slug: string) {
+  try {
+    return await getPublicBrokerageBySlug(slug);
+  } catch (error) {
+    if (error instanceof PublicApiError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 }

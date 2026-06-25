@@ -1,30 +1,9 @@
-import { DataTable } from "@/components/tables/data-table";
+import { UsersRound } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import type { DealRoomParticipant } from "@/types/deal-rooms";
 
 export function DealRoomParticipantsList({ participants = [] }: { participants?: DealRoomParticipant[] }) {
-  return (
-    <DataTable<DealRoomParticipant>
-      columns={[
-        { key: "role", header: "Role" },
-        { key: "status", header: "Status" },
-        { key: "display", header: "Participant", cell: (row) => participantDisplay(row) },
-        { key: "invitedAt", header: "Invited", cell: (row) => formatDate(row.invitedAt) },
-        { key: "joinedAt", header: "Joined", cell: (row) => formatDate(row.joinedAt) },
-      ]}
-      data={participants}
-      emptyTitle="No participants"
-      emptyDescription="Participants added to the deal room will appear here."
-    />
-  );
+  if (!participants.length) return <div className="ui-empty-state"><UsersRound className="h-7 w-7" aria-hidden="true" /><p>No participants have been added.</p></div>;
+  return <ul className="space-y-3">{participants.map((participant) => <li key={participant.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-[var(--color-text)]">{participantDisplay(participant)}</p><p className="mt-1 text-xs capitalize text-[var(--color-text-muted)]">{participant.role.replaceAll("_", " ").toLowerCase()}</p></div><span className="ui-badge capitalize">{participant.status.toLowerCase()}</span></div>{participant.joinedAt || participant.invitedAt ? <p className="mt-2 text-xs text-[var(--color-text-muted)]">{participant.joinedAt ? `Joined ${formatDate(participant.joinedAt)}` : `Invited ${formatDate(participant.invitedAt)}`}</p> : null}</li>)}</ul>;
 }
-
-function participantDisplay(participant: DealRoomParticipant) {
-  if (participant.user) {
-    return [participant.user.firstName, participant.user.lastName].filter(Boolean).join(" ") ||
-      participant.user.email;
-  }
-  if (participant.client) return participant.client.name ?? participant.clientId ?? "Client";
-  if (participant.organization) return participant.organization.name;
-  return participant.userId ?? participant.clientId ?? participant.organizationId ?? "Unknown";
-}
+function participantDisplay(participant: DealRoomParticipant) { if (participant.user) return [participant.user.firstName, participant.user.lastName].filter(Boolean).join(" ") || participant.user.email; if (participant.client) return participant.client.name ?? "Client"; if (participant.organization) return participant.organization.name; return participant.role.replaceAll("_", " ").toLowerCase(); }

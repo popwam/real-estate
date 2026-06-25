@@ -50,6 +50,7 @@ const IDS = {
   brokerageProfile: 'demo_brokerage_profile',
   brokerProfile: 'demo_broker_profile',
   developerWebsiteSettings: 'demo_developer_website_settings',
+  brokerageWebsiteSettings: 'demo_brokerage_website_settings',
   project: 'demo_project_northline',
   phase: 'demo_project_phase_one',
   availableUnit: 'demo_unit_available_1201',
@@ -101,8 +102,8 @@ async function main() {
     });
     const developer = await upsertOrganization(prisma, {
       id: IDS.developerOrg,
-      name: 'Demo Development Group',
-      slug: 'demo-development-group',
+      name: 'Northline Development Group',
+      slug: 'northline-development-group',
       type: 'DEVELOPER',
       status: 'APPROVED',
       city: 'Cairo',
@@ -111,8 +112,8 @@ async function main() {
     });
     const brokerage = await upsertOrganization(prisma, {
       id: IDS.brokerageOrg,
-      name: 'Demo Brokerage Collective',
-      slug: 'demo-brokerage-collective',
+      name: 'Northline Brokerage Collective',
+      slug: 'northline-brokerage-collective',
       type: 'BROKERAGE',
       status: 'APPROVED',
       city: 'Cairo',
@@ -161,8 +162,8 @@ async function main() {
       roleId: developerRole.id,
       email: 'developer.demo@popwam.local',
       passwordHash: defaultHash,
-      firstName: 'Demo',
-      lastName: 'Developer',
+      firstName: 'Northline',
+      lastName: 'Development',
       userRole: 'DEVELOPER_OWNER',
     });
     const brokerageUser = await upsertUser(prisma, {
@@ -171,7 +172,7 @@ async function main() {
       roleId: brokerageRole.id,
       email: 'brokerage.demo@popwam.local',
       passwordHash: defaultHash,
-      firstName: 'Demo',
+      firstName: 'Northline',
       lastName: 'Brokerage',
       userRole: 'BROKERAGE_OWNER',
     });
@@ -181,8 +182,8 @@ async function main() {
       roleId: brokerRole.id,
       email: 'broker.demo@popwam.local',
       passwordHash: defaultHash,
-      firstName: 'Demo',
-      lastName: 'Broker',
+      firstName: 'Northline',
+      lastName: 'Advisor',
       userRole: 'BROKER',
     });
 
@@ -206,11 +207,11 @@ async function main() {
       create: {
         id: IDS.brokerageProfile,
         organizationId: brokerage.id,
-        brokerLicenseNumber: 'DEMO-BROKERAGE-LICENSE',
+        brokerLicenseNumber: 'NORTHLINE-BROKERAGE-LICENSE',
         activeBrokersCount: 1,
       },
       update: {
-        brokerLicenseNumber: 'DEMO-BROKERAGE-LICENSE',
+        brokerLicenseNumber: 'NORTHLINE-BROKERAGE-LICENSE',
         activeBrokersCount: 1,
       },
     });
@@ -239,10 +240,11 @@ async function main() {
         id: IDS.developerWebsiteSettings,
         organizationId: developer.id,
         publicSlug: developer.slug,
-        subdomain: 'developer-demo',
+        subdomain: 'northline',
         customDomain: null,
-        siteTitle: 'Demo Development Group',
-        siteDescription: 'Demo public developer website for Stage 2 API smoke checks.',
+        siteTitle: 'Northline Development Group',
+        siteDescription:
+          'Explore verified projects, available homes, and direct follow-up through POPWAM.',
         logoUrl: null,
         contactPhone: '+201000000000',
         contactEmail: 'developer.demo@popwam.local',
@@ -251,10 +253,11 @@ async function main() {
       },
       update: {
         publicSlug: developer.slug,
-        subdomain: 'developer-demo',
+        subdomain: 'northline',
         customDomain: null,
-        siteTitle: 'Demo Development Group',
-        siteDescription: 'Demo public developer website for Stage 2 API smoke checks.',
+        siteTitle: 'Northline Development Group',
+        siteDescription:
+          'Explore verified projects, available homes, and direct follow-up through POPWAM.',
         contactPhone: '+201000000000',
         contactEmail: 'developer.demo@popwam.local',
         whatsappUrl: 'https://wa.me/201000000000',
@@ -265,15 +268,15 @@ async function main() {
       where: {
         organizationId_domain: {
           organizationId: developer.id,
-          domain: 'developer-demo.popwam.com',
+          domain: 'northline.popwam.com',
         },
       },
       create: {
         organizationId: developer.id,
-        domain: 'developer-demo.popwam.com',
+        domain: 'northline.popwam.com',
         type: 'SUBDOMAIN',
         status: 'VERIFIED',
-        verificationToken: 'demo-developer-subdomain-token',
+        verificationToken: 'northline-subdomain-token',
         verifiedAt: now,
       },
       update: {
@@ -282,25 +285,51 @@ async function main() {
         failureReason: null,
       },
     });
+    await prisma.organizationWebsiteSettings.upsert({
+      where: { organizationId: brokerage.id },
+      create: {
+        id: IDS.brokerageWebsiteSettings,
+        organizationId: brokerage.id,
+        publicSlug: brokerage.slug,
+        subdomain: 'northline-brokerage',
+        customDomain: null,
+        siteTitle: 'Northline Brokerage Collective',
+        siteDescription:
+          'A verified brokerage team helping buyers compare suitable homes and follow up through POPWAM.',
+        logoUrl: null,
+        contactPhone: '+201111111111',
+        contactEmail: 'brokerage.demo@popwam.local',
+        whatsappUrl: 'https://wa.me/201111111111',
+        isPublished: true,
+      },
+      update: {
+        publicSlug: brokerage.slug,
+        subdomain: 'northline-brokerage',
+        customDomain: null,
+        siteTitle: 'Northline Brokerage Collective',
+        siteDescription:
+          'A verified brokerage team helping buyers compare suitable homes and follow up through POPWAM.',
+        contactPhone: '+201111111111',
+        contactEmail: 'brokerage.demo@popwam.local',
+        whatsappUrl: 'https://wa.me/201111111111',
+        isPublished: true,
+      },
+    });
 
     const project = await prisma.project.upsert({
-      where: {
-        developerId_slug: {
-          developerId: developer.id,
-          slug: 'northline-demo-residences',
-        },
-      },
+      where: { id: IDS.project },
       create: {
         id: IDS.project,
         developerId: developer.id,
-        name: 'Northline Demo Residences',
-        slug: 'northline-demo-residences',
+        name: 'Northline Residences',
+        slug: 'northline-residences',
         type: ProjectType.COMPOUND,
         status: ProjectStatus.ACTIVE,
         city: 'New Cairo',
         district: 'Golden Square',
-        address: 'Demo District, New Cairo',
-        description: 'Stable Phase 1 demo project for local walkthroughs.',
+        address: 'Golden Square, New Cairo',
+        description:
+          'A residential community with public project details, available homes, and POPWAM follow-up.',
         visibility: ProjectVisibility.OPEN_MARKETPLACE,
         isFeatured: true,
         amenities: ['Clubhouse', 'Retail promenade', 'Parks'],
@@ -308,10 +337,14 @@ async function main() {
         videos: [],
       },
       update: {
-        name: 'Northline Demo Residences',
+        name: 'Northline Residences',
+        slug: 'northline-residences',
         status: ProjectStatus.ACTIVE,
         city: 'New Cairo',
         district: 'Golden Square',
+        address: 'Golden Square, New Cairo',
+        description:
+          'A residential community with public project details, available homes, and POPWAM follow-up.',
         visibility: ProjectVisibility.OPEN_MARKETPLACE,
         isFeatured: true,
       },
@@ -408,7 +441,7 @@ async function main() {
         id: IDS.paymentPlan,
         projectId: project.id,
         scope: 'PROJECT',
-        name: 'Demo 10 Percent Down',
+        name: '10 Percent Down Plan',
         downPaymentPct: 10,
         installmentMonths: 96,
         installmentPct: 80,
@@ -418,7 +451,7 @@ async function main() {
       },
       update: {
         projectId: project.id,
-        name: 'Demo 10 Percent Down',
+        name: '10 Percent Down Plan',
         downPaymentPct: 10,
         installmentMonths: 96,
         installmentPct: 80,
@@ -484,13 +517,14 @@ async function main() {
         value: 2.5,
         currency: 'EGP',
         isActive: true,
-        notes: 'Demo brokerage commission rule.',
+        notes: 'Northline brokerage commission rule.',
       },
       update: {
         developerId: developer.id,
         projectId: project.id,
         targetOrganizationId: brokerage.id,
         value: 2.5,
+        notes: 'Northline brokerage commission rule.',
         isActive: true,
       },
     });
@@ -506,13 +540,14 @@ async function main() {
         value: 15000,
         currency: 'EGP',
         isActive: true,
-        notes: 'Demo broker commission rule.',
+        notes: 'Northline advisor commission rule.',
       },
       update: {
         developerId: developer.id,
         projectId: project.id,
         targetUserId: brokerUser.id,
         value: 15000,
+        notes: 'Northline advisor commission rule.',
         isActive: true,
       },
     });
@@ -529,14 +564,14 @@ async function main() {
       create: {
         id: IDS.client,
         projectId: project.id,
-        name: 'Demo Client',
+        name: 'Northline Client',
         phoneHash,
         phoneLast4: normalizedPhone.slice(-4),
         source: LeadSource.MANUAL,
         createdById: brokerUser.id,
       },
       update: {
-        name: 'Demo Client',
+        name: 'Northline Client',
         source: LeadSource.MANUAL,
         createdById: brokerUser.id,
       },
@@ -553,7 +588,7 @@ async function main() {
         brokerageId: brokerage.id,
         status: LeadStatus.RESERVATION,
         source: LeadSource.MANUAL,
-        notes: 'Demo sold-chain lead.',
+        notes: 'Northline sold-chain lead.',
       },
       update: {
         clientId: client.id,
@@ -562,6 +597,7 @@ async function main() {
         brokerUserId: brokerUser.id,
         brokerageId: brokerage.id,
         status: LeadStatus.RESERVATION,
+        notes: 'Northline sold-chain lead.',
       },
     });
 
@@ -578,7 +614,7 @@ async function main() {
         clientPhoneHash: phoneHash,
         status: LeadClaimStatus.WON,
         source: LeadSource.MANUAL,
-        notes: 'Demo claim won through sold-chain flow.',
+        notes: 'Northline claim won through sold-chain flow.',
         expiresAt: claimExpiresAt,
       },
       update: {
@@ -590,6 +626,7 @@ async function main() {
         brokerageId: brokerage.id,
         clientPhoneHash: phoneHash,
         status: LeadClaimStatus.WON,
+        notes: 'Northline claim won through sold-chain flow.',
         expiresAt: claimExpiresAt,
       },
     });
@@ -606,7 +643,7 @@ async function main() {
         brokerUserId: brokerUser.id,
         brokerageId: brokerage.id,
         status: ReservationRequestStatus.APPROVED,
-        notes: 'Demo reservation approved.',
+        notes: 'Northline reservation approved.',
         approvedAt: now,
       },
       update: {
@@ -618,6 +655,7 @@ async function main() {
         brokerUserId: brokerUser.id,
         brokerageId: brokerage.id,
         status: ReservationRequestStatus.APPROVED,
+        notes: 'Northline reservation approved.',
         approvedAt: now,
       },
     });
@@ -702,13 +740,13 @@ async function main() {
         dealRoomId: dealRoom.id,
         senderUserId: brokerUser.id,
         messageType: DealRoomMessageType.TEXT,
-        body: 'Demo message: client documents are ready for review.',
+        body: 'Northline message: client documents are ready for review.',
       },
       update: {
         dealRoomId: dealRoom.id,
         senderUserId: brokerUser.id,
         messageType: DealRoomMessageType.TEXT,
-        body: 'Demo message: client documents are ready for review.',
+        body: 'Northline message: client documents are ready for review.',
       },
     });
 
@@ -843,7 +881,7 @@ async function upsertOrganization(
   },
 ) {
   return prisma.organization.upsert({
-    where: { slug: input.slug },
+    where: { id: input.id },
     create: {
       id: input.id,
       name: input.name,
@@ -862,6 +900,7 @@ async function upsertOrganization(
     },
     update: {
       name: input.name,
+      slug: input.slug,
       type: input.type,
       status: input.status,
       city: input.city,
@@ -902,11 +941,11 @@ async function ensureOrganizationRole(
       organizationId,
       name,
       isSystem: true,
-      description: `Demo role: ${name}`,
+      description: `Seed role: ${name}`,
     },
     update: {
       isSystem: true,
-      description: `Demo role: ${name}`,
+      description: `Seed role: ${name}`,
     },
   });
 

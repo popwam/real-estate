@@ -6,7 +6,7 @@ export default function DeveloperHrEmployeesPage() {
   return (
     <OperationsPage
       title="HR employees"
-      description="Employee records for internal operations. No payroll is included."
+      description="Employee records for team operations. No payroll is included."
       listPath="/hr/employees"
       queryKey="hr-employees"
       fields={[

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_error.dart';
+import '../../../core/utils/auth_debug_log.dart';
 import '../data/auth_models.dart';
 import '../data/auth_repository.dart';
 
@@ -43,36 +45,60 @@ class AuthController extends ChangeNotifier {
   AuthState get state => _state;
 
   Future<void> restore() async {
+    authDebugLog('Restoring stored mobile session');
     _state = const AuthState(status: AuthStatus.checking);
     notifyListeners();
 
-    final hasTokens = await _repository.hasStoredSession();
-    if (!hasTokens) {
-      _state = const AuthState(status: AuthStatus.signedOut);
-      notifyListeners();
-      return;
-    }
-
     try {
+      final hasTokens = await _repository.hasStoredSession();
+      if (!hasTokens) {
+        authDebugLog('No stored session found');
+        _state = const AuthState(status: AuthStatus.signedOut);
+        notifyListeners();
+        return;
+      }
+
+      authDebugLog('Stored session found; loading current user');
       final session = await _repository.me();
+      authDebugLog('Stored session restored');
       _state = AuthState(status: AuthStatus.signedIn, session: session);
-    } catch (_) {
+    } catch (error) {
+      authDebugLog('Stored session restore failed');
       await _repository.clearTokens();
-      _state = const AuthState(status: AuthStatus.signedOut);
+      _state = AuthState(
+        status: AuthStatus.signedOut,
+        errorMessage: apiErrorMessage(error),
+      );
     }
     notifyListeners();
   }
 
-  Future<void> login(String email, String password) async {
-    _state = const AuthState(status: AuthStatus.checking);
+  Future<void> login(String identifier, String password) async {
+    authDebugLog('Login flow started');
+    _state = AuthState(status: AuthStatus.signedOut, errorMessage: null);
     notifyListeners();
 
-    final session = await _repository.login(email: email, password: password);
-    _state = AuthState(status: AuthStatus.signedIn, session: session);
-    notifyListeners();
+    try {
+      final session = await _repository.login(
+        identifier: identifier,
+        password: password,
+      );
+      authDebugLog('Navigating to mobile home');
+      _state = AuthState(status: AuthStatus.signedIn, session: session);
+      notifyListeners();
+    } catch (error) {
+      authDebugLog('Login flow failed');
+      _state = AuthState(
+        status: AuthStatus.signedOut,
+        errorMessage: apiErrorMessage(error),
+      );
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> logout() async {
+    authDebugLog('Logout started');
     await _repository.logout();
     _state = const AuthState(status: AuthStatus.signedOut);
     notifyListeners();

@@ -2,7 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { useCreatePlatformOrganization } from "@/hooks/use-platform-admin";
+import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function CreateOrganizationForm() {
   const create = useCreatePlatformOrganization();
@@ -23,19 +26,57 @@ export function CreateOrganizationForm() {
   }
 
   return (
-    <form className="mb-5 grid gap-3 rounded-md border border-zinc-200 bg-white p-4 md:grid-cols-5" onSubmit={submit}>
-      <input required name="name" aria-label="Company name" placeholder="Company name" className="h-10 rounded-md border border-zinc-300 px-3 text-sm" />
-      <select name="type" aria-label="Company type" className="h-10 rounded-md border border-zinc-300 px-3 text-sm">
-        <option value="DEVELOPER">Developer</option>
-        <option value="BROKERAGE">Brokerage</option>
-        <option value="INDIVIDUAL_BROKER">Individual broker</option>
-      </select>
-      <input name="city" aria-label="City" placeholder="City" className="h-10 rounded-md border border-zinc-300 px-3 text-sm" />
-      <input name="country" aria-label="Country" placeholder="Country" className="h-10 rounded-md border border-zinc-300 px-3 text-sm" />
-      <Button disabled={create.isPending} type="submit">{create.isPending ? "Creating" : "Create company"}</Button>
-      {create.error ? <p className="text-sm text-red-700 md:col-span-5">{create.error.message}</p> : null}
-      {createdName ? <p className="text-sm text-emerald-700 md:col-span-5">Created {createdName}. Open it below to create an invitation.</p> : null}
-    </form>
+    <section className="ui-card mb-5 p-4">
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Create organization record</h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+          Create the company shell first, then open its dossier to review profile data and issue invitations.
+        </p>
+      </div>
+      <form className="grid gap-3 lg:grid-cols-[1.2fr_220px_1fr_1fr_auto]" onSubmit={submit}>
+        <div className="space-y-2">
+          <Label htmlFor="platform-org-name">Company name</Label>
+          <Input required id="platform-org-name" name="name" placeholder="Company name" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="platform-org-type">Company type</Label>
+          <select id="platform-org-type" name="type" className="ui-input">
+            <option value="DEVELOPER">Developer</option>
+            <option value="BROKERAGE">Brokerage</option>
+            <option value="INDIVIDUAL_BROKER">Individual broker</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="platform-org-city">City</Label>
+          <Input id="platform-org-city" name="city" placeholder="City" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="platform-org-country">Country</Label>
+          <Input id="platform-org-country" name="country" placeholder="Country" />
+        </div>
+        <div className="flex items-end">
+          <Button className="w-full" disabled={create.isPending} type="submit">
+            {create.isPending ? "Creating" : "Create"}
+          </Button>
+        </div>
+        {create.error ? (
+          <FeedbackState
+            className="lg:col-span-5"
+            tone="error"
+            title="Could not create organization"
+            description={create.error.message}
+          />
+        ) : null}
+        {createdName ? (
+          <FeedbackState
+            className="lg:col-span-5"
+            tone="success"
+            title={`${createdName} was created`}
+            description="Open the dossier below to review details, add verification context, and create invitations."
+          />
+        ) : null}
+      </form>
+    </section>
   );
 }
 

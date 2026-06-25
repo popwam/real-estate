@@ -2,10 +2,10 @@ export function CallPlaceholderButton() {
   return (
     <a
       href="#lead-form"
-      aria-label="Open the placeholder lead form for a call request"
-      className="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-950"
+      aria-label="Open the contact form to request a call"
+      className="ui-button ui-button-secondary"
     >
-      Call placeholder
+      Request a call
     </a>
   );
 }

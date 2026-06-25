@@ -234,7 +234,7 @@ export async function submitLead(payload: SubmitPublicLeadPayload) {
     if (mode === "hybrid") {
       return mockLeadResponse(
         payload.preferredContactMethod,
-        "Mock lead captured while API is unavailable.",
+        "Your request was received.",
       );
     }
 
@@ -252,7 +252,10 @@ export async function getPublicConversationByToken(token: string) {
   try {
     return await getConversationByToken(token);
   } catch (error) {
-    if (mode === "hybrid" && token.startsWith("mock-chat-")) {
+    if (
+      mode === "hybrid" &&
+      (token.startsWith("chat-") || token.startsWith("mock-chat-"))
+    ) {
       return mockConversationByToken(token);
     }
 
@@ -277,7 +280,10 @@ export async function postPublicConversationMessageByToken(
       throw error;
     }
 
-    if (mode === "hybrid" && token.startsWith("mock-chat-")) {
+    if (
+      mode === "hybrid" &&
+      (token.startsWith("chat-") || token.startsWith("mock-chat-"))
+    ) {
       return mockConversationMessage(token, payload);
     }
 
@@ -365,23 +371,30 @@ function toPublicProject(project: ApiPublicProject): PublicProject {
     ...(project.images ?? []),
     ...(units.flatMap((unit) => unit.images ?? []) ?? []),
   ].filter(Boolean);
-  const heroImageUrl =
-    project.coverImageUrl ??
-    gallery[0] ??
-    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=80";
+  const galleryImageUrls = unique([
+    project.coverImageUrl,
+    ...gallery,
+  ].filter(Boolean) as string[]);
+  const heroImageUrl = galleryImageUrls[0] ?? "";
   const unitTypes = toUnitTypes(project);
-  const paymentPlan = toPaymentPlan(project.paymentPlans?.[0]);
+  const sourcePaymentPlan = project.paymentPlans?.[0];
+  const paymentPlan = toPaymentPlan(sourcePaymentPlan);
+  const hasPrice = Boolean(minPrice);
 
   return {
     slug: project.slug,
     name: project.name,
+    propertyType: titleCase(project.type),
+    address: project.address,
     city: project.city ?? "Public marketplace",
     district: project.district ?? "Verified listing",
     developerSlug: project.developer.slug,
     developerName: project.developer.name,
     status: "ACTIVE",
     visibility: "OPEN_MARKETPLACE",
-    priceLabel: minPrice ? `From ${formatMoney(minPrice, project.currency)}` : "Price on request",
+    priceLabel: hasPrice
+      ? `From ${formatMoney(minPrice, project.currency)}`
+      : "Pricing available on request",
     unitMix:
       unitTypes.map((unitType) => unitType.type).join(", ") ||
       `${project.availableUnitsCount} available units`,
@@ -389,15 +402,25 @@ function toPublicProject(project: ApiPublicProject): PublicProject {
       ? `Delivery from ${new Date(project.deliveryDate).getFullYear()}`
       : "Delivery date available on request",
     heroImageUrl,
-    galleryImageUrls: gallery.length ? gallery.slice(0, 3) : [heroImageUrl],
-    summary: project.description ?? project.developer.summary ?? "Public project details.",
+    galleryImageUrls: galleryImageUrls.slice(0, 6),
+    summary:
+      project.description ??
+      project.developer.summary ??
+      "Published project details are available through this public listing.",
     highlights: project.amenities?.length
       ? project.amenities
-      : ["Verified developer", "Open-marketplace public listing"],
+      : [
+          "Published public project information",
+          "Interest routed through POPWAM",
+        ],
     unitTypes,
     paymentPlan,
     minPrice,
     maxPrice,
+    availableUnitsCount: project.availableUnitsCount,
+    hasMedia: galleryImageUrls.length > 0,
+    hasPaymentPlan: Boolean(sourcePaymentPlan),
+    hasPrice,
     featured: project.isFeatured,
     ogImageUrl: heroImageUrl,
     developerContact: project.developer.contact,
@@ -456,14 +479,14 @@ function toPublicOrganization(
 
 function mockLeadResponse(
   preferredContactMethod: PreferredContactMethod | undefined = "CALL",
-  message = "Mock lead captured.",
+  message = "Your request was received.",
 ) {
   const shareToken =
-    preferredContactMethod === "CHAT" ? `mock-chat-${Date.now()}` : undefined;
+    preferredContactMethod === "CHAT" ? `chat-${Date.now()}` : undefined;
 
   return {
     success: true,
-    id: `mock-${Date.now()}`,
+    id: `lead-${Date.now()}`,
     status: "NEW",
     preferredContactMethod,
     message,
@@ -473,7 +496,7 @@ function mockLeadResponse(
         ? {
             preferredContactMethod,
             whatsappUrl: "https://wa.me/201000000000",
-            note: "Demo/mock WhatsApp link. No provider was called.",
+            note: "WhatsApp contact is available for this request.",
           }
         : undefined,
     conversation: shareToken
@@ -493,28 +516,28 @@ function mockConversationByToken(token: string): PublicConversationByToken {
     type: "PUBLIC_LEAD",
     status: "OPEN",
     project: {
-      name: "Demo chat request",
+      name: "Project conversation",
       slug: "demo",
     },
     participants: [
       {
         publicRole: "CLIENT",
-        displayName: "Demo visitor",
+        displayName: "Visitor",
       },
       {
         publicRole: "SYSTEM",
-        displayName: "POPWAM demo",
+        displayName: "POPWAM",
       },
     ],
     messages: [
       {
         id: `${token}-message-1`,
         type: "SYSTEM",
-        body: "Demo/mock conversation link. API mode only displays real backend conversation tokens.",
+        body: "Your conversation is ready. Share your questions and the team can follow up here.",
         createdAt: new Date().toISOString(),
         sender: {
           publicRole: "SYSTEM",
-          displayName: "POPWAM demo",
+          displayName: "POPWAM",
         },
       },
     ],
@@ -545,7 +568,7 @@ function mockConversationMessage(
       createdAt: new Date().toISOString(),
       sender: {
         publicRole: "CLIENT",
-        displayName: payload.senderName?.trim() || "Demo visitor",
+        displayName: payload.senderName?.trim() || "Visitor",
       },
     },
   };

@@ -9,8 +9,8 @@ import { getSiteBaseUrl } from "@/lib/seo";
 const staticPaths = ["/", "/projects", "/landing/northline-launch", "/landing/coastline-summer"];
 const fallbackStaticPaths = [
   ...staticPaths,
-  "/developers/demo-developer",
-  "/brokerages/demo-brokerage",
+  "/developers/northline-development-group",
+  "/brokerages/northline-brokerage-collective",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -32,8 +32,8 @@ async function getDynamicSitemapPaths() {
   try {
     const [projects, developer, brokerage] = await Promise.all([
       listPublicProjects(),
-      getPublicDeveloperBySlug("demo-developer"),
-      getPublicBrokerageBySlug("demo-brokerage"),
+      getPublicDeveloperBySlug("northline-development-group"),
+      getPublicBrokerageBySlug("northline-brokerage-collective"),
     ]);
 
     return [

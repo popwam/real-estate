@@ -67,20 +67,20 @@ export function CommissionRuleForm({
   return (
     <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(submit)}>
       <Field label="Project ID" error={errors.projectId?.message}><Input {...register("projectId")} /></Field>
-      <Field label="Party type"><select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" {...register("partyType")}><option value="BROKERAGE">BROKERAGE</option><option value="BROKER">BROKER</option><option value="PLATFORM">PLATFORM</option><option value="DEVELOPER">DEVELOPER</option></select></Field>
+      <Field label="Beneficiary type"><select className="ui-input" {...register("partyType")}><option value="BROKERAGE">Brokerage</option><option value="BROKER">Broker</option><option value="PLATFORM">Platform</option><option value="DEVELOPER">Developer</option></select></Field>
       <Field label="Target organization ID"><Input {...register("targetOrganizationId")} /></Field>
       <Field label="Target user ID"><Input {...register("targetUserId")} /></Field>
-      <Field label="Commission type"><select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" {...register("commissionType")}><option value="PERCENTAGE">PERCENTAGE</option><option value="FIXED">FIXED</option></select></Field>
+      <Field label="Calculation method"><select className="ui-input" {...register("commissionType")}><option value="PERCENTAGE">Percentage of deal value</option><option value="FIXED">Fixed amount</option></select></Field>
       <Field label="Value" error={errors.value?.message}><Input type="number" min="0" step="0.0001" {...register("value")} /></Field>
       <Field label="Currency"><Input {...register("currency")} /></Field>
-      <label className="flex items-center gap-2 text-sm text-zinc-700"><input type="checkbox" {...register("isActive")} /> Active</label>
+      <label className="flex items-center gap-2 text-sm text-[var(--color-text)]"><input type="checkbox" {...register("isActive")} /> Active for eligible deals</label>
       <div className="md:col-span-2"><Field label="Notes"><Textarea {...register("notes")} /></Field></div>
-      {error ? <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 md:col-span-2"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error.message}</span></div> : null}
+      {error ? <div className="ui-feedback ui-feedback-error flex gap-2 text-sm md:col-span-2" role="alert"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error.message}</span></div> : null}
       <div className="md:col-span-2"><Button disabled={isPending} type="submit">{isPending ? "Saving" : rule ? "Update rule" : "Create rule"}</Button></div>
     </form>
   );
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <div className="space-y-2"><Label>{label}</Label>{children}{error ? <p className="text-sm text-red-600">{error}</p> : null}</div>;
+  return <div className="space-y-2"><Label>{label}</Label>{children}{error ? <p className="text-sm text-[var(--color-danger)]" role="alert">{error}</p> : null}</div>;
 }

@@ -4,6 +4,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { normalizeOptionalPhoneOrThrow, normalizePhone, phonesMatch } from '../../common/phone-normalization';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PrismaService } from '../database/prisma.service';
 import {
   OWNER_ROLE_BY_ORGANIZATION_TYPE,
@@ -25,6 +27,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly hashService: HashService,
     private readonly jwtService: JwtService,
+    private readonly auditLogs: AuditLogsService,
   ) {}
 
   async register(dto: RegisterOrganizationDto): Promise<AuthResponseDto> {
@@ -36,6 +39,9 @@ export class AuthService {
     if (existingUser) {
       throw new ConflictException('Email is already registered.');
     }
+
+    const phone = normalizeOptionalPhoneOrThrow(dto.phone);
+    await this.assertPhoneAvailable(phone);
 
     const organizationType = dto.organizationType;
     const userRole = OWNER_ROLE_BY_ORGANIZATION_TYPE[organizationType];
@@ -58,7 +64,7 @@ export class AuthService {
               legalName: this.optionalString(dto.legalName),
               tradeName: this.optionalString(dto.tradeName),
               email,
-              phone: this.optionalString(dto.phone),
+              phone,
             },
           },
         },
@@ -83,7 +89,7 @@ export class AuthService {
           passwordHash,
           firstName: this.optionalString(dto.firstName),
           lastName: this.optionalString(dto.lastName),
-          phone: this.optionalString(dto.phone),
+          phone,
           userRole,
         },
         include: {
@@ -107,25 +113,13 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     this.assertLoginDto(dto);
 
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        organization: true,
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const identifier = this.loginIdentifier(dto);
+    const identifierKind = this.isValidEmail(identifier) ? 'email' : 'phone';
+    const user = await this.findLoginUser(identifier);
 
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('Invalid email or password.');
+    if (!user || !user.isActive || !this.organizationCanLogin(user.organization)) {
+      await this.recordLoginAudit('auth.login_failed', undefined, identifierKind);
+      throw new UnauthorizedException('Invalid login details.');
     }
 
     const passwordValid = await this.hashService.verify(
@@ -134,13 +128,15 @@ export class AuthService {
     );
 
     if (!passwordValid) {
-      throw new UnauthorizedException('Invalid email or password.');
+      await this.recordLoginAudit('auth.login_failed', user, identifierKind);
+      throw new UnauthorizedException('Invalid login details.');
     }
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+    await this.recordLoginAudit('auth.login_success', user, identifierKind);
 
     return this.issueAuthResponse(user);
   }
@@ -181,6 +177,10 @@ export class AuthService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User is not active.');
+    }
+
+    if (!this.organizationCanLogin(user.organization)) {
+      throw new UnauthorizedException('Organization is not active.');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -230,6 +230,10 @@ export class AuthService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User is not active.');
+    }
+
+    if (!this.organizationCanLogin(user.organization)) {
+      throw new UnauthorizedException('Organization is not active.');
     }
 
     return {
@@ -353,6 +357,74 @@ export class AuthService {
     return slug || `organization-${Date.now()}`;
   }
 
+  private async findLoginUser(identifier: string) {
+    const include = {
+      organization: true,
+      role: {
+        include: {
+          permissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      },
+    };
+
+    if (this.isValidEmail(identifier)) {
+      return this.prisma.user.findUnique({
+        where: { email: identifier.trim().toLowerCase() },
+        include,
+      });
+    }
+
+    const normalizedPhone = normalizePhone(identifier);
+    if (!normalizedPhone) return null;
+
+    const users = await this.prisma.user.findMany({
+      where: { phone: { not: null } },
+      include,
+    });
+    const matches = users.filter((user) => phonesMatch(user.phone, normalizedPhone));
+
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  private async assertPhoneAvailable(phone: string | undefined) {
+    if (!phone) return;
+
+    const users = await this.prisma.user.findMany({
+      where: { phone: { not: null } },
+      select: { id: true, phone: true },
+    });
+    const conflict = users.some((user) => phonesMatch(user.phone, phone));
+    if (conflict) {
+      throw new ConflictException('Phone number cannot be used for this account.');
+    }
+  }
+
+  private organizationCanLogin(organization: any) {
+    return !organization || !['SUSPENDED', 'REVOKED'].includes(organization.status);
+  }
+
+  private async recordLoginAudit(action: string, user: any | undefined, identifierKind: string) {
+    try {
+      await this.auditLogs.record({
+        action,
+        entityType: 'User',
+        entityId: user?.id,
+        organizationId: user?.organizationId ?? null,
+        metadata: { identifierKind },
+      });
+    } catch {
+      // Login should not fail because audit persistence is unavailable.
+    }
+  }
+
+  private loginIdentifier(dto: LoginDto) {
+    return (dto.identifier ?? dto.email ?? dto.phone ?? '').trim();
+  }
+
   private optionalString(value: string | undefined) {
     const trimmed = value?.trim();
     return trimmed || undefined;
@@ -384,8 +456,8 @@ export class AuthService {
   }
 
   private assertLoginDto(dto: LoginDto) {
-    if (!this.isValidEmail(dto.email) || !dto.password) {
-      throw new BadRequestException('email and password are required.');
+    if (!this.loginIdentifier(dto) || !dto.password) {
+      throw new BadRequestException('identifier and password are required.');
     }
   }
 

@@ -1,10 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LoaderCircle, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { Field, SelectInput, TextAreaInput, TextInput } from "@/components/developer/form-fields";
+import { FeedbackState } from "@/components/feedback-state";
+import { Button } from "@/components/ui/button";
 import type { Project, ProjectInput } from "@/types/developer";
 
 const projectSchema = z.object({
@@ -28,15 +30,21 @@ export function ProjectForm({
   submitLabel = "Save project",
   isPending,
   error,
+  successMessage,
   onSubmit,
 }: {
   project?: Project;
   submitLabel?: string;
   isPending?: boolean;
   error?: Error | null;
+  successMessage?: string;
   onSubmit: (input: ProjectInput) => Promise<unknown>;
 }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<ProjectFormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: project?.name ?? "",
@@ -48,14 +56,14 @@ export function ProjectForm({
       description: project?.description ?? "",
       visibility: project?.visibility ?? "PRIVATE",
       status: project?.status ?? "DRAFT",
-      latitude: project?.latitude ? String(project.latitude) : "",
-      longitude: project?.longitude ? String(project.longitude) : "",
+      latitude: project?.latitude != null ? String(project.latitude) : "",
+      longitude: project?.longitude != null ? String(project.longitude) : "",
     },
   });
 
   return (
     <form
-      className="grid gap-4 md:grid-cols-2"
+      className="space-y-6"
       onSubmit={handleSubmit((values) =>
         onSubmit({
           ...values,
@@ -64,27 +72,109 @@ export function ProjectForm({
         }),
       )}
     >
-      <Field label="Name" error={errors.name?.message}><TextInput {...register("name")} /></Field>
-      <Field label="Slug" error={errors.slug?.message}><TextInput {...register("slug")} /></Field>
-      <Field label="Type" error={errors.type?.message}>
-        <SelectInput {...register("type")}>
-          {["COMPOUND", "BUILDING", "TOWER", "VILLA_COMPOUND", "COMMERCIAL", "MIXED_USE"].map((v) => <option key={v} value={v}>{v}</option>)}
-        </SelectInput>
-      </Field>
-      <Field label="Status" error={errors.status?.message}>
-        <SelectInput {...register("status")}>{["DRAFT", "ACTIVE", "SOLD_OUT", "SUSPENDED", "ARCHIVED"].map((v) => <option key={v} value={v}>{v}</option>)}</SelectInput>
-      </Field>
-      <Field label="City"><TextInput {...register("city")} /></Field>
-      <Field label="District"><TextInput {...register("district")} /></Field>
-      <Field label="Address"><TextInput {...register("address")} /></Field>
-      <Field label="Visibility">
-        <SelectInput {...register("visibility")}>{["PRIVATE", "APPROVED_BROKERAGES", "OPEN_MARKETPLACE", "SELECTED_BROKERS", "HIDDEN"].map((v) => <option key={v} value={v}>{v}</option>)}</SelectInput>
-      </Field>
-      <Field label="Latitude"><TextInput type="number" step="any" {...register("latitude")} /></Field>
-      <Field label="Longitude"><TextInput type="number" step="any" {...register("longitude")} /></Field>
-      <div className="md:col-span-2"><Field label="Description"><TextAreaInput {...register("description")} /></Field></div>
-      {error ? <p className="md:col-span-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error.message}</p> : null}
-      <div className="md:col-span-2"><Button type="submit" disabled={isPending}>{isPending ? "Saving" : submitLabel}</Button></div>
+      <FormSection
+        title="Basic information"
+        description="Name the project and define how it is classified inside the portfolio."
+      >
+        <Field label="Project name" error={errors.name?.message} required>
+          <TextInput placeholder="Example: North Coast Residence" {...register("name")} />
+        </Field>
+        <Field label="Public slug" error={errors.slug?.message} hint="Used in public URLs when the project is published.">
+          <TextInput placeholder="north-coast-residence" {...register("slug")} />
+        </Field>
+        <Field label="Project type" error={errors.type?.message} required>
+          <SelectInput {...register("type")}>
+            {["COMPOUND", "BUILDING", "TOWER", "VILLA_COMPOUND", "COMMERCIAL", "MIXED_USE"].map((value) => (
+              <option key={value} value={value}>{formatLabel(value)}</option>
+            ))}
+          </SelectInput>
+        </Field>
+        <Field label="Lifecycle status" error={errors.status?.message} required hint="Draft projects remain editable and are not automatically public.">
+          <SelectInput {...register("status")}>
+            {["DRAFT", "ACTIVE", "SOLD_OUT", "SUSPENDED", "ARCHIVED"].map((value) => (
+              <option key={value} value={value}>{formatLabel(value)}</option>
+            ))}
+          </SelectInput>
+        </Field>
+      </FormSection>
+
+      <FormSection
+        title="Location"
+        description="Add the customer-facing location first; coordinates are optional operational metadata."
+      >
+        <Field label="City"><TextInput placeholder="City" {...register("city")} /></Field>
+        <Field label="District"><TextInput placeholder="District or area" {...register("district")} /></Field>
+        <div className="md:col-span-2">
+          <Field label="Address"><TextInput placeholder="Street or development address" {...register("address")} /></Field>
+        </div>
+        <Field label="Latitude" hint="Optional decimal coordinate.">
+          <TextInput type="number" step="any" inputMode="decimal" {...register("latitude")} />
+        </Field>
+        <Field label="Longitude" hint="Optional decimal coordinate.">
+          <TextInput type="number" step="any" inputMode="decimal" {...register("longitude")} />
+        </Field>
+      </FormSection>
+
+      <FormSection
+        title="Description and publishing"
+        description="Set the private/public description and choose the current audience. Unit pricing is managed from Inventory."
+      >
+        <div className="md:col-span-2">
+          <Field label="Project description" hint="Explain the project clearly without private notes.">
+            <TextAreaInput className="min-h-32" placeholder="Project overview, positioning, and key information" {...register("description")} />
+          </Field>
+        </div>
+        <div className="md:col-span-2">
+          <Field label="Visibility" required hint="You can review audience impact in detail from the Visibility page.">
+            <SelectInput {...register("visibility")}>
+              {["PRIVATE", "APPROVED_BROKERAGES", "OPEN_MARKETPLACE", "SELECTED_BROKERS", "HIDDEN"].map((value) => (
+                <option key={value} value={value}>{formatLabel(value)}</option>
+              ))}
+            </SelectInput>
+          </Field>
+        </div>
+        <div className="md:col-span-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm leading-6 text-[var(--color-muted)]">
+          Creating or editing this record does not add inventory, payment plans, broker permissions, or publish it automatically. Complete those readiness steps from the project command center.
+        </div>
+      </FormSection>
+
+      {error ? (
+        <FeedbackState tone="error" title="Project could not be saved" description={error.message} />
+      ) : null}
+      {successMessage ? <FeedbackState tone="success" title={successMessage} /> : null}
+
+      <div className="flex justify-end border-t border-[var(--color-border)] pt-5">
+        <Button type="submit" disabled={isPending}>
+          {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
+          {isPending ? "Saving…" : submitLabel}
+        </Button>
+      </div>
     </form>
   );
+}
+
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5">
+      <legend className="px-2 text-sm font-semibold text-[var(--color-foreground)]">{title}</legend>
+      <p className="mb-5 text-sm leading-6 text-[var(--color-muted)]">{description}</p>
+      <div className="grid gap-4 md:grid-cols-2">{children}</div>
+    </fieldset>
+  );
+}
+
+function formatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

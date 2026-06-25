@@ -4,6 +4,7 @@ import {
   getPublicOrganizationBySlug,
   resolvePublicOrganizationByDomain,
 } from "@/lib/public-data";
+import { PublicApiError } from "@/lib/public-api";
 import type {
   PublicOrganization,
   PublicProject,
@@ -48,9 +49,9 @@ const landingPages: MockLandingPage[] = [
     slug: "northline-launch",
     title: "Northline Residences launch preview",
     subtitle:
-      "A mock campaign page for an open-marketplace project with verification, project details, and a disabled lead form.",
-    organizationSlug: "demo-developer",
-    projectSlug: "demo",
+      "A campaign page for a public project with verification, project details, and interest capture.",
+    organizationSlug: "northline-development-group",
+    projectSlug: "northline-residences",
     heroImage:
       "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80",
     sections: [
@@ -66,40 +67,40 @@ const landingPages: MockLandingPage[] = [
       "sticky-cta",
     ],
     amenities: [
-      "Clubhouse placeholder",
-      "Landscape promenade placeholder",
-      "Retail spine placeholder",
-      "Smart access placeholder",
+      "Clubhouse access",
+      "Landscape promenade",
+      "Retail spine",
+      "Smart access",
     ],
     faq: [
       {
         question: "Is this connected to live inventory?",
-        answer: "No. This landing page is powered by mock public data only.",
+        answer: "This page shows public project information and does not expose private inventory.",
       },
       {
         question: "Can visitors submit leads?",
-        answer: "No backend submission is enabled in Slice 4.",
+        answer: "Yes. Visitors can send an interest request through the contact form.",
       },
       {
         question: "Which projects can appear?",
-        answer: "Only active open-marketplace mock projects can render.",
+        answer: "Only projects approved for public visibility can appear.",
       },
     ],
-    ctaLabel: "Register interest placeholder",
+    ctaLabel: "Register interest",
     seoTitle: "Northline Residences Launch",
     seoDescription:
-      "Mock landing page for Northline Residences with public-only project data and disabled lead capture.",
+      "Northline Residences campaign page with public project details and interest capture.",
     ogImage:
       "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
     noindex: true,
   },
   {
     slug: "coastline-summer",
-    title: "Coastline Demo Village summer campaign",
+    title: "Coastline Village summer campaign",
     subtitle:
-      "A demo marketing page for coastal project discovery, UTM capture, and placeholder form behavior.",
-    organizationSlug: "demo-developer",
-    projectSlug: "coastline-demo",
+      "A coastal project campaign for browsing public details and sending interest.",
+    organizationSlug: "northline-development-group",
+    projectSlug: "coastline-village",
     heroImage:
       "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
     sections: [
@@ -115,25 +116,25 @@ const landingPages: MockLandingPage[] = [
       "sticky-cta",
     ],
     amenities: [
-      "Beach access placeholder",
-      "Serviced residence placeholder",
-      "Lagoon view placeholder",
-      "Family zone placeholder",
+      "Beach access",
+      "Serviced residences",
+      "Lagoon views",
+      "Family zones",
     ],
     faq: [
       {
         question: "Does this page expose private units?",
-        answer: "No. It resolves through the public mock adapter only.",
+        answer: "No. It only presents information approved for public viewing.",
       },
       {
-        question: "Are WhatsApp and call buttons live?",
-        answer: "No. They use mock placeholder links in Slice 4.",
+        question: "How can visitors request details?",
+        answer: "They can send an interest request through the contact form.",
       },
     ],
     ctaLabel: "Request campaign details",
-    seoTitle: "Coastline Demo Village Campaign",
+    seoTitle: "Coastline Village Campaign",
     seoDescription:
-      "Mock coastal project campaign page with public-only data and disabled backend lead capture.",
+      "Coastal project campaign page with public project details and interest capture.",
     ogImage:
       "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
     noindex: true,
@@ -141,17 +142,21 @@ const landingPages: MockLandingPage[] = [
 ];
 
 async function resolveLanding(page: MockLandingPage): Promise<ResolvedLandingPage | null> {
-  const organization = await getPublicOrganizationBySlug(page.organizationSlug);
+  const organization = await optionalPublicLookup(() =>
+    getPublicOrganizationBySlug(page.organizationSlug),
+  );
 
   if (!organization) {
     return null;
   }
 
-  const project = page.projectSlug
-    ? ((await getPublicProjectBySlug(page.projectSlug)) ?? undefined)
+  const projectSlug = page.projectSlug;
+  const project = projectSlug
+    ? ((await optionalPublicLookup(() => getPublicProjectBySlug(projectSlug))) ??
+      undefined)
     : undefined;
 
-  if (page.projectSlug && !project) {
+  if (projectSlug && !project) {
     return null;
   }
 
@@ -175,12 +180,14 @@ export async function getMockLandingPageForDomain(domain: string, slug: string) 
     return null;
   }
 
-  const project = page.projectSlug
-    ? ((await getPublicProjectForOrganization(organization.slug, page.projectSlug)) ??
-      undefined)
+  const projectSlug = page.projectSlug;
+  const project = projectSlug
+    ? ((await optionalPublicLookup(() =>
+      getPublicProjectForOrganization(organization.slug, projectSlug),
+    )) ?? undefined)
     : undefined;
 
-  if (page.projectSlug && !project) {
+  if (projectSlug && !project) {
     return null;
   }
 
@@ -189,4 +196,16 @@ export async function getMockLandingPageForDomain(domain: string, slug: string) 
     organization,
     project,
   };
+}
+
+async function optionalPublicLookup<T>(resolver: () => Promise<T | null>) {
+  try {
+    return await resolver();
+  } catch (error) {
+    if (error instanceof PublicApiError && error.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
 }

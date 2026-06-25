@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PublicFooter } from "@/components/public/public-footer";
-import { PublicBottomNav } from "@/components/public/public-bottom-nav";
-import { PublicHeader } from "@/components/public/public-header";
+import { PublicShell } from "@/components/public/public-shell";
 import { TrackingPlaceholders } from "@/components/tracking/tracking-placeholders";
 import { FirstPartyVisitorTracking } from "@/components/tracking/first-party-visitor-tracking";
 import { Suspense } from "react";
@@ -22,6 +20,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = defaultMetadata;
 
+const publicPreferenceBootstrap = `
+(function () {
+  try {
+    var theme = localStorage.getItem("popwam-theme");
+    var fontScale = localStorage.getItem("popwam-font-scale");
+    var locale = localStorage.getItem("popwam-locale");
+    var root = document.documentElement;
+
+    root.dataset.theme = theme === "dark" || theme === "comfort" ? theme : "light";
+    root.dataset.fontScale =
+      fontScale === "large" || fontScale === "extra-large" ? fontScale : "normal";
+    root.lang = locale === "ar" || locale === "fr" ? locale : "en";
+    root.dir = locale === "ar" ? "rtl" : "ltr";
+  } catch (error) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,18 +45,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      dir="ltr"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <script dangerouslySetInnerHTML={{ __html: publicPreferenceBootstrap }} />
         <PublicWebProviders>
           <TrackingPlaceholders />
           <Suspense fallback={null}><FirstPartyVisitorTracking /></Suspense>
-          <PublicHeader />
-          <main className="flex-1 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] md:pb-0">
-            {children}
-          </main>
-          <PublicFooter />
-          <PublicBottomNav />
+          <PublicShell>{children}</PublicShell>
         </PublicWebProviders>
       </body>
     </html>

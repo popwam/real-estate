@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_error.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_token_storage.dart';
+import '../../../core/utils/auth_debug_log.dart';
 import 'auth_models.dart';
 
 class AuthRepository {
@@ -14,21 +16,43 @@ class AuthRepository {
   final SecureTokenStorage _tokenStorage;
 
   Future<AuthSession> login({
-    required String email,
+    required String identifier,
     required String password,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/auth/login',
-      data: {'email': email, 'password': password},
-    );
-    final data = response.data ?? <String, dynamic>{};
-    await _tokenStorage.saveTokens(
-      TokenPair(
-        accessToken: data['accessToken'] as String,
-        refreshToken: data['refreshToken'] as String,
-      ),
-    );
-    return AuthSession.fromJson(data);
+    authDebugLog('Login request started');
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/login',
+        data: {'identifier': identifier, 'password': password},
+      );
+      authDebugLog('Login response received: ${response.statusCode}');
+
+      final data = response.data ?? <String, dynamic>{};
+      final accessToken = data['accessToken'] as String?;
+      final refreshToken = data['refreshToken'] as String?;
+
+      if (accessToken == null || refreshToken == null) {
+        authDebugLog('Login failed: token payload missing');
+        throw const ApiFriendlyException(
+          'Login response was incomplete. Please try again.',
+        );
+      }
+
+      await _tokenStorage.saveTokens(
+        TokenPair(accessToken: accessToken, refreshToken: refreshToken),
+      );
+      authDebugLog('Token stored');
+
+      authDebugLog('Loading current user');
+      final session = await me();
+      authDebugLog('Current user loaded');
+      return session;
+    } catch (error) {
+      authDebugLog('Login failed: ${_safeFailureLabel(error)}');
+      await _tokenStorage.clearTokens();
+      rethrow;
+    }
   }
 
   Future<AuthSession> me() async {
@@ -49,6 +73,18 @@ class AuthRepository {
   }
 
   Future<void> clearTokens() => _tokenStorage.clearTokens();
+}
+
+String _safeFailureLabel(Object error) {
+  if (error is DioException) {
+    return 'dio ${error.type.name} ${error.response?.statusCode ?? ''}'.trim();
+  }
+
+  if (error is ApiFriendlyException) {
+    return 'friendly error';
+  }
+
+  return error.runtimeType.toString();
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ArrowRight, LoaderCircle, Plus, RotateCcw, Search } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
+import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { DetailCard } from "@/components/platform/detail-card";
 import { useCreateOperation, usePatchOperation } from "@/hooks/use-admin-operations";
 import { useCrmLeads, useCrmPipelineStages } from "@/hooks/use-admin-crm";
 import type { CrmLead } from "@/types/admin-crm";
@@ -21,88 +23,11 @@ export function PipelinePage({ leadBasePath = "/developer/crm/leads" }: { leadBa
   const [moveNote, setMoveNote] = useState("");
   const [search, setSearch] = useState("");
 
-  const leadsByStage = useMemo(() => {
-    const map = new Map<string, CrmLead[]>();
-    for (const lead of leads?.items ?? []) {
-      const query = search.trim().toLowerCase();
-      if (query && !`${lead.client?.name ?? ""} ${lead.status} ${lead.project?.name ?? ""}`.toLowerCase().includes(query)) continue;
-      const key = lead.pipelineStageId ?? "unassigned";
-      map.set(key, [...(map.get(key) ?? []), lead]);
-    }
-    return map;
-  }, [leads?.items, search]);
+  const leadsByStage = useMemo(() => { const map = new Map<string, CrmLead[]>(); for (const lead of leads?.items ?? []) { const query = search.trim().toLowerCase(); if (query && !`${lead.client?.name ?? ""} ${lead.status} ${lead.project?.name ?? ""}`.toLowerCase().includes(query)) continue; const key = lead.pipelineStageId ?? "unassigned"; map.set(key, [...(map.get(key) ?? []), lead]); } return map; }, [leads?.items, search]);
+  async function create() { if (!stageName.trim()) return; await createStage.mutateAsync({ name: stageName }); setStageName(""); }
+  async function moveLead() { if (!selectedLead || !selectedStage) return; await patch.mutateAsync({ path: `/crm/leads/${selectedLead}/stage`, input: { stageId: selectedStage, note: moveNote.trim() || undefined } }); setSelectedLead(""); setSelectedStage(""); setMoveNote(""); }
 
-  async function create() {
-    if (!stageName.trim()) return;
-    await createStage.mutateAsync({ name: stageName });
-    setStageName("");
-  }
-
-  async function moveLead() {
-    if (!selectedLead || !selectedStage) return;
-    await patch.mutateAsync({ path: `/crm/leads/${selectedLead}/stage`, input: { stageId: selectedStage, note: moveNote.trim() || undefined } });
-    setSelectedLead("");
-    setSelectedStage("");
-    setMoveNote("");
-  }
-
-  return (
-    <>
-      <PageHeader title="CRM pipeline" description="Foundation Kanban view with stage columns and a simple lead move action." />
-      <div className="space-y-6">
-        {(stagesError || leadsError) ? (
-          <DetailCard title="Pipeline loading issue">
-            <p className="text-sm text-red-700">{stagesError?.message ?? leadsError?.message}</p>
-            <button className="mt-3 rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium" onClick={() => { void refetchStages(); void refetchLeads(); }}>
-              Retry
-            </button>
-          </DetailCard>
-        ) : null}
-        {stagesLoading || leadsLoading ? <LoadingState label="Loading CRM pipeline" /> : null}
-        <DetailCard title="Filter leads">
-          <input className="h-10 w-full rounded-md border border-zinc-300 px-3 text-sm" placeholder="Search by lead, status, or project" value={search} onChange={(event) => setSearch(event.target.value)} />
-        </DetailCard>
-        <DetailCard title="Stage setup">
-          <div className="flex gap-2">
-            <input className="h-10 rounded-md border border-zinc-300 px-3 text-sm" placeholder="New stage name" value={stageName} onChange={(event) => setStageName(event.target.value)} />
-            <button className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white" onClick={create}>Add stage</button>
-          </div>
-        </DetailCard>
-        <DetailCard title="Move lead">
-          <div className="grid gap-3 md:grid-cols-4">
-            <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={selectedLead} onChange={(event) => setSelectedLead(event.target.value)}>
-              <option value="">Select lead</option>
-              {(leads?.items ?? []).map((lead) => <option key={lead.id} value={lead.id}>{lead.client?.name ?? lead.id}</option>)}
-            </select>
-            <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={selectedStage} onChange={(event) => setSelectedStage(event.target.value)}>
-              <option value="">Select stage</option>
-              {stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
-            </select>
-            <input className="h-10 rounded-md border border-zinc-300 px-3 text-sm" placeholder="Optional move note" value={moveNote} onChange={(event) => setMoveNote(event.target.value)} />
-            <button className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-medium text-white" onClick={moveLead}>Move</button>
-          </div>
-          {patch.error ? <p className="mt-3 text-sm text-red-700">{patch.error.message}</p> : null}
-        </DetailCard>
-        <div className="grid gap-4 lg:grid-cols-4">
-          {stages.map((stage) => (
-            <section className="rounded-md border border-zinc-200 bg-white p-3" key={stage.id}>
-              <h2 className="text-sm font-semibold text-zinc-900">{stage.name}</h2>
-              <div className="mt-3 space-y-2">
-                {(leadsByStage.get(stage.id) ?? []).map((lead) => (
-                  <div className="rounded-md border border-zinc-200 p-3 text-sm" key={lead.id}>
-                    <Link className="font-medium text-zinc-900 hover:underline" href={`${leadBasePath}/${lead.id}`}>
-                      {lead.client?.name ?? "CRM lead"}
-                    </Link>
-                    <p className="text-zinc-500">{lead.status}{lead.project?.name ? ` · ${lead.project.name}` : ""}</p>
-                    <p className="mt-1 text-xs text-zinc-400">Stage history is available on lead detail.</p>
-                  </div>
-                ))}
-                {!(leadsByStage.get(stage.id) ?? []).length ? <p className="text-sm text-zinc-500">No leads.</p> : null}
-              </div>
-            </section>
-          ))}
-        </div>
-      </div>
-    </>
-  );
+  return <div className="space-y-6"><PageHeader title="CRM pipeline" description="Review leads by stage and use the explicit move action on desktop or mobile. Drag-and-drop is not assumed." />{stagesError || leadsError ? <FeedbackState tone="error" title="Pipeline could not be loaded" description={stagesError?.message ?? leadsError?.message} action={<button type="button" className="ui-button ui-button-secondary" onClick={() => { void refetchStages(); void refetchLeads(); }}><RotateCcw className="h-4 w-4" aria-hidden="true" />Retry</button>} /> : null}{stagesLoading || leadsLoading ? <LoadingState label="Loading CRM pipeline" /> : null}<section className="ui-card p-4 sm:p-5" aria-labelledby="pipeline-controls-title"><h2 id="pipeline-controls-title" className="text-sm font-semibold text-[var(--color-foreground)]">Pipeline controls</h2><div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.8fr)]"><div className="space-y-3"><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Search leads<div className="relative"><Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" aria-hidden="true" /><input className="ui-input ps-9" placeholder="Lead, status, or project" value={search} onChange={(event) => setSearch(event.target.value)} /></div></label><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">New stage name<div className="flex gap-2"><input className="ui-input" value={stageName} onChange={(event) => setStageName(event.target.value)} /><button type="button" className="ui-button ui-button-secondary" disabled={createStage.isPending || !stageName.trim()} onClick={create}>{createStage.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}Add</button></div></label></div><div><p className="text-xs font-semibold text-[var(--color-muted)]">Move a lead</p><div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"><select className="ui-input" aria-label="Lead to move" value={selectedLead} onChange={(event) => setSelectedLead(event.target.value)}><option value="">Select lead</option>{(leads?.items ?? []).map((lead) => <option key={lead.id} value={lead.id}>{lead.client?.name ?? "Unnamed lead"}{lead.project?.name ? ` · ${lead.project.name}` : ""}</option>)}</select><select className="ui-input" aria-label="Destination stage" value={selectedStage} onChange={(event) => setSelectedStage(event.target.value)}><option value="">Select stage</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select><input className="ui-input" aria-label="Optional move note" placeholder="Optional move note" value={moveNote} onChange={(event) => setMoveNote(event.target.value)} /><button type="button" className="ui-button ui-button-primary" disabled={patch.isPending || !selectedLead || !selectedStage} onClick={moveLead}>{patch.isPending ? "Moving…" : "Move lead"}<ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>{patch.error ? <div className="mt-3"><FeedbackState tone="error" title="Lead could not be moved" description={patch.error.message} /></div> : null}</div></div></section>{!stagesLoading && !leadsLoading && !stagesError && !leadsError ? <section aria-labelledby="pipeline-board-title"><div className="mb-4"><h2 id="pipeline-board-title" className="text-lg font-semibold text-[var(--color-foreground)]">Stage board</h2><p className="mt-1 text-sm text-[var(--color-muted)]">Up to 100 leads are loaded by the existing pipeline view contract.</p></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{stages.map((stage) => { const stageLeads = leadsByStage.get(stage.id) ?? []; return <section className="ui-card p-4" key={stage.id}><div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-[var(--color-foreground)]">{stage.name}</h3><span className="ui-badge">{stageLeads.length}</span></div><div className="mt-3 space-y-2">{stageLeads.map((lead) => <article className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3" key={lead.id}><Link className="font-semibold text-[var(--color-foreground)] hover:text-[var(--color-accent)]" href={`${leadBasePath}/${lead.id}`}>{lead.client?.name ?? "CRM lead"}</Link><p className="mt-1 text-xs text-[var(--color-muted)]">{formatLabel(lead.status)}{lead.project?.name ? ` · ${lead.project.name}` : ""}</p></article>)}{!stageLeads.length ? <p className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] p-3 text-sm text-[var(--color-muted)]">No leads in this stage.</p> : null}</div></section>; })}</div>{!stages.length ? <EmptyState title="No pipeline stages yet" description="Create the first stage using the existing stage setup control." /> : null}</section> : null}</div>;
 }
+
+function formatLabel(value: string) { return value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { OrganizationFooter } from "@/components/organization/organization-footer";
+import { PublicPreferences } from "@/components/public/public-preferences";
 import type { PublicOrganization } from "@/lib/mock-public-marketplace";
 
 type OrganizationPublicShellProps = {
@@ -14,27 +15,50 @@ export function OrganizationPublicShell({
   organization,
   children,
 }: OrganizationPublicShellProps) {
+  const navItems = [
+    { href: `/${domain}`, label: "Home" },
+    { href: `/${domain}/projects`, label: "Projects" },
+    { href: `/${domain}/about`, label: "About" },
+    { href: `/${domain}/contact`, label: "Contact" },
+  ];
+
   return (
-    <div className="bg-white">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
-          <Link href={`/${domain}`} className="text-lg font-semibold text-slate-950">
-            {organization.name}
+    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
+      <header className="sticky top-0 z-[var(--z-sticky)] border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-raised)_94%,transparent)] backdrop-blur-xl">
+        <div className="mx-auto flex min-h-[var(--topbar-height)] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link href={`/${domain}`} className="flex min-w-0 items-center gap-3" aria-label={`${organization.name} home`}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-[var(--color-primary)] text-sm font-black text-[var(--color-primary-foreground)] shadow-[var(--shadow-sm)]">
+              {organization.name.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="truncate text-base font-bold text-[var(--color-foreground)] sm:text-lg">{organization.name}</span>
           </Link>
-          <nav className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <Link href={`/${domain}/projects`} className="rounded px-3 py-2 hover:bg-slate-100">
-              Projects
+
+          <div className="flex items-center gap-2">
+            <nav className="hidden items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-sm font-semibold md:flex" aria-label="Organization navigation">
+              {navItems.map((item) => (
+                <Link key={item.href} href={item.href} className="rounded-[var(--radius-sm)] px-3 py-2 text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="hidden lg:block">
+              <PublicPreferences />
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex overflow-x-auto border-t border-[var(--color-border)] px-3 py-2 text-sm font-semibold md:hidden" aria-label="Organization mobile navigation">
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className="shrink-0 rounded-[var(--radius-sm)] px-3 py-2 text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]">
+              {item.label}
             </Link>
-            <Link href={`/${domain}/about`} className="rounded px-3 py-2 hover:bg-slate-100">
-              About
-            </Link>
-            <Link href={`/${domain}/contact`} className="rounded px-3 py-2 hover:bg-slate-100">
-              Contact
-            </Link>
-          </nav>
+          ))}
+        </nav>
+        <div className="border-t border-[var(--color-border)] px-3 pb-3 md:hidden">
+          <PublicPreferences expanded />
         </div>
       </header>
-      {children}
+      <main>{children}</main>
       <OrganizationFooter domain={domain} organization={organization} />
     </div>
   );

@@ -18,6 +18,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('POPWAM'), findsOneWidget);
+    expect(find.text('Email or phone'), findsOneWidget);
     expect(find.text('Log in'), findsOneWidget);
   });
 }

@@ -2,8 +2,10 @@
 
 import { ReservationRequestTable } from "@/components/lead-reservations/reservation-request-table";
 import { LoadingState } from "@/components/loading-state";
+import { FeedbackState } from "@/components/feedback-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
+import { CommercialSummaryStrip } from "@/components/commercial/commercial-summary-strip";
 import {
   useApproveReservationRequest,
   useRejectReservationRequest,
@@ -19,11 +21,12 @@ export default function DeveloperReservationRequestsPage() {
     <>
       <PageHeader
         title="Reservation Requests"
-        description="Review broker reservation requests for developer projects. Approval places the requested unit on hold."
+        description="Prioritize pending broker requests and make the unit impact clear before approving or rejecting."
       />
+      {!isLoading && !error ? <CommercialSummaryStrip items={[{ label: "All requests", value: data.length, description: "Requests for your projects" }, { label: "Pending decision", value: data.filter((request) => request.status === "PENDING").length, description: "Requests requiring review" }, { label: "Approved", value: data.filter((request) => request.status === "APPROVED").length, description: "Units held through approval" }, { label: "Closed", value: data.filter((request) => request.status === "REJECTED" || request.status === "CANCELLED").length, description: "Rejected or cancelled requests" }]} /> : null}
       <DetailCard title="Reservation Queue">
         {isLoading ? <LoadingState label="Loading reservation requests" /> : null}
-        {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
+        {error ? <FeedbackState tone="error" title="Reservation requests could not be loaded" description={error.message} /> : null}
         {!isLoading && !error ? (
           <ReservationRequestTable
             requests={data}

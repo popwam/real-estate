@@ -1,15 +1,17 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { Check, ClipboardCheck, LoaderCircle, Plus, RotateCcw } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
+import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { DetailCard } from "@/components/platform/detail-card";
-import { Button } from "@/components/ui/button";
-import { useCompleteCrmTask, useCreateCrmTask, useCrmTasks } from "@/hooks/use-admin-crm";
+import { useCompleteCrmTask, useCreateCrmTask, useCrmLeads, useCrmTasks } from "@/hooks/use-admin-crm";
 import { formatDate } from "@/lib/format";
 
 export function CrmTasksPage({ title = "CRM tasks", description = "Follow-up tasks for CRM leads." }: { title?: string; description?: string }) {
   const tasks = useCrmTasks();
+  const leads = useCrmLeads({ page: 1, pageSize: 100 });
   const createTask = useCreateCrmTask();
   const completeTask = useCompleteCrmTask();
   const [status, setStatus] = useState("");
@@ -18,91 +20,11 @@ export function CrmTasksPage({ title = "CRM tasks", description = "Follow-up tas
   const [now] = useState(() => Date.now());
   const [form, setForm] = useState({ title: "", crmLeadId: "", priority: "NORMAL", dueAt: "" });
 
-  const filtered = useMemo(() => {
-    return (tasks.data ?? []).filter((task) => {
-      if (status && task.status !== status) return false;
-      if (priority && task.priority !== priority) return false;
-      if (due && (task.dueAt ?? "").slice(0, 10) !== due) return false;
-      return true;
-    });
-  }, [due, priority, status, tasks.data]);
+  const filtered = useMemo(() => (tasks.data ?? []).filter((task) => (!status || task.status === status) && (!priority || task.priority === priority) && (!due || (task.dueAt ?? "").slice(0, 10) === due)), [due, priority, status, tasks.data]);
+  async function submit(event: FormEvent) { event.preventDefault(); if (!form.title.trim()) return; await createTask.mutateAsync({ title: form.title.trim(), priority: form.priority, dueAt: form.dueAt || undefined, ...(form.crmLeadId ? { crmLeadId: form.crmLeadId } : {}) }); setForm({ title: "", crmLeadId: "", priority: "NORMAL", dueAt: "" }); }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!form.title.trim()) return;
-    await createTask.mutateAsync({
-      title: form.title.trim(),
-      priority: form.priority,
-      dueAt: form.dueAt || undefined,
-      ...(form.crmLeadId ? { crmLeadId: form.crmLeadId } : {}),
-    });
-    setForm({ title: "", crmLeadId: "", priority: "NORMAL", dueAt: "" });
-  }
-
-  return (
-    <>
-      <PageHeader title={title} description={description} />
-      <div className="space-y-6">
-        <DetailCard title="Filters">
-          <div className="grid gap-3 md:grid-cols-3">
-            <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="">All statuses</option>
-              <option value="OPEN">OPEN</option>
-              <option value="DONE">DONE</option>
-              <option value="CANCELLED">CANCELLED</option>
-            </select>
-            <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={priority} onChange={(event) => setPriority(event.target.value)}>
-              <option value="">All priorities</option>
-              <option value="LOW">LOW</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="HIGH">HIGH</option>
-            </select>
-            <input className="h-10 rounded-md border border-zinc-300 px-3 text-sm" type="date" value={due} onChange={(event) => setDue(event.target.value)} />
-          </div>
-        </DetailCard>
-        <DetailCard title="Create task">
-          <form className="grid gap-3 md:grid-cols-[1fr_220px_160px_160px_auto]" onSubmit={submit}>
-            <input className="h-10 rounded-md border border-zinc-300 px-3 text-sm" placeholder="Task title" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-            <input className="h-10 rounded-md border border-zinc-300 px-3 text-sm" placeholder="Optional CRM lead id" value={form.crmLeadId} onChange={(event) => setForm((current) => ({ ...current, crmLeadId: event.target.value }))} />
-            <select className="h-10 rounded-md border border-zinc-300 px-3 text-sm" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}>
-              <option value="LOW">LOW</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="HIGH">HIGH</option>
-            </select>
-            <input className="h-10 rounded-md border border-zinc-300 px-3 text-sm" type="date" value={form.dueAt} onChange={(event) => setForm((current) => ({ ...current, dueAt: event.target.value }))} />
-            <Button disabled={createTask.isPending || !form.title.trim()}>{createTask.isPending ? "Saving..." : "Create"}</Button>
-          </form>
-          {createTask.error ? <p className="mt-3 text-sm text-red-700">{createTask.error.message}</p> : null}
-        </DetailCard>
-        <DetailCard title="Task list">
-          {tasks.isLoading ? <LoadingState label="Loading CRM tasks" /> : null}
-          {tasks.error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{tasks.error.message}</p> : null}
-          {!tasks.isLoading && !tasks.error ? (
-            <div className="divide-y divide-zinc-100 rounded-md border border-zinc-200">
-              {filtered.map((task) => {
-                const overdue = task.status === "OPEN" && task.dueAt && new Date(task.dueAt).getTime() < now;
-                return (
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm" key={task.id}>
-                    <div>
-                      <p className="font-medium text-zinc-950">{task.title}</p>
-                      <p className="text-zinc-500">
-                        {task.status} · {task.priority} · Due {formatDate(task.dueAt)} {overdue ? "· Overdue" : ""}
-                      </p>
-                      {task.crmLead?.client?.name ? <p className="text-zinc-500">Lead: {task.crmLead.client.name}</p> : null}
-                    </div>
-                    {task.status === "OPEN" ? (
-                      <Button disabled={completeTask.isPending} onClick={() => completeTask.mutate(task.id)}>
-                        Mark complete
-                      </Button>
-                    ) : null}
-                  </div>
-                );
-              })}
-              {!filtered.length ? <p className="p-4 text-sm text-zinc-500">No tasks match these filters.</p> : null}
-            </div>
-          ) : null}
-        </DetailCard>
-      </div>
-    </>
-  );
+  return <div className="space-y-6"><PageHeader title={title} description={description} /><section className="ui-card p-4 sm:p-5" aria-labelledby="task-filters-title"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 id="task-filters-title" className="text-sm font-semibold text-[var(--color-foreground)]">Filter tasks</h2><p className="mt-1 text-xs text-[var(--color-muted)]">Review open, completed, cancelled, priority, and due-date states.</p></div><button type="button" className="ui-button ui-button-secondary" onClick={() => { setStatus(""); setPriority(""); setDue(""); }}><RotateCcw className="h-4 w-4" aria-hidden="true" />Reset</button></div><div className="mt-4 grid gap-3 sm:grid-cols-3"><Filter label="Status" value={status} onChange={setStatus} options={["OPEN", "DONE", "CANCELLED"]} /><Filter label="Priority" value={priority} onChange={setPriority} options={["LOW", "NORMAL", "HIGH"]} /><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Due date<input className="ui-input" type="date" value={due} onChange={(event) => setDue(event.target.value)} /></label></div></section><section className="ui-card p-4 sm:p-5" aria-labelledby="create-task-title"><h2 id="create-task-title" className="text-sm font-semibold text-[var(--color-foreground)]">Create follow-up task</h2><p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">Choose an available lead by name instead of entering a raw lead ID. The task can also remain unlinked.</p><form className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(12rem,0.7fr)_9rem_11rem_auto]" onSubmit={submit}><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Task title<input className="ui-input" placeholder="Follow-up action" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></label><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Lead<select className="ui-input" value={form.crmLeadId} onChange={(event) => setForm((current) => ({ ...current, crmLeadId: event.target.value }))}><option value="">No linked lead</option>{(leads.data?.items ?? []).map((lead) => <option key={lead.id} value={lead.id}>{lead.client?.name ?? "Unnamed lead"}{lead.project?.name ? ` · ${lead.project.name}` : ""}</option>)}</select></label><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Priority<select className="ui-input" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}><option value="LOW">Low</option><option value="NORMAL">Normal</option><option value="HIGH">High</option></select></label><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Due date<input className="ui-input" type="date" value={form.dueAt} onChange={(event) => setForm((current) => ({ ...current, dueAt: event.target.value }))} /></label><button className="ui-button ui-button-primary self-end" disabled={createTask.isPending || !form.title.trim()}>{createTask.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}{createTask.isPending ? "Saving…" : "Create"}</button></form>{createTask.error ? <div className="mt-4"><FeedbackState tone="error" title="Task could not be created" description={createTask.error.message} /></div> : null}</section><section className="ui-card p-4 sm:p-5" aria-labelledby="task-results-title"><div className="mb-4"><h2 id="task-results-title" className="text-lg font-semibold text-[var(--color-foreground)]">Tasks</h2><p className="mt-1 text-sm text-[var(--color-muted)]">{filtered.length.toLocaleString()} results</p></div>{tasks.isLoading ? <LoadingState label="Loading CRM tasks" /> : null}{tasks.error ? <FeedbackState tone="error" title="Tasks could not be loaded" description={tasks.error.message} /> : null}{!tasks.isLoading && !tasks.error ? <div className="grid gap-3">{filtered.map((task) => { const overdue = task.status === "OPEN" && task.dueAt && new Date(task.dueAt).getTime() < now; return <article className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 sm:flex-row sm:items-center sm:justify-between" key={task.id}><div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[var(--color-foreground)]">{task.title}</p><span className="ui-badge">{formatLabel(task.status)}</span><span className="ui-badge">{formatLabel(task.priority)}</span>{overdue ? <span className="inline-flex rounded-full border border-[var(--color-danger)] bg-[var(--color-danger-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--color-danger)]">Overdue</span> : null}</div><p className="mt-2 text-sm text-[var(--color-muted)]">Due {formatDate(task.dueAt)}{task.crmLead?.client?.name ? ` · Lead: ${task.crmLead.client.name}` : " · Unlinked task"}</p></div>{task.status === "OPEN" ? <button type="button" className="ui-button ui-button-secondary" disabled={completeTask.isPending} onClick={() => completeTask.mutate(task.id)}><Check className="h-4 w-4" aria-hidden="true" />Mark complete</button> : null}</article>; })}{!filtered.length ? <EmptyState icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />} title="No tasks match these filters" description="Clear the filters or create a new follow-up task." /> : null}</div> : null}{completeTask.error ? <div className="mt-4"><FeedbackState tone="error" title="Task could not be completed" description={completeTask.error.message} /></div> : null}</section></div>;
 }
+
+function Filter({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) { return <label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">{label}<select className="ui-input" value={value} onChange={(event) => onChange(event.target.value)}><option value="">All</option>{options.map((option) => <option key={option} value={option}>{formatLabel(option)}</option>)}</select></label>; }
+function formatLabel(value: string) { return value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }

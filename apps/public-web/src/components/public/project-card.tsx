@@ -1,32 +1,48 @@
 import Link from "next/link";
+import { ProjectMediaVisual } from "@/components/marketplace/project-media-visual";
 import type { PublicProject } from "@/lib/mock-public-marketplace";
 
 export function ProjectCard({ project }: { project: PublicProject }) {
+  const location = [project.city, project.district].filter(Boolean).join(" / ");
+
   return (
-    <article className="overflow-hidden rounded border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div
-        className="h-52 bg-slate-200 bg-cover bg-center"
-        style={{ backgroundImage: `url(${project.heroImageUrl})` }}
-        aria-label={`${project.name} preview image`}
+    <article className="ui-card overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
+      <ProjectMediaVisual
+        imageUrl={project.heroImageUrl}
+        label={`${project.name} project preview`}
+        className="h-52"
       />
       <div className="p-5">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
-          <span>{project.city}</span>
-          <span className="h-1 w-1 rounded-full bg-slate-300" />
-          <span>{project.district}</span>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+          <span>{location || "Public project"}</span>
+          <span className="ui-badge border-0 px-2 py-1 text-[0.68rem]">
+            Available for interest
+          </span>
         </div>
-        <h2 className="mt-3 text-xl font-semibold text-slate-950">{project.name}</h2>
-        <p className="mt-1 text-sm font-medium text-slate-500">
+        <h2 className="mt-3 text-xl font-semibold text-[var(--color-foreground)]">{project.name}</h2>
+        <p className="mt-1 text-sm font-medium text-[var(--color-muted)]">
           By {project.developerName}
         </p>
-        <p className="mt-2 text-sm leading-6 text-slate-600">{project.summary}</p>
-        <dl className="mt-5 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+        <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">{project.summary}</p>
+        <dl className="mt-5 grid gap-3 text-sm text-[var(--color-muted)] sm:grid-cols-2">
+          {project.propertyType ? (
+            <div>
+              <dt className="font-semibold text-[var(--color-foreground)]">Type</dt>
+              <dd>{project.propertyType}</dd>
+            </div>
+          ) : null}
+          {project.hasPrice ? (
+            <div>
+              <dt className="font-semibold text-[var(--color-foreground)]">Pricing</dt>
+              <dd>{project.priceLabel}</dd>
+            </div>
+          ) : null}
           <div>
-            <dt className="font-semibold text-slate-950">Price</dt>
-            <dd>{project.priceLabel}</dd>
+            <dt className="font-semibold text-[var(--color-foreground)]">Location</dt>
+            <dd>{location || "Available on request"}</dd>
           </div>
           <div>
-            <dt className="font-semibold text-slate-950">Delivery</dt>
+            <dt className="font-semibold text-[var(--color-foreground)]">Delivery</dt>
             <dd>{project.deliveryLabel}</dd>
           </div>
         </dl>
@@ -34,7 +50,7 @@ export function ProjectCard({ project }: { project: PublicProject }) {
           {project.unitTypes.slice(0, 3).map((unitType) => (
             <span
               key={unitType.type}
-              className="rounded border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700"
+              className="ui-badge"
             >
               {unitType.type}
             </span>
@@ -42,7 +58,7 @@ export function ProjectCard({ project }: { project: PublicProject }) {
         </div>
         <Link
           href={`/projects/${project.slug}`}
-          className="mt-5 inline-flex rounded bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="ui-button ui-button-primary mt-5"
         >
           View project
         </Link>

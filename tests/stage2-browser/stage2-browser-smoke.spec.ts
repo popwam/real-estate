@@ -112,12 +112,13 @@ test("developer import/export browser flow", async ({ page }) => {
 
   await page.goto(`${ADMIN_URL}/developer/import-export/export`);
   await expect(page.getByRole("heading", { name: "Data export" })).toBeVisible();
-  await page.locator("select").first().selectOption("projects");
+  const datasetSelect = page.locator("select").filter({ hasText: "projects" }).first();
+  await datasetSelect.selectOption("projects");
   await page.getByRole("button", { name: "Run export" }).click();
   await expect(page.getByText(/"dataType": "projects"/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Download JSON" })).toBeEnabled();
 
-  await page.locator("select").first().selectOption("account");
+  await datasetSelect.selectOption("account");
   await page.getByRole("button", { name: "Run export" }).click();
   await expect(page.getByText(/"dataType": "account"/)).toBeVisible();
   await expect(page.locator("body")).not.toContainText("passwordHash");
@@ -128,7 +129,7 @@ test("developer import/export browser flow", async ({ page }) => {
 test("brokerage CRM claim and conversation browser flow", async ({ page }) => {
   await loginAdmin(page, accounts.broker.email, accounts.broker.password);
   await page.goto(`${ADMIN_URL}/brokerage/crm/marketplace-leads`);
-  await expect(page.getByRole("heading", { name: "Marketplace CRM leads" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Marketplace leads" })).toBeVisible();
 
   const claimButton = page.getByRole("button", { name: "Claim lead" }).first();
   if (await claimButton.isVisible()) {
@@ -139,7 +140,7 @@ test("brokerage CRM claim and conversation browser flow", async ({ page }) => {
   await page.goto(`${ADMIN_URL}/brokerage/conversations`);
   await expect(page.getByRole("heading", { name: "Conversations" })).toBeVisible();
   await openFirstTableAction(page, "Open");
-  await expect(page.getByRole("heading", { level: 1, name: /^Conversation / })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversation overview" })).toBeVisible();
 
   const composer = page.getByPlaceholder("Write a conversation message.");
   if (await composer.isVisible()) {
@@ -153,8 +154,7 @@ test("brokerage CRM claim and conversation browser flow", async ({ page }) => {
 test("developer CRM leads and conversations browser flow", async ({ page }) => {
   await loginAdmin(page, accounts.developer.email, accounts.developer.password);
   await page.goto(`${ADMIN_URL}/developer/crm/leads`);
-  await expect(page.getByRole("heading", { name: "CRM leads" })).toBeVisible();
-  await expect(page.getByText("Lead inbox")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "CRM lead inbox" })).toBeVisible();
   await page.goto(`${ADMIN_URL}/developer/crm/leads/${prepared.crmLeadId}`);
   await expect(page.getByRole("heading", { name: "Activity timeline" })).toBeVisible();
   await expectActivityTimelineSurface(page);
@@ -162,10 +162,10 @@ test("developer CRM leads and conversations browser flow", async ({ page }) => {
   await page.goto(`${ADMIN_URL}/developer/conversations`);
   await expect(page.getByRole("heading", { name: "Conversations" })).toBeVisible();
   await page.goto(`${ADMIN_URL}/developer/conversations/${prepared.conversationId}`);
-  await expect(page.getByRole("heading", { level: 1, name: /^Conversation / })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversation overview" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Public share link" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Activity timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Private share link" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversation activity" })).toBeVisible();
   await expectActivityTimelineSurface(page);
 });
 
@@ -194,7 +194,7 @@ test("platform overview pages render without app crash", async ({ page }) => {
   await expectActivityTimelineSurface(page);
 
   await page.goto(`${ADMIN_URL}/platform/conversations/${prepared.conversationId}`);
-  await expect(page.getByRole("heading", { name: "Activity timeline" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conversation activity" })).toBeVisible();
   await expectActivityTimelineSurface(page);
 });
 
@@ -208,14 +208,14 @@ test("public contact options and public conversation reply route", async ({ page
   } else {
     await page.goto(`${PUBLIC_URL}/projects/${prepared.projectSlug}`);
   }
-  await expect(page.getByRole("heading", { name: /Register interest/i }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Send your interest" }).first()).toBeVisible();
 
   await submitPublicLeadForm(page, "CALL");
-  await expect(page.getByText("Your call request was sent")).toBeVisible();
+  await expect(page.getByText("Your request was sent")).toBeVisible();
 
   await page.goto(`${PUBLIC_URL}/projects/${prepared.projectSlug}`);
   await submitPublicLeadForm(page, "CHAT");
-  await expect(page.getByText("Your chat request was created.")).toBeVisible();
+  await expect(page.getByText("Your conversation is ready")).toBeVisible();
   await expect(page.getByRole("link", { name: "Open conversation" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText("Demo/mock conversation link.");
@@ -226,9 +226,9 @@ test("public contact options and public conversation reply route", async ({ page
   expect(chatConversationHref).not.toContain("mock-chat");
 
   await page.goto(`${PUBLIC_URL}${chatConversationHref}`);
-  await expect(page.getByText("Public conversation")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Reply" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send reply" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("Private conversation")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText("organizationId");
   await expect(page.locator("body")).not.toContainText("crmLeadId");
   await expect(page.locator("body")).not.toContainText("clientId");
@@ -236,9 +236,9 @@ test("public contact options and public conversation reply route", async ({ page
 
   const publicReply = `Browser public reply ${Date.now()}`;
   await page.getByLabel(/Your name/i).fill("Browser Smoke Visitor");
-  await page.getByLabel("Message").fill(publicReply);
-  await page.getByRole("button", { name: "Send reply" }).click();
-  await expect(page.getByText("Message sent.")).toBeVisible();
+  await page.getByRole("textbox", { name: "Message" }).fill(publicReply);
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByText("Your message was sent.")).toBeVisible();
   await expect(page.getByText(publicReply)).toBeVisible();
 
   await page.goto(`${PUBLIC_URL}/projects/${prepared.projectSlug}`);
@@ -246,18 +246,18 @@ test("public contact options and public conversation reply route", async ({ page
   await submitPublicLeadForm(page, "WHATSAPP");
   const popup = await popupPromise;
   await popup?.close();
-  await expect(page.getByText("WhatsApp request received")).toBeVisible();
+  await expect(page.getByText("Your request was sent")).toBeVisible();
 
   await page.goto(`${PUBLIC_URL}/c/${prepared.shareToken}`);
-  await expect(page.getByText("Public conversation")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Reply" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send reply" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("Private conversation")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
 });
 
 async function loginAdmin(page: Page, email: string, password: string) {
   await page.goto(`${ADMIN_URL}/login`);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.locator('input[name="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForFunction(() => Boolean(window.localStorage.getItem("popwam.admin.accessToken")));
   await expect(page).not.toHaveURL(/\/login$/);
@@ -267,24 +267,24 @@ async function submitPublicLeadForm(page: Page, method: "CALL" | "CHAT" | "WHATS
   const stamp = Date.now();
   const form = page.locator("form").filter({ hasText: "Preferred contact" }).last();
   await form.getByLabel(methodLabel(method)).check();
-  await form.getByLabel("Name").fill(`Browser Smoke ${method} ${stamp}`);
-  await form.getByLabel("Phone").fill(`+2010${String(stamp).slice(-8)}`);
-  await form.getByLabel("Email optional").fill(`browser-${method.toLowerCase()}-${stamp}@example.com`);
-  await form.getByLabel("Message optional").fill(`Browser smoke ${method} request.`);
-  await form.getByLabel(/I consent to POPWAM/i).check();
+  await form.getByLabel("Full name").fill(`Browser Smoke ${method} ${stamp}`);
+  await form.getByLabel("Phone number").fill(`+2010${String(stamp).slice(-8)}`);
+  await form.getByLabel("Email (optional)").fill(`browser-${method.toLowerCase()}-${stamp}@example.com`);
+  await form.getByLabel("Message (optional)").fill(`Browser smoke ${method} request.`);
+  await form.getByLabel(/I agree that POPWAM may share this request/i).check();
   await form.getByRole("button", { name: submitButtonLabel(method) }).click();
 }
 
 function methodLabel(method: "CALL" | "CHAT" | "WHATSAPP") {
-  if (method === "CALL") return "Request Call";
-  if (method === "CHAT") return "Start Chat";
+  if (method === "CALL") return "Request a call";
+  if (method === "CHAT") return "Message online";
   return "WhatsApp";
 }
 
 function submitButtonLabel(method: "CALL" | "CHAT" | "WHATSAPP") {
-  if (method === "CALL") return "Request call";
-  if (method === "CHAT") return "Start chat";
-  return "Contact via WhatsApp";
+  if (method === "CALL") return "Request a call";
+  if (method === "CHAT") return "Send message";
+  return "Continue with WhatsApp";
 }
 
 async function openFirstTableAction(page: Page, name: string) {
@@ -294,12 +294,12 @@ async function openFirstTableAction(page: Page, name: string) {
 }
 
 async function expectActivityTimelineSurface(page: Page) {
-  const emptyState = page.getByText("No activity recorded yet.");
+  const emptyState = page.getByText("No activity recorded yet");
   const activityItem = page
     .getByRole("listitem")
     .filter({
       hasText:
-        /LEAD CREATED|LEAD CONVERTED|LEAD CLAIMED|LEAD STATUS CHANGED|CONVERSATION CREATED|CONVERSATION STATUS CHANGED|MESSAGE SENT|PUBLIC MESSAGE SENT|NOTE ADDED/,
+        /Lead Created|Lead Converted|Lead Claimed|Lead Status Changed|Conversation Created|Conversation Status Changed|Message Sent|Public Message Sent|Note Added/i,
     })
     .first();
 

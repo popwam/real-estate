@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { OrganizationContactSection } from "@/components/organization/organization-contact-section";
+import { StickyCtaBar } from "@/components/cta/sticky-cta-bar";
+import { ProjectContactPanel } from "@/components/marketplace/project-contact-panel";
+import { ProjectDetailHero } from "@/components/marketplace/project-detail-hero";
+import { ProjectMediaGallery } from "@/components/marketplace/project-media-gallery";
 import { OrganizationPublicShell } from "@/components/organization/organization-public-shell";
+import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
 import {
   getPublicProjectForOrganization,
   resolvePublicOrganizationByDomain,
@@ -43,76 +47,133 @@ export default async function DomainProjectDetailPage({
     notFound();
   }
 
+  const location = [project.city, project.district, project.address]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <OrganizationPublicShell domain={domain} organization={organization}>
-      <section
-        className="min-h-[420px] bg-cover bg-center"
-        style={{ backgroundImage: `url(${project.heroImageUrl})` }}
-      >
-        <div className="min-h-[420px] bg-slate-950/60">
-          <div className="mx-auto flex min-h-[420px] max-w-7xl flex-col justify-end px-6 py-12 text-white">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
-              {organization.name} / {project.city}
+      <ProjectDetailHero project={project} />
+      <OrganizationTrustStrip
+        organization={organization}
+        projectCount={organization.projects.length}
+      />
+
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.64fr_0.36fr] lg:items-start lg:py-14">
+        <div className="grid gap-10">
+          <ProjectMediaGallery project={project} />
+
+          <section className="ui-card p-5 sm:p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+              {organization.name}
             </p>
-            <h1 className="mt-3 max-w-4xl text-5xl font-semibold leading-tight">
-              {project.name}
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-100">
+            <h2 className="mt-3 text-2xl font-semibold text-[var(--color-foreground)]">
+              Project overview
+            </h2>
+            <p className="mt-4 text-base leading-7 text-[var(--color-muted)]">
               {project.summary}
             </p>
-          </div>
+            {project.highlights.length > 0 ? (
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                {project.highlights.map((highlight) => (
+                  <li
+                    key={highlight}
+                    className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm font-medium text-[var(--color-foreground)]"
+                  >
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+
+          <section className="grid gap-6 md:grid-cols-2">
+            <article className="ui-card p-5 sm:p-6">
+              <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
+                Location
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+                {location || "Location details are available on request."}
+              </p>
+            </article>
+
+            <article className="ui-card p-5 sm:p-6">
+              <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
+                Organization
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
+                Published by{" "}
+                <Link
+                  href={`/${domain}`}
+                  className="font-semibold text-[var(--color-foreground)] underline"
+                >
+                  {organization.name}
+                </Link>
+                .
+              </p>
+            </article>
+          </section>
+
+          {project.unitTypes.length > 0 ? (
+            <section className="ui-card p-5 sm:p-6">
+              <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
+                Units and inventory summary
+              </h2>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {project.unitTypes.map((unitType) => (
+                  <article
+                    key={unitType.type}
+                    className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4"
+                  >
+                    <h3 className="font-semibold text-[var(--color-foreground)]">
+                      {unitType.type}
+                    </h3>
+                    <p className="mt-2 text-sm text-[var(--color-muted)]">
+                      {unitType.bedrooms} / {unitType.sizeRange}
+                    </p>
+                    {project.hasPrice ? (
+                      <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
+                        From {unitType.startingPrice}
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {project.hasPaymentPlan ? (
+            <section className="ui-card p-5 sm:p-6">
+              <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
+                Payment plan
+              </h2>
+              <dl className="mt-6 grid gap-4 text-sm text-[var(--color-muted)] sm:grid-cols-2">
+                <DetailFact label="Down payment" value={project.paymentPlan.downPayment} />
+                <DetailFact label="Installments" value={project.paymentPlan.installments} />
+                <DetailFact label="Delivery" value={project.paymentPlan.delivery} />
+                <DetailFact label="Maintenance" value={project.paymentPlan.maintenance} />
+              </dl>
+            </section>
+          ) : null}
         </div>
+
+        <ProjectContactPanel project={project} />
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[0.8fr_1.2fr]">
-        <aside className="rounded border border-slate-200 bg-slate-50 p-6">
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            Organization project context
-          </p>
-          <dl className="mt-5 grid gap-4 text-sm text-slate-700">
-            <div>
-              <dt className="font-semibold text-slate-950">Organization</dt>
-              <dd>{organization.name}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-slate-950">Price</dt>
-              <dd>{project.priceLabel}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-slate-950">Delivery</dt>
-              <dd>{project.deliveryLabel}</dd>
-            </div>
-          </dl>
-          <Link
-            href={`/${domain}/contact`}
-            className="mt-6 inline-flex rounded bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-          >
-            Contact placeholder
-          </Link>
-        </aside>
-        <div>
-          <h2 className="text-3xl font-semibold text-slate-950">Public project</h2>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            This organization-context page uses the same public-only adapter as
-            the main marketplace. No private inventory, lead claim, reservation,
-            deal, or commission data is shown.
-          </p>
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {project.unitTypes.map((unitType) => (
-              <div key={unitType.type} className="rounded border border-slate-200 p-5">
-                <p className="font-semibold text-slate-950">{unitType.type}</p>
-                <p className="mt-2 text-sm text-slate-600">
-                  {unitType.bedrooms} / {unitType.sizeRange}
-                </p>
-                <p className="mt-2 text-sm font-medium text-slate-950">
-                  From {unitType.startingPrice}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      <OrganizationContactSection organization={organization} />
+      <StickyCtaBar
+        label={`Interested in ${project.name}?`}
+        whatsappUrl={project.developerContact?.whatsappUrl}
+        avoidBottomNav={false}
+      />
     </OrganizationPublicShell>
+  );
+}
+
+function DetailFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+      <dt className="font-semibold text-[var(--color-foreground)]">{label}</dt>
+      <dd className="mt-1">{value}</dd>
+    </div>
   );
 }

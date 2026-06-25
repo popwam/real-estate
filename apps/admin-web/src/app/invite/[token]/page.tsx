@@ -1,9 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { acceptInvitationApi, getInvitationApi } from "@/lib/api";
+import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Invitation = Awaited<ReturnType<typeof getInvitationApi>>;
 
@@ -15,7 +19,9 @@ export default function InvitationPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void getInvitationApi(token).then(setInvitation).catch(() => setError("This invitation is invalid or unavailable."));
+    void getInvitationApi(token)
+      .then(setInvitation)
+      .catch(() => setError("This invitation is invalid or unavailable."));
   }, [token]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -39,21 +45,76 @@ export default function InvitationPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg items-center px-6 py-12">
-      <div className="w-full rounded-xl border border-zinc-200 bg-white p-7 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-950">Join {invitation?.organization.name ?? "POPWAM"}</h1>
-        {accepted ? <p className="mt-4 text-sm text-emerald-700">Invitation accepted. You can now sign in.</p> : null}
+    <main className="mx-auto flex min-h-screen max-w-lg items-center bg-[var(--color-background)] px-6 py-12 text-[var(--color-foreground)]">
+      <div className="ui-card w-full p-7">
+        <p className="text-sm font-medium text-[var(--color-muted)]">Company invitation</p>
+        <h1 className="mt-2 text-2xl font-semibold">
+          Join {invitation?.organization.name ?? "POPWAM"}
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+          Set your password to activate your POPWAM login for this organization.
+        </p>
+
+        {accepted ? (
+          <div className="mt-5 space-y-4">
+            <FeedbackState
+              tone="success"
+              title="Invitation accepted"
+              description="Your account is ready. Sign in with your invited email or phone number and the password you just set."
+            />
+            <Link className="ui-button w-full" href="/login">
+              Sign in
+            </Link>
+          </div>
+        ) : null}
+
         {!accepted && invitation ? (
           <form className="mt-6 grid gap-4" onSubmit={submit}>
-            <p className="text-sm text-zinc-600">{invitation.email} · {invitation.intendedRole.replaceAll("_", " ")}</p>
-            <input name="firstName" placeholder="First name" className="h-10 rounded-md border border-zinc-300 px-3" />
-            <input name="lastName" placeholder="Last name" className="h-10 rounded-md border border-zinc-300 px-3" />
-            <input name="phone" placeholder="Phone optional" className="h-10 rounded-md border border-zinc-300 px-3" />
-            <input required minLength={10} type="password" name="password" placeholder="Password (10+ characters)" className="h-10 rounded-md border border-zinc-300 px-3" />
-            <Button disabled={submitting || !invitation.canAccept} type="submit">{submitting ? "Accepting" : "Accept invitation"}</Button>
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">
+              {invitation.email} - {invitation.intendedRole.replaceAll("_", " ")}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="firstName">First name</Label>
+              <Input id="firstName" name="firstName" autoComplete="given-name" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input id="lastName" name="lastName" autoComplete="family-name" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone number for login (optional)</Label>
+              <Input id="phone" name="phone" autoComplete="tel" inputMode="tel" placeholder="+201001234567" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                required
+                minLength={10}
+                type="password"
+                id="password"
+                name="password"
+                autoComplete="new-password"
+                placeholder="At least 10 characters"
+              />
+            </div>
+            {!invitation.canAccept ? (
+              <FeedbackState
+                tone="error"
+                title="Invitation unavailable"
+                description={`This invitation is ${invitation.status.toLowerCase().replaceAll("_", " ")}.`}
+              />
+            ) : null}
+            <Button disabled={submitting || !invitation.canAccept} type="submit">
+              {submitting ? "Accepting..." : "Accept invitation"}
+            </Button>
           </form>
         ) : null}
-        {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+
+        {error ? (
+          <div className="mt-4">
+            <FeedbackState tone="error" title="Invitation error" description={error} />
+          </div>
+        ) : null}
       </div>
     </main>
   );

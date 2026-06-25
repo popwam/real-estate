@@ -13,14 +13,14 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -37,7 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       await ref.read(authControllerProvider).login(
-            _emailController.text.trim(),
+            _identifierController.text.trim(),
             _passwordController.text,
           );
     } catch (error) {
@@ -75,16 +75,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
+                      controller: _identifierController,
+                      keyboardType: TextInputType.text,
+                      autofillHints: const [
+                        AutofillHints.username,
+                        AutofillHints.email,
+                        AutofillHints.telephoneNumber,
+                      ],
                       decoration: const InputDecoration(
-                        labelText: 'Email',
+                        labelText: 'Email or phone',
                         prefixIcon: Icon(Icons.mail_outline),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Email is required';
+                          return 'Email or phone is required';
                         }
                         return null;
                       },

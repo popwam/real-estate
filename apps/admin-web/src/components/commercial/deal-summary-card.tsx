@@ -10,7 +10,7 @@ export function DealSummaryCard({ deal }: { deal: Deal }) {
       <DetailCard title="Deal Summary">
         <DetailGrid items={[
           { label: "Status", value: <DealStatusBadge status={deal.status} /> },
-          { label: "Deal room", value: deal.dealRoomId },
+          { label: "Deal room", value: deal.dealRoom?.status ? `${deal.dealRoom.status.replaceAll("_", " ").toLowerCase()} workspace` : "Related negotiation workspace" },
           { label: "Final price", value: money(deal.finalPrice, deal.currency) },
           { label: "Created", value: formatDate(deal.createdAt) },
           { label: "Approved", value: formatDate(deal.approvedAt) },

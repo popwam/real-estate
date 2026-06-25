@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { LoaderCircle, Save } from "lucide-react";
+import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useUpdateConversationStatus } from "@/hooks/use-admin-crm";
@@ -12,30 +14,8 @@ export function ConversationStatusUpdateDialog({ conversationId, currentStatus }
   const [status, setStatus] = useState<ConversationStatus>(currentStatus);
   const [statusNote, setStatusNote] = useState("");
   const update = useUpdateConversationStatus(conversationId);
-
-  async function submit() {
-    await update.mutateAsync({ status, statusNote: statusNote || undefined });
-    setStatusNote("");
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
-        <label className="space-y-2 text-sm font-medium text-zinc-800">
-          Status
-          <select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" value={status} onChange={(event) => setStatus(event.target.value as ConversationStatus)}>
-            {statuses.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <label className="space-y-2 text-sm font-medium text-zinc-800">
-          Status note
-          <Textarea value={statusNote} onChange={(event) => setStatusNote(event.target.value)} placeholder="Optional note for this status change." />
-        </label>
-      </div>
-      {update.error ? <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{update.error.message}</p> : null}
-      {update.isSuccess ? <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Conversation status updated.</p> : null}
-      <Button disabled={update.isPending} onClick={submit}>{update.isPending ? "Updating" : "Update conversation status"}</Button>
-      <p className="text-sm text-zinc-500">No WebSocket or external chat provider is called.</p>
-    </div>
-  );
+  async function submit() { await update.mutateAsync({ status, statusNote: statusNote || undefined }); setStatusNote(""); }
+  return <div className="space-y-4"><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Status<select className="ui-input" value={status} onChange={(event) => { setStatus(event.target.value as ConversationStatus); update.reset(); }}>{statuses.map((item) => <option key={item} value={item}>{formatLabel(item)}</option>)}</select></label><label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Status note<Textarea value={statusNote} onChange={(event) => setStatusNote(event.target.value)} placeholder="Optional reason or handoff note" /></label>{update.error ? <FeedbackState tone="error" title="Conversation status could not be updated" description={update.error.message} /> : null}{update.isSuccess ? <FeedbackState tone="success" title="Conversation status updated" /> : null}<Button className="w-full" disabled={update.isPending || (status === currentStatus && !statusNote.trim())} onClick={submit}>{update.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}{update.isPending ? "Updating…" : "Update status"}</Button></div>;
 }
+
+function formatLabel(value: string) { return value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }

@@ -47,7 +47,7 @@ export function ReservationRequestForm({
       <div className="space-y-2">
         <Label>Lead claim ID</Label>
         <Input {...register("leadClaimId")} />
-        {errors.leadClaimId ? <p className="text-sm text-red-600">{errors.leadClaimId.message}</p> : null}
+        {errors.leadClaimId ? <p className="text-sm text-[var(--color-danger)]" role="alert">{errors.leadClaimId.message}</p> : null}
       </div>
       <div className="space-y-2">
         <Label>Unit ID (optional)</Label>
@@ -58,7 +58,7 @@ export function ReservationRequestForm({
         <Textarea {...register("notes")} />
       </div>
       {error ? (
-        <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 md:col-span-2">
+        <div className="ui-feedback ui-feedback-error flex gap-2 text-sm md:col-span-2" role="alert">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{error.message}</span>
         </div>

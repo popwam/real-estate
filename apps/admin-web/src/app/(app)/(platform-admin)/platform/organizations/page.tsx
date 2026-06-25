@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Building2, Filter } from "lucide-react";
+import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { OrganizationStatusBadge } from "@/components/platform/organization-status-badge";
-import { DataTable } from "@/components/tables/data-table";
+import { OrganizationResponsiveList } from "@/components/platform/organization-responsive-list";
 import { useOrganizations } from "@/hooks/use-platform-admin";
-import type { Organization } from "@/types/platform";
 import { CreateOrganizationForm } from "@/components/platform/create-organization-form";
 
 export default function PlatformOrganizationsPage() {
@@ -28,14 +27,32 @@ export default function PlatformOrganizationsPage() {
     <>
       <PageHeader
         title="Organizations"
-        description="Platform-wide registry for developers, brokerages, individual brokers, and POPWAM entities."
+        description="Trust and access control center for developers, brokerages, individual brokers, and platform-owned entities."
       />
       <CreateOrganizationForm />
-      <div className="mb-4 flex flex-col gap-3 rounded-md border border-zinc-200 bg-white p-4 sm:flex-row sm:items-center">
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-          Type
+      <section className="ui-card mb-5 p-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+              <Filter className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Review filters</h2>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Showing {rows.length} of {data.length} organization records.
+              </p>
+            </div>
+          </div>
+          <div className="inline-flex items-center gap-2 text-sm text-[var(--color-muted)]">
+            <Building2 className="h-4 w-4" aria-hidden="true" />
+            Result count is based on the loaded organization list.
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+          <label className="space-y-2 text-sm font-medium text-[var(--color-foreground)]">
+            <span>Type</span>
           <select
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal text-zinc-900"
+            className="ui-input"
             value={type}
             onChange={(event) => setType(event.target.value)}
           >
@@ -46,10 +63,10 @@ export default function PlatformOrganizationsPage() {
             <option value="INDIVIDUAL_BROKER">Individual broker</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-          Status
+          <label className="space-y-2 text-sm font-medium text-[var(--color-foreground)]">
+            <span>Status</span>
           <select
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm font-normal text-zinc-900"
+            className="ui-input"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
@@ -61,35 +78,14 @@ export default function PlatformOrganizationsPage() {
             <option value="REVOKED">Revoked</option>
           </select>
         </label>
-        <p className="text-sm text-zinc-500 sm:ml-auto">Filters are local placeholders for Slice 2.</p>
       </div>
+      </section>
       {isLoading ? <LoadingState label="Loading organizations" /> : null}
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
+      {error ? (
+        <FeedbackState tone="error" title="Could not load organizations" description={error.message} />
+      ) : null}
       {!isLoading && !error ? (
-        <DataTable<Organization>
-          columns={[
-            {
-              key: "name",
-              header: "Name",
-              cell: (row) => (
-                <Link className="font-medium text-zinc-950 hover:underline" href={`/platform/organizations/${row.id}`}>
-                  {row.name}
-                </Link>
-              ),
-            },
-            { key: "type", header: "Type" },
-            { key: "status", header: "Status", cell: (row) => <OrganizationStatusBadge status={row.status} /> },
-            { key: "plan", header: "Plan", cell: (row) => row.plan ?? "Not set" },
-            {
-              key: "location",
-              header: "City / Country",
-              cell: (row) => [row.city, row.country].filter(Boolean).join(", ") || "Not set",
-            },
-          ]}
-          data={rows}
-          emptyTitle="No organizations match these filters"
-          emptyDescription="Change the local type or status filter to broaden the list."
-        />
+        <OrganizationResponsiveList organizations={rows} totalCount={data.length} />
       ) : null}
     </>
   );

@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { normalizeOptionalPhoneOrThrow, phonesMatch } from '../../common/phone-normalization';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { ROLE_NAME_BY_USER_ROLE } from '../auth/constants';
 import { HashService } from '../auth/hash.service';
 import { PrismaService } from '../database/prisma.service';
@@ -17,6 +19,7 @@ export class InvitationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hashService: HashService,
+    private readonly auditLogs: AuditLogsService,
   ) {}
 
   async getPublicInvitation(token: string) {
@@ -54,9 +57,10 @@ export class InvitationsService {
       });
       throw new GoneException('Invitation has expired.');
     }
+    const phone = normalizeOptionalPhoneOrThrow(dto.phone);
     const passwordHash = await this.hashService.hash(dto.password);
 
-    return this.prisma.$transaction(async (tx) => {
+    const acceptedInvitation = await this.prisma.$transaction(async (tx) => {
       const invitation = await tx.organizationInvitation.findUnique({
         where: { tokenHash },
         include: { organization: true },
@@ -77,8 +81,17 @@ export class InvitationsService {
         throw new GoneException('Invitation has expired.');
       }
 
-      const existing = await tx.user.findUnique({ where: { email: invitation.email } });
-      if (existing) throw new ConflictException('Email is already registered.');
+      const existing = await tx.user.findUnique({
+        where: { email: invitation.email },
+      });
+      if (
+        existing &&
+        (existing.passwordHash ||
+          existing.organizationId !== invitation.organizationId)
+      ) {
+        throw new ConflictException('Email is already registered.');
+      }
+      await this.assertPhoneAvailable(phone, existing?.id);
 
       const roleName = ROLE_NAME_BY_USER_ROLE[invitation.intendedRole];
       const role = await tx.role.upsert({
@@ -98,18 +111,32 @@ export class InvitationsService {
       });
 
       await this.ensureRolePermissions(tx, role.id, roleName);
-      const user = await tx.user.create({
-        data: {
-          organizationId: invitation.organizationId,
-          roleId: role.id,
-          email: invitation.email,
-          passwordHash,
-          firstName: this.optionalString(dto.firstName),
-          lastName: this.optionalString(dto.lastName),
-          phone: this.optionalString(dto.phone),
-          userRole: invitation.intendedRole,
-        },
-      });
+      const user = existing
+        ? await tx.user.update({
+            where: { id: existing.id },
+            data: {
+              organizationId: invitation.organizationId,
+              roleId: role.id,
+              passwordHash,
+              firstName: this.optionalString(dto.firstName) ?? existing.firstName,
+              lastName: this.optionalString(dto.lastName) ?? existing.lastName,
+              phone: phone ?? existing.phone,
+              userRole: invitation.intendedRole,
+              isActive: true,
+            },
+          })
+        : await tx.user.create({
+            data: {
+              organizationId: invitation.organizationId,
+              roleId: role.id,
+              email: invitation.email,
+              passwordHash,
+              firstName: this.optionalString(dto.firstName),
+              lastName: this.optionalString(dto.lastName),
+              phone,
+              userRole: invitation.intendedRole,
+            },
+          });
 
       await tx.organizationInvitation.update({
         where: { id: invitation.id },
@@ -121,6 +148,9 @@ export class InvitationsService {
       });
 
       return {
+        invitationId: invitation.id,
+        organizationId: invitation.organizationId,
+        intendedRole: invitation.intendedRole,
         accepted: true,
         user: {
           id: user.id,
@@ -137,6 +167,36 @@ export class InvitationsService {
         },
       };
     });
+
+    await this.recordAcceptedInvitation(
+      {
+        id: acceptedInvitation.invitationId,
+        organizationId: acceptedInvitation.organizationId,
+        intendedRole: acceptedInvitation.intendedRole,
+      },
+      acceptedInvitation.user.id,
+    );
+
+    return {
+      accepted: acceptedInvitation.accepted,
+      user: acceptedInvitation.user,
+      organization: acceptedInvitation.organization,
+    };
+  }
+
+  private async assertPhoneAvailable(phone: string | undefined, exceptUserId?: string) {
+    if (!phone) return;
+
+    const users = await this.prisma.user.findMany({
+      where: { phone: { not: null } },
+      select: { id: true, phone: true },
+    });
+    const conflict = users.some(
+      (user) => user.id !== exceptUserId && phonesMatch(user.phone, phone),
+    );
+    if (conflict) {
+      throw new ConflictException('Phone number cannot be used for this account.');
+    }
   }
 
   private async findByToken(token: string) {
@@ -195,5 +255,22 @@ export class InvitationsService {
   private optionalString(value?: string) {
     const clean = value?.trim();
     return clean ? clean.slice(0, 200) : undefined;
+  }
+
+  private async recordAcceptedInvitation(invitation: any, userId: string) {
+    try {
+      await this.auditLogs.record({
+        action: 'organization.invitation_accepted',
+        entityType: 'OrganizationInvitation',
+        entityId: invitation.id,
+        organizationId: invitation.organizationId,
+        metadata: {
+          acceptedByUserId: userId,
+          intendedRole: invitation.intendedRole,
+        },
+      });
+    } catch {
+      // Invitation acceptance should not fail because audit persistence is unavailable.
+    }
   }
 }

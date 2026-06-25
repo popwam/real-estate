@@ -9,11 +9,11 @@ import { Topbar } from "@/components/layout/topbar";
 export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen" style={{ backgroundColor: "var(--color-background)" }}>
+      <div className="flex min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
         <IconSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Topbar />
-          <main className="flex-1 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] pt-6 lg:px-8 lg:pb-6">
+          <main className="flex-1 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
             {children}
           </main>
         </div>

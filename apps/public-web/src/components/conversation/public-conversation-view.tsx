@@ -2,6 +2,10 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { PublicConversationComposer } from "@/components/conversation/public-conversation-composer";
+import { PublicConversationShell } from "@/components/conversation/public-conversation-shell";
+import { PublicMessageBubble } from "@/components/conversation/public-message-bubble";
 import {
   getPublicConversationByToken,
   isPublicConversationMessageRateLimitError,
@@ -24,7 +28,7 @@ export function PublicConversationView({
   const [error, setError] = useState<string | null>(null);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isOpen = conversation.status === "OPEN";
+  const isOpen = conversation.status?.toUpperCase() === "OPEN";
 
   const sortedMessages = useMemo(
     () =>
@@ -61,7 +65,7 @@ export function PublicConversationView({
         });
 
         setBody("");
-        setSentMessage("Message sent.");
+        setSentMessage("Your message was sent.");
 
         try {
           const refreshed = await getPublicConversationByToken(token);
@@ -79,140 +83,139 @@ export function PublicConversationView({
   }
 
   return (
-    <div className="rounded border border-slate-200 bg-white p-6">
-      <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-        Public conversation
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-        {conversation.project?.name ?? "POPWAM chat request"}
-      </h1>
-      <p className="mt-3 text-sm leading-6 text-slate-600">
-        This view is limited to public-safe conversation fields. Replies are
-        sent through this private conversation link.
-      </p>
-
-      <dl className="mt-6 grid gap-4 border-y border-slate-200 py-5 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="font-semibold text-slate-950">Status</dt>
-          <dd className="mt-1 text-slate-700">{conversation.status}</dd>
-        </div>
-        <div>
-          <dt className="font-semibold text-slate-950">Type</dt>
-          <dd className="mt-1 text-slate-700">{conversation.type}</dd>
-        </div>
-      </dl>
-
-      <section className="mt-6">
-        <h2 className="text-lg font-semibold text-slate-950">Participants</h2>
-        <div className="mt-3 grid gap-2">
-          {conversation.participants.map((participant, index) => (
-            <div
-              key={`${participant.publicRole}-${participant.displayName}-${index}`}
-              className="rounded border border-slate-200 bg-slate-50 p-3 text-sm"
+    <PublicConversationShell
+      title={conversation.project?.name ?? "Private conversation"}
+      description="This private link shows public-safe conversation details only. Do not share sensitive payment or identity documents here."
+      context={
+        <ConversationContext
+          conversation={conversation}
+          messageCount={sortedMessages.length}
+        />
+      }
+      composer={
+        <PublicConversationComposer
+          senderName={senderName}
+          body={body}
+          error={error}
+          sentMessage={sentMessage}
+          isPending={isPending}
+          disabled={!isOpen}
+          onSenderNameChange={setSenderName}
+          onBodyChange={setBody}
+          onSubmit={onSubmit}
+        />
+      }
+    >
+      <section aria-labelledby="conversation-messages-title">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2
+              id="conversation-messages-title"
+              className="text-xl font-semibold text-[var(--color-foreground)]"
             >
-              <p className="font-semibold text-slate-950">
-                {participant.displayName ?? participant.publicRole}
-              </p>
-              <p className="mt-1 text-slate-600">{participant.publicRole}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold text-slate-950">Messages</h2>
-        <div className="mt-3 grid gap-3">
-          {sortedMessages.length ? (
-            sortedMessages.map((message) => (
-              <article
-                key={message.id}
-                className="rounded border border-slate-200 bg-white p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                  <span>
-                    {message.sender?.displayName ??
-                      message.sender?.publicRole ??
-                      message.type}
-                  </span>
-                  <time dateTime={message.createdAt}>
-                    {new Date(message.createdAt).toLocaleString("en-US")}
-                  </time>
-                </div>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">
-                  {message.body}
-                </p>
-              </article>
-            ))
-          ) : (
-            <p className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              No public-safe messages have been returned yet.
+              Messages
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
+              Replies are added to this conversation using the existing secure
+              link.
             </p>
-          )}
+          </div>
+          <span className="ui-badge">{readableStatus(conversation.status)}</span>
         </div>
-      </section>
 
-      <section className="mt-8 border-t border-slate-200 pt-6">
-        <h2 className="text-lg font-semibold text-slate-950">Reply</h2>
-        {isOpen ? (
-          <form className="mt-4 grid gap-4" onSubmit={onSubmit}>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Your name <span className="font-normal text-slate-500">(optional)</span>
-              <input
-                value={senderName}
-                onChange={(event) => setSenderName(event.target.value)}
-                maxLength={120}
-                className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none ring-emerald-600 focus:ring-2"
-                placeholder="Buyer Name"
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Message
-              <textarea
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                rows={5}
-                maxLength={2000}
-                className="resize-y rounded border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none ring-emerald-600 focus:ring-2"
-                placeholder="Write a plain-text reply..."
-                required
-              />
-            </label>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {isPending ? "Sending..." : "Send reply"}
-              </button>
-              <span className="text-xs text-slate-500">
-                {body.trim().length}/2000
-              </span>
-            </div>
-            {error ? (
-              <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {error}
-              </p>
-            ) : null}
-            {sentMessage ? (
-              <p className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-                {sentMessage}
-              </p>
-            ) : null}
-          </form>
+        {sortedMessages.length ? (
+          <div className="mt-5 grid gap-4">
+            {sortedMessages.map((message) => (
+              <PublicMessageBubble key={message.id} message={message} />
+            ))}
+          </div>
         ) : (
-          <p className="mt-3 rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            This conversation is closed.
-          </p>
+          <div className="ui-card mt-5 border-dashed p-6 text-center">
+            <h3 className="text-xl font-semibold text-[var(--color-foreground)]">
+              This conversation is ready.
+            </h3>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--color-muted)]">
+              Messages from you and the project team will appear here when they
+              are available.
+            </p>
+            <Link href="#conversation-composer" className="ui-button ui-button-primary mt-5">
+              Start with a reply
+            </Link>
+          </div>
         )}
       </section>
+    </PublicConversationShell>
+  );
+}
+
+function ConversationContext({
+  conversation,
+  messageCount,
+}: {
+  conversation: PublicConversationByToken;
+  messageCount: number;
+}) {
+  const participants = conversation.participants.filter(
+    (participant) => participant.displayName || participant.publicRole,
+  );
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {conversation.project?.name ? (
+        <ContextCard label="Project" value={conversation.project.name} />
+      ) : null}
+      <ContextCard label="Status" value={readableStatus(conversation.status)} />
+      <ContextCard
+        label="Messages"
+        value={`${messageCount} message${messageCount === 1 ? "" : "s"}`}
+      />
+      {participants.length ? (
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:col-span-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+            Participants
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {participants.map((participant, index) => (
+              <span
+                key={`${participant.publicRole}-${participant.displayName}-${index}`}
+                className="ui-badge"
+              >
+                {participant.displayName?.trim() || readableStatus(participant.publicRole)}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
+function ContextCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function readableStatus(value: string | null | undefined) {
+  if (!value) return "Available";
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function errorMessage(error: unknown) {
   if (isPublicConversationMessageRateLimitError(error)) {
-    return "Too many messages. Please try again shortly.";
+    return "Too many messages were sent from this browser. Please try again shortly.";
   }
 
   if (error instanceof PublicApiError) {
@@ -223,6 +226,9 @@ function errorMessage(error: unknown) {
     }
     if (error.status === 404) {
       return "This conversation link is no longer available.";
+    }
+    if (error.status === 410) {
+      return "This conversation link has expired.";
     }
   }
 

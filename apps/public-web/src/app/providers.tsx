@@ -2,7 +2,12 @@
 
 import type { ReactNode } from "react";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { I18nProvider } from "@/i18n";
 
 export function PublicWebProviders({ children }: { children: ReactNode }) {
-  return <ThemeProvider>{children}</ThemeProvider>;
+  return (
+    <ThemeProvider>
+      <I18nProvider>{children}</I18nProvider>
+    </ThemeProvider>
+  );
 }

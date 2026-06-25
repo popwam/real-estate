@@ -41,20 +41,20 @@ export function DealRoomMessageComposer({
     <form className="space-y-4" onSubmit={handleSubmit(submit)}>
       <div className="space-y-2">
         <Label>Type</Label>
-        <select className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm" {...register("messageType")}>
-          <option value="TEXT">TEXT</option>
-          <option value="SYSTEM">SYSTEM</option>
-          <option value="DOCUMENT">DOCUMENT</option>
-          <option value="STATUS_UPDATE">STATUS_UPDATE</option>
+        <select className="ui-input" {...register("messageType")}>
+          <option value="TEXT">Message</option>
+          <option value="SYSTEM">System note</option>
+          <option value="DOCUMENT">Document reference</option>
+          <option value="STATUS_UPDATE">Status update</option>
         </select>
       </div>
       <div className="space-y-2">
         <Label>Message</Label>
         <Textarea placeholder="Write a deal room message." {...register("body")} />
-        {errors.body ? <p className="text-sm text-red-600">{errors.body.message}</p> : null}
+        {errors.body ? <p className="text-sm text-[var(--color-danger)]" role="alert">{errors.body.message}</p> : null}
       </div>
       {error ? (
-        <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="ui-feedback ui-feedback-error flex gap-2 text-sm" role="alert">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{error.message}</span>
         </div>

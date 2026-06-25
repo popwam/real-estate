@@ -3,6 +3,8 @@
 import { CrmActivityItem } from "@/components/admin-crm/crm-activity-item";
 import { CrmActivityPaginationControls } from "@/components/admin-crm/crm-activity-pagination-controls";
 import { LoadingState } from "@/components/loading-state";
+import { EmptyState } from "@/components/empty-state";
+import { FeedbackState } from "@/components/feedback-state";
 import type { CrmActivity, PaginationMeta } from "@/types/admin-crm";
 
 export function CrmActivityTimeline({
@@ -25,11 +27,11 @@ export function CrmActivityTimeline({
   }
 
   if (error) {
-    return <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p>;
+    return <FeedbackState tone="error" title="Activity could not be loaded" description={error.message} />;
   }
 
   if (!activities?.length) {
-    return <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">No activity recorded yet.</p>;
+    return <EmptyState title="No activity recorded yet" description="Status changes, notes, tasks, and conversation events will appear here when available." />;
   }
 
   return (

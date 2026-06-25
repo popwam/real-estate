@@ -1,45 +1,21 @@
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/status-badge";
 import type { ConversationStatus, CrmLeadStatus, PreferredContactMethod } from "@/types/admin-crm";
 
 export function CrmLeadStatusBadge({ status }: { status: CrmLeadStatus }) {
-  const className = {
-    NEW: "border-blue-200 bg-blue-50 text-blue-700",
-    CLAIMED: "border-amber-200 bg-amber-50 text-amber-700",
-    IN_CONVERSATION: "border-sky-200 bg-sky-50 text-sky-700",
-    QUALIFIED: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    LOST: "border-zinc-200 bg-zinc-50 text-zinc-700",
-    CONVERTED: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    SPAM: "border-red-200 bg-red-50 text-red-700",
-  } as const;
-
-  return <Badge className={className[status]} label={status.replaceAll("_", " ")} />;
+  return <StatusBadge status={status} className={tone(status)} />;
 }
 
 export function PreferredContactMethodBadge({ method }: { method?: PreferredContactMethod | null }) {
-  const label = method ?? "CALL";
-  const className =
-    label === "WHATSAPP"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-      : label === "CHAT"
-        ? "border-sky-200 bg-sky-50 text-sky-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-700";
-  return <Badge className={className} label={label} />;
+  return <StatusBadge status={method ?? "NOT_SET"} className="border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-foreground)]" />;
 }
 
 export function ConversationStatusBadge({ status }: { status: ConversationStatus }) {
-  const className = {
-    OPEN: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    CLOSED: "border-zinc-200 bg-zinc-50 text-zinc-700",
-    ARCHIVED: "border-amber-200 bg-amber-50 text-amber-700",
-  } as const;
-
-  return <Badge className={className[status]} label={status} />;
+  return <StatusBadge status={status} className={tone(status)} />;
 }
 
-function Badge({ label, className }: { label: string; className: string }) {
-  return (
-    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium", className)}>
-      {label}
-    </span>
-  );
+function tone(status: string) {
+  if (["QUALIFIED", "CONVERTED", "OPEN"].includes(status)) return "border-[var(--color-success)] bg-[var(--color-success-soft)] text-[var(--color-success)]";
+  if (["CLAIMED", "IN_CONVERSATION", "ARCHIVED"].includes(status)) return "border-[var(--color-warning)] bg-[var(--color-warning-soft)] text-[var(--color-warning)]";
+  if (["LOST", "SPAM"].includes(status)) return "border-[var(--color-danger)] bg-[var(--color-danger-soft)] text-[var(--color-danger)]";
+  return "border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-foreground)]";
 }

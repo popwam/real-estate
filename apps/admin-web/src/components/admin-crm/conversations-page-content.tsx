@@ -4,38 +4,14 @@ import { useState } from "react";
 import { ConversationFilters } from "@/components/admin-crm/conversation-filters";
 import { ConversationsTable } from "@/components/admin-crm/conversations-table";
 import { CrmPaginationControls } from "@/components/admin-crm/crm-pagination-controls";
+import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { DetailCard } from "@/components/platform/detail-card";
 import { useConversations } from "@/hooks/use-admin-crm";
 import type { ConversationListQuery } from "@/types/admin-crm";
 
 export function ConversationsPageContent({ basePath }: { basePath: string }) {
   const [filters, setFilters] = useState<ConversationListQuery>({ page: 1, pageSize: 20 });
   const { data, isLoading, error } = useConversations(filters);
-
-  return (
-    <>
-      <PageHeader title="Conversations" description="CRM lead conversations scoped by backend authorization." />
-      <div className="space-y-6">
-      <DetailCard title="Filters">
-        <ConversationFilters filters={filters} onChange={setFilters} />
-      </DetailCard>
-      <DetailCard title="Conversation inbox">
-        {isLoading ? <LoadingState label="Loading conversations" /> : null}
-        {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
-        {!isLoading && !error && data ? (
-          <>
-            <ConversationsTable basePath={basePath} conversations={data.items} />
-            <CrmPaginationControls
-              pagination={data.pagination}
-              onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
-              onPageSizeChange={(pageSize) => setFilters((current) => ({ ...current, page: 1, pageSize }))}
-            />
-          </>
-        ) : null}
-      </DetailCard>
-      </div>
-    </>
-  );
+  return <div className="space-y-6"><PageHeader title="Conversation inbox" description="Continue lead and support discussions with clear participant, project, status, and recent-message context." /><section className="ui-card p-4 sm:p-5" aria-labelledby="conversation-filters-title"><h2 id="conversation-filters-title" className="text-sm font-semibold text-[var(--color-foreground)]">Filter conversations</h2><p className="mt-1 mb-4 text-xs text-[var(--color-muted)]">Unread state is not assumed because the current list contract does not provide it.</p><ConversationFilters filters={filters} onChange={setFilters} /></section><section className="ui-card p-4 sm:p-5" aria-labelledby="conversation-results-title"><div className="mb-5"><h2 id="conversation-results-title" className="text-lg font-semibold text-[var(--color-foreground)]">Inbox</h2>{data ? <p className="mt-1 text-sm text-[var(--color-muted)]">{data.pagination.total.toLocaleString()} conversations</p> : null}</div>{isLoading ? <LoadingState label="Loading conversations" /> : null}{error ? <FeedbackState tone="error" title="Conversations could not be loaded" description={error.message} /> : null}{!isLoading && !error && data ? <><ConversationsTable basePath={basePath} conversations={data.items} /><CrmPaginationControls pagination={data.pagination} onPageChange={(page) => setFilters((current) => ({ ...current, page }))} onPageSizeChange={(pageSize) => setFilters((current) => ({ ...current, page: 1, pageSize }))} /></> : null}</section></div>;
 }

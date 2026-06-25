@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizeOptionalPhoneOrThrow, phonesMatch } from '../../common/phone-normalization';
 import { isPlatformUser } from '../../common/organization-scope';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
@@ -71,6 +72,9 @@ export class UsersService {
       throw new ConflictException('Email is already registered.');
     }
 
+    const phone = normalizeOptionalPhoneOrThrow(dto.phone);
+    await this.assertPhoneAvailable(phone);
+
     const passwordHash = dto.password
       ? await this.hashService.hash(dto.password)
       : undefined;
@@ -90,7 +94,7 @@ export class UsersService {
           passwordHash,
           firstName: this.optionalString(dto.firstName),
           lastName: this.optionalString(dto.lastName),
-          phone: this.optionalString(dto.phone),
+          phone,
           userRole,
         },
         include: { organization: true, role: true },
@@ -130,6 +134,8 @@ export class UsersService {
     currentUser: AuthenticatedRequestUser,
   ) {
     const existing = await this.findOne(id, currentUser);
+    const phone = normalizeOptionalPhoneOrThrow(dto.phone);
+    await this.assertPhoneAvailable(phone, id);
     const roleName = dto.role ?? existing.role?.name;
     const userRole = roleName ? this.userRoleFor(roleName) : existing.userRole;
     const role = roleName
@@ -145,7 +151,7 @@ export class UsersService {
       data: {
         firstName: this.optionalString(dto.firstName),
         lastName: this.optionalString(dto.lastName),
-        phone: this.optionalString(dto.phone),
+        phone,
         userRole,
         roleId: role?.id ?? existing.roleId,
       },
@@ -323,6 +329,21 @@ export class UsersService {
   private optionalString(value: string | undefined) {
     const trimmed = value?.trim();
     return trimmed || undefined;
+  }
+
+  private async assertPhoneAvailable(phone: string | undefined, exceptUserId?: string) {
+    if (!phone) return;
+
+    const users = await this.prisma.user.findMany({
+      where: { phone: { not: null } },
+      select: { id: true, phone: true },
+    });
+    const conflict = users.some(
+      (user) => user.id !== exceptUserId && phonesMatch(user.phone, phone),
+    );
+    if (conflict) {
+      throw new ConflictException('Phone number cannot be used for this account.');
+    }
   }
 
   private isValidEmail(value: string | undefined) {

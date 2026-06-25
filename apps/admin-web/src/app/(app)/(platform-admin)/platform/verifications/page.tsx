@@ -1,13 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { FileCheck2 } from "lucide-react";
+import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { VerificationStatusBadge } from "@/components/platform/verification-status-badge";
-import { DataTable } from "@/components/tables/data-table";
+import { VerificationResponsiveList } from "@/components/platform/verification-responsive-list";
 import { useVerificationQueue } from "@/hooks/use-platform-admin";
-import { formatDate, formatPlainDate } from "@/lib/format";
-import type { Verification } from "@/types/platform";
 
 export default function PlatformVerificationsPage() {
   const { data = [], isLoading, error } = useVerificationQueue();
@@ -16,35 +14,32 @@ export default function PlatformVerificationsPage() {
     <>
       <PageHeader
         title="Verifications"
-        description="Pending verification queue for organization documents awaiting platform review."
+        description="Review submitted organization documents and make clear approve, reject, or request-info decisions."
       />
+      <section className="ui-card mb-5 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+              <FileCheck2 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Review queue</h2>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                {data.length ? `${data.length} verification request${data.length === 1 ? "" : "s"} loaded.` : "No verification requests waiting for review."}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm leading-6 text-[var(--color-muted)]">
+            No risk score or document preview is shown unless returned by the existing API.
+          </p>
+        </div>
+      </section>
       {isLoading ? <LoadingState label="Loading verification queue" /> : null}
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
+      {error ? (
+        <FeedbackState tone="error" title="Could not load verification queue" description={error.message} />
+      ) : null}
       {!isLoading && !error ? (
-        <DataTable<Verification>
-          columns={[
-            {
-              key: "documentType",
-              header: "Document",
-              cell: (row) => (
-                <Link className="font-medium text-zinc-950 hover:underline" href={`/platform/verifications/${row.id}`}>
-                  {row.documentType.replaceAll("_", " ")}
-                </Link>
-              ),
-            },
-            {
-              key: "organization",
-              header: "Organization",
-              cell: (row) => row.organization?.name ?? row.organizationId,
-            },
-            { key: "status", header: "Status", cell: (row) => <VerificationStatusBadge status={row.status} /> },
-            { key: "expiryDate", header: "Expires", cell: (row) => formatPlainDate(row.expiryDate) },
-            { key: "createdAt", header: "Submitted", cell: (row) => formatDate(row.createdAt) },
-          ]}
-          data={data}
-          emptyTitle="No pending verifications"
-          emptyDescription="Submitted organization documents awaiting review will appear here."
-        />
+        <VerificationResponsiveList verifications={data} />
       ) : null}
     </>
   );

@@ -8,6 +8,7 @@ import { DealRoomParticipantsList } from "@/components/deal-rooms/deal-room-part
 import { DealRoomStatusActionDialog } from "@/components/deal-rooms/deal-room-status-action-dialog";
 import { DealRoomSummaryCard } from "@/components/deal-rooms/deal-room-summary-card";
 import { LoadingState } from "@/components/loading-state";
+import { FeedbackState } from "@/components/feedback-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
@@ -32,21 +33,21 @@ export function DealRoomDetailView({ id }: { id: string }) {
   const createDeal = useCreateDealFromRoom();
 
   if (isLoading) return <LoadingState label="Loading deal room" />;
-  if (error) return <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p>;
+  if (error) return <FeedbackState tone="error" title="Deal room could not be loaded" description={error.message} />;
   if (!room) return null;
 
   return (
     <>
       <PageHeader
-        title={`Deal Room ${room.id}`}
-        description="Deal room workspace for reservation follow-up, participants, messages, and safe status transitions."
+        title={room.project?.name ? `${room.project.name} negotiation` : "Deal room"}
+        description={`${room.unit?.unitNumber ? `Unit ${room.unit.unitNumber} · ` : ""}Coordinate the parties and move this approved reservation through a clear handoff.`}
         actions={
           <>
             <DealRoomStatusActionDialog
               currentStatus={room.status}
               isPending={updateStatus.isPending}
               error={updateStatus.error}
-              trigger={<Button>Update status</Button>}
+              trigger={<Button className="ui-button-secondary">Update status</Button>}
               onConfirm={(status) => updateStatus.mutateAsync(status)}
             />
             {room.status === "APPROVED" || room.status === "PENDING_APPROVAL" ? (
@@ -55,7 +56,7 @@ export function DealRoomDetailView({ id }: { id: string }) {
                 defaultDealRoomId={room.id}
                 isPending={createDeal.isPending}
                 error={createDeal.error}
-                trigger={<Button>Finalize deal</Button>}
+                trigger={<Button>Finalize as deal</Button>}
                 onConfirm={(input) => createDeal.mutateAsync({
                   dealRoomId: room.id,
                   finalPrice: input.finalPrice,
@@ -66,38 +67,34 @@ export function DealRoomDetailView({ id }: { id: string }) {
           </>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <DealRoomSummaryCard room={room} />
-          <DetailCard title="Participants">
-            <DealRoomParticipantsList participants={room.participants} />
-          </DetailCard>
-          <DetailCard title="Messages">
+          <DetailCard title="Negotiation activity">
             {messages.isLoading ? <LoadingState label="Loading messages" /> : null}
-            {messages.error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{messages.error.message}</p> : null}
+            {messages.error ? <FeedbackState tone="error" title="Messages could not be loaded" description={messages.error.message} /> : null}
             {!messages.isLoading && !messages.error ? <DealRoomMessagesTimeline messages={messages.data ?? []} /> : null}
+            <div className="sticky bottom-0 mt-5 border-t border-[var(--color-border)] bg-[var(--color-surface)] pt-5">
+              <DealRoomMessageComposer isPending={createMessage.isPending} error={createMessage.error} onSubmit={(input) => createMessage.mutateAsync(input)} />
+            </div>
           </DetailCard>
         </div>
         <div className="space-y-6">
-          <DetailCard title="Invite Client">
+          <DetailCard title="Participants">
+            <DealRoomParticipantsList participants={room.participants} />
+          </DetailCard>
+          <DetailCard title="Invite client">
             <ClientInviteDialog
               isPending={inviteClient.isPending}
               error={inviteClient.error}
               onInvite={() => inviteClient.mutateAsync()}
             />
           </DetailCard>
-          <DetailCard title="Add Participant">
+          <DetailCard title="Add participant">
             <DealRoomParticipantForm
               isPending={addParticipant.isPending}
               error={addParticipant.error}
               onSubmit={(input) => addParticipant.mutateAsync(input)}
-            />
-          </DetailCard>
-          <DetailCard title="Send Message">
-            <DealRoomMessageComposer
-              isPending={createMessage.isPending}
-              error={createMessage.error}
-              onSubmit={(input) => createMessage.mutateAsync(input)}
             />
           </DetailCard>
         </div>

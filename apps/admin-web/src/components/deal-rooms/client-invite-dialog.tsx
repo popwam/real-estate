@@ -27,16 +27,16 @@ export function ClientInviteDialog({
         <Send className="h-4 w-4" />
         {isPending ? "Inviting" : "Invite client"}
       </Button>
-      <p className="text-sm leading-6 text-zinc-500">
+      <p className="text-sm leading-6 text-[var(--color-text-muted)]">
         Client invite creates or refreshes the client participant. External SMS/email delivery is a placeholder and is not implemented yet.
       </p>
       {result ? (
-        <div className="flex gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+        <div className="ui-feedback ui-feedback-success flex gap-2 text-sm" role="status">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>Client participant is {result.participant.status}. Delivery: {result.invite.delivery}.</span>
         </div>
       ) : null}
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error.message}</p> : null}
+      {error ? <p className="ui-feedback ui-feedback-error text-sm" role="alert">{error.message}</p> : null}
     </div>
   );
 }

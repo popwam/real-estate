@@ -154,7 +154,7 @@ export function acceptInvitationApi(token: string, input: { password: string; fi
   });
 }
 
-export function loginApi(input: { email: string; password: string }) {
+export function loginApi(input: { identifier?: string; email?: string; password: string }) {
   return apiRequest<AuthSession>("/auth/login", {
     method: "POST",
     body: JSON.stringify(input),

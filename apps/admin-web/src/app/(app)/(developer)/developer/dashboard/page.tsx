@@ -1,19 +1,176 @@
-import { FolderKanban, Handshake, Package } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
-import { StatCard } from "@/components/layout/stat-card";
+"use client";
+
+import {
+  Building2,
+  ClipboardCheck,
+  FolderKanban,
+  MessageSquareText,
+  Package,
+  Plus,
+  UsersRound,
+} from "lucide-react";
+import { DashboardActionCard } from "@/components/dashboard/dashboard-action-card";
+import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
+import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
+import { useCrmSummary } from "@/hooks/use-admin-crm";
+import { usePublicLeads } from "@/hooks/use-admin-public";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { useProjects, useInventoryUnits } from "@/hooks/use-developer";
+import { useReservationRequests } from "@/hooks/use-lead-reservations";
 
 export default function DeveloperDashboardPage() {
+  const currentUser = useCurrentUser();
+  const projects = useProjects();
+  const inventory = useInventoryUnits();
+  const publicLeads = usePublicLeads();
+  const crm = useCrmSummary();
+  const reservations = useReservationRequests();
+
+  const newPublicLeads = publicLeads.data?.filter((lead) => lead.status === "NEW").length;
+  const pendingReservations = reservations.data?.filter(
+    (reservation) => reservation.status === "PENDING",
+  ).length;
+  const firstName = currentUser.data?.user.firstName?.trim();
+  const organization = currentUser.data?.organization;
+
   return (
-    <>
-      <PageHeader
-        title="Developer Dashboard"
-        description="Workspace foundation for projects, inventory, agreements, and broker access."
+    <div className="space-y-9">
+      <DashboardWelcome
+        eyebrow="Developer workspace"
+        title={firstName ? `Welcome back, ${firstName}` : "Build, publish, and sell with confidence"}
+        description="Keep project readiness, inventory, buyer interest, and reservation decisions visible from one focused workspace."
+        context={`${organization?.name ?? "Developer organization"} · ${formatLabel(organization?.status ?? "DRAFT")}`}
+        primaryAction={{ href: "/developer/projects/new", label: "Create project" }}
+        secondaryAction={{ href: "/developer/crm/leads", label: "Open CRM" }}
+        icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
       />
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Projects" value="--" description="Project management starts in a later slice." icon={<FolderKanban className="h-5 w-5" />} />
-        <StatCard label="Inventory" value="--" description="Units tables are placeholders for now." icon={<Package className="h-5 w-5" />} />
-        <StatCard label="Agreements" value="--" description="Brokerage agreements are available in backend." icon={<Handshake className="h-5 w-5" />} />
-      </div>
-    </>
+
+      <DashboardSection
+        title="Business readiness"
+        description="Live organization-scoped summaries highlight what is ready and where the team should act next."
+      >
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <DashboardKpiCard
+            label="Projects"
+            value={projects.data?.length}
+            description="Projects are available for review, publishing, and selling setup."
+            emptyDescription="Create the first project to begin the developer journey."
+            href="/developer/projects"
+            linkLabel="Open projects"
+            icon={<FolderKanban className="h-5 w-5" aria-hidden="true" />}
+            isLoading={projects.isLoading}
+            error={projects.error}
+          />
+          <DashboardKpiCard
+            label="Inventory units"
+            value={inventory.data?.length}
+            description="Units are available for pricing, visibility, and availability review."
+            emptyDescription="No inventory units have been added yet."
+            href="/developer/inventory"
+            linkLabel="Open inventory"
+            icon={<Package className="h-5 w-5" aria-hidden="true" />}
+            isLoading={inventory.isLoading}
+            error={inventory.error}
+          />
+          <DashboardKpiCard
+            label="New public leads"
+            value={newPublicLeads}
+            description="New website enquiries are waiting for a first review."
+            emptyDescription="No new public enquiries are waiting."
+            href="/developer/public-leads"
+            linkLabel="Review public leads"
+            icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
+            isLoading={publicLeads.isLoading}
+            error={publicLeads.error}
+          />
+          <DashboardKpiCard
+            label="New CRM leads"
+            value={crm.data?.leads.new}
+            description="New leads need qualification and a clear next action."
+            emptyDescription="No new CRM leads are waiting."
+            href="/developer/crm/leads"
+            linkLabel="Open CRM leads"
+            icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
+            isLoading={crm.isLoading}
+            error={crm.error}
+          />
+          <DashboardKpiCard
+            label="Open conversations"
+            value={crm.data?.conversations.open}
+            description="Active conversations may need a sales response."
+            emptyDescription="There are no open conversations."
+            href="/developer/conversations"
+            linkLabel="Open conversations"
+            icon={<MessageSquareText className="h-5 w-5" aria-hidden="true" />}
+            isLoading={crm.isLoading}
+            error={crm.error}
+          />
+          <DashboardKpiCard
+            label="Pending reservations"
+            value={pendingReservations}
+            description="Reservation requests need an inventory-aware decision."
+            emptyDescription="No reservation requests are pending."
+            href="/developer/reservation-requests"
+            linkLabel="Review reservations"
+            icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
+            isLoading={reservations.isLoading}
+            error={reservations.error}
+          />
+        </div>
+      </DashboardSection>
+
+      <DashboardSection
+        title="Next recommended actions"
+        description="Move from project setup to buyer follow-up without losing the commercial thread."
+      >
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <DashboardActionCard
+            title="Create a project"
+            description="Start a new project record and prepare its core public and commercial information."
+            href="/developer/projects/new"
+            actionLabel="New project"
+            icon={<Plus className="h-5 w-5" aria-hidden="true" />}
+            emphasis
+          />
+          <DashboardActionCard
+            title="Review project readiness"
+            description="Check visibility, phases, payment plans, and selling permissions."
+            href="/developer/projects"
+            actionLabel="Open projects"
+            icon={<FolderKanban className="h-5 w-5" aria-hidden="true" />}
+          />
+          <DashboardActionCard
+            title="Keep inventory current"
+            description="Review availability, pricing, and public visibility across all units."
+            href="/developer/inventory"
+            actionLabel="Open inventory"
+            icon={<Package className="h-5 w-5" aria-hidden="true" />}
+          />
+          <DashboardActionCard
+            title="Respond to buyer interest"
+            description="Triage new website enquiries before moving qualified buyers into CRM."
+            href="/developer/public-leads"
+            actionLabel="Review public leads"
+            icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
+          />
+          <DashboardActionCard
+            title="Advance the sales pipeline"
+            description="Assign next actions, follow conversations, and keep leads moving."
+            href="/developer/crm/leads"
+            actionLabel="Open CRM"
+            icon={<MessageSquareText className="h-5 w-5" aria-hidden="true" />}
+          />
+        </div>
+      </DashboardSection>
+    </div>
   );
+}
+
+function formatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

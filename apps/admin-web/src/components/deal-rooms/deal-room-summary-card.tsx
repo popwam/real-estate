@@ -29,9 +29,9 @@ export function DealRoomSummaryCard({ room }: { room: DealRoom }) {
       </DetailCard>
       <DetailCard title="Reservation And Lead">
         <DetailGrid items={[
-          { label: "Reservation", value: room.reservationRequestId },
+          { label: "Reservation", value: room.reservationRequest?.status ? `${room.reservationRequest.status.toLowerCase()} request` : "Approved request" },
           { label: "Reservation status", value: room.reservationRequest?.status },
-          { label: "Lead claim", value: room.leadClaimId },
+          { label: "Lead claim", value: room.leadClaim?.status ? room.leadClaim.status.toLowerCase() : "Protected lead claim" },
           { label: "Lead source", value: room.lead?.source ?? room.leadClaim?.source },
           { label: "Client", value: room.client?.name ?? "Client" },
           { label: "Client invite", value: room.clientInvitedAt ? formatDate(room.clientInvitedAt) : "Not invited" },

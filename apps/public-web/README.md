@@ -9,6 +9,28 @@ pnpm --filter public-web dev
 pnpm --filter public-web build
 ```
 
+For staging API QA, copy `.env.local.example` to `.env.local` and run the
+Public Web app on the expected CORS-approved local port:
+
+```bash
+cd /d E:\saas\real-estate
+pnpm --filter public-web exec next dev -p 3205
+```
+
+Admin Web should point share links at the same Public Web port:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://api-staging.popwam.com
+NEXT_PUBLIC_PUBLIC_WEB_BASE_URL=http://localhost:3205
+```
+
+Run Admin Web for local QA on:
+
+```bash
+cd /d E:\saas\real-estate
+pnpm --filter admin-web exec next dev -p 3203
+```
+
 ## Public Environment Variables
 
 Copy `.env.example` for local development. These values are public browser/runtime values only.

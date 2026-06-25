@@ -12,7 +12,7 @@ export function DataTable<T extends object>({
   columns,
   data,
   emptyTitle = "No records yet",
-  emptyDescription = "This area will connect to the backend in a later slice.",
+  emptyDescription = "Records will appear here when they are available for this workspace.",
 }: {
   columns: DataTableColumn<T>[];
   data: T[];
@@ -24,31 +24,31 @@ export function DataTable<T extends object>({
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+    <div className="ui-card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-zinc-200 text-sm">
-          <thead className="bg-zinc-50">
+        <table className="min-w-full divide-y divide-[var(--color-border)] text-sm">
+          <thead className="bg-[var(--color-surface-muted)]">
             <tr>
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-4 py-3 text-left font-medium text-zinc-600"
+                  className="px-4 py-3 text-start text-xs font-bold uppercase tracking-wide text-[var(--color-muted)]"
                 >
                   {column.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
             {data.map((row, rowIndex) => (
               <tr
                 key={String((row as Record<string, unknown>).id ?? rowIndex)}
-                className="hover:bg-zinc-50/80"
+                className="transition-colors hover:bg-[var(--color-surface-muted)]"
               >
                 {columns.map((column) => (
                   <td
                     key={String(column.key)}
-                    className={cn("px-4 py-3 align-middle text-zinc-800")}
+                    className={cn("px-4 py-3 align-middle text-[var(--color-foreground)]")}
                   >
                     {column.cell
                       ? column.cell(row)

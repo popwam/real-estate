@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { KeyRound, LoaderCircle, ShieldCheck, Store, UserRoundCheck } from "lucide-react";
+import { FeedbackState } from "@/components/feedback-state";
+import { Button } from "@/components/ui/button";
 import {
   useCreateProjectBrokerAuthorization,
   useProjectBrokerAuthorizations,
@@ -8,7 +11,17 @@ import {
   useUpdateProjectSellingMode,
 } from "@/hooks/use-developer";
 import type { ProjectSellingMode } from "@/types/developer";
-import { Button } from "@/components/ui/button";
+
+const sellingModes: Array<{
+  value: ProjectSellingMode;
+  title: string;
+  description: string;
+  icon: typeof KeyRound;
+}> = [
+  { value: "OWNER_ONLY", title: "Owner only", description: "The developer team owns lead handling and broker attribution is not accepted.", icon: ShieldCheck },
+  { value: "AUTHORIZED_BROKERS", title: "Authorized brokers", description: "Only brokerages or brokers explicitly added below can sell and receive attribution.", icon: UserRoundCheck },
+  { value: "OPEN_BROKERAGE", title: "Open brokerage", description: "Eligible marketplace brokerages can participate without a project-specific authorization record.", icon: Store },
+];
 
 export function ProjectSellingPermissions({ projectId, sellingMode }: { projectId: string; sellingMode: ProjectSellingMode }) {
   const [mode, setMode] = useState(sellingMode);
@@ -27,38 +40,64 @@ export function ProjectSellingPermissions({ projectId, sellingMode }: { projectI
     form.reset();
   }
 
+  const actionError = updateMode.error ?? create.error ?? remove.error;
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid flex-1 gap-2 text-sm font-medium text-zinc-700">
-          Selling mode
-          <select value={mode} onChange={(event) => setMode(event.target.value as ProjectSellingMode)} className="h-10 rounded-md border border-zinc-300 px-3">
-            <option value="OWNER_ONLY">Owner only</option>
-            <option value="AUTHORIZED_BROKERS">Authorized brokers</option>
-            <option value="OPEN_BROKERAGE">Open brokerage</option>
-          </select>
-        </label>
-        <Button disabled={updateMode.isPending || mode === sellingMode} onClick={() => updateMode.mutate(mode)}>Save mode</Button>
+    <div className="space-y-6">
+      <fieldset>
+        <legend className="text-sm font-semibold text-[var(--color-foreground)]">Who can sell this project?</legend>
+        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">Choose the commercial rule that controls eligible broker attribution.</p>
+        <div className="mt-4 grid gap-3">
+          {sellingModes.map((option) => {
+            const Icon = option.icon;
+            const selected = mode === option.value;
+            return (
+              <label key={option.value} className={`flex cursor-pointer gap-3 rounded-[var(--radius-md)] border p-4 ${selected ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]" : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-muted)]"}`}>
+                <input type="radio" name="sellingMode" value={option.value} checked={selected} onChange={() => setMode(option.value)} className="mt-1 accent-[var(--color-accent)]" />
+                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-accent)]" aria-hidden="true" />
+                <span><span className="block text-sm font-semibold text-[var(--color-foreground)]">{option.title}</span><span className="mt-1 block text-sm leading-6 text-[var(--color-muted)]">{option.description}</span></span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+        <p className="text-sm text-[var(--color-muted)]">Current saved mode: <strong className="text-[var(--color-foreground)]">{formatLabel(sellingMode)}</strong></p>
+        <Button disabled={updateMode.isPending || mode === sellingMode} onClick={() => updateMode.mutate(mode)}>
+          {updateMode.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <KeyRound className="h-4 w-4" aria-hidden="true" />}
+          {updateMode.isPending ? "Saving…" : "Save selling mode"}
+        </Button>
       </div>
-      <p className="text-sm text-zinc-600">Owner-only leads remain with the developer. Broker attribution is accepted only for eligible or explicitly authorized sellers.</p>
-      <form className="grid gap-3 md:grid-cols-[180px_1fr_auto]" onSubmit={add}>
-        <select name="granteeType" className="h-10 rounded-md border border-zinc-300 px-3 text-sm">
-          <option value="organization">Brokerage organization</option>
-          <option value="broker">Broker user</option>
-        </select>
-        <input required name="granteeId" placeholder="Organization or user ID" className="h-10 rounded-md border border-zinc-300 px-3 text-sm" />
-        <Button disabled={create.isPending} type="submit">Authorize</Button>
-      </form>
-      {updateMode.error || create.error || remove.error ? <p className="text-sm text-red-700">{(updateMode.error ?? create.error ?? remove.error)?.message}</p> : null}
-      <div className="space-y-2">
-        {(list.data ?? []).map((authorization) => (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 p-3 text-sm" key={authorization.id}>
-            <span>{authorization.organization?.name ?? [authorization.brokerUser?.firstName, authorization.brokerUser?.lastName].filter(Boolean).join(" ") ?? authorization.organizationId ?? authorization.brokerUserId}</span>
-            <div className="flex items-center gap-3"><span>{authorization.status}</span><Button disabled={remove.isPending} onClick={() => remove.mutate(authorization.id)} type="button">Remove</Button></div>
-          </div>
-        ))}
-        {!list.isLoading && !list.data?.length ? <p className="text-sm text-zinc-500">No broker authorizations.</p> : null}
-      </div>
+
+      {updateMode.isSuccess ? <FeedbackState tone="success" title="Selling mode updated" description="The project now uses the selected broker participation rule." /> : null}
+      {actionError ? <FeedbackState tone="error" title="Selling permissions could not be updated" description={actionError.message} /> : null}
+
+      <section aria-labelledby="broker-authorizations-title">
+        <h3 id="broker-authorizations-title" className="text-sm font-semibold text-[var(--color-foreground)]">Explicit broker authorizations</h3>
+        <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">These records are used when the project requires specifically authorized brokerages or broker users.</p>
+        <form className="mt-4 grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)_auto]" onSubmit={add}>
+          <label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Authorization type<select name="granteeType" className="ui-input"><option value="organization">Brokerage organization</option><option value="broker">Broker user</option></select></label>
+          <label className="grid gap-2 text-xs font-semibold text-[var(--color-muted)]">Organization or user ID<input required name="granteeId" placeholder="Enter an existing ID" className="ui-input" /></label>
+          <Button disabled={create.isPending} type="submit" className="self-end">{create.isPending ? "Authorizing…" : "Authorize"}</Button>
+        </form>
+
+        <div className="mt-4 space-y-2">
+          {list.isLoading ? <p className="text-sm text-[var(--color-muted)]" role="status">Loading broker authorizations…</p> : null}
+          {(list.data ?? []).map((authorization) => (
+            <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:flex-row sm:items-center sm:justify-between" key={authorization.id}>
+              <div><p className="text-sm font-semibold text-[var(--color-foreground)]">{authorization.organization?.name ?? ([authorization.brokerUser?.firstName, authorization.brokerUser?.lastName].filter(Boolean).join(" ") || authorization.organizationId || authorization.brokerUserId)}</p><p className="mt-1 text-xs text-[var(--color-muted)]">{formatLabel(authorization.status)}</p></div>
+              <button type="button" className="ui-button ui-button-secondary" disabled={remove.isPending} onClick={() => remove.mutate(authorization.id)} aria-label={`Remove authorization for ${authorization.organization?.name ?? authorization.organizationId ?? authorization.brokerUserId ?? "broker"}`}>Remove</button>
+            </div>
+          ))}
+          {!list.isLoading && !list.error && !list.data?.length ? <p className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border-strong)] p-4 text-sm text-[var(--color-muted)]">No explicit broker authorizations have been added.</p> : null}
+          {list.error ? <FeedbackState tone="error" title="Authorizations could not be loaded" description={list.error.message} /> : null}
+        </div>
+      </section>
     </div>
   );
+}
+
+function formatLabel(value: string) {
+  return value.toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }

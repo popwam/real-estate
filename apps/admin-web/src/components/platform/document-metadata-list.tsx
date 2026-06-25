@@ -22,36 +22,36 @@ export function DocumentMetadataList({ documents }: { documents: Verification[] 
   }
 
   return (
-    <div className="divide-y divide-zinc-100">
+    <div className="divide-y divide-[var(--color-border)]">
       {documents.map((document) => (
-        <div key={document.id} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 md:flex-row md:items-center md:justify-between">
+        <div
+          key={document.id}
+          className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 md:flex-row md:items-center md:justify-between"
+        >
           <div className="flex min-w-0 gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
               <FileText className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium text-zinc-950">{document.documentType.replaceAll("_", " ")}</p>
+                <p className="font-medium text-[var(--color-foreground)]">{document.documentType.replaceAll("_", " ")}</p>
                 <VerificationStatusBadge status={document.status} />
               </div>
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
                 {document.uploadedFile?.mimeType ?? "No mime type"} · {formatBytes(document.uploadedFile?.sizeBytes)}
               </p>
               {document.rejectionReason ? (
-                <p className="mt-1 text-sm text-red-600">{document.rejectionReason}</p>
+                <p className="mt-1 text-sm text-[var(--color-danger)]">{document.rejectionReason}</p>
               ) : null}
             </div>
           </div>
           <div className="flex items-center gap-2 md:justify-end">
-            <Link
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-              href={`/platform/verifications/${document.id}`}
-            >
+            <Link className="ui-button ui-button-secondary h-9 px-3" href={`/platform/verifications/${document.id}`}>
               Review
             </Link>
             {document.documentUrl || document.uploadedFile?.url ? (
               <a
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                className="ui-button ui-button-secondary h-9 px-3"
                 href={document.documentUrl ?? document.uploadedFile?.url ?? "#"}
                 target="_blank"
                 rel="noreferrer"

@@ -50,6 +50,8 @@ export type PublicProject = {
   name: string;
   city: string;
   district: string;
+  address?: string | null;
+  propertyType?: string;
   developerSlug: string;
   developerName: string;
   status: PublicProjectStatus;
@@ -65,6 +67,10 @@ export type PublicProject = {
   paymentPlan: PublicPaymentPlan;
   minPrice: number;
   maxPrice: number;
+  availableUnitsCount?: number;
+  hasMedia?: boolean;
+  hasPaymentPlan?: boolean;
+  hasPrice?: boolean;
   featured: boolean;
   ogImageUrl: string;
   developerContact?: {
@@ -83,12 +89,13 @@ export type PublicProjectFilters = {
 
 const projects: PublicProject[] = [
   {
-    slug: "demo",
+    slug: "northline-residences",
     name: "Northline Residences",
     city: "New Cairo",
     district: "Golden Square",
-    developerSlug: "demo-developer",
-    developerName: "Demo Development Group",
+    propertyType: "Residential",
+    developerSlug: "northline-development-group",
+    developerName: "Northline Development Group",
     status: "ACTIVE",
     visibility: "OPEN_MARKETPLACE",
     priceLabel: "From EGP 4.2M",
@@ -102,11 +109,11 @@ const projects: PublicProject[] = [
       "https://images.unsplash.com/photo-1600210491892-03d54c0aaf87?auto=format&fit=crop&w=900&q=80",
     ],
     summary:
-      "A public marketplace preview for a verified residential project. Data is mocked until public APIs are available.",
+      "A residential project with published public details for buyers comparing locations, unit types, and payment options.",
     highlights: [
-      "Verified developer profile placeholder",
+      "Developer profile available",
       "Public-only project information",
-      "No private unit inventory exposed",
+      "Interest routed through POPWAM",
     ],
     unitTypes: [
       {
@@ -136,17 +143,22 @@ const projects: PublicProject[] = [
     },
     minPrice: 4200000,
     maxPrice: 15000000,
+    availableUnitsCount: 3,
+    hasMedia: true,
+    hasPaymentPlan: true,
+    hasPrice: true,
     featured: true,
     ogImageUrl:
       "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    slug: "coastline-demo",
-    name: "Coastline Demo Village",
+    slug: "coastline-village",
+    name: "Coastline Village",
     city: "North Coast",
     district: "Ras El Hekma",
-    developerSlug: "demo-developer",
-    developerName: "Demo Development Group",
+    propertyType: "Coastal homes",
+    developerSlug: "northline-development-group",
+    developerName: "Northline Development Group",
     status: "ACTIVE",
     visibility: "OPEN_MARKETPLACE",
     priceLabel: "From EGP 6.8M",
@@ -160,11 +172,11 @@ const projects: PublicProject[] = [
       "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=900&q=80",
     ],
     summary:
-      "A second mock public project used to exercise listing states without calling marketplace APIs.",
+      "A coastal residential project with public unit-type, delivery, and payment-plan details.",
     highlights: [
-      "Open marketplace mock record",
-      "Public SEO route coverage",
-      "Future API adapter boundary ready",
+      "Published public project details",
+      "Coastal residential offering",
+      "Interest routed through POPWAM",
     ],
     unitTypes: [
       {
@@ -188,6 +200,10 @@ const projects: PublicProject[] = [
     },
     minPrice: 6800000,
     maxPrice: 30000000,
+    availableUnitsCount: 2,
+    hasMedia: true,
+    hasPaymentPlan: true,
+    hasPrice: true,
     featured: true,
     ogImageUrl:
       "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
@@ -197,8 +213,9 @@ const projects: PublicProject[] = [
     name: "Harbor Business Quay",
     city: "Dubai",
     district: "Business Bay",
+    propertyType: "Mixed-use",
     developerSlug: "gulf-demo-developer",
-    developerName: "Gulf Demo Properties",
+    developerName: "Gulf Coast Properties",
     status: "ACTIVE",
     visibility: "OPEN_MARKETPLACE",
     priceLabel: "From AED 1.7M",
@@ -212,11 +229,11 @@ const projects: PublicProject[] = [
       "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=900&q=80",
     ],
     summary:
-      "A mock mixed-use public listing for testing filters, city coverage, and profile associations.",
+      "A mixed-use public listing with residential and serviced residence options in a central business district.",
     highlights: [
-      "Verified public listing shell",
+      "Published public project details",
       "Mixed-use project summary",
-      "Lead capture disabled in Slice 2",
+      "Interest routed through POPWAM",
     ],
     unitTypes: [
       {
@@ -240,15 +257,20 @@ const projects: PublicProject[] = [
     },
     minPrice: 1700000,
     maxPrice: 6200000,
+    availableUnitsCount: 2,
+    hasMedia: true,
+    hasPaymentPlan: true,
+    hasPrice: true,
     featured: false,
     ogImageUrl:
       "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    slug: "private-demo-hidden-from-public",
+    slug: "private-inventory-hidden-from-public",
     name: "Private Developer Inventory",
     city: "Cairo",
     district: "Confidential",
+    propertyType: "Private inventory",
     developerSlug: "private-developer",
     developerName: "Private Developer",
     status: "ACTIVE",
@@ -258,7 +280,7 @@ const projects: PublicProject[] = [
     deliveryLabel: "Hidden",
     heroImageUrl: "",
     galleryImageUrls: [],
-    summary: "This mock record proves private projects are filtered out.",
+    summary: "This private record is excluded from public marketplace browsing.",
     highlights: [],
     unitTypes: [],
     paymentPlan: {
@@ -269,6 +291,10 @@ const projects: PublicProject[] = [
     },
     minPrice: 0,
     maxPrice: 0,
+    availableUnitsCount: 0,
+    hasMedia: false,
+    hasPaymentPlan: false,
+    hasPrice: false,
     featured: false,
     ogImageUrl: "",
   },
@@ -276,19 +302,19 @@ const projects: PublicProject[] = [
 
 const organizations: PublicOrganization[] = [
   {
-    name: "Demo Development Group",
-    slug: "demo-developer",
+    name: "Northline Development Group",
+    slug: "northline-development-group",
     type: "DEVELOPER",
     city: "Cairo",
     country: "Egypt",
     summary:
-      "Verified developer profile placeholder for public SEO pages. Real organization data will come from Team 1 and public APIs later.",
+      "Developer profile for a participating organization with public project information and safe contact routing.",
     highlights: [
-      "Developer public profile shell",
-      "Project portfolio placeholder",
-      "Verification badges pending backend contract",
+      "Developer public profile",
+      "Published project portfolio",
+      "Visitor interest routed through POPWAM",
     ],
-    verifiedLabel: "Verification placeholder",
+    verifiedLabel: "Verification under review",
     establishedLabel: "Established 2014",
     projectCountLabel: "2 public projects",
     serviceAreas: ["New Cairo", "North Coast", "West Cairo"],
@@ -296,29 +322,29 @@ const organizations: PublicOrganization[] = [
       "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1400&q=80",
     ogImageUrl:
       "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
-    publicDomains: ["developer-demo", "developer-demo.popwam.com"],
-    subdomain: "developer-demo.popwam.com",
-    customDomain: "custom-domain-demo.test",
+    publicDomains: ["northline", "northline.popwam.com"],
+    subdomain: "northline.popwam.com",
+    customDomain: "northline.test",
     contact: {
       phone: "+201000000000",
-      email: "sales@demo-developer.test",
+      email: "sales@northline.example",
       whatsappUrl: "https://wa.me/201000000000",
     },
   },
   {
-    name: "Gulf Demo Properties",
+    name: "Gulf Coast Properties",
     slug: "gulf-demo-developer",
     type: "DEVELOPER",
     city: "Dubai",
     country: "UAE",
     summary:
-      "Developer profile placeholder for Gulf public marketplace pages and domain routing tests.",
+      "Developer profile for Gulf marketplace projects with published public portfolio information.",
     highlights: [
-      "Developer verification badge placeholder",
+      "Developer public profile",
       "Public Gulf portfolio shell",
-      "No authenticated inventory exposed",
+      "Private inventory remains protected",
     ],
-    verifiedLabel: "Verification placeholder",
+    verifiedLabel: "Verification under review",
     establishedLabel: "Established 2018",
     projectCountLabel: "1 public project",
     serviceAreas: ["Dubai", "Abu Dhabi"],
@@ -335,31 +361,31 @@ const organizations: PublicOrganization[] = [
     },
   },
   {
-    name: "Harbor Brokerage Collective",
-    slug: "demo-brokerage",
+    name: "Northline Brokerage Collective",
+    slug: "northline-brokerage-collective",
     type: "BROKERAGE",
-    city: "Dubai",
-    country: "UAE",
+    city: "Cairo",
+    country: "Egypt",
     summary:
-      "Brokerage public profile placeholder for future marketing and referral pages.",
+      "A verified brokerage team helping buyers compare suitable homes and follow up through POPWAM.",
     highlights: [
-      "Brokerage public profile shell",
-      "Market coverage placeholder",
-      "Lead routing disabled until backend support exists",
+      "Brokerage public profile",
+      "Market coverage information",
+      "Visitor interest routed through POPWAM",
     ],
-    verifiedLabel: "Brokerage verification placeholder",
-    brokerCountLabel: "42 broker profiles placeholder",
-    serviceAreas: ["Dubai", "New Cairo", "North Coast"],
+    verifiedLabel: "Verification under review",
+    brokerCountLabel: "Brokerage team",
+    serviceAreas: ["New Cairo", "North Coast", "West Cairo"],
     heroImageUrl:
       "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=80",
     ogImageUrl:
       "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80",
-    publicDomains: ["brokerage-demo", "brokerage-demo.popwam.com"],
-    subdomain: "brokerage-demo.popwam.com",
+    publicDomains: ["northline-brokerage", "northline-brokerage.popwam.com"],
+    subdomain: "northline-brokerage.popwam.com",
     contact: {
-      phone: "+971511111111",
-      email: "hello@brokerage-demo.test",
-      whatsappUrl: "https://wa.me/971511111111",
+      phone: "+201111111111",
+      email: "hello@northline-brokerage.example",
+      whatsappUrl: "https://wa.me/201111111111",
     },
   },
 ];

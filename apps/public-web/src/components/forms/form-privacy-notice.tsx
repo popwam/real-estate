@@ -1,8 +1,8 @@
 export function FormPrivacyNotice() {
   return (
-    <p className="text-xs leading-5 text-slate-500">
-      POPWAM stores this as a public contact request only. It does not create a
-      lead claim, reservation, deal, or broker assignment.
+    <p className="text-xs leading-5 text-[var(--color-muted)]">
+      POPWAM uses your details only to route this request to the relevant
+      organization for follow-up.
     </p>
   );
 }

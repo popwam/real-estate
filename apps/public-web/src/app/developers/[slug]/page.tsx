@@ -1,6 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ProjectCard } from "@/components/public/project-card";
+import { OrganizationContactPanel } from "@/components/organization/organization-contact-panel";
+import { OrganizationProfileHero } from "@/components/organization/organization-profile-hero";
+import { OrganizationProjectGrid } from "@/components/organization/organization-project-grid";
+import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
 import { getPublicDeveloperBySlug } from "@/lib/public-data";
 import { createSeoMetadata } from "@/lib/seo";
 
@@ -17,6 +19,7 @@ export async function generateMetadata({ params }: DeveloperPageProps) {
     description:
       developer?.summary ?? "The requested public developer profile could not be found.",
     path: `/developers/${slug}`,
+    image: developer?.ogImageUrl,
   });
 }
 
@@ -29,74 +32,83 @@ export default async function DeveloperProfilePage({ params }: DeveloperPageProp
   }
 
   return (
-    <div className="bg-slate-50">
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-12">
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            Developer profile
+    <div className="bg-[var(--color-background)]">
+      <OrganizationProfileHero
+        organization={developer}
+        eyebrow="Developer profile"
+        primaryHref="#projects"
+        primaryLabel="View public projects"
+        secondaryHref="#contact"
+        secondaryLabel="Contact developer"
+      />
+      <OrganizationTrustStrip
+        organization={developer}
+        projectCount={developer.projects.length}
+      />
+
+      <section id="projects" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+              Projects
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold text-[var(--color-foreground)]">
+              Public project portfolio
+            </h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+              Projects appear here when this developer has approved them for
+              public viewing.
+            </p>
+          </div>
+          <p className="text-sm font-semibold text-[var(--color-foreground)]">
+            {developer.projects.length} project
+            {developer.projects.length === 1 ? "" : "s"}
           </p>
-          <h1 className="mt-3 text-4xl font-semibold text-slate-950">
-            {developer.name}
-          </h1>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-            {developer.summary}
-          </p>
-          <p className="mt-4 text-sm font-medium text-slate-700">
-            {developer.city}, {developer.country}
-          </p>
-          <div className="mt-6 inline-flex rounded border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
-            {developer.verifiedLabel}
+        </div>
+        <div className="mt-8">
+          <OrganizationProjectGrid projects={developer.projects} />
+        </div>
+      </section>
+
+      <section className="border-y border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.36fr_0.64fr]">
+          <aside className="ui-card p-5 sm:p-6">
+            <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
+              Developer overview
+            </h2>
+            <dl className="mt-5 grid gap-4 text-sm text-[var(--color-muted)]">
+              {developer.establishedLabel ? (
+                <div>
+                  <dt className="font-semibold text-[var(--color-foreground)]">
+                    Track record
+                  </dt>
+                  <dd>{developer.establishedLabel}</dd>
+                </div>
+              ) : null}
+              {developer.serviceAreas?.length ? (
+                <div>
+                  <dt className="font-semibold text-[var(--color-foreground)]">
+                    Service areas
+                  </dt>
+                  <dd>{developer.serviceAreas.join(", ")}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </aside>
+          <div className="grid gap-4 md:grid-cols-3">
+            {developer.highlights.map((highlight) => (
+              <article key={highlight} className="ui-card p-5">
+                <p className="text-sm leading-6 text-[var(--color-muted)]">
+                  {highlight}
+                </p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[0.75fr_1.25fr]">
-        <aside className="rounded border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
-            Developer overview
-          </h2>
-          <dl className="mt-5 grid gap-4 text-sm text-slate-700">
-            <div>
-              <dt className="font-semibold text-slate-950">Track record</dt>
-              <dd>{developer.establishedLabel}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-slate-950">Public portfolio</dt>
-              <dd>{developer.projectCountLabel}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-slate-950">Service areas</dt>
-              <dd>{developer.serviceAreas?.join(", ")}</dd>
-            </div>
-          </dl>
-          <ul className="mt-5 grid gap-3 text-sm text-slate-700">
-            {developer.highlights.map((highlight) => (
-              <li key={highlight} className="rounded bg-slate-50 p-3">
-                {highlight}
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/projects"
-            className="mt-6 inline-flex rounded bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
-          >
-            Browse all projects
-          </Link>
-        </aside>
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-950">
-            Public project portfolio
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            These projects are returned through the public data adapter and
-            filtered to active open-marketplace visibility only.
-          </p>
-          <div className="mt-6 grid gap-6">
-            {developer.projects.map((project) => (
-              <ProjectCard key={project.slug} project={project} />
-            ))}
-          </div>
-        </div>
+      <section id="contact" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6">
+        <OrganizationContactPanel organization={developer} />
       </section>
     </div>
   );

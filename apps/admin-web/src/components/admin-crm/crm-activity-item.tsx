@@ -7,30 +7,30 @@ export function CrmActivityItem({ activity }: { activity: CrmActivity }) {
   const actor = activity.publicActorName ?? activity.actorRole ?? activity.actorOrganization?.name ?? activity.actorUser?.name;
 
   return (
-    <li className="rounded-md border border-zinc-200 bg-white p-4">
+    <li className="relative rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 ps-6 before:absolute before:inset-y-4 before:start-0 before:w-1 before:rounded-e before:bg-[var(--color-accent)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-2">
           <CrmActivityTypeBadge type={activity.type} />
           <div>
-            <p className="font-medium text-zinc-950">{activity.title}</p>
-            {activity.body ? <p className="mt-1 text-sm text-zinc-600">{activity.body}</p> : null}
+            <p className="font-medium text-[var(--color-foreground)]">{activity.title}</p>
+            {activity.body ? <p className="mt-1 text-sm text-[var(--color-muted)]">{activity.body}</p> : null}
           </div>
         </div>
-        <time className="text-sm text-zinc-500">{formatDate(activity.createdAt)}</time>
+        <time className="text-sm text-[var(--color-muted)]">{formatDate(activity.createdAt)}</time>
       </div>
-      <div className="mt-3 flex flex-wrap gap-3 text-xs text-zinc-500">
+      <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--color-muted)]">
         {actor ? <span>Actor: {actor}</span> : null}
         {activity.crmLead?.client?.name ? <span>Lead: {activity.crmLead.client.name}</span> : null}
         {activity.crmLead?.project?.name ? <span>Project: {activity.crmLead.project.name}</span> : null}
         {activity.conversation?.type ? <span>Conversation: {activity.conversation.type.replaceAll("_", " ")}</span> : null}
       </div>
-      {metadata ? (
-        <pre className="mt-3 max-h-40 overflow-auto rounded-md bg-zinc-950 p-3 text-xs leading-5 text-zinc-50">
-          {JSON.stringify(metadata, null, 2)}
-        </pre>
-      ) : null}
+      {metadata ? <dl className="mt-3 grid gap-2 rounded-[var(--radius-md)] bg-[var(--color-surface-muted)] p-3 sm:grid-cols-2">{Object.entries(metadata).map(([key, value]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{formatLabel(key)}</dt><dd className="mt-1 text-xs text-[var(--color-foreground)]">{value == null ? "Not set" : String(value)}</dd></div>)}</dl> : null}
     </li>
   );
+}
+
+function formatLabel(value: string) {
+  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function safeMetadata(metadata?: Record<string, unknown> | null) {
