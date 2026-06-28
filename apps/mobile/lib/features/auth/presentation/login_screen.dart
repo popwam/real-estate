@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../core/router/auth_route_policy.dart';
+import '../../../shared/widgets/language_selector.dart';
 import 'auth_controller.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -36,12 +39,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await ref.read(authControllerProvider).login(
-            _identifierController.text.trim(),
-            _passwordController.text,
-          );
+      await ref
+          .read(authControllerProvider)
+          .login(_identifierController.text.trim(), _passwordController.text);
+      if (mounted) {
+        final session = ref.read(authControllerProvider).state.session;
+        final from = GoRouterState.of(context).uri.queryParameters['from'];
+        final target =
+            session != null &&
+                from != null &&
+                from.isNotEmpty &&
+                canAccessMobileRoute(session, Uri.parse(from).path)
+            ? from
+            : session == null
+                ? publicHomeRoute
+                : homeRouteForUser(
+                    session.user,
+                    permissions: session.permissions,
+                  );
+        context.go(target);
+      }
     } catch (error) {
-      setState(() => _errorMessage = apiErrorMessage(error));
+      if (mounted) {
+        setState(() => _errorMessage = context.formatApiError(error));
+      }
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -52,6 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Scaffold(
       body: SafeArea(
@@ -65,14 +87,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('POPWAM', style: theme.textTheme.displaySmall),
+                    Text(l10n.appTitle, style: theme.textTheme.displaySmall),
                     const SizedBox(height: 8),
                     Text(
-                      'Verified real estate marketplace',
+                      l10n.appTagline,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    const LanguageSelector(),
                     const SizedBox(height: 32),
                     TextFormField(
                       controller: _identifierController,
@@ -82,13 +106,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         AutofillHints.email,
                         AutofillHints.telephoneNumber,
                       ],
-                      decoration: const InputDecoration(
-                        labelText: 'Email or phone',
-                        prefixIcon: Icon(Icons.mail_outline),
+                      decoration: InputDecoration(
+                        labelText: l10n.emailOrPhone,
+                        prefixIcon: const Icon(Icons.mail_outline),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Email or phone is required';
+                          return l10n.emailOrPhoneRequired;
                         }
                         return null;
                       },
@@ -98,13 +122,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       controller: _passwordController,
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
-                      decoration: const InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: Icon(Icons.lock_outline),
+                      decoration: InputDecoration(
+                        labelText: l10n.password,
+                        prefixIcon: const Icon(Icons.lock_outline),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Password is required';
+                          return l10n.passwordRequired;
                         }
                         return null;
                       },
@@ -126,7 +150,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.login),
-                      label: const Text('Log in'),
+                      label: Text(l10n.signIn),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => context.go(publicHomeRoute),
+                      icon: const Icon(Icons.explore_outlined),
+                      label: Text(l10n.continueAsGuest),
                     ),
                   ],
                 ),

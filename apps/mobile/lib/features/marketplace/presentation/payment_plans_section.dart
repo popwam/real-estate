@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/l10n_extensions.dart';
 import '../data/marketplace_models.dart';
 
 class PaymentPlansSection extends StatelessWidget {
@@ -10,10 +11,11 @@ class PaymentPlansSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     if (paymentPlans.isEmpty) {
       return Text(
-        'No payment plans returned yet.',
+        l10n.noPaymentPlans,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -43,12 +45,20 @@ class PaymentPlansSection extends StatelessWidget {
                     if (plan.downPaymentPercent != null)
                       Chip(
                         label: Text(
-                          '${plan.downPaymentPercent!.toStringAsFixed(0)}% down',
+                          l10n.downPaymentPercent(
+                            context.formatNumber(
+                              plan.downPaymentPercent!,
+                              decimalDigits: 0,
+                            ),
+                          ),
                         ),
                       ),
                     if (plan.installments != null)
-                      Chip(label: Text('${plan.installments} installments')),
-                    if (plan.years != null) Chip(label: Text('${plan.years} years')),
+                      Chip(
+                        label: Text(l10n.installmentsCount(plan.installments!)),
+                      ),
+                    if (plan.years != null)
+                      Chip(label: Text(l10n.yearsCount(plan.years!))),
                   ],
                 ),
               ],

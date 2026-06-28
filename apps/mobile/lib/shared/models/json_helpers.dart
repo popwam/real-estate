@@ -1,4 +1,8 @@
-String stringValue(Map<String, dynamic> json, String key, {String fallback = ''}) {
+String stringValue(
+  Map<String, dynamic> json,
+  String key, {
+  String fallback = '',
+}) {
   final value = json[key];
   if (value == null) {
     return fallback;

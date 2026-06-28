@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
-import '../../../core/utils/money_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/deal_models.dart';
@@ -16,13 +15,14 @@ class DealsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deals = ref.watch(myDealsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My deals'),
+        title: Text(l10n.myDeals),
         actions: [
           IconButton(
-            tooltip: 'Refresh deals',
+            tooltip: l10n.refreshDeals,
             onPressed: () => ref.invalidate(myDealsProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -31,9 +31,9 @@ class DealsListScreen extends ConsumerWidget {
       body: deals.when(
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No deals yet',
-              message: 'Sold and approved deals scoped to you appear here.',
+            return EmptyState(
+              title: l10n.noDealsYet,
+              message: l10n.dealsAppearHere,
               icon: Icons.receipt_long_outlined,
             );
           }
@@ -49,13 +49,13 @@ class DealsListScreen extends ConsumerWidget {
           );
         },
         error: (error, _) => EmptyState(
-          title: 'Deals unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.dealsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(myDealsProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -72,6 +72,7 @@ class DealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: InkWell(
@@ -87,22 +88,26 @@ class DealCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      deal.project?.name ?? 'Project ${deal.projectId}',
+                      deal.project?.name ?? '${l10n.project} ${deal.projectId}',
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(deal.unit?.title ?? 'Unit ${deal.unitId}'),
+              Text(deal.unit?.title ?? '${l10n.unit} ${deal.unitId}'),
               const SizedBox(height: 8),
-              Text(moneyLabel(deal.finalPrice, currency: deal.currency)),
+              Text(
+                context.formatMoney(deal.finalPrice, currency: deal.currency),
+              ),
               const SizedBox(height: 8),
               Text(
                 deal.soldAt == null
-                    ? 'Created ${shortDateTime(deal.createdAt)}'
-                    : 'Sold ${shortDateTime(deal.soldAt)}',
+                    ? l10n.createdAt(
+                        context.formatShortDateTime(deal.createdAt),
+                      )
+                    : l10n.soldAt(context.formatShortDateTime(deal.soldAt)),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -114,7 +119,9 @@ class DealCard extends StatelessWidget {
                 children: [
                   StatusChip(label: deal.status),
                   if (deal.dealRoomId.isNotEmpty)
-                    Chip(label: Text('Room ${_shortId(deal.dealRoomId)}')),
+                    Chip(
+                      label: Text(l10n.roomShortId(_shortId(deal.dealRoomId))),
+                    ),
                 ],
               ),
             ],

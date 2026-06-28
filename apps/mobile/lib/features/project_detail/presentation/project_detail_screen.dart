@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../features/auth/presentation/auth_controller.dart';
 import '../../../features/marketplace/data/marketplace_models.dart';
 import '../../../features/marketplace/data/marketplace_repository.dart';
 import '../../../features/marketplace/presentation/image_carousel_placeholder.dart';
@@ -19,39 +20,59 @@ class ProjectDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final project = ref.watch(projectDetailProvider(projectId));
     final units = ref.watch(projectUnitsProvider(projectId));
+    final isSignedIn = ref.watch(authControllerProvider).state.isSignedIn;
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Project')),
+      appBar: AppBar(title: Text(l10n.projectDetails)),
       body: project.when(
         data: (item) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
             _ProjectHeader(project: item),
             const SizedBox(height: 18),
-            Text('Images', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.images, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             ImageCarouselPlaceholder(imageUrl: item.coverImageUrl),
             const SizedBox(height: 18),
-            Text('Payment plans', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.paymentPlans,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             PaymentPlansSection(paymentPlans: item.paymentPlans),
             const SizedBox(height: 18),
             FilledButton.icon(
-              onPressed: () => context.push(
-                '/lead-claims/new?projectId=${Uri.encodeComponent(item.id)}',
+              onPressed: () {
+                final target =
+                    '/lead-claims/new?projectId=${Uri.encodeComponent(item.id)}';
+                if (!isSignedIn) {
+                  context.push(
+                    '/login?from=${Uri.encodeComponent(target)}',
+                  );
+                  return;
+                }
+                context.push(target);
+              },
+              icon: Icon(
+                isSignedIn ? Icons.person_add_alt_1 : Icons.login,
               ),
-              icon: const Icon(Icons.person_add_alt_1),
-              label: const Text('Create Lead Claim'),
+              label: Text(
+                isSignedIn ? l10n.createLeadClaim : l10n.signInToRequest,
+              ),
             ),
             const SizedBox(height: 18),
-            Text('Available units', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.availableUnits,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             units.when(
               data: (unitItems) {
                 if (unitItems.isEmpty) {
-                  return const EmptyState(
-                    title: 'No units visible',
-                    message: 'The backend did not expose units for this project.',
+                  return EmptyState(
+                    title: l10n.noUnitsVisible,
+                    message: l10n.backendDidNotExposeUnits,
                   );
                 }
                 return Column(
@@ -64,8 +85,8 @@ class ProjectDetailScreen extends ConsumerWidget {
                 );
               },
               error: (error, _) => EmptyState(
-                title: 'Units unavailable',
-                message: apiErrorMessage(error),
+                title: l10n.unitsUnavailable,
+                message: context.formatApiError(error),
                 icon: Icons.cloud_off_outlined,
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -73,13 +94,13 @@ class ProjectDetailScreen extends ConsumerWidget {
           ],
         ),
         error: (error, _) => EmptyState(
-          title: 'Project unavailable',
-          message: apiErrorMessage(error),
-                icon: Icons.lock_outline,
+          title: l10n.projectUnavailable,
+          message: context.formatApiError(error),
+          icon: Icons.lock_outline,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(projectDetailProvider(projectId)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -96,6 +117,7 @@ class _ProjectHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -113,14 +135,25 @@ class _ProjectHeader extends StatelessWidget {
             ),
             if (project.developerName != null) ...[
               const SizedBox(height: 8),
-              Text('Developer: ${project.developerName}'),
+              Text(l10n.developerLabel(project.developerName!)),
             ],
-            if (project.description != null && project.description!.isNotEmpty) ...[
+            if (project.description != null &&
+                project.description!.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(project.description!),
             ],
             const SizedBox(height: 16),
-            Text(project.startingPriceLabel, style: theme.textTheme.titleLarge),
+            Text(
+              project.startingPrice == null
+                  ? l10n.priceOnRequest
+                  : l10n.fromPrice(
+                      context.formatMoney(
+                        project.startingPrice,
+                        currency: project.currency,
+                      ),
+                    ),
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,

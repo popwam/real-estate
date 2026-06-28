@@ -66,12 +66,12 @@ final myDealRoomsProvider = FutureProvider.autoDispose<List<DealRoom>>((ref) {
   return ref.watch(dealRoomsRepositoryProvider).myRooms();
 });
 
-final dealRoomDetailProvider =
-    FutureProvider.autoDispose.family<DealRoom, String>((ref, id) {
-  return ref.watch(dealRoomsRepositoryProvider).detail(id);
-});
+final dealRoomDetailProvider = FutureProvider.autoDispose
+    .family<DealRoom, String>((ref, id) {
+      return ref.watch(dealRoomsRepositoryProvider).detail(id);
+    });
 
-final dealRoomMessagesProvider =
-    FutureProvider.autoDispose.family<List<DealRoomMessage>, String>((ref, id) {
-  return ref.watch(dealRoomsRepositoryProvider).messages(id);
-});
+final dealRoomMessagesProvider = FutureProvider.autoDispose
+    .family<List<DealRoomMessage>, String>((ref, id) {
+      return ref.watch(dealRoomsRepositoryProvider).messages(id);
+    });

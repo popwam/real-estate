@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/reservation_request_models.dart';
@@ -15,13 +15,14 @@ class ReservationRequestsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(myReservationRequestsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reservation requests'),
+        title: Text(l10n.reservationRequests),
         actions: [
           IconButton(
-            tooltip: 'Refresh requests',
+            tooltip: l10n.refreshRequests,
             onPressed: () => ref.invalidate(myReservationRequestsProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -30,9 +31,9 @@ class ReservationRequestsListScreen extends ConsumerWidget {
       body: requests.when(
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No reservation requests',
-              message: 'Create a request from an active lead claim.',
+            return EmptyState(
+              title: l10n.noReservationRequests,
+              message: l10n.createRequestFromLeadClaim,
               icon: Icons.event_note_outlined,
             );
           }
@@ -49,13 +50,13 @@ class ReservationRequestsListScreen extends ConsumerWidget {
           );
         },
         error: (error, _) => EmptyState(
-          title: 'Requests unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.requestsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(myReservationRequestsProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -72,6 +73,7 @@ class ReservationRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: InkWell(
@@ -86,21 +88,24 @@ class ReservationRequestCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      request.project?.name ?? 'Project ${request.projectId}',
+                      request.project?.name ??
+                          '${l10n.project} ${request.projectId}',
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(request.unit?.title ?? 'Unit ${request.unitId}'),
+              Text(request.unit?.title ?? '${l10n.unit} ${request.unitId}'),
               const SizedBox(height: 8),
-              Text('Created ${shortDateTime(request.createdAt)}'),
+              Text(
+                l10n.createdAt(context.formatShortDateTime(request.createdAt)),
+              ),
               if (request.rejectionReason != null &&
                   request.rejectionReason!.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Reason: ${request.rejectionReason}'),
+                Text('${l10n.reason}: ${request.rejectionReason}'),
               ],
               const SizedBox(height: 12),
               StatusChip(label: request.status),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../data/crm_repository.dart';
 
 class CrmSummaryCard extends ConsumerWidget {
@@ -10,6 +10,7 @@ class CrmSummaryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(crmSummaryProvider);
+    final l10n = context.l10n;
 
     return summary.when(
       data: (data) => Card(
@@ -23,12 +24,12 @@ class CrmSummaryCard extends ConsumerWidget {
                   const Icon(Icons.analytics_outlined),
                   const SizedBox(width: 8),
                   Text(
-                    'CRM summary',
+                    l10n.crmSummary,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const Spacer(),
                   IconButton(
-                    tooltip: 'Refresh CRM summary',
+                    tooltip: l10n.refreshCrmSummary,
                     onPressed: () => ref.invalidate(crmSummaryProvider),
                     icon: const Icon(Icons.refresh),
                   ),
@@ -39,17 +40,23 @@ class CrmSummaryCard extends ConsumerWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _SummaryPill(label: 'Total leads', value: data.totalLeads),
-                  _SummaryPill(label: 'New', value: data.newLeads),
-                  _SummaryPill(label: 'Claimed', value: data.claimedLeads),
-                  _SummaryPill(label: 'Qualified', value: data.qualifiedLeads),
+                  _SummaryPill(label: l10n.totalLeads, value: data.totalLeads),
+                  _SummaryPill(label: l10n.newLeads, value: data.newLeads),
+                  _SummaryPill(label: l10n.claimed, value: data.claimedLeads),
                   _SummaryPill(
-                    label: 'Open chats',
+                    label: l10n.qualifiedLeads,
+                    value: data.qualifiedLeads,
+                  ),
+                  _SummaryPill(
+                    label: l10n.openChats,
                     value: data.openConversations,
                   ),
-                  _SummaryPill(label: 'Today leads', value: data.todayNewLeads),
                   _SummaryPill(
-                    label: 'Today messages',
+                    label: l10n.todayLeads,
+                    value: data.todayNewLeads,
+                  ),
+                  _SummaryPill(
+                    label: l10n.todayMessages,
                     value: data.todayNewMessages,
                   ),
                 ],
@@ -61,7 +68,9 @@ class CrmSummaryCard extends ConsumerWidget {
       error: (error, _) => Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Text('CRM summary unavailable: ${apiErrorMessage(error)}'),
+          child: Text(
+            l10n.crmSummaryUnavailable(context.formatApiError(error)),
+          ),
         ),
       ),
       loading: () => const Card(
@@ -93,10 +102,7 @@ class _SummaryPill extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            value.toString(),
-            style: theme.textTheme.titleLarge,
-          ),
+          Text(context.formatNumber(value), style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(label, style: theme.textTheme.bodySmall),
         ],

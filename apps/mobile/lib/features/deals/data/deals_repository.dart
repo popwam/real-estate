@@ -31,7 +31,9 @@ final myDealsProvider = FutureProvider.autoDispose<List<Deal>>((ref) {
   return ref.watch(dealsRepositoryProvider).myDeals();
 });
 
-final dealDetailProvider =
-    FutureProvider.autoDispose.family<Deal, String>((ref, id) {
+final dealDetailProvider = FutureProvider.autoDispose.family<Deal, String>((
+  ref,
+  id,
+) {
   return ref.watch(dealsRepositoryProvider).detail(id);
 });

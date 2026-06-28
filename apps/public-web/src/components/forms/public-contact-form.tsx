@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { FormPrivacyNotice } from "@/components/forms/form-privacy-notice";
 import { PublicLeadSuccess } from "@/components/forms/public-lead-success";
+import { useI18n } from "@/i18n";
 import { isPublicLeadRateLimitError, submitLead } from "@/lib/public-data";
 import {
   PublicApiError,
@@ -28,6 +29,7 @@ export function PublicContactForm({
   projectSlug?: string;
   whatsappUrl?: string | null;
 }) {
+  const { t } = useI18n();
   const [submitted, setSubmitted] = useState<SubmitPublicLeadResponse | null>(null);
   const [preferredContactMethod, setPreferredContactMethod] =
     useState<PreferredContactMethod>("CALL");
@@ -35,7 +37,7 @@ export function PublicContactForm({
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [utm, setUtm] = useState<CapturedUtmParams>({});
-  const contactOptions = buildContactOptions(Boolean(whatsappUrl));
+  const contactOptions = buildContactOptions(Boolean(whatsappUrl), t);
   const errorId = projectSlug ? `${projectSlug}-contact-error` : "public-contact-error";
 
   useEffect(() => {
@@ -107,7 +109,7 @@ export function PublicContactForm({
         window.open(safeWhatsAppUrl, "_blank", "noopener,noreferrer");
       }
     } catch (caughtError) {
-      setError(publicLeadErrorMessage(caughtError));
+      setError(publicLeadErrorMessage(caughtError, t));
     } finally {
       setSubmitting(false);
     }
@@ -136,29 +138,28 @@ export function PublicContactForm({
     >
       <div>
         <h3 className="text-xl font-semibold text-[var(--color-foreground)]">
-          Contact the team
+          {t("lead.contactTeam")}
         </h3>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-          Share your details and the team will respond through your preferred
-          contact method.
+          {t("lead.contactTeamDescription")}
         </p>
       </div>
-      <input type="hidden" name="subject" value={subject ?? "Public contact"} />
+      <input type="hidden" name="subject" value={subject ?? t("lead.publicContactSubject")} />
       <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-        Full name
+        {t("lead.fullName")}
         <input name="name" required className="ui-input" autoComplete="name" />
       </label>
       <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-        Phone number
+        {t("lead.phone")}
         <input name="phone" required className="ui-input" autoComplete="tel" />
       </label>
       <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-        Email <span className="font-normal text-[var(--color-muted)]">(optional)</span>
+        {t("lead.email")} <span className="font-normal text-[var(--color-muted)]">{t("lead.optionalSuffix")}</span>
         <input name="email" type="email" className="ui-input" autoComplete="email" />
       </label>
       <fieldset className="grid gap-3">
         <legend className="text-sm font-semibold text-[var(--color-foreground)]">
-          Preferred contact
+          {t("lead.preferredContact")}
         </legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {contactOptions.map((option) => (
@@ -185,7 +186,7 @@ export function PublicContactForm({
         </div>
       </fieldset>
       <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-        Message <span className="font-normal text-[var(--color-muted)]">(optional)</span>
+        {t("lead.message")} <span className="font-normal text-[var(--color-muted)]">{t("lead.optionalSuffix")}</span>
         <textarea name="message" className="ui-input" />
       </label>
       <label className="flex items-start gap-3 text-sm leading-6 text-[var(--color-muted)]">
@@ -196,17 +197,16 @@ export function PublicContactForm({
           className="mt-1 h-4 w-4 rounded border-[var(--color-border-strong)]"
         />
         <span>
-          I agree that POPWAM may share this message with the relevant
-          organization so they can follow up.
+          {t("lead.messageConsent")}
         </span>
       </label>
       <div className="sr-only" aria-hidden="true">
         <label>
-          Website
+          {t("lead.website")}
           <input name="website" tabIndex={-1} autoComplete="off" />
         </label>
         <label>
-          Company website
+          {t("lead.companyWebsite")}
           <input name="companyWebsite" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
@@ -220,42 +220,42 @@ export function PublicContactForm({
         disabled={submitting}
         className="ui-button ui-button-primary w-full"
       >
-        {submitting ? "Sending..." : submitLabel(preferredContactMethod)}
+        {submitting ? t("lead.sending") : submitLabel(preferredContactMethod, t)}
       </button>
       <FormPrivacyNotice />
     </form>
   );
 }
 
-function buildContactOptions(includeWhatsapp: boolean) {
+function buildContactOptions(includeWhatsapp: boolean, t: (key: string) => string) {
   const options: Array<{ value: PreferredContactMethod; label: string }> = [
-    { value: "CALL", label: "Request a call" },
-    { value: "CHAT", label: "Message online" },
+    { value: "CALL", label: t("lead.requestCall") },
+    { value: "CHAT", label: t("lead.messageOnline") },
   ];
 
   if (includeWhatsapp) {
-    options.push({ value: "WHATSAPP", label: "WhatsApp" });
+    options.push({ value: "WHATSAPP", label: t("lead.whatsapp") });
   }
 
   return options;
 }
 
-function submitLabel(method: PreferredContactMethod) {
-  if (method === "CALL") return "Request a call";
-  if (method === "CHAT") return "Send message";
-  return "Continue with WhatsApp";
+function submitLabel(method: PreferredContactMethod, t: (key: string) => string) {
+  if (method === "CALL") return t("lead.requestCall");
+  if (method === "CHAT") return t("lead.sendMessage");
+  return t("lead.continueWhatsapp");
 }
 
-function publicLeadErrorMessage(error: unknown) {
+function publicLeadErrorMessage(error: unknown, t: (key: string) => string) {
   if (isPublicLeadRateLimitError(error)) {
-    return "Too many requests were sent from this browser. Please try again shortly.";
+    return t("lead.error.rateLimit");
   }
 
   if (error instanceof PublicApiError && (error.status === 400 || error.status === 422)) {
-    return "Please check the required details and try again.";
+    return t("lead.error.validation");
   }
 
-  return "We could not send your message right now. Please try again.";
+  return t("lead.error.messageGeneric");
 }
 
 function optionalString(value: FormDataEntryValue | null) {

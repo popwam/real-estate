@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/crm_models.dart';
@@ -27,13 +27,14 @@ class _CrmLeadsListScreenState extends ConsumerState<CrmLeadsListScreen> {
       preferredContactMethod: _method,
     );
     final leads = ref.watch(crmLeadsProvider(filters));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CRM leads'),
+        title: Text(l10n.crmLeads),
         actions: [
           IconButton(
-            tooltip: 'Refresh CRM leads',
+            tooltip: l10n.refreshCrmLeads,
             onPressed: () => ref.invalidate(crmLeadsProvider(filters)),
             icon: const Icon(Icons.refresh),
           ),
@@ -51,19 +52,21 @@ class _CrmLeadsListScreenState extends ConsumerState<CrmLeadsListScreen> {
             child: leads.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return const EmptyState(
-                    title: 'No CRM leads',
-                    message: 'Public and claimed CRM leads in your scope appear here.',
+                  return EmptyState(
+                    title: l10n.noCrmLeads,
+                    message: l10n.crmLeadsAppearHere,
                     icon: Icons.people_alt_outlined,
                   );
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async => ref.refresh(crmLeadsProvider(filters).future),
+                  onRefresh: () async =>
+                      ref.refresh(crmLeadsProvider(filters).future),
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: items.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       return CrmLeadCard(lead: items[index]);
                     },
@@ -71,13 +74,13 @@ class _CrmLeadsListScreenState extends ConsumerState<CrmLeadsListScreen> {
                 );
               },
               error: (error, _) => EmptyState(
-                title: 'CRM leads unavailable',
-                message: apiErrorMessage(error),
+                title: l10n.crmLeadsUnavailable,
+                message: context.formatApiError(error),
                 icon: Icons.cloud_off_outlined,
                 action: OutlinedButton.icon(
                   onPressed: () => ref.invalidate(crmLeadsProvider(filters)),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.retry),
                 ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -98,10 +101,11 @@ class CrmLeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final clientName = lead.client?.name ?? 'Masked lead';
+    final l10n = context.l10n;
+    final clientName = lead.client?.name ?? l10n.maskedLead;
     final phone = lead.client?.phoneLast4 == null
         ? null
-        : 'Phone ending ${lead.client!.phoneLast4}';
+        : l10n.phoneEnding(lead.client!.phoneLast4!);
 
     return Card(
       child: InkWell(
@@ -118,17 +122,14 @@ class CrmLeadCard extends StatelessWidget {
                   Expanded(
                     child: Text(clientName, style: theme.textTheme.titleMedium),
                   ),
-                  trailing ?? const Icon(Icons.chevron_right),
+                  trailing ?? const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(lead.project?.name ?? 'No project attached'),
-              if (phone != null) ...[
-                const SizedBox(height: 4),
-                Text(phone),
-              ],
+              Text(lead.project?.name ?? l10n.noProjectAttached),
+              if (phone != null) ...[const SizedBox(height: 4), Text(phone)],
               const SizedBox(height: 4),
-              Text('Created ${shortDateTime(lead.createdAt)}'),
+              Text(l10n.createdAt(context.formatShortDateTime(lead.createdAt))),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -136,8 +137,10 @@ class CrmLeadCard extends StatelessWidget {
                 children: [
                   StatusChip(label: lead.status),
                   Chip(label: Text(lead.preferredContactMethod)),
-                  Chip(label: Text(lead.isClaimed ? 'Claimed' : 'Unclaimed')),
-                  if (lead.unavailable) const Chip(label: Text('Unavailable')),
+                  Chip(
+                    label: Text(lead.isClaimed ? l10n.claimed : l10n.unclaimed),
+                  ),
+                  if (lead.unavailable) Chip(label: Text(l10n.unavailable)),
                 ],
               ),
             ],
@@ -163,6 +166,8 @@ class _LeadFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Row(
@@ -170,16 +175,25 @@ class _LeadFilters extends StatelessWidget {
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All')),
-                DropdownMenuItem(value: 'NEW', child: Text('New')),
-                DropdownMenuItem(value: 'CLAIMED', child: Text('Claimed')),
-                DropdownMenuItem(value: 'IN_CONVERSATION', child: Text('In chat')),
-                DropdownMenuItem(value: 'QUALIFIED', child: Text('Qualified')),
-                DropdownMenuItem(value: 'LOST', child: Text('Lost')),
-                DropdownMenuItem(value: 'CONVERTED', child: Text('Converted')),
-                DropdownMenuItem(value: 'SPAM', child: Text('Spam')),
+              decoration: InputDecoration(labelText: l10n.status),
+              items: [
+                DropdownMenuItem(value: null, child: Text(l10n.all)),
+                DropdownMenuItem(value: 'NEW', child: Text(l10n.newStatus)),
+                DropdownMenuItem(value: 'CLAIMED', child: Text(l10n.claimed)),
+                DropdownMenuItem(
+                  value: 'IN_CONVERSATION',
+                  child: Text(l10n.inChat),
+                ),
+                DropdownMenuItem(
+                  value: 'QUALIFIED',
+                  child: Text(l10n.qualified),
+                ),
+                DropdownMenuItem(value: 'LOST', child: Text(l10n.lost)),
+                DropdownMenuItem(
+                  value: 'CONVERTED',
+                  child: Text(l10n.converted),
+                ),
+                DropdownMenuItem(value: 'SPAM', child: Text(l10n.spam)),
               ],
               onChanged: onStatusChanged,
             ),
@@ -188,12 +202,12 @@ class _LeadFilters extends StatelessWidget {
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: method,
-              decoration: const InputDecoration(labelText: 'Contact'),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('All')),
-                DropdownMenuItem(value: 'CALL', child: Text('Call')),
-                DropdownMenuItem(value: 'CHAT', child: Text('Chat')),
-                DropdownMenuItem(value: 'WHATSAPP', child: Text('WhatsApp')),
+              decoration: InputDecoration(labelText: l10n.contact),
+              items: [
+                DropdownMenuItem(value: null, child: Text(l10n.all)),
+                DropdownMenuItem(value: 'CALL', child: Text(l10n.call)),
+                DropdownMenuItem(value: 'CHAT', child: Text(l10n.chat)),
+                DropdownMenuItem(value: 'WHATSAPP', child: Text(l10n.whatsApp)),
               ],
               onChanged: onMethodChanged,
             ),

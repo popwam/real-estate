@@ -71,7 +71,8 @@ class LeadClaim {
       projectId: stringValue(json, 'projectId'),
       unitId: json['unitId']?.toString(),
       status: stringValue(json, 'status', fallback: 'UNKNOWN'),
-      notes: json['notes']?.toString() ??
+      notes:
+          json['notes']?.toString() ??
           (lead is Map<String, dynamic> ? lead['notes']?.toString() : null),
       source: json['source']?.toString(),
       expiresAt: json['expiresAt']?.toString(),
@@ -86,7 +87,9 @@ class LeadClaim {
       project: project is Map<String, dynamic>
           ? MarketplaceProject.fromJson(project)
           : null,
-      unit: unit is Map<String, dynamic> ? MarketplaceUnit.fromJson(unit) : null,
+      unit: unit is Map<String, dynamic>
+          ? MarketplaceUnit.fromJson(unit)
+          : null,
     );
   }
 }

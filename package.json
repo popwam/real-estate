@@ -10,6 +10,7 @@
     "qa:stage4:backend": "pnpm --filter api build && pnpm --filter api test --runInBand && pnpm --filter api test:e2e --runInBand",
     "smoke:stage2": "powershell -ExecutionPolicy Bypass -File scripts/local-smoke.ps1",
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
+    "i18n:audit": "node scripts/i18n-audit.mjs",
     "test:stage2:browser": "playwright test --config=playwright.stage2.config.ts",
     "test:stage4:browser": "playwright test --config=playwright.stage4.config.ts"
   },

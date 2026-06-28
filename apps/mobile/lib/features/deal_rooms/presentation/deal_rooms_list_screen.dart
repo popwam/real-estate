@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/deal_room_models.dart';
@@ -15,13 +15,14 @@ class DealRoomsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rooms = ref.watch(myDealRoomsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deal rooms'),
+        title: Text(l10n.dealRooms),
         actions: [
           IconButton(
-            tooltip: 'Refresh deal rooms',
+            tooltip: l10n.refreshDealRooms,
             onPressed: () => ref.invalidate(myDealRoomsProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -30,9 +31,9 @@ class DealRoomsListScreen extends ConsumerWidget {
       body: rooms.when(
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No deal rooms',
-              message: 'Deal rooms appear here after an approved reservation is opened.',
+            return EmptyState(
+              title: l10n.noDealRooms,
+              message: l10n.dealRoomsAppearHere,
               icon: Icons.forum_outlined,
             );
           }
@@ -48,13 +49,13 @@ class DealRoomsListScreen extends ConsumerWidget {
           );
         },
         error: (error, _) => EmptyState(
-          title: 'Deal rooms unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.dealRoomsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(myDealRoomsProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -71,6 +72,7 @@ class DealRoomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: InkWell(
@@ -86,21 +88,24 @@ class DealRoomCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      room.project?.name ?? 'Project ${room.projectId}',
+                      room.project?.name ?? '${l10n.project} ${room.projectId}',
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(room.unit?.title ?? 'Unit ${room.unitId}'),
+              Text(room.unit?.title ?? '${l10n.unit} ${room.unitId}'),
               const SizedBox(height: 8),
-              Text('${room.participants.length} participants'),
+              Text(l10n.participantsCount(room.participants.length)),
               const SizedBox(height: 8),
               Text(
                 room.lastMessage?.body ??
-                    '${room.messageCount ?? 0} messages · opened ${shortDate(room.createdAt)}',
+                    l10n.messagesOpenedSummary(
+                      room.messageCount ?? 0,
+                      context.formatShortDate(room.createdAt),
+                    ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium?.copyWith(

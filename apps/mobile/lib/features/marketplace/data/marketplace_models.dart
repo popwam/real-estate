@@ -38,7 +38,10 @@ class MarketplaceProject {
   final List<MarketplacePaymentPlan> paymentPlans;
 
   String get locationLabel {
-    final parts = [district, city].whereType<String>().where((v) => v.isNotEmpty);
+    final parts = [
+      district,
+      city,
+    ].whereType<String>().where((v) => v.isNotEmpty);
     return parts.isEmpty ? 'Location pending' : parts.join(', ');
   }
 
@@ -46,8 +49,12 @@ class MarketplaceProject {
     if (startingPrice == null) {
       return 'Price on request';
     }
-    final value = startingPrice!.toStringAsFixed(startingPrice! % 1 == 0 ? 0 : 2);
-    return 'From ${currency ?? 'EGP'} $value';
+    final value = startingPrice!.toStringAsFixed(
+      startingPrice! % 1 == 0 ? 0 : 2,
+    );
+    return currency == null || currency!.isEmpty
+        ? 'From $value'
+        : 'From $currency $value';
   }
 
   factory MarketplaceProject.fromJson(Map<String, dynamic> json) {
@@ -76,11 +83,15 @@ class MarketplaceProject {
       developerName: developer is Map<String, dynamic>
           ? developer['name']?.toString()
           : null,
-      availableUnits: units.isNotEmpty ? units.length : intValue(json, 'availableUnits'),
+      availableUnits: units.isNotEmpty
+          ? units.length
+          : intValue(json, 'availableUnits'),
       coverImageUrl: _firstImageUrl(json),
-      startingPrice: doubleValue(json, 'startingPrice') ??
+      startingPrice:
+          doubleValue(json, 'startingPrice') ??
           (unitPrices.isNotEmpty ? unitPrices.first : null),
-      currency: json['currency']?.toString() ??
+      currency:
+          json['currency']?.toString() ??
           (units.isNotEmpty ? units.first['currency']?.toString() : null),
       paymentPlans: _paymentPlans(json['paymentPlans']),
     );
@@ -125,7 +136,7 @@ class MarketplaceUnit {
       return 'Price on request';
     }
     final value = basePrice!.toStringAsFixed(basePrice! % 1 == 0 ? 0 : 2);
-    return '${currency ?? 'EGP'} $value';
+    return currency == null || currency!.isEmpty ? value : '$currency $value';
   }
 
   factory MarketplaceUnit.fromJson(Map<String, dynamic> json) {

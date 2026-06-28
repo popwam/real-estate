@@ -45,7 +45,9 @@ class MarketplaceRepository {
   }
 
   Future<MarketplaceUnit> getUnit(String id) async {
-    final response = await _dio.get<Map<String, dynamic>>('/marketplace/units/$id');
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/marketplace/units/$id',
+    );
     return MarketplaceUnit.fromJson(response.data ?? <String, dynamic>{});
   }
 
@@ -87,27 +89,31 @@ final marketplaceRepositoryProvider = Provider<MarketplaceRepository>((ref) {
 
 final marketplaceProjectsProvider =
     FutureProvider.autoDispose<List<MarketplaceProject>>((ref) {
-  final filters = ref.watch(marketplaceFiltersProvider);
-  return ref.watch(marketplaceRepositoryProvider).getProjects(filters: filters);
-});
+      final filters = ref.watch(marketplaceFiltersProvider);
+      return ref
+          .watch(marketplaceRepositoryProvider)
+          .getProjects(filters: filters);
+    });
 
 final marketplaceUnitsProvider =
     FutureProvider.autoDispose<List<MarketplaceUnit>>((ref) {
-  final filters = ref.watch(marketplaceFiltersProvider);
-  return ref.watch(marketplaceRepositoryProvider).getUnits(filters: filters);
-});
+      final filters = ref.watch(marketplaceFiltersProvider);
+      return ref
+          .watch(marketplaceRepositoryProvider)
+          .getUnits(filters: filters);
+    });
 
-final projectDetailProvider =
-    FutureProvider.autoDispose.family<MarketplaceProject, String>((ref, id) {
-  return ref.watch(marketplaceRepositoryProvider).getProject(id);
-});
+final projectDetailProvider = FutureProvider.autoDispose
+    .family<MarketplaceProject, String>((ref, id) {
+      return ref.watch(marketplaceRepositoryProvider).getProject(id);
+    });
 
-final projectUnitsProvider =
-    FutureProvider.autoDispose.family<List<MarketplaceUnit>, String>((ref, id) {
-  return ref.watch(marketplaceRepositoryProvider).getUnits(projectId: id);
-});
+final projectUnitsProvider = FutureProvider.autoDispose
+    .family<List<MarketplaceUnit>, String>((ref, id) {
+      return ref.watch(marketplaceRepositoryProvider).getUnits(projectId: id);
+    });
 
-final unitDetailProvider =
-    FutureProvider.autoDispose.family<MarketplaceUnit, String>((ref, id) {
-  return ref.watch(marketplaceRepositoryProvider).getUnit(id);
-});
+final unitDetailProvider = FutureProvider.autoDispose
+    .family<MarketplaceUnit, String>((ref, id) {
+      return ref.watch(marketplaceRepositoryProvider).getUnit(id);
+    });

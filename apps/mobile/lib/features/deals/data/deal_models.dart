@@ -92,14 +92,19 @@ class Deal {
       project: project is Map<String, dynamic>
           ? MarketplaceProject.fromJson(project)
           : null,
-      unit: unit is Map<String, dynamic> ? MarketplaceUnit.fromJson(unit) : null,
-      dealRoom:
-          dealRoom is Map<String, dynamic> ? DealRoom.fromJson(dealRoom) : null,
+      unit: unit is Map<String, dynamic>
+          ? MarketplaceUnit.fromJson(unit)
+          : null,
+      dealRoom: dealRoom is Map<String, dynamic>
+          ? DealRoom.fromJson(dealRoom)
+          : null,
       brokerName: brokerName.isNotEmpty ? brokerName : null,
       brokerageName: brokerage is Map<String, dynamic>
           ? brokerage['name']?.toString()
           : null,
-      clientName: client is Map<String, dynamic> ? client['name']?.toString() : null,
+      clientName: client is Map<String, dynamic>
+          ? client['name']?.toString()
+          : null,
     );
   }
 }

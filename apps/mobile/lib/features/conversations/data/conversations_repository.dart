@@ -25,7 +25,9 @@ class ConversationsRepository {
   }
 
   Future<List<ConversationMessage>> messages(String id) async {
-    final response = await _dio.get<List<dynamic>>('/conversations/$id/messages');
+    final response = await _dio.get<List<dynamic>>(
+      '/conversations/$id/messages',
+    );
     return (response.data ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(ConversationMessage.fromJson)
@@ -63,7 +65,8 @@ class ConversationsRepository {
     return Conversation.fromJson(response.data ?? <String, dynamic>{});
   }
 
-  Future<PublicConversationMessageResponse> postPublicConversationMessageByToken(
+  Future<PublicConversationMessageResponse>
+  postPublicConversationMessageByToken(
     String token,
     PublicConversationMessagePayload payload,
   ) async {
@@ -77,29 +80,28 @@ class ConversationsRepository {
   }
 }
 
-final conversationsRepositoryProvider = Provider<ConversationsRepository>((ref) {
+final conversationsRepositoryProvider = Provider<ConversationsRepository>((
+  ref,
+) {
   return ConversationsRepository(ref.watch(dioProvider));
 });
 
-final conversationsProvider =
-    FutureProvider.autoDispose.family<List<Conversation>, ConversationFilters>((
-  ref,
-  filters,
-) {
-  return ref.watch(conversationsRepositoryProvider).conversations(filters);
-});
+final conversationsProvider = FutureProvider.autoDispose
+    .family<List<Conversation>, ConversationFilters>((ref, filters) {
+      return ref.watch(conversationsRepositoryProvider).conversations(filters);
+    });
 
-final conversationDetailProvider =
-    FutureProvider.autoDispose.family<Conversation, String>((ref, id) {
-  return ref.watch(conversationsRepositoryProvider).detail(id);
-});
+final conversationDetailProvider = FutureProvider.autoDispose
+    .family<Conversation, String>((ref, id) {
+      return ref.watch(conversationsRepositoryProvider).detail(id);
+    });
 
-final conversationMessagesProvider =
-    FutureProvider.autoDispose.family<List<ConversationMessage>, String>((ref, id) {
-  return ref.watch(conversationsRepositoryProvider).messages(id);
-});
+final conversationMessagesProvider = FutureProvider.autoDispose
+    .family<List<ConversationMessage>, String>((ref, id) {
+      return ref.watch(conversationsRepositoryProvider).messages(id);
+    });
 
-final publicConversationProvider =
-    FutureProvider.autoDispose.family<Conversation, String>((ref, token) {
-  return ref.watch(conversationsRepositoryProvider).byShareToken(token);
-});
+final publicConversationProvider = FutureProvider.autoDispose
+    .family<Conversation, String>((ref, token) {
+      return ref.watch(conversationsRepositoryProvider).byShareToken(token);
+    });

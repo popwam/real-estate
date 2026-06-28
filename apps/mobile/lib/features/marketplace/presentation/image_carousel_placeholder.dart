@@ -30,7 +30,9 @@ class ImageCarouselPlaceholder extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest,
                     ),
-                    child: const Center(child: Icon(Icons.broken_image_outlined)),
+                    child: const Center(
+                      child: Icon(Icons.broken_image_outlined),
+                    ),
                   );
                 },
               ),

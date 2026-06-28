@@ -98,7 +98,9 @@ class CommissionEntry {
       project: project is Map<String, dynamic>
           ? MarketplaceProject.fromJson(project)
           : null,
-      unit: unit is Map<String, dynamic> ? MarketplaceUnit.fromJson(unit) : null,
+      unit: unit is Map<String, dynamic>
+          ? MarketplaceUnit.fromJson(unit)
+          : null,
     );
   }
 }

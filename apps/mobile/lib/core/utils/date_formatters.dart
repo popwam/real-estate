@@ -1,4 +1,10 @@
+import 'package:intl/intl.dart';
+
 String shortDate(String? value) {
+  return shortDateForLocale(value);
+}
+
+String shortDateForLocale(String? value, {String? locale}) {
   if (value == null || value.isEmpty) {
     return '-';
   }
@@ -9,12 +15,14 @@ String shortDate(String? value) {
   }
 
   final local = parsed.toLocal();
-  final month = local.month.toString().padLeft(2, '0');
-  final day = local.day.toString().padLeft(2, '0');
-  return '${local.year}-$month-$day';
+  return DateFormat.yMMMd(locale).format(local);
 }
 
 String shortDateTime(String? value) {
+  return shortDateTimeForLocale(value);
+}
+
+String shortDateTimeForLocale(String? value, {String? locale}) {
   if (value == null || value.isEmpty) {
     return '-';
   }
@@ -25,9 +33,5 @@ String shortDateTime(String? value) {
   }
 
   final local = parsed.toLocal();
-  final month = local.month.toString().padLeft(2, '0');
-  final day = local.day.toString().padLeft(2, '0');
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '${local.year}-$month-$day $hour:$minute';
+  return DateFormat.yMMMd(locale).add_jm().format(local);
 }

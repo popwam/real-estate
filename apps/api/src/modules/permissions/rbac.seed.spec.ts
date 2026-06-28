@@ -18,5 +18,7 @@ describe('RBAC seed definitions', () => {
     expect(ROLE_PERMISSIONS.developer_owner).toContain('users.manage_own_org');
     expect(ROLE_PERMISSIONS.developer_owner).toContain('imports.hr');
     expect(ROLE_PERMISSIONS.platform_owner).toContain('organizations.view_all');
+    expect(ROLE_PERMISSIONS.platform_owner).toContain('deal_rooms.join');
+    expect(ROLE_PERMISSIONS.platform_admin).toContain('deal_rooms.join');
   });
 });

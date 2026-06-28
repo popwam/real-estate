@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
-import '../../../core/utils/money_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/deal_models.dart';
@@ -18,22 +16,23 @@ class DealDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deal = ref.watch(dealDetailProvider(dealId));
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Deal')),
+      appBar: AppBar(title: Text(l10n.deal)),
       body: deal.when(
         data: (item) => ListView(
           padding: const EdgeInsets.all(16),
           children: [_DealDetailCard(deal: item)],
         ),
         error: (error, _) => EmptyState(
-          title: 'Deal unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.dealUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(dealDetailProvider(dealId)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -50,6 +49,7 @@ class _DealDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -58,7 +58,7 @@ class _DealDetailCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              deal.project?.name ?? 'Project ${deal.projectId}',
+              deal.project?.name ?? '${l10n.project} ${deal.projectId}',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 10),
@@ -68,33 +68,45 @@ class _DealDetailCard extends StatelessWidget {
               children: [
                 StatusChip(label: deal.status),
                 if (deal.unit?.status.isNotEmpty == true)
-                  StatusChip(label: 'Unit ${deal.unit!.status}'),
+                  StatusChip(label: '${l10n.unit} ${deal.unit!.status}'),
               ],
             ),
             const SizedBox(height: 16),
             Text(
-              moneyLabel(deal.finalPrice, currency: deal.currency),
+              context.formatMoney(deal.finalPrice, currency: deal.currency),
               style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 18),
-            _Row(label: 'Unit', value: deal.unit?.title ?? deal.unitId),
-            _Row(label: 'Deal room', value: deal.dealRoomId),
-            _Row(label: 'Broker', value: deal.brokerName ?? '-'),
-            _Row(label: 'Brokerage', value: deal.brokerageName ?? '-'),
-            _Row(label: 'Client', value: deal.clientName ?? '-'),
-            _Row(label: 'Created', value: shortDateTime(deal.createdAt)),
+            _Row(label: l10n.unit, value: deal.unit?.title ?? deal.unitId),
+            _Row(label: l10n.dealRoomLabel, value: deal.dealRoomId),
+            _Row(label: l10n.broker, value: deal.brokerName ?? '-'),
+            _Row(label: l10n.brokerage, value: deal.brokerageName ?? '-'),
+            _Row(label: l10n.client, value: deal.clientName ?? '-'),
+            _Row(
+              label: l10n.created,
+              value: context.formatShortDateTime(deal.createdAt),
+            ),
             if (deal.approvedAt != null)
-              _Row(label: 'Approved', value: shortDateTime(deal.approvedAt)),
+              _Row(
+                label: l10n.approved,
+                value: context.formatShortDateTime(deal.approvedAt),
+              ),
             if (deal.soldAt != null)
-              _Row(label: 'Sold', value: shortDateTime(deal.soldAt)),
+              _Row(
+                label: l10n.sold,
+                value: context.formatShortDateTime(deal.soldAt),
+              ),
             if (deal.cancelledAt != null)
-              _Row(label: 'Cancelled', value: shortDateTime(deal.cancelledAt)),
+              _Row(
+                label: l10n.cancelled,
+                value: context.formatShortDateTime(deal.cancelledAt),
+              ),
             if (deal.dealRoomId.isNotEmpty) ...[
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => context.push('/deal-rooms/${deal.dealRoomId}'),
                 icon: const Icon(Icons.forum_outlined),
-                label: const Text('Open Deal Room'),
+                label: Text(l10n.openDealRoom),
               ),
             ],
           ],

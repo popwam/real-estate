@@ -18,9 +18,10 @@ class AuthUser {
   final String? phone;
 
   String get displayName {
-    final name = [firstName, lastName]
-        .where((part) => part != null && part.trim().isNotEmpty)
-        .join(' ');
+    final name = [
+      firstName,
+      lastName,
+    ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
     return name.isEmpty ? email : name;
   }
 

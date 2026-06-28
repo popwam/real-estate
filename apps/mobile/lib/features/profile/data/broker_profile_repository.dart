@@ -15,7 +15,9 @@ class BrokerProfileRepository {
   }
 }
 
-final brokerProfileRepositoryProvider = Provider<BrokerProfileRepository>((ref) {
+final brokerProfileRepositoryProvider = Provider<BrokerProfileRepository>((
+  ref,
+) {
   return BrokerProfileRepository(ref.watch(dioProvider));
 });
 

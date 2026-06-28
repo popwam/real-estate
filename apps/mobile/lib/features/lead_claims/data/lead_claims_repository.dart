@@ -67,7 +67,7 @@ final myLeadClaimsProvider = FutureProvider.autoDispose<List<LeadClaim>>((ref) {
   return ref.watch(leadClaimsRepositoryProvider).myClaims();
 });
 
-final leadClaimDetailProvider =
-    FutureProvider.autoDispose.family<LeadClaim, String>((ref, id) {
-  return ref.watch(leadClaimsRepositoryProvider).detail(id);
-});
+final leadClaimDetailProvider = FutureProvider.autoDispose
+    .family<LeadClaim, String>((ref, id) {
+      return ref.watch(leadClaimsRepositoryProvider).detail(id);
+    });

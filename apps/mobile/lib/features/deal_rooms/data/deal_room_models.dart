@@ -9,6 +9,7 @@ enum DealRoomStatus {
   approved('APPROVED'),
   sold('SOLD'),
   cancelled('CANCELLED'),
+  disputed('DISPUTED'),
   unknown('UNKNOWN');
 
   const DealRoomStatus(this.value);
@@ -28,6 +29,7 @@ enum DealRoomParticipantRole {
   developerSales('DEVELOPER_SALES'),
   salesManager('SALES_MANAGER'),
   client('CLIENT'),
+  platformSupport('PLATFORM_SUPPORT'),
   observer('OBSERVER'),
   unknown('UNKNOWN');
 
@@ -46,6 +48,7 @@ enum DealRoomParticipantRole {
 enum DealRoomMessageType {
   text('TEXT'),
   system('SYSTEM'),
+  document('DOCUMENT'),
   statusUpdate('STATUS_UPDATE'),
   unknown('UNKNOWN');
 
@@ -101,6 +104,16 @@ class DealRoom {
     final participants = json['participants'];
     final count = json['_count'];
     final messages = json['messages'];
+    DealRoomMessage? lastMessage;
+
+    if (messages is List) {
+      for (final message in messages.reversed) {
+        if (message is Map<String, dynamic>) {
+          lastMessage = DealRoomMessage.fromJson(message);
+          break;
+        }
+      }
+    }
 
     return DealRoom(
       id: stringValue(json, 'id'),
@@ -113,22 +126,22 @@ class DealRoom {
       project: project is Map<String, dynamic>
           ? MarketplaceProject.fromJson(project)
           : null,
-      unit: unit is Map<String, dynamic> ? MarketplaceUnit.fromJson(unit) : null,
+      unit: unit is Map<String, dynamic>
+          ? MarketplaceUnit.fromJson(unit)
+          : null,
       reservationRequest: reservationRequest is Map<String, dynamic>
           ? ReservationRequest.fromJson(reservationRequest)
           : null,
       participants: participants is List
           ? participants
-              .whereType<Map<String, dynamic>>()
-              .map(DealRoomParticipant.fromJson)
-              .toList()
+                .whereType<Map<String, dynamic>>()
+                .map(DealRoomParticipant.fromJson)
+                .toList()
           : const [],
       messageCount: count is Map<String, dynamic>
           ? intValue(count, 'messages')
           : intValue(json, 'messageCount'),
-      lastMessage: messages is List && messages.isNotEmpty
-          ? DealRoomMessage.fromJson(messages.last as Map<String, dynamic>)
-          : null,
+      lastMessage: lastMessage,
     );
   }
 }
@@ -176,10 +189,10 @@ class DealRoomParticipant {
       displayName: userName.isNotEmpty
           ? userName
           : client is Map<String, dynamic>
-              ? client['name']?.toString()
-              : organization is Map<String, dynamic>
-                  ? organization['name']?.toString()
-                  : null,
+          ? client['name']?.toString()
+          : organization is Map<String, dynamic>
+          ? organization['name']?.toString()
+          : null,
     );
   }
 }
@@ -219,8 +232,8 @@ class DealRoomMessage {
       senderName: userName.isNotEmpty
           ? userName
           : senderClient is Map<String, dynamic>
-              ? senderClient['name']?.toString()
-              : null,
+          ? senderClient['name']?.toString()
+          : null,
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../localization/l10n_extensions.dart';
+import 'auth_route_policy.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
@@ -35,27 +37,63 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authController = ref.watch(authControllerProvider);
 
   return GoRouter(
-    initialLocation: '/auth/loading',
+    initialLocation: publicHomeRoute,
     refreshListenable: authController,
     redirect: (context, state) {
       final authState = authController.state;
       final isLogin = state.matchedLocation == '/login';
       final isLoading = state.matchedLocation == '/auth/loading';
-      final isPublicConversation = state.matchedLocation.startsWith('/c/');
+      final location = state.matchedLocation;
+      final currentRoute = state.uri.toString();
+      final isProtected = isProtectedMobileRoute(location);
+      final isPublic = isPublicMobileRoute(location);
 
       if (authState.status == AuthStatus.checking) {
-        return isLoading ? null : '/auth/loading';
+        if (isProtected) {
+          return isLoading
+              ? null
+              : '/auth/loading?from=${Uri.encodeComponent(currentRoute)}';
+        }
+        return null;
       }
 
       if (!authState.isSignedIn) {
-        if (isPublicConversation) {
+        if (isLoading) {
+          return publicHomeRoute;
+        }
+        if (isLogin || isPublic) {
           return null;
         }
-        return isLogin ? null : '/login';
+        return '$loginRoute?from=${Uri.encodeComponent(currentRoute)}';
       }
 
       if (isLogin || isLoading) {
-        return '/marketplace/projects';
+        final from = state.uri.queryParameters['from'];
+        if (from != null &&
+            from.isNotEmpty &&
+            canAccessMobileRoute(authState.session!, Uri.parse(from).path)) {
+          return from;
+        }
+        return homeRouteForUser(
+          authState.session!.user,
+          permissions: authState.session!.permissions,
+        );
+      }
+
+      if (authState.routeAfterRestore && location == publicHomeRoute) {
+        authController.consumeRestoreRouting();
+        final restoredHome = homeRouteForUser(
+          authState.session!.user,
+          permissions: authState.session!.permissions,
+        );
+        return restoredHome == location ? null : restoredHome;
+      }
+
+      if (isProtected && !canAccessMobileRoute(authState.session!, location)) {
+        return homeRouteForUser(
+          authState.session!.user,
+          permissions: authState.session!.permissions,
+        );
       }
 
       return null;
@@ -67,15 +105,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       ShellRoute(
-        builder: (context, state, child) => MarketplaceShellScreen(child: child),
+        builder: (context, state, child) =>
+            MarketplaceShellScreen(child: child),
         routes: [
           GoRoute(
             path: '/marketplace/projects',
             builder: (context, state) => const ProjectsListScreen(),
           ),
           GoRoute(
+            path: '/marketplace/projects/:id',
+            builder: (context, state) {
+              return ProjectDetailScreen(projectId: state.pathParameters['id']!);
+            },
+          ),
+          GoRoute(
             path: '/marketplace/units',
             builder: (context, state) => const UnitsListScreen(),
+          ),
+          GoRoute(
+            path: '/marketplace/units/:id',
+            builder: (context, state) {
+              return UnitDetailScreen(unitId: state.pathParameters['id']!);
+            },
           ),
           GoRoute(
             path: '/marketplace/map',
@@ -170,9 +221,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final projectId = state.uri.queryParameters['projectId'];
           if (projectId == null || projectId.isEmpty) {
-            return const _MissingRouteInputScreen(
-              title: 'Create lead claim',
-              message: 'Open a project or unit first, then create the claim.',
+            return _MissingRouteInputScreen(
+              title: context.l10n.createLeadClaim,
+              message: context.l10n.openProjectOrUnitFirst,
             );
           }
           return LeadClaimFormScreen(
@@ -192,9 +243,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final draft = state.extra;
           if (draft is! ReservationRequestDraft) {
-            return const _MissingRouteInputScreen(
-              title: 'Reservation request',
-              message: 'Open an active lead claim first, then create the request.',
+            return _MissingRouteInputScreen(
+              title: context.l10n.reservationRequest,
+              message: context.l10n.openActiveLeadClaimFirst,
             );
           }
           return ReservationRequestFormScreen(draft: draft);
@@ -223,18 +274,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
     errorBuilder: (context, state) {
       return Scaffold(
-        appBar: AppBar(title: const Text('POPWAM')),
-        body: Center(child: Text(state.error?.toString() ?? 'Route not found')),
+        appBar: AppBar(title: Text(context.l10n.appTitle)),
+        body: Center(
+          child: Text(state.error?.toString() ?? context.l10n.routeNotFound),
+        ),
       );
     },
   );
 });
 
 class _MissingRouteInputScreen extends StatelessWidget {
-  const _MissingRouteInputScreen({
-    required this.title,
-    required this.message,
-  });
+  const _MissingRouteInputScreen({required this.title, required this.message});
 
   final String title;
   final String message;

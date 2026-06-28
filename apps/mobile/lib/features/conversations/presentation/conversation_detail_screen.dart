@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/conversations_repository.dart';
@@ -18,7 +17,8 @@ class ConversationDetailScreen extends ConsumerStatefulWidget {
       _ConversationDetailScreenState();
 }
 
-class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScreen> {
+class _ConversationDetailScreenState
+    extends ConsumerState<ConversationDetailScreen> {
   final _messageController = TextEditingController();
   bool _busy = false;
   String? _message;
@@ -31,18 +31,25 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
 
   @override
   Widget build(BuildContext context) {
-    final conversation = ref.watch(conversationDetailProvider(widget.conversationId));
-    final messages = ref.watch(conversationMessagesProvider(widget.conversationId));
+    final conversation = ref.watch(
+      conversationDetailProvider(widget.conversationId),
+    );
+    final messages = ref.watch(
+      conversationMessagesProvider(widget.conversationId),
+    );
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conversation'),
+        title: Text(l10n.conversation),
         actions: [
           IconButton(
-            tooltip: 'Refresh conversation',
+            tooltip: l10n.refreshConversations,
             onPressed: () {
               ref.invalidate(conversationDetailProvider(widget.conversationId));
-              ref.invalidate(conversationMessagesProvider(widget.conversationId));
+              ref.invalidate(
+                conversationMessagesProvider(widget.conversationId),
+              );
             },
             icon: const Icon(Icons.refresh),
           ),
@@ -65,9 +72,9 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
             Expanded(
               child: messages.when(
                 data: (items) => items.isEmpty
-                    ? const EmptyState(
-                        title: 'No messages yet',
-                        message: 'Messages in this conversation appear here.',
+                    ? EmptyState(
+                        title: l10n.noMessagesYet,
+                        message: l10n.messagesAppearHere,
                         icon: Icons.chat_bubble_outline,
                       )
                     : ListView.separated(
@@ -79,8 +86,8 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
                             _MessageBubble(message: items[index]),
                       ),
                 error: (error, _) => EmptyState(
-                  title: 'Messages unavailable',
-                  message: apiErrorMessage(error),
+                  title: l10n.messagesUnavailable,
+                  message: context.formatApiError(error),
                   icon: Icons.cloud_off_outlined,
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -97,15 +104,16 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
                         controller: _messageController,
                         minLines: 1,
                         maxLines: 3,
-                        decoration: const InputDecoration(
-                          hintText: 'Write a message',
+                        decoration: InputDecoration(
+                          hintText: l10n.writeMessage,
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    FilledButton(
+                    IconButton.filled(
+                      tooltip: l10n.sendMessage,
                       onPressed: _busy ? null : _sendMessage,
-                      child: const Text('Send'),
+                      icon: const Icon(Icons.send),
                     ),
                   ],
                 ),
@@ -114,8 +122,8 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
           ],
         ),
         error: (error, _) => EmptyState(
-          title: 'Conversation unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.conversationUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -135,7 +143,7 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
       ref.invalidate(conversationMessagesProvider(widget.conversationId));
       ref.invalidate(conversationDetailProvider(widget.conversationId));
     } catch (error) {
-      setState(() => _message = apiErrorMessage(error));
+      setState(() => _message = context.formatApiError(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -144,21 +152,24 @@ class _ConversationDetailScreenState extends ConsumerState<ConversationDetailScr
   Future<void> _showStatusSheet({required String currentStatus}) async {
     final result = await showModalBottomSheet<_StatusUpdate>(
       context: context,
-      builder: (context) => _ConversationStatusSheet(currentStatus: currentStatus),
+      builder: (context) =>
+          _ConversationStatusSheet(currentStatus: currentStatus),
     );
     if (result == null) return;
 
     setState(() => _busy = true);
     try {
-      await ref.read(conversationsRepositoryProvider).updateStatus(
+      await ref
+          .read(conversationsRepositoryProvider)
+          .updateStatus(
             widget.conversationId,
             status: result.status,
             statusNote: result.note,
           );
       ref.invalidate(conversationDetailProvider(widget.conversationId));
-      setState(() => _message = 'Conversation status updated.');
+      setState(() => _message = context.l10n.conversationStatusUpdated);
     } catch (error) {
-      setState(() => _message = apiErrorMessage(error));
+      setState(() => _message = context.formatApiError(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -180,6 +191,8 @@ class _ConversationHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -192,20 +205,24 @@ class _ConversationHeader extends StatelessWidget {
                 actions: [
                   TextButton(
                     onPressed: onDismissMessage,
-                    child: const Text('Dismiss'),
+                    child: Text(l10n.dismiss),
                   ),
                 ],
               ),
             Text(
               conversation.project?.name ??
                   conversation.crmLead?.project?.name ??
-                  'CRM conversation',
+                  l10n.crmConversation,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(conversation.crmLead?.client?.name ?? conversation.type),
             const SizedBox(height: 8),
-            Text('Updated ${shortDateTime(conversation.updatedAt)}'),
+            Text(
+              l10n.updatedAt(
+                context.formatShortDateTime(conversation.updatedAt),
+              ),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -214,14 +231,14 @@ class _ConversationHeader extends StatelessWidget {
                 StatusChip(label: conversation.status),
                 Chip(label: Text(conversation.type)),
                 if (conversation.shareToken != null)
-                  const Chip(label: Text('Public share token')),
+                  Chip(label: Text(l10n.publicShareToken)),
               ],
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: onStatusPressed,
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('Update status'),
+              label: Text(l10n.updateStatus),
             ),
           ],
         ),
@@ -240,8 +257,8 @@ class _MessageBubble extends StatelessWidget {
     final theme = Theme.of(context);
     return Align(
       alignment: message.sender?.publicRole == 'CLIENT'
-          ? Alignment.centerLeft
-          : Alignment.centerRight,
+          ? AlignmentDirectional.centerStart
+          : AlignmentDirectional.centerEnd,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 320),
         child: DecoratedBox(
@@ -259,7 +276,7 @@ class _MessageBubble extends StatelessWidget {
                 Text(
                   [
                     message.sender?.displayName ?? message.sender?.publicRole,
-                    shortDateTime(message.createdAt),
+                    context.formatShortDateTime(message.createdAt),
                   ].whereType<String>().join(' · '),
                   style: theme.textTheme.bodySmall,
                 ),
@@ -294,6 +311,8 @@ class _ConversationStatusSheetState extends State<_ConversationStatusSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -302,32 +321,32 @@ class _ConversationStatusSheetState extends State<_ConversationStatusSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Update conversation status',
+              l10n.updateConversationStatus,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: const [
-                DropdownMenuItem(value: 'OPEN', child: Text('Open')),
-                DropdownMenuItem(value: 'CLOSED', child: Text('Closed')),
-                DropdownMenuItem(value: 'ARCHIVED', child: Text('Archived')),
+              decoration: InputDecoration(labelText: l10n.status),
+              items: [
+                DropdownMenuItem(value: 'OPEN', child: Text(l10n.open)),
+                DropdownMenuItem(value: 'CLOSED', child: Text(l10n.closed)),
+                DropdownMenuItem(value: 'ARCHIVED', child: Text(l10n.archived)),
               ],
               onChanged: (value) => setState(() => _status = value ?? _status),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _noteController,
-              decoration: const InputDecoration(labelText: 'Status note optional'),
+              decoration: InputDecoration(labelText: l10n.statusNoteOptional),
               maxLines: 2,
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(
-                _StatusUpdate(status: _status, note: _noteController.text),
-              ),
-              child: const Text('Save status'),
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(_StatusUpdate(status: _status, note: _noteController.text)),
+              child: Text(l10n.saveStatus),
             ),
           ],
         ),

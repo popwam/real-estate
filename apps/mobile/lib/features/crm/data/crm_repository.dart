@@ -14,7 +14,9 @@ class CrmRepository {
     return CrmSummary.fromJson(response.data ?? <String, dynamic>{});
   }
 
-  Future<List<CrmLead>> leads([CrmLeadFilters filters = const CrmLeadFilters()]) async {
+  Future<List<CrmLead>> leads([
+    CrmLeadFilters filters = const CrmLeadFilters(),
+  ]) async {
     final response = await _dio.get<dynamic>(
       '/crm/leads',
       queryParameters: filters.toQuery(),
@@ -77,17 +79,17 @@ final crmSummaryProvider = FutureProvider.autoDispose<CrmSummary>((ref) {
   return ref.watch(crmRepositoryProvider).summary();
 });
 
-final crmLeadsProvider =
-    FutureProvider.autoDispose.family<List<CrmLead>, CrmLeadFilters>((ref, filters) {
-  return ref.watch(crmRepositoryProvider).leads(filters);
-});
+final crmLeadsProvider = FutureProvider.autoDispose
+    .family<List<CrmLead>, CrmLeadFilters>((ref, filters) {
+      return ref.watch(crmRepositoryProvider).leads(filters);
+    });
 
-final marketplaceCrmLeadsProvider =
-    FutureProvider.autoDispose.family<List<CrmLead>, CrmLeadFilters>((ref, filters) {
-  return ref.watch(crmRepositoryProvider).marketplaceLeads(filters);
-});
+final marketplaceCrmLeadsProvider = FutureProvider.autoDispose
+    .family<List<CrmLead>, CrmLeadFilters>((ref, filters) {
+      return ref.watch(crmRepositoryProvider).marketplaceLeads(filters);
+    });
 
-final crmLeadDetailProvider =
-    FutureProvider.autoDispose.family<CrmLead, String>((ref, id) {
-  return ref.watch(crmRepositoryProvider).detail(id);
-});
+final crmLeadDetailProvider = FutureProvider.autoDispose
+    .family<CrmLead, String>((ref, id) {
+      return ref.watch(crmRepositoryProvider).detail(id);
+    });

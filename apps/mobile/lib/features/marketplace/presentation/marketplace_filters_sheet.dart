@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/localization/l10n_extensions.dart';
 import '../data/marketplace_filters.dart';
 
 class MarketplaceFiltersButton extends ConsumerWidget {
@@ -9,9 +10,10 @@ class MarketplaceFiltersButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filters = ref.watch(marketplaceFiltersProvider);
+    final l10n = context.l10n;
 
     return IconButton(
-      tooltip: 'Filters',
+      tooltip: l10n.filters,
       onPressed: () => showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -73,7 +75,9 @@ class _MarketplaceFiltersSheetState
   }
 
   void _apply() {
-    ref.read(marketplaceFiltersProvider.notifier).setFilters(
+    ref
+        .read(marketplaceFiltersProvider.notifier)
+        .setFilters(
           MarketplaceFilters(
             city: _clean(_city),
             district: _clean(_district),
@@ -101,6 +105,7 @@ class _MarketplaceFiltersSheetState
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final l10n = context.l10n;
 
     return SafeArea(
       child: Padding(
@@ -114,66 +119,45 @@ class _MarketplaceFiltersSheetState
                 children: [
                   Expanded(
                     child: Text(
-                      'Marketplace filters',
+                      l10n.marketplaceFilters,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Close filters',
+                    tooltip: l10n.closeFilters,
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              _Field(controller: _city, label: 'City'),
-              _Field(controller: _district, label: 'District'),
-              _Field(controller: _unitType, label: 'Unit type'),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Field(
-                      controller: _minPrice,
-                      label: 'Min price',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _Field(
-                      controller: _maxPrice,
-                      label: 'Max price',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
+              _Field(controller: _city, label: l10n.city),
+              _Field(controller: _district, label: l10n.district),
+              _Field(controller: _unitType, label: l10n.unitType),
+              _Field(
+                controller: _minPrice,
+                label: l10n.minPrice,
+                keyboardType: TextInputType.number,
               ),
-              Row(
-                children: [
-                  Expanded(
-                    child: _Field(
-                      controller: _bedrooms,
-                      label: 'Bedrooms',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _Field(
-                      controller: _areaMin,
-                      label: 'Min area',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _Field(
-                      controller: _areaMax,
-                      label: 'Max area',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
+              _Field(
+                controller: _maxPrice,
+                label: l10n.maxPrice,
+                keyboardType: TextInputType.number,
+              ),
+              _Field(
+                controller: _bedrooms,
+                label: l10n.bedrooms,
+                keyboardType: TextInputType.number,
+              ),
+              _Field(
+                controller: _areaMin,
+                label: l10n.minArea,
+                keyboardType: TextInputType.number,
+              ),
+              _Field(
+                controller: _areaMax,
+                label: l10n.maxArea,
+                keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 12),
               Row(
@@ -182,7 +166,7 @@ class _MarketplaceFiltersSheetState
                     child: OutlinedButton.icon(
                       onPressed: _clear,
                       icon: const Icon(Icons.clear),
-                      label: const Text('Clear'),
+                      label: Text(l10n.clear),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -190,7 +174,7 @@ class _MarketplaceFiltersSheetState
                     child: FilledButton.icon(
                       onPressed: _apply,
                       icon: const Icon(Icons.check),
-                      label: const Text('Apply'),
+                      label: Text(l10n.apply),
                     ),
                   ),
                 ],

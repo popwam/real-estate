@@ -83,10 +83,7 @@ class CrmSummary {
 }
 
 class CrmLeadFilters {
-  const CrmLeadFilters({
-    this.status,
-    this.preferredContactMethod,
-  });
+  const CrmLeadFilters({this.status, this.preferredContactMethod});
 
   final String? status;
   final String? preferredContactMethod;
@@ -112,11 +109,7 @@ class CrmLeadFilters {
 }
 
 class CrmClientSummary {
-  const CrmClientSummary({
-    required this.name,
-    this.phoneLast4,
-    this.email,
-  });
+  const CrmClientSummary({required this.name, this.phoneLast4, this.email});
 
   final String name;
   final String? phoneLast4;
@@ -132,11 +125,7 @@ class CrmClientSummary {
 }
 
 class CrmProjectSummary {
-  const CrmProjectSummary({
-    required this.id,
-    required this.name,
-    this.slug,
-  });
+  const CrmProjectSummary({required this.id, required this.name, this.slug});
 
   final String id;
   final String name;
@@ -152,10 +141,7 @@ class CrmProjectSummary {
 }
 
 class CrmOrganizationSummary {
-  const CrmOrganizationSummary({
-    required this.name,
-    this.slug,
-  });
+  const CrmOrganizationSummary({required this.name, this.slug});
 
   final String name;
   final String? slug;
@@ -243,8 +229,5 @@ List<CrmLead> crmLeadsFromResponse(dynamic data) {
   if (items is! List) {
     return const [];
   }
-  return items
-      .whereType<Map<String, dynamic>>()
-      .map(CrmLead.fromJson)
-      .toList();
+  return items.whereType<Map<String, dynamic>>().map(CrmLead.fromJson).toList();
 }

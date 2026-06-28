@@ -27,12 +27,13 @@ final commissionsRepositoryProvider = Provider<CommissionsRepository>((ref) {
   return CommissionsRepository(ref.watch(dioProvider));
 });
 
-final myCommissionsProvider =
-    FutureProvider.autoDispose<List<CommissionEntry>>((ref) {
-  return ref.watch(commissionsRepositoryProvider).myCommissions();
-});
+final myCommissionsProvider = FutureProvider.autoDispose<List<CommissionEntry>>(
+  (ref) {
+    return ref.watch(commissionsRepositoryProvider).myCommissions();
+  },
+);
 
-final commissionDetailProvider =
-    FutureProvider.autoDispose.family<CommissionEntry, String>((ref, id) {
-  return ref.watch(commissionsRepositoryProvider).detail(id);
-});
+final commissionDetailProvider = FutureProvider.autoDispose
+    .family<CommissionEntry, String>((ref, id) {
+      return ref.watch(commissionsRepositoryProvider).detail(id);
+    });

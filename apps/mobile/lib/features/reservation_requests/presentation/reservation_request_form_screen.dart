@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../features/lead_claims/data/lead_claim_models.dart';
 import '../../../features/lead_claims/data/lead_claims_repository.dart';
 import '../../../features/marketplace/data/marketplace_repository.dart';
@@ -45,7 +45,9 @@ class _ReservationRequestFormScreenState
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
     try {
-      final request = await ref.read(reservationRequestsRepositoryProvider).create(
+      final request = await ref
+          .read(reservationRequestsRepositoryProvider)
+          .create(
             leadClaimId: widget.draft.claim.id,
             unitId: _unitId,
             notes: _notes.text,
@@ -56,16 +58,18 @@ class _ReservationRequestFormScreenState
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Reservation request ${request.status}.')),
+        SnackBar(
+          content: Text(context.l10n.reservationRequestStatus(request.status)),
+        ),
       );
       context.go('/reservation-requests/${request.id}');
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -79,9 +83,10 @@ class _ReservationRequestFormScreenState
     final units = claim.unitId == null
         ? ref.watch(projectUnitsProvider(claim.projectId))
         : null;
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reservation request')),
+      appBar: AppBar(title: Text(l10n.reservationRequest)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -92,28 +97,30 @@ class _ReservationRequestFormScreenState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    claim.project?.name ?? 'Project ${claim.projectId}',
+                    claim.project?.name ?? '${l10n.project} ${claim.projectId}',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 14),
                   if (claim.unitId != null)
-                    Text('Unit: ${claim.unit?.title ?? claim.unitId}')
+                    Text(l10n.unitLabel(claim.unit?.title ?? claim.unitId!))
                   else
                     units!.when(
                       data: (items) => DropdownButtonFormField<String>(
                         initialValue: _unitId,
-                        decoration: const InputDecoration(labelText: 'Unit'),
+                        decoration: InputDecoration(labelText: l10n.unit),
                         items: items
                             .map(
                               (unit) => DropdownMenuItem<String>(
                                 value: unit.id,
-                                child: Text('${unit.title} - ${unit.priceLabel}'),
+                                child: Text(
+                                  '${unit.title} - ${unit.basePrice == null ? l10n.priceOnRequest : context.formatMoney(unit.basePrice, currency: unit.currency)}',
+                                ),
                               ),
                             )
                             .toList(),
                         onChanged: (value) => setState(() => _unitId = value),
                       ),
-                      error: (error, _) => Text(apiErrorMessage(error)),
+                      error: (error, _) => Text(context.formatApiError(error)),
                       loading: () => const LinearProgressIndicator(),
                     ),
                   const SizedBox(height: 12),
@@ -121,15 +128,16 @@ class _ReservationRequestFormScreenState
                     controller: _notes,
                     minLines: 3,
                     maxLines: 5,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
+                    decoration: InputDecoration(
+                      labelText: l10n.notes,
                       alignLabelWithHint: true,
                     ),
                   ),
                   const SizedBox(height: 18),
                   FilledButton.icon(
-                    onPressed:
-                        _isSubmitting || _unitId == null ? null : _submit,
+                    onPressed: _isSubmitting || _unitId == null
+                        ? null
+                        : _submit,
                     icon: _isSubmitting
                         ? const SizedBox(
                             width: 18,
@@ -137,7 +145,7 @@ class _ReservationRequestFormScreenState
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.event_available),
-                    label: const Text('Submit Reservation Request'),
+                    label: Text(l10n.submitReservationRequest),
                   ),
                 ],
               ),

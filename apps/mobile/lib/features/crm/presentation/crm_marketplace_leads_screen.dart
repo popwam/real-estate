@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../data/crm_models.dart';
 import '../data/crm_repository.dart';
@@ -30,14 +30,16 @@ class _CrmMarketplaceLeadsScreenState
       preferredContactMethod: _method,
     );
     final leads = ref.watch(marketplaceCrmLeadsProvider(filters));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Marketplace CRM leads'),
+        title: Text(l10n.marketplaceCrmLeads),
         actions: [
           IconButton(
-            tooltip: 'Refresh marketplace CRM leads',
-            onPressed: () => ref.invalidate(marketplaceCrmLeadsProvider(filters)),
+            tooltip: l10n.refreshMarketplaceCrmLeads,
+            onPressed: () =>
+                ref.invalidate(marketplaceCrmLeadsProvider(filters)),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -52,7 +54,7 @@ class _CrmMarketplaceLeadsScreenState
                 actions: [
                   TextButton(
                     onPressed: () => setState(() => _message = null),
-                    child: const Text('Dismiss'),
+                    child: Text(l10n.dismiss),
                   ),
                 ],
               ),
@@ -64,14 +66,20 @@ class _CrmMarketplaceLeadsScreenState
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _status,
-                    decoration: const InputDecoration(labelText: 'Status'),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('All')),
-                      DropdownMenuItem(value: 'NEW', child: Text('New')),
-                      DropdownMenuItem(value: 'CLAIMED', child: Text('Claimed')),
+                    decoration: InputDecoration(labelText: l10n.status),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text(l10n.all)),
+                      DropdownMenuItem(
+                        value: 'NEW',
+                        child: Text(l10n.newStatus),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CLAIMED',
+                        child: Text(l10n.claimed),
+                      ),
                       DropdownMenuItem(
                         value: 'IN_CONVERSATION',
-                        child: Text('In chat'),
+                        child: Text(l10n.inChat),
                       ),
                     ],
                     onChanged: (value) => setState(() => _status = value),
@@ -81,12 +89,15 @@ class _CrmMarketplaceLeadsScreenState
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _method,
-                    decoration: const InputDecoration(labelText: 'Contact'),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('All')),
-                      DropdownMenuItem(value: 'CALL', child: Text('Call')),
-                      DropdownMenuItem(value: 'CHAT', child: Text('Chat')),
-                      DropdownMenuItem(value: 'WHATSAPP', child: Text('WhatsApp')),
+                    decoration: InputDecoration(labelText: l10n.contact),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text(l10n.all)),
+                      DropdownMenuItem(value: 'CALL', child: Text(l10n.call)),
+                      DropdownMenuItem(value: 'CHAT', child: Text(l10n.chat)),
+                      DropdownMenuItem(
+                        value: 'WHATSAPP',
+                        child: Text(l10n.whatsApp),
+                      ),
                     ],
                     onChanged: (value) => setState(() => _method = value),
                   ),
@@ -98,9 +109,9 @@ class _CrmMarketplaceLeadsScreenState
             child: leads.when(
               data: (items) {
                 if (items.isEmpty) {
-                  return const EmptyState(
-                    title: 'No marketplace CRM leads',
-                    message: 'Claimable CRM leads appear here when available.',
+                  return EmptyState(
+                    title: l10n.noMarketplaceCrmLeads,
+                    message: l10n.marketplaceCrmLeadsAppearHere,
                     icon: Icons.person_add_alt_outlined,
                   );
                 }
@@ -111,7 +122,8 @@ class _CrmMarketplaceLeadsScreenState
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: items.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final lead = items[index];
                       return CrmLeadCard(
@@ -122,7 +134,7 @@ class _CrmMarketplaceLeadsScreenState
                                 onPressed: _claiming
                                     ? null
                                     : () => _claimLead(lead, filters),
-                                child: const Text('Claim'),
+                                child: Text(l10n.claim),
                               ),
                       );
                     },
@@ -130,14 +142,14 @@ class _CrmMarketplaceLeadsScreenState
                 );
               },
               error: (error, _) => EmptyState(
-                title: 'Marketplace CRM leads unavailable',
-                message: apiErrorMessage(error),
+                title: l10n.marketplaceCrmLeadsUnavailable,
+                message: context.formatApiError(error),
                 icon: Icons.cloud_off_outlined,
                 action: OutlinedButton.icon(
                   onPressed: () =>
                       ref.invalidate(marketplaceCrmLeadsProvider(filters)),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.retry),
                 ),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -157,12 +169,12 @@ class _CrmMarketplaceLeadsScreenState
       await ref.read(crmRepositoryProvider).claim(lead.id);
       ref.invalidate(marketplaceCrmLeadsProvider(filters));
       ref.invalidate(crmLeadsProvider(const CrmLeadFilters()));
-      setState(() => _message = 'Lead claimed.');
+      setState(() => _message = context.l10n.leadClaimed);
     } on DioException catch (error) {
       setState(() {
         _message = error.response?.statusCode == 409
-            ? 'This lead has already been claimed.'
-            : apiErrorMessage(error);
+            ? context.l10n.leadAlreadyClaimed
+            : context.formatApiError(error);
       });
     } finally {
       if (mounted) {

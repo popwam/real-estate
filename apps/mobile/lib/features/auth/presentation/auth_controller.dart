@@ -13,11 +13,13 @@ class AuthState {
     required this.status,
     this.session,
     this.errorMessage,
+    this.routeAfterRestore = false,
   });
 
   final AuthStatus status;
   final AuthSession? session;
   final String? errorMessage;
+  final bool routeAfterRestore;
 
   bool get isSignedIn => status == AuthStatus.signedIn && session != null;
 
@@ -25,11 +27,13 @@ class AuthState {
     AuthStatus? status,
     AuthSession? session,
     String? errorMessage,
+    bool? routeAfterRestore,
   }) {
     return AuthState(
       status: status ?? this.status,
       session: session ?? this.session,
       errorMessage: errorMessage,
+      routeAfterRestore: routeAfterRestore ?? this.routeAfterRestore,
     );
   }
 }
@@ -61,7 +65,11 @@ class AuthController extends ChangeNotifier {
       authDebugLog('Stored session found; loading current user');
       final session = await _repository.me();
       authDebugLog('Stored session restored');
-      _state = AuthState(status: AuthStatus.signedIn, session: session);
+      _state = AuthState(
+        status: AuthStatus.signedIn,
+        session: session,
+        routeAfterRestore: true,
+      );
     } catch (error) {
       authDebugLog('Stored session restore failed');
       await _repository.clearTokens();
@@ -102,6 +110,11 @@ class AuthController extends ChangeNotifier {
     await _repository.logout();
     _state = const AuthState(status: AuthStatus.signedOut);
     notifyListeners();
+  }
+
+  void consumeRestoreRouting() {
+    if (!_state.routeAfterRestore) return;
+    _state = _state.copyWith(routeAfterRestore: false);
   }
 }
 

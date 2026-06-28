@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/lead_claim_models.dart';
@@ -15,13 +15,14 @@ class LeadClaimsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final claims = ref.watch(myLeadClaimsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My lead claims'),
+        title: Text(l10n.myLeadClaims),
         actions: [
           IconButton(
-            tooltip: 'Refresh claims',
+            tooltip: l10n.refreshLead,
             onPressed: () => ref.invalidate(myLeadClaimsProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -30,9 +31,9 @@ class LeadClaimsListScreen extends ConsumerWidget {
       body: claims.when(
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No lead claims',
-              message: 'Create a claim from a project or unit detail screen.',
+            return EmptyState(
+              title: l10n.noLeadClaims,
+              message: l10n.createClaimFromProjectOrUnit,
               icon: Icons.person_search_outlined,
             );
           }
@@ -42,18 +43,19 @@ class LeadClaimsListScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               itemCount: items.length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) => LeadClaimCard(claim: items[index]),
+              itemBuilder: (context, index) =>
+                  LeadClaimCard(claim: items[index]),
             ),
           );
         },
         error: (error, _) => EmptyState(
-          title: 'Claims unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.claimsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(myLeadClaimsProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -70,6 +72,7 @@ class LeadClaimCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: InkWell(
@@ -85,15 +88,16 @@ class LeadClaimCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      claim.project?.name ?? 'Project ${claim.projectId}',
+                      claim.project?.name ??
+                          '${l10n.project} ${claim.projectId}',
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(claim.unit?.title ?? 'No unit selected'),
+              Text(claim.unit?.title ?? l10n.noUnitSelected),
               const SizedBox(height: 8),
               Text(claim.maskedPhone),
               const SizedBox(height: 12),
@@ -102,7 +106,11 @@ class LeadClaimCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   StatusChip(label: claim.status),
-                  Chip(label: Text('Expires ${shortDate(claim.expiresAt)}')),
+                  Chip(
+                    label: Text(
+                      l10n.expiresAt(context.formatShortDate(claim.expiresAt)),
+                    ),
+                  ),
                 ],
               ),
             ],

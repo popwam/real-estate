@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { PublicShell } from "@/components/public/public-shell";
 import { TrackingPlaceholders } from "@/components/tracking/tracking-placeholders";
 import { FirstPartyVisitorTracking } from "@/components/tracking/first-party-visitor-tracking";
@@ -7,16 +6,6 @@ import { Suspense } from "react";
 import { PublicWebProviders } from "@/app/providers";
 import { defaultMetadata } from "@/lib/seo";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = defaultMetadata;
 
@@ -47,7 +36,7 @@ export default function RootLayout({
       lang="en"
       dir="ltr"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="flex min-h-full flex-col">
         <script dangerouslySetInnerHTML={{ __html: publicPreferenceBootstrap }} />

@@ -50,15 +50,15 @@ class ReservationRequestsRepository {
 
 final reservationRequestsRepositoryProvider =
     Provider<ReservationRequestsRepository>((ref) {
-  return ReservationRequestsRepository(ref.watch(dioProvider));
-});
+      return ReservationRequestsRepository(ref.watch(dioProvider));
+    });
 
 final myReservationRequestsProvider =
     FutureProvider.autoDispose<List<ReservationRequest>>((ref) {
-  return ref.watch(reservationRequestsRepositoryProvider).myRequests();
-});
+      return ref.watch(reservationRequestsRepositoryProvider).myRequests();
+    });
 
-final reservationRequestDetailProvider =
-    FutureProvider.autoDispose.family<ReservationRequest, String>((ref, id) {
-  return ref.watch(reservationRequestsRepositoryProvider).detail(id);
-});
+final reservationRequestDetailProvider = FutureProvider.autoDispose
+    .family<ReservationRequest, String>((ref, id) {
+      return ref.watch(reservationRequestsRepositoryProvider).detail(id);
+    });

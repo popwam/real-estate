@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
-import '../../../core/utils/money_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/commission_models.dart';
@@ -16,13 +15,14 @@ class CommissionsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final commissions = ref.watch(myCommissionsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My commissions'),
+        title: Text(l10n.myCommissions),
         actions: [
           IconButton(
-            tooltip: 'Refresh commissions',
+            tooltip: l10n.refreshCommissions,
             onPressed: () => ref.invalidate(myCommissionsProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -31,9 +31,9 @@ class CommissionsListScreen extends ConsumerWidget {
       body: commissions.when(
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No commissions yet',
-              message: 'Commission entries scoped to you appear here.',
+            return EmptyState(
+              title: l10n.noCommissionsYet,
+              message: l10n.commissionsAppearHere,
               icon: Icons.payments_outlined,
             );
           }
@@ -50,13 +50,13 @@ class CommissionsListScreen extends ConsumerWidget {
           );
         },
         error: (error, _) => EmptyState(
-          title: 'Commissions unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.commissionsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(myCommissionsProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -73,6 +73,7 @@ class CommissionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: InkWell(
@@ -87,17 +88,26 @@ class CommissionCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      moneyLabel(commission.amount, currency: commission.currency),
+                      context.formatMoney(
+                        commission.amount,
+                        currency: commission.currency,
+                      ),
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(commission.project?.name ?? 'Deal ${commission.dealId}'),
+              Text(
+                commission.project?.name ?? '${l10n.deal} ${commission.dealId}',
+              ),
               const SizedBox(height: 8),
-              Text('Created ${shortDateTime(commission.createdAt)}'),
+              Text(
+                l10n.createdAt(
+                  context.formatShortDateTime(commission.createdAt),
+                ),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,

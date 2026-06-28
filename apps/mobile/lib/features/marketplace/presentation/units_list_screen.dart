@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
+import '../../../shared/widgets/directional_chevron.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../data/marketplace_models.dart';
 import '../data/marketplace_repository.dart';
@@ -14,14 +15,15 @@ class UnitsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final units = ref.watch(marketplaceUnitsProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Units'),
+        title: Text(l10n.units),
         actions: [
           const MarketplaceFiltersButton(),
           IconButton(
-            tooltip: 'Refresh units',
+            tooltip: l10n.refreshUnits,
             onPressed: () => ref.invalidate(marketplaceUnitsProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -30,11 +32,11 @@ class UnitsListScreen extends ConsumerWidget {
       body: units.when(
         data: (items) {
           if (items.isEmpty) {
-            return const EmptyState(
-              title: 'No visible units',
-              message: 'Available inventory appears here after API visibility checks.',
+            return EmptyState(
+              title: l10n.noVisibleUnits,
+              message: l10n.availableInventoryAppearsHere,
               icon: Icons.home_work_outlined,
-              action: MarketplaceFiltersButton(),
+              action: const MarketplaceFiltersButton(),
             );
           }
           return RefreshIndicator(
@@ -48,13 +50,13 @@ class UnitsListScreen extends ConsumerWidget {
           );
         },
         error: (error, _) => EmptyState(
-          title: 'Units unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.unitsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(marketplaceUnitsProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -71,11 +73,12 @@ class UnitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => context.push('/units/${unit.id}'),
+        onTap: () => context.push('/marketplace/units/${unit.id}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -87,27 +90,40 @@ class UnitCard extends StatelessWidget {
                   Expanded(
                     child: Text(unit.title, style: theme.textTheme.titleMedium),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const DirectionalChevron(),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                unit.project?.name ?? 'Project pending',
+                unit.project?.name ?? l10n.projectPending,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 12),
-              Text(unit.priceLabel, style: theme.textTheme.titleSmall),
+              Text(
+                unit.basePrice == null
+                    ? l10n.priceOnRequest
+                    : context.formatMoney(
+                        unit.basePrice,
+                        currency: unit.currency,
+                      ),
+                style: theme.textTheme.titleSmall,
+              ),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
                   if (unit.unitType != null) _InfoChip(label: unit.unitType!),
-                  if (unit.bedrooms != null) _InfoChip(label: '${unit.bedrooms} bed'),
+                  if (unit.bedrooms != null)
+                    _InfoChip(label: l10n.bedCount(unit.bedrooms!)),
                   if (unit.areaSqm != null)
-                    _InfoChip(label: '${unit.areaSqm!.toStringAsFixed(0)} sqm'),
+                    _InfoChip(
+                      label: l10n.sqmValue(
+                        context.formatNumber(unit.areaSqm!, decimalDigits: 0),
+                      ),
+                    ),
                   _InfoChip(label: unit.status),
                 ],
               ),

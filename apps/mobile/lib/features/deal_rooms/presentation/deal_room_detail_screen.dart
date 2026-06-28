@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/deal_room_models.dart';
@@ -35,22 +34,24 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Client invite created.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.clientInviteCreated)));
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
     }
   }
 
   Future<void> _updateStatus(String status) async {
     try {
-      await ref.read(dealRoomsRepositoryProvider).updateStatus(widget.roomId, status);
+      await ref
+          .read(dealRoomsRepositoryProvider)
+          .updateStatus(widget.roomId, status);
       ref.invalidate(myDealRoomsProvider);
       ref.invalidate(dealRoomDetailProvider(widget.roomId));
       ref.invalidate(dealRoomMessagesProvider(widget.roomId));
@@ -58,15 +59,15 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Deal room moved to $status.')),
+        SnackBar(content: Text(context.l10n.dealRoomMovedTo(status))),
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
     }
   }
 
@@ -78,15 +79,17 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
 
     setState(() => _isSending = true);
     try {
-      await ref.read(dealRoomsRepositoryProvider).createMessage(widget.roomId, body);
+      await ref
+          .read(dealRoomsRepositoryProvider)
+          .createMessage(widget.roomId, body);
       _messageController.clear();
       ref.invalidate(dealRoomMessagesProvider(widget.roomId));
       ref.invalidate(myDealRoomsProvider);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(apiErrorMessage(error))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
       }
     } finally {
       if (mounted) {
@@ -99,13 +102,14 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
   Widget build(BuildContext context) {
     final room = ref.watch(dealRoomDetailProvider(widget.roomId));
     final messages = ref.watch(dealRoomMessagesProvider(widget.roomId));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deal room'),
+        title: Text(l10n.dealRoom),
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'Deal room actions',
+            tooltip: l10n.dealRoomActions,
             onSelected: (value) {
               if (value == 'invite') {
                 _inviteClient();
@@ -113,19 +117,16 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
                 _updateStatus(value);
               }
             },
-            itemBuilder: (context) => const [
+            itemBuilder: (context) => [
               PopupMenuItem(
                 value: 'NEGOTIATION',
-                child: Text('Move to negotiation'),
+                child: Text(l10n.moveToNegotiation),
               ),
               PopupMenuItem(
                 value: 'PENDING_APPROVAL',
-                child: Text('Move to pending approval'),
+                child: Text(l10n.moveToPendingApproval),
               ),
-              PopupMenuItem(
-                value: 'invite',
-                child: Text('Invite client'),
-              ),
+              PopupMenuItem(value: 'invite', child: Text(l10n.inviteClient)),
             ],
           ),
         ],
@@ -147,16 +148,16 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
                     _ParticipantsSection(participants: item.participants),
                     const SizedBox(height: 16),
                     Text(
-                      'Messages',
+                      l10n.messages,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 10),
                     messages.when(
                       data: (items) {
                         if (items.isEmpty) {
-                          return const EmptyState(
-                            title: 'No messages yet',
-                            message: 'Messages and status updates appear here.',
+                          return EmptyState(
+                            title: l10n.noMessagesYet,
+                            message: l10n.messagesAndStatusAppearHere,
                             icon: Icons.chat_bubble_outline,
                           );
                         }
@@ -170,8 +171,12 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
                         );
                       },
                       error: (error, _) => EmptyState(
-                        title: 'Messages unavailable',
-                        message: apiErrorMessage(error),
+                        title: _dealRoomErrorTitle(
+                          context,
+                          error,
+                          fallback: l10n.messagesUnavailable,
+                        ),
+                        message: _dealRoomErrorMessage(context, error),
                         icon: Icons.cloud_off_outlined,
                       ),
                       loading: () => const LinearProgressIndicator(),
@@ -191,15 +196,15 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
                         controller: _messageController,
                         minLines: 1,
                         maxLines: 4,
-                        decoration: const InputDecoration(
-                          labelText: 'Message',
-                          prefixIcon: Icon(Icons.chat_outlined),
+                        decoration: InputDecoration(
+                          labelText: l10n.message,
+                          prefixIcon: const Icon(Icons.chat_outlined),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     IconButton.filled(
-                      tooltip: 'Send message',
+                      tooltip: l10n.sendMessage,
                       onPressed: _isSending ? null : _sendMessage,
                       icon: _isSending
                           ? const SizedBox(
@@ -216,13 +221,18 @@ class _DealRoomDetailScreenState extends ConsumerState<DealRoomDetailScreen> {
           ],
         ),
         error: (error, _) => EmptyState(
-          title: 'Deal room unavailable',
-          message: apiErrorMessage(error),
+          title: _dealRoomErrorTitle(
+            context,
+            error,
+            fallback: l10n.couldNotLoadDealRoomTryAgain,
+          ),
+          message: _dealRoomErrorMessage(context, error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
-            onPressed: () => ref.invalidate(dealRoomDetailProvider(widget.roomId)),
+            onPressed: () =>
+                ref.invalidate(dealRoomDetailProvider(widget.roomId)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -239,6 +249,7 @@ class _DealRoomSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -247,11 +258,11 @@ class _DealRoomSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              room.project?.name ?? 'Project ${room.projectId}',
+              room.project?.name ?? '${l10n.project} ${room.projectId}',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
-            Text(room.unit?.title ?? 'Unit ${room.unitId}'),
+            Text(room.unit?.title ?? '${l10n.unit} ${room.unitId}'),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -260,19 +271,27 @@ class _DealRoomSummary extends StatelessWidget {
                 StatusChip(label: room.status),
                 if (room.reservationRequest?.status != null)
                   StatusChip(
-                    label: 'Reservation ${room.reservationRequest!.status}',
+                    label: l10n.reservationStatus(
+                      room.reservationRequest!.status,
+                    ),
                   ),
               ],
             ),
             const SizedBox(height: 16),
-            _Row(label: 'Opened', value: shortDateTime(room.createdAt)),
             _Row(
-              label: 'Client invite',
-              value: room.clientInvitedAt == null
-                  ? 'Not invited'
-                  : shortDateTime(room.clientInvitedAt),
+              label: l10n.open,
+              value: context.formatShortDateTime(room.createdAt),
             ),
-            _Row(label: 'Messages', value: '${room.messageCount ?? 0}'),
+            _Row(
+              label: l10n.clientInvite,
+              value: room.clientInvitedAt == null
+                  ? l10n.notInvited
+                  : context.formatShortDateTime(room.clientInvitedAt),
+            ),
+            _Row(
+              label: l10n.messages,
+              value: context.formatNumber(room.messageCount ?? 0),
+            ),
           ],
         ),
       ),
@@ -288,6 +307,7 @@ class _ParticipantsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -295,11 +315,11 @@ class _ParticipantsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Participants', style: theme.textTheme.titleMedium),
+            Text(l10n.participants, style: theme.textTheme.titleMedium),
             const SizedBox(height: 12),
             if (participants.isEmpty)
               Text(
-                'No participants returned yet.',
+                l10n.noParticipantsYet,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -310,7 +330,7 @@ class _ParticipantsSection extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.person_outline),
                   title: Text(participant.displayName ?? participant.role),
-                  subtitle: Text('${participant.role} · ${participant.status}'),
+                  subtitle: Text('${participant.role} - ${participant.status}'),
                 ),
               ],
           ],
@@ -328,11 +348,12 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isSystem = message.type == DealRoomMessageType.system ||
+    final isSystem =
+        message.type == DealRoomMessageType.system ||
         message.type == DealRoomMessageType.statusUpdate;
 
     return Align(
-      alignment: isSystem ? Alignment.center : Alignment.centerLeft,
+      alignment: isSystem ? Alignment.center : AlignmentDirectional.centerStart,
       child: Container(
         width: isSystem ? double.infinity : null,
         padding: const EdgeInsets.all(12),
@@ -343,16 +364,17 @@ class _MessageBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
-          crossAxisAlignment:
-              isSystem ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          crossAxisAlignment: isSystem
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
           children: [
             Text(message.body),
             const SizedBox(height: 4),
             Text(
               [
                 message.senderName ?? message.messageType,
-                shortDateTime(message.createdAt),
-              ].join(' · '),
+                context.formatShortDateTime(message.createdAt),
+              ].join(' - '),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -362,6 +384,34 @@ class _MessageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+String _dealRoomErrorTitle(
+  BuildContext context,
+  Object error, {
+  required String fallback,
+}) {
+  final message = context.formatApiError(error);
+  final l10n = context.l10n;
+
+  if (message == l10n.dealRoomNotFound ||
+      message == l10n.dealRoomAccessDenied) {
+    return message;
+  }
+
+  return fallback;
+}
+
+String _dealRoomErrorMessage(BuildContext context, Object error) {
+  final message = context.formatApiError(error);
+  final l10n = context.l10n;
+
+  if (message == l10n.dealRoomNotFound ||
+      message == l10n.dealRoomAccessDenied) {
+    return l10n.couldNotLoadDealRoomTryAgain;
+  }
+
+  return message;
 }
 
 class _Row extends StatelessWidget {

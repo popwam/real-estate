@@ -10,6 +10,7 @@ export type InterfaceLocale = "en" | "ar" | "fr";
 const THEME_STORAGE_KEY = "popwam-theme";
 const FONT_SCALE_STORAGE_KEY = "popwam-font-scale";
 const LOCALE_STORAGE_KEY = "popwam-locale";
+const LOCALE_COOKIE_KEY = "popwam-locale";
 const PREFERENCES_EVENT = "popwam-preferences-change";
 
 type Preferences = {
@@ -45,6 +46,7 @@ function applyPreferences(preferences: Preferences) {
   root.dataset.fontScale = preferences.fontScale;
   root.lang = preferences.locale;
   root.dir = preferences.locale === "ar" ? "rtl" : "ltr";
+  document.cookie = `${LOCALE_COOKIE_KEY}=${preferences.locale}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
 function announcePreferenceChange() {

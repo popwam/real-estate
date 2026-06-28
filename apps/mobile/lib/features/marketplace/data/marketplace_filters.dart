@@ -22,26 +22,26 @@ class MarketplaceFilters {
   final String? areaMax;
 
   bool get isEmpty => [
-        city,
-        district,
-        unitType,
-        minPrice,
-        maxPrice,
-        bedrooms,
-        areaMin,
-        areaMax,
-      ].every((value) => value == null || value.trim().isEmpty);
+    city,
+    district,
+    unitType,
+    minPrice,
+    maxPrice,
+    bedrooms,
+    areaMin,
+    areaMax,
+  ].every((value) => value == null || value.trim().isEmpty);
 
   int get activeCount => [
-        city,
-        district,
-        unitType,
-        minPrice,
-        maxPrice,
-        bedrooms,
-        areaMin,
-        areaMax,
-      ].where((value) => value != null && value.trim().isNotEmpty).length;
+    city,
+    district,
+    unitType,
+    minPrice,
+    maxPrice,
+    bedrooms,
+    areaMin,
+    areaMax,
+  ].where((value) => value != null && value.trim().isNotEmpty).length;
 
   Map<String, dynamic> toProjectQuery() {
     return _compact({
@@ -116,5 +116,5 @@ class MarketplaceFiltersController extends Notifier<MarketplaceFilters> {
 
 final marketplaceFiltersProvider =
     NotifierProvider<MarketplaceFiltersController, MarketplaceFilters>(
-  MarketplaceFiltersController.new,
-);
+      MarketplaceFiltersController.new,
+    );

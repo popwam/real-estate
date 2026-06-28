@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../features/reservation_requests/presentation/reservation_request_form_screen.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -23,25 +22,26 @@ class LeadClaimDetailScreen extends ConsumerWidget {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lead claim released.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.leadClaimReleased)));
     } catch (error) {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final claim = ref.watch(leadClaimDetailProvider(claimId));
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Lead claim')),
+      appBar: AppBar(title: Text(l10n.leadClaim)),
       body: claim.when(
         data: (item) => ListView(
           padding: const EdgeInsets.all(16),
@@ -51,29 +51,29 @@ class LeadClaimDetailScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: item.isActive
                   ? () => context.push(
-                        '/reservation-requests/new',
-                        extra: ReservationRequestDraft(claim: item),
-                      )
+                      '/reservation-requests/new',
+                      extra: ReservationRequestDraft(claim: item),
+                    )
                   : null,
               icon: const Icon(Icons.event_available),
-              label: const Text('Create Reservation Request'),
+              label: Text(l10n.createReservationRequest),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: item.isActive ? () => _release(context, ref) : null,
               icon: const Icon(Icons.logout),
-              label: const Text('Release claim'),
+              label: Text(l10n.releaseClaim),
             ),
           ],
         ),
         error: (error, _) => EmptyState(
-          title: 'Claim unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.claimUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(leadClaimDetailProvider(claimId)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -90,6 +90,7 @@ class _ClaimDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -98,7 +99,7 @@ class _ClaimDetailCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              claim.project?.name ?? 'Project ${claim.projectId}',
+              claim.project?.name ?? '${l10n.project} ${claim.projectId}',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
@@ -111,16 +112,28 @@ class _ClaimDetailCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _Row(label: 'Client', value: claim.clientName ?? '-'),
-            _Row(label: 'Phone', value: claim.maskedPhone),
-            _Row(label: 'Unit', value: claim.unit?.title ?? 'No unit selected'),
-            _Row(label: 'Created', value: shortDateTime(claim.createdAt)),
-            _Row(label: 'Expires', value: shortDate(claim.expiresAt)),
+            _Row(label: l10n.client, value: claim.clientName ?? '-'),
+            _Row(label: l10n.phone, value: claim.maskedPhone),
+            _Row(
+              label: l10n.unit,
+              value: claim.unit?.title ?? l10n.noUnitSelected,
+            ),
+            _Row(
+              label: l10n.created,
+              value: context.formatShortDateTime(claim.createdAt),
+            ),
+            _Row(
+              label: l10n.expires,
+              value: context.formatShortDate(claim.expiresAt),
+            ),
             if (claim.releasedAt != null)
-              _Row(label: 'Released', value: shortDateTime(claim.releasedAt)),
+              _Row(
+                label: l10n.released,
+                value: context.formatShortDateTime(claim.releasedAt),
+              ),
             if (claim.notes != null && claim.notes!.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('Notes', style: theme.textTheme.titleSmall),
+              Text(l10n.notes, style: theme.textTheme.titleSmall),
               const SizedBox(height: 6),
               Text(claim.notes!),
             ],

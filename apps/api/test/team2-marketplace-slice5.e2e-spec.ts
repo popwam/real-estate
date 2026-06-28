@@ -54,6 +54,15 @@ describe('Team 2 marketplace Slice 5 deal rooms (e2e)', () => {
     );
     const brokerageToken = brokerage.body.accessToken;
 
+    const platform = await register(
+      app,
+      `team2-slice5-platform+${stamp}@popwam.local`,
+      `Slice 5 Platform ${stamp}`,
+      'PLATFORM',
+      password,
+    );
+    const platformToken = platform.body.accessToken;
+
     await createBrokerUser(
       `team2-slice5-broker+${stamp}@popwam.local`,
       brokerageToken,
@@ -183,12 +192,38 @@ describe('Team 2 marketplace Slice 5 deal rooms (e2e)', () => {
 
     await request(app.getHttpServer())
       .get(`/deal-rooms/${dealRoom.body.id}`)
+      .set('Authorization', `Bearer ${platformToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.id).toBe(dealRoom.body.id);
+        expect(body.participants).toEqual(expect.any(Array));
+        expect(body._count?.messages).toEqual(expect.any(Number));
+      });
+
+    await request(app.getHttpServer())
+      .get(`/deal-rooms/${dealRoom.body.id}`)
       .set('Authorization', `Bearer ${otherDeveloperToken}`)
       .expect(403);
 
     await request(app.getHttpServer())
+      .get('/deal-rooms/missing-deal-room')
+      .set('Authorization', `Bearer ${developerToken}`)
+      .expect(404)
+      .expect(({ body }) => {
+        expect(body.message).toBe('Deal room not found.');
+      });
+
+    await request(app.getHttpServer())
       .get('/deal-rooms')
       .set('Authorization', `Bearer ${brokerageAdminToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(ids(body)).toContain(dealRoom.body.id);
+      });
+
+    await request(app.getHttpServer())
+      .get('/deal-rooms')
+      .set('Authorization', `Bearer ${platformToken}`)
       .expect(200)
       .expect(({ body }) => {
         expect(ids(body)).toContain(dealRoom.body.id);
@@ -220,6 +255,14 @@ describe('Team 2 marketplace Slice 5 deal rooms (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/deal-rooms/${dealRoom.body.id}/messages`)
       .set('Authorization', `Bearer ${developerToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(ids(body)).toContain(message.body.id);
+      });
+
+    await request(app.getHttpServer())
+      .get(`/deal-rooms/${dealRoom.body.id}/messages`)
+      .set('Authorization', `Bearer ${platformToken}`)
       .expect(200)
       .expect(({ body }) => {
         expect(ids(body)).toContain(message.body.id);

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../features/deal_rooms/data/deal_rooms_repository.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -24,15 +23,15 @@ class ReservationRequestDetailScreen extends ConsumerWidget {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reservation request cancelled.')),
+        SnackBar(content: Text(context.l10n.reservationRequestCancelled)),
       );
     } catch (error) {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
     }
   }
 
@@ -45,26 +44,27 @@ class ReservationRequestDetailScreen extends ConsumerWidget {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deal room created.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.dealRoomCreated)));
       context.go('/deal-rooms/${room.id}');
     } catch (error) {
       if (!context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.formatApiError(error))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final request = ref.watch(reservationRequestDetailProvider(requestId));
+    final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reservation request')),
+      appBar: AppBar(title: Text(l10n.reservationRequest)),
       body: request.when(
         data: (item) => ListView(
           padding: const EdgeInsets.all(16),
@@ -76,25 +76,25 @@ class ReservationRequestDetailScreen extends ConsumerWidget {
                   ? () => _createDealRoom(context, ref)
                   : null,
               icon: const Icon(Icons.forum_outlined),
-              label: const Text('Create Deal Room'),
+              label: Text(l10n.createDealRoom),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: item.isPending ? () => _cancel(context, ref) : null,
               icon: const Icon(Icons.cancel_outlined),
-              label: const Text('Cancel request'),
+              label: Text(l10n.cancelRequest),
             ),
           ],
         ),
         error: (error, _) => EmptyState(
-          title: 'Request unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.requestUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
             onPressed: () =>
                 ref.invalidate(reservationRequestDetailProvider(requestId)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -111,6 +111,7 @@ class _RequestDetailCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -119,26 +120,41 @@ class _RequestDetailCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              request.project?.name ?? 'Project ${request.projectId}',
+              request.project?.name ?? '${l10n.project} ${request.projectId}',
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
             StatusChip(label: request.status),
             const SizedBox(height: 16),
-            _Row(label: 'Unit', value: request.unit?.title ?? request.unitId),
-            _Row(label: 'Created', value: shortDateTime(request.createdAt)),
+            _Row(
+              label: l10n.unit,
+              value: request.unit?.title ?? request.unitId,
+            ),
+            _Row(
+              label: l10n.created,
+              value: context.formatShortDateTime(request.createdAt),
+            ),
             if (request.approvedAt != null)
-              _Row(label: 'Approved', value: shortDateTime(request.approvedAt)),
+              _Row(
+                label: l10n.approved,
+                value: context.formatShortDateTime(request.approvedAt),
+              ),
             if (request.rejectedAt != null)
-              _Row(label: 'Rejected', value: shortDateTime(request.rejectedAt)),
+              _Row(
+                label: l10n.rejected,
+                value: context.formatShortDateTime(request.rejectedAt),
+              ),
             if (request.cancelledAt != null)
-              _Row(label: 'Cancelled', value: shortDateTime(request.cancelledAt)),
+              _Row(
+                label: l10n.cancelled,
+                value: context.formatShortDateTime(request.cancelledAt),
+              ),
             if (request.rejectionReason != null &&
                 request.rejectionReason!.isNotEmpty)
-              _Row(label: 'Reason', value: request.rejectionReason!),
+              _Row(label: l10n.reason, value: request.rejectionReason!),
             if (request.notes != null && request.notes!.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('Notes', style: theme.textTheme.titleSmall),
+              Text(l10n.notes, style: theme.textTheme.titleSmall),
               const SizedBox(height: 6),
               Text(request.notes!),
             ],

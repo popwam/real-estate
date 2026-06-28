@@ -226,7 +226,7 @@ test("public contact options and public conversation reply route", async ({ page
   expect(chatConversationHref).not.toContain("mock-chat");
 
   await page.goto(`${PUBLIC_URL}${chatConversationHref}`);
-  await expect(page.getByRole("main").getByText("Private conversation")).toBeVisible();
+  await expect(page.getByRole("main").getByText("Private conversation", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
   await expect(page.locator("body")).not.toContainText("organizationId");
@@ -249,7 +249,7 @@ test("public contact options and public conversation reply route", async ({ page
   await expect(page.getByText("Your request was sent")).toBeVisible();
 
   await page.goto(`${PUBLIC_URL}/c/${prepared.shareToken}`);
-  await expect(page.getByRole("main").getByText("Private conversation")).toBeVisible();
+  await expect(page.getByRole("main").getByText("Private conversation", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
 });

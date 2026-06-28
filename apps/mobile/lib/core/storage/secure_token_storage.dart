@@ -13,6 +13,7 @@ class SecureTokenStorage {
 
   static const _accessTokenKey = 'popwam_access_token';
   static const _refreshTokenKey = 'popwam_refresh_token';
+  static const _localeCodeKey = 'popwam_locale_code';
 
   final FlutterSecureStorage _storage;
 
@@ -43,6 +44,12 @@ class SecureTokenStorage {
       _storage.delete(key: _accessTokenKey),
       _storage.delete(key: _refreshTokenKey),
     ]);
+  }
+
+  Future<String?> readLocaleCode() => _storage.read(key: _localeCodeKey);
+
+  Future<void> saveLocaleCode(String localeCode) {
+    return _storage.write(key: _localeCodeKey, value: localeCode);
   }
 }
 

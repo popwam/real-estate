@@ -13,7 +13,7 @@ export function DealRoomTable({ rooms, basePath }: { rooms: DealRoom[]; basePath
       <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Negotiation workspace</p><h3 className="mt-1 truncate text-base font-semibold text-[var(--color-text)]">{room.project?.name ?? "Deal room"}</h3></div><DealRoomStatusBadge status={room.status} /></div>
       <dl className="mt-5 grid gap-3 text-sm">
         <Fact icon={Home} label="Unit" value={room.unit?.unitNumber ?? "Unit details unavailable"} />
-        <Fact icon={Building2} label="Parties" value={`${room.developer?.name ?? "Developer"} · ${room.brokerage?.name ?? "Individual broker"}`} />
+        <Fact icon={Building2} label="Parties" value={`${room.developer?.name ?? "Developer"} - ${room.brokerage?.name ?? "Individual broker"}`} />
         <Fact icon={UsersRound} label="Participants" value={room.participants?.length !== undefined ? `${room.participants.length} participant${room.participants.length === 1 ? "" : "s"}` : clientParticipantLabel(room)} />
         <Fact icon={MessageSquareText} label="Messages" value={room._count?.messages !== undefined ? `${room._count.messages} message${room._count.messages === 1 ? "" : "s"}` : "Open workspace for activity"} />
         <Fact icon={CalendarClock} label="Last activity" value={formatDate(room.updatedAt)} />
@@ -25,4 +25,4 @@ export function DealRoomTable({ rooms, basePath }: { rooms: DealRoom[]; basePath
 
 function Fact({ icon: Icon, label, value }: { icon: typeof Home; label: string; value: string }) { return <div className="flex gap-3"><Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-text-muted)]" aria-hidden="true" /><div className="min-w-0"><dt className="text-xs text-[var(--color-text-muted)]">{label}</dt><dd className="truncate font-medium text-[var(--color-text)]">{value}</dd></div></div>; }
 export function brokerName(room: DealRoom) { if (!room.broker) return "Assigned broker"; return [room.broker.firstName, room.broker.lastName].filter(Boolean).join(" ") || room.broker.email; }
-export function clientParticipantLabel(room: DealRoom) { const participant = room.participants?.find((item) => item.role === "CLIENT"); if (!participant) return room.clientInvitedAt ? "Client invited" : "Client not invited"; return `${participant.client?.name ?? "Client"} · ${participant.status.toLowerCase()}`; }
+export function clientParticipantLabel(room: DealRoom) { const participant = room.participants?.find((item) => item.role === "CLIENT"); if (!participant) return room.clientInvitedAt ? "Client invited" : "Client not invited"; return `${participant.client?.name ?? "Client"} - ${participant.status.toLowerCase()}`; }

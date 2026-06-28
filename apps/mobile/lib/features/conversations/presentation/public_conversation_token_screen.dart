@@ -2,8 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/conversation_models.dart';
@@ -37,13 +36,14 @@ class _PublicConversationTokenScreenState
   @override
   Widget build(BuildContext context) {
     final conversation = ref.watch(publicConversationProvider(widget.token));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Public conversation'),
+        title: Text(l10n.publicConversation),
         actions: [
           IconButton(
-            tooltip: 'Refresh conversation',
+            tooltip: l10n.refreshConversations,
             onPressed: () =>
                 ref.invalidate(publicConversationProvider(widget.token)),
             icon: const Icon(Icons.refresh),
@@ -61,13 +61,11 @@ class _PublicConversationTokenScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.project?.name ?? 'Conversation',
+                      item.project?.name ?? l10n.conversation,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'This shared conversation shows only public-safe chat fields.',
-                    ),
+                    Text(l10n.thisSharedConversation),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
@@ -82,9 +80,9 @@ class _PublicConversationTokenScreenState
             ),
             const SizedBox(height: 12),
             if (item.recentMessages.isEmpty)
-              const EmptyState(
-                title: 'No messages yet',
-                message: 'Public-safe messages for this conversation appear here.',
+              EmptyState(
+                title: l10n.noMessagesYet,
+                message: l10n.publicSafeMessagesAppearHere,
                 icon: Icons.chat_bubble_outline,
               )
             else
@@ -94,8 +92,9 @@ class _PublicConversationTokenScreenState
                     title: Text(message.body),
                     subtitle: Text(
                       [
-                        message.sender?.displayName ?? message.sender?.publicRole,
-                        shortDateTime(message.createdAt),
+                        message.sender?.displayName ??
+                            message.sender?.publicRole,
+                        context.formatShortDateTime(message.createdAt),
                       ].whereType<String>().join(' · '),
                     ),
                   ),
@@ -113,17 +112,17 @@ class _PublicConversationTokenScreenState
                 onDismissError: () => setState(() => _error = null),
               )
             else
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('This conversation is closed.'),
+                  padding: const EdgeInsets.all(16),
+                  child: Text(l10n.conversationClosed),
                 ),
               ),
           ],
         ),
         error: (error, _) => EmptyState(
-          title: 'Conversation unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.conversationUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.link_off_outlined,
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -141,14 +140,12 @@ class _PublicConversationTokenScreenState
     });
 
     if (body.isEmpty) {
-      setState(() => _error = 'Please enter a message before sending.');
+      setState(() => _error = context.l10n.enterMessageBeforeSending);
       return;
     }
 
     if (body.length > 2000) {
-      setState(
-        () => _error = 'Message is too long. Please keep it under 2000 characters.',
-      );
+      setState(() => _error = context.l10n.messageTooLong);
       return;
     }
 
@@ -165,7 +162,7 @@ class _PublicConversationTokenScreenState
           );
       _messageController.clear();
       ref.invalidate(publicConversationProvider(widget.token));
-      setState(() => _notice = 'Message sent.');
+      setState(() => _notice = context.l10n.messageSent);
     } catch (error) {
       setState(() => _error = _publicReplyErrorMessage(error));
     } finally {
@@ -179,21 +176,21 @@ class _PublicConversationTokenScreenState
     if (error is DioException) {
       final statusCode = error.response?.statusCode;
       if (statusCode == 404) {
-        return 'This conversation link is no longer available.';
+        return context.l10n.conversationLinkUnavailable;
       }
       if (statusCode == 429) {
-        return 'Too many messages. Please try again shortly.';
+        return context.l10n.tooManyMessages;
       }
       if (statusCode == 400) {
-        final message = apiErrorMessage(error);
+        final message = context.formatApiError(error);
         if (message.toLowerCase().contains('2000')) {
-          return 'Message is too long. Please keep it under 2000 characters.';
+          return context.l10n.messageTooLong;
         }
-        return 'Please check your message and try again.';
+        return context.l10n.checkMessageTryAgain;
       }
     }
 
-    return 'Could not send your message. Please try again.';
+    return context.l10n.couldNotSendMessage;
   }
 }
 
@@ -220,20 +217,20 @@ class _PublicReplyComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Reply', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.reply, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             TextField(
               controller: senderNameController,
               maxLength: 120,
-              decoration: const InputDecoration(
-                labelText: 'Your name optional',
-              ),
+              decoration: InputDecoration(labelText: l10n.yourNameOptional),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -241,9 +238,9 @@ class _PublicReplyComposer extends StatelessWidget {
               minLines: 3,
               maxLines: 5,
               maxLength: 2000,
-              decoration: const InputDecoration(
-                labelText: 'Message',
-                hintText: 'Write a plain-text reply',
+              decoration: InputDecoration(
+                labelText: l10n.message,
+                hintText: l10n.writePlainTextReply,
               ),
             ),
             const SizedBox(height: 8),
@@ -255,7 +252,7 @@ class _PublicReplyComposer extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.send_outlined),
-              label: Text(busy ? 'Sending' : 'Send reply'),
+              label: Text(busy ? l10n.sending : l10n.sendReply),
             ),
             if (notice != null) ...[
               const SizedBox(height: 12),
@@ -265,7 +262,7 @@ class _PublicReplyComposer extends StatelessWidget {
                 actions: [
                   TextButton(
                     onPressed: onDismissNotice,
-                    child: const Text('Dismiss'),
+                    child: Text(l10n.dismiss),
                   ),
                 ],
               ),
@@ -278,7 +275,7 @@ class _PublicReplyComposer extends StatelessWidget {
                 actions: [
                   TextButton(
                     onPressed: onDismissError,
-                    child: const Text('Dismiss'),
+                    child: Text(l10n.dismiss),
                   ),
                 ],
               ),

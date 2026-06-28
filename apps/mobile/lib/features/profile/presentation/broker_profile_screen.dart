@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/errors/api_error.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../data/broker_profile_models.dart';
 import '../data/broker_profile_repository.dart';
@@ -12,13 +12,14 @@ class BrokerProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(brokerProfileProvider);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Broker profile'),
+        title: Text(l10n.brokerProfile),
         actions: [
           IconButton(
-            tooltip: 'Edit placeholder',
+            tooltip: l10n.editPlaceholder,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const BrokerProfileEditPlaceholderScreen(),
@@ -34,14 +35,14 @@ class BrokerProfileScreen extends ConsumerWidget {
           children: [_BrokerProfileCard(profile: item)],
         ),
         error: (error, _) => EmptyState(
-          title: 'Broker profile unavailable',
+          title: l10n.brokerProfileUnavailable,
           message:
-              '${apiErrorMessage(error)}\n\nThis screen is ready for GET /broker-profile/me when the backend exposes it.',
+              '${context.formatApiError(error)}\n\n${l10n.brokerProfileBackendReady}',
           icon: Icons.badge_outlined,
           action: OutlinedButton.icon(
             onPressed: () => ref.invalidate(brokerProfileProvider),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -56,10 +57,10 @@ class BrokerProfileEditPlaceholderScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit broker profile')),
-      body: const EmptyState(
-        title: 'Edit profile is not active yet',
-        message: 'Profile update APIs are not part of the current backend slice.',
+      appBar: AppBar(title: Text(context.l10n.editBrokerProfile)),
+      body: EmptyState(
+        title: context.l10n.editProfileInactive,
+        message: context.l10n.profileUpdateApisUnavailable,
         icon: Icons.edit_note_outlined,
       ),
     );
@@ -74,6 +75,7 @@ class _BrokerProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Card(
       child: Padding(
@@ -82,20 +84,23 @@ class _BrokerProfileCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              profile.displayName ?? 'Broker profile',
+              profile.displayName ?? l10n.brokerProfile,
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            _ProfileRow(label: 'License', value: profile.licenseNumber ?? '-'),
-            _ProfileRow(label: 'Phone', value: profile.phone ?? '-'),
-            _ProfileRow(label: 'Country', value: profile.country ?? '-'),
-            _ProfileRow(label: 'City', value: profile.city ?? '-'),
-            _ProfileRow(label: 'Status', value: profile.status ?? '-'),
             _ProfileRow(
-              label: 'Experience',
+              label: l10n.license,
+              value: profile.licenseNumber ?? '-',
+            ),
+            _ProfileRow(label: l10n.phone, value: profile.phone ?? '-'),
+            _ProfileRow(label: l10n.country, value: profile.country ?? '-'),
+            _ProfileRow(label: l10n.city, value: profile.city ?? '-'),
+            _ProfileRow(label: l10n.status, value: profile.status ?? '-'),
+            _ProfileRow(
+              label: l10n.experience,
               value: profile.yearsOfExperience == null
                   ? '-'
-                  : '${profile.yearsOfExperience} years',
+                  : l10n.yearsExperience(profile.yearsOfExperience!),
             ),
           ],
         ),

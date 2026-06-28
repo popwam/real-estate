@@ -54,7 +54,8 @@ class ReservationRequest {
   final MarketplaceUnit? unit;
   final LeadClaim? leadClaim;
 
-  ReservationRequestStatus get statusType => ReservationRequestStatus.from(status);
+  ReservationRequestStatus get statusType =>
+      ReservationRequestStatus.from(status);
   bool get isPending => statusType == ReservationRequestStatus.pending;
 
   factory ReservationRequest.fromJson(Map<String, dynamic> json) {
@@ -77,9 +78,12 @@ class ReservationRequest {
       project: project is Map<String, dynamic>
           ? MarketplaceProject.fromJson(project)
           : null,
-      unit: unit is Map<String, dynamic> ? MarketplaceUnit.fromJson(unit) : null,
-      leadClaim:
-          leadClaim is Map<String, dynamic> ? LeadClaim.fromJson(leadClaim) : null,
+      unit: unit is Map<String, dynamic>
+          ? MarketplaceUnit.fromJson(unit)
+          : null,
+      leadClaim: leadClaim is Map<String, dynamic>
+          ? LeadClaim.fromJson(leadClaim)
+          : null,
     );
   }
 }

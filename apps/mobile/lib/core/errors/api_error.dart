@@ -31,10 +31,16 @@ String apiErrorMessage(Object error) {
     }
 
     if (error.response?.statusCode == 403) {
+      if (_isDealRoomPath(error.requestOptions.path)) {
+        return 'You do not have access to this deal room';
+      }
       return 'You do not have access to this mobile workspace.';
     }
 
     if (error.response?.statusCode == 404) {
+      if (_isDealRoomPath(error.requestOptions.path)) {
+        return 'Deal room not found';
+      }
       return 'The requested mobile resource was not found.';
     }
 
@@ -49,6 +55,10 @@ String apiErrorMessage(Object error) {
   }
 
   return error.toString();
+}
+
+bool _isDealRoomPath(String path) {
+  return path == '/deal-rooms' || path.startsWith('/deal-rooms/');
 }
 
 class ApiFriendlyException implements Exception {

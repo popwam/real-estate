@@ -90,10 +90,7 @@ class ConversationMessage {
 }
 
 class PublicConversationMessagePayload {
-  const PublicConversationMessagePayload({
-    required this.body,
-    this.senderName,
-  });
+  const PublicConversationMessagePayload({required this.body, this.senderName});
 
   final String body;
   final String? senderName;
@@ -116,7 +113,9 @@ class PublicConversationMessageResponse {
   final bool ok;
   final ConversationMessage message;
 
-  factory PublicConversationMessageResponse.fromJson(Map<String, dynamic> json) {
+  factory PublicConversationMessageResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
     final message = json['message'];
     return PublicConversationMessageResponse(
       ok: json['ok'] == true,
@@ -171,20 +170,22 @@ class Conversation {
       project: project is Map<String, dynamic>
           ? CrmProjectSummary.fromJson(project)
           : null,
-      crmLead: crmLead is Map<String, dynamic> ? CrmLead.fromJson(crmLead) : null,
+      crmLead: crmLead is Map<String, dynamic>
+          ? CrmLead.fromJson(crmLead)
+          : null,
       updatedAt: json['updatedAt']?.toString(),
       createdAt: json['createdAt']?.toString(),
       participants: participants is List
           ? participants
-              .whereType<Map<String, dynamic>>()
-              .map(ConversationParticipant.fromJson)
-              .toList()
+                .whereType<Map<String, dynamic>>()
+                .map(ConversationParticipant.fromJson)
+                .toList()
           : const [],
       recentMessages: messages is List
           ? messages
-              .whereType<Map<String, dynamic>>()
-              .map(ConversationMessage.fromJson)
-              .toList()
+                .whereType<Map<String, dynamic>>()
+                .map(ConversationMessage.fromJson)
+                .toList()
           : const [],
     );
   }

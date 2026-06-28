@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/errors/api_error.dart';
-import '../../../core/utils/date_formatters.dart';
+import '../../../core/localization/l10n_extensions.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../data/crm_repository.dart';
@@ -26,14 +25,16 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final lead = ref.watch(crmLeadDetailProvider(widget.leadId));
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CRM lead'),
+        title: Text(l10n.crmLead),
         actions: [
           IconButton(
-            tooltip: 'Refresh lead',
-            onPressed: () => ref.invalidate(crmLeadDetailProvider(widget.leadId)),
+            tooltip: l10n.refreshLead,
+            onPressed: () =>
+                ref.invalidate(crmLeadDetailProvider(widget.leadId)),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -49,7 +50,7 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
                   actions: [
                     TextButton(
                       onPressed: () => setState(() => _message = null),
-                      child: const Text('Dismiss'),
+                      child: Text(l10n.dismiss),
                     ),
                   ],
                 ),
@@ -60,12 +61,12 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.client?.name ?? 'Masked lead',
+                        item.client?.name ?? l10n.maskedLead,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 8),
                       if (item.client?.phoneLast4 != null)
-                        Text('Phone ending ${item.client!.phoneLast4}'),
+                        Text(l10n.phoneEnding(item.client!.phoneLast4!)),
                       if (item.client?.email != null) Text(item.client!.email!),
                       const SizedBox(height: 12),
                       Wrap(
@@ -74,7 +75,11 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
                         children: [
                           StatusChip(label: item.status),
                           Chip(label: Text(item.preferredContactMethod)),
-                          Chip(label: Text(item.isClaimed ? 'Claimed' : 'Unclaimed')),
+                          Chip(
+                            label: Text(
+                              item.isClaimed ? l10n.claimed : l10n.unclaimed,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -83,22 +88,33 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
               ),
               const SizedBox(height: 12),
               _InfoCard(
-                title: 'Project',
+                title: l10n.projectLabel,
                 rows: [
-                  _InfoRow('Project', item.project?.name ?? '-'),
-                  _InfoRow('Source page', item.sourcePage ?? '-'),
-                  _InfoRow('Created', shortDateTime(item.createdAt)),
-                  _InfoRow('Claimed', shortDateTime(item.claimedAt)),
-                  _InfoRow('Claim organization', item.claimedByOrganization?.name ?? '-'),
-                  _InfoRow('Status note', item.statusNote ?? '-'),
+                  _InfoRow(l10n.projectLabel, item.project?.name ?? '-'),
+                  _InfoRow(l10n.sourcePage, item.sourcePage ?? '-'),
+                  _InfoRow(
+                    l10n.created,
+                    context.formatShortDateTime(item.createdAt),
+                  ),
+                  _InfoRow(
+                    l10n.claimedLabel,
+                    context.formatShortDateTime(item.claimedAt),
+                  ),
+                  _InfoRow(
+                    l10n.claimOrganization,
+                    item.claimedByOrganization?.name ?? '-',
+                  ),
+                  _InfoRow(l10n.statusNote, item.statusNote ?? '-'),
                 ],
               ),
               if (item.utm != null) ...[
                 const SizedBox(height: 12),
                 _InfoCard(
-                  title: 'UTM',
+                  title: l10n.utm,
                   rows: item.utm!.entries
-                      .map((entry) => _InfoRow(entry.key, entry.value.toString()))
+                      .map(
+                        (entry) => _InfoRow(entry.key, entry.value.toString()),
+                      )
                       .toList(),
                 ),
               ],
@@ -110,31 +126,33 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Actions',
+                        l10n.actions,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(
-                        onPressed:
-                            _busy ? null : () => _createConversation(widget.leadId),
+                        onPressed: _busy
+                            ? null
+                            : () => _createConversation(widget.leadId),
                         icon: const Icon(Icons.forum_outlined),
-                        label: const Text('Open conversation'),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : () => _claimLead(widget.leadId),
-                        icon: const Icon(Icons.person_add_alt_outlined),
-                        label: const Text('Claim lead'),
+                        label: Text(l10n.openConversation),
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
                         onPressed: _busy
                             ? null
-                            : () => _showStatusSheet(
-                                  currentStatus: item.status,
-                                ),
+                            : () => _claimLead(widget.leadId),
+                        icon: const Icon(Icons.person_add_alt_outlined),
+                        label: Text(l10n.claimLead),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () =>
+                                  _showStatusSheet(currentStatus: item.status),
                         icon: const Icon(Icons.edit_outlined),
-                        label: const Text('Update status'),
+                        label: Text(l10n.updateStatus),
                       ),
                     ],
                   ),
@@ -144,13 +162,14 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
           );
         },
         error: (error, _) => EmptyState(
-          title: 'CRM lead unavailable',
-          message: apiErrorMessage(error),
+          title: l10n.crmLeadsUnavailable,
+          message: context.formatApiError(error),
           icon: Icons.cloud_off_outlined,
           action: OutlinedButton.icon(
-            onPressed: () => ref.invalidate(crmLeadDetailProvider(widget.leadId)),
+            onPressed: () =>
+                ref.invalidate(crmLeadDetailProvider(widget.leadId)),
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -166,12 +185,12 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
     try {
       await ref.read(crmRepositoryProvider).claim(id);
       ref.invalidate(crmLeadDetailProvider(id));
-      setState(() => _message = 'Lead claimed.');
+      setState(() => _message = context.l10n.leadClaimed);
     } on DioException catch (error) {
       setState(() {
         _message = error.response?.statusCode == 409
-            ? 'This lead has already been claimed.'
-            : apiErrorMessage(error);
+            ? context.l10n.leadAlreadyClaimed
+            : context.formatApiError(error);
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -184,13 +203,14 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
       _message = null;
     });
     try {
-      final conversationId =
-          await ref.read(crmRepositoryProvider).createConversationFromLead(id);
+      final conversationId = await ref
+          .read(crmRepositoryProvider)
+          .createConversationFromLead(id);
       if (conversationId.isNotEmpty && mounted) {
         context.push('/crm-conversations/$conversationId');
       }
     } catch (error) {
-      setState(() => _message = apiErrorMessage(error));
+      setState(() => _message = context.formatApiError(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -208,16 +228,18 @@ class _CrmLeadDetailScreenState extends ConsumerState<CrmLeadDetailScreen> {
       _message = null;
     });
     try {
-      await ref.read(crmRepositoryProvider).updateStatus(
+      await ref
+          .read(crmRepositoryProvider)
+          .updateStatus(
             widget.leadId,
             status: result.status,
             statusNote: result.note,
           );
       ref.invalidate(crmLeadDetailProvider(widget.leadId));
       ref.invalidate(crmSummaryProvider);
-      setState(() => _message = 'Lead status updated.');
+      setState(() => _message = context.l10n.leadStatusUpdated);
     } catch (error) {
-      setState(() => _message = apiErrorMessage(error));
+      setState(() => _message = context.formatApiError(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -245,6 +267,8 @@ class _LeadStatusSheetState extends State<_LeadStatusSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -252,34 +276,46 @@ class _LeadStatusSheetState extends State<_LeadStatusSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Update lead status', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              l10n.updateLeadStatus,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: const [
-                DropdownMenuItem(value: 'NEW', child: Text('New')),
-                DropdownMenuItem(value: 'CLAIMED', child: Text('Claimed')),
-                DropdownMenuItem(value: 'IN_CONVERSATION', child: Text('In chat')),
-                DropdownMenuItem(value: 'QUALIFIED', child: Text('Qualified')),
-                DropdownMenuItem(value: 'LOST', child: Text('Lost')),
-                DropdownMenuItem(value: 'CONVERTED', child: Text('Converted')),
-                DropdownMenuItem(value: 'SPAM', child: Text('Spam')),
+              decoration: InputDecoration(labelText: l10n.status),
+              items: [
+                DropdownMenuItem(value: 'NEW', child: Text(l10n.newStatus)),
+                DropdownMenuItem(value: 'CLAIMED', child: Text(l10n.claimed)),
+                DropdownMenuItem(
+                  value: 'IN_CONVERSATION',
+                  child: Text(l10n.inChat),
+                ),
+                DropdownMenuItem(
+                  value: 'QUALIFIED',
+                  child: Text(l10n.qualified),
+                ),
+                DropdownMenuItem(value: 'LOST', child: Text(l10n.lost)),
+                DropdownMenuItem(
+                  value: 'CONVERTED',
+                  child: Text(l10n.converted),
+                ),
+                DropdownMenuItem(value: 'SPAM', child: Text(l10n.spam)),
               ],
               onChanged: (value) => setState(() => _status = value ?? _status),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _noteController,
-              decoration: const InputDecoration(labelText: 'Status note optional'),
+              decoration: InputDecoration(labelText: l10n.statusNoteOptional),
               maxLines: 2,
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(
-                _StatusUpdate(status: _status, note: _noteController.text),
-              ),
-              child: const Text('Save status'),
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(_StatusUpdate(status: _status, note: _noteController.text)),
+              child: Text(l10n.saveStatus),
             ),
           ],
         ),
@@ -318,9 +354,7 @@ class _InfoCard extends StatelessWidget {
                   children: [
                     Expanded(child: Text(row.label)),
                     const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(row.value, textAlign: TextAlign.end),
-                    ),
+                    Flexible(child: Text(row.value, textAlign: TextAlign.end)),
                   ],
                 ),
               ),

@@ -1,8 +1,13 @@
+import { cookies } from "next/headers";
 import { Building2, CheckCircle2, ShieldCheck } from "lucide-react";
 import { LoginForm } from "@/app/(app)/(auth)/login/login-form";
 import { DisplayPreferences } from "@/components/layout/display-preferences";
+import { normalizeLocale, tServer } from "@/i18n/server";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
+  const t = (key: string) => tServer(locale, key);
+
   return (
     <main className="min-h-screen bg-[var(--color-background)] lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)]">
       <section className="relative hidden overflow-hidden bg-[var(--color-primary)] p-10 text-[var(--color-primary-foreground)] lg:flex lg:flex-col lg:justify-between xl:p-14">
@@ -16,39 +21,38 @@ export default function LoginPage() {
           </span>
           <div>
             <p className="font-semibold tracking-tight">POPWAM</p>
-            <p className="text-xs opacity-65">Real Estate Marketplace &amp; CRM</p>
+            <p className="text-xs opacity-65">{t("auth.login.brandSubtitle")}</p>
           </div>
         </div>
 
         <div className="relative max-w-xl py-16">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-65">
-            One trusted workspace
+            {t("auth.login.eyebrow")}
           </p>
           <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
-            Move property operations forward with clarity.
+            {t("auth.login.heroTitle")}
           </h1>
           <p className="mt-6 max-w-lg text-base leading-7 opacity-75">
-            Review organizations, manage projects and inventory, follow leads, and
-            keep every deal moving from one secure workspace.
+            {t("auth.login.heroDescription")}
           </p>
-          <ul className="mt-9 grid gap-4 text-sm sm:grid-cols-2" aria-label="Platform capabilities">
+          <ul className="mt-9 grid gap-4 text-sm sm:grid-cols-2" aria-label={t("auth.login.capabilitiesAria")}>
             <li className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-[var(--color-accent)]" aria-hidden="true" />
-              Verified marketplace operations
+              {t("auth.login.capabilityMarketplace")}
             </li>
             <li className="flex items-center gap-3">
               <Building2 className="h-5 w-5 text-[var(--color-accent)]" aria-hidden="true" />
-              Role-focused company workspaces
+              {t("auth.login.capabilityWorkspaces")}
             </li>
             <li className="flex items-center gap-3 sm:col-span-2">
               <CheckCircle2 className="h-5 w-5 text-[var(--color-accent)]" aria-hidden="true" />
-              CRM, reservations, deals, and governance in one flow
+              {t("auth.login.capabilityWorkflow")}
             </li>
           </ul>
         </div>
 
         <p className="relative text-xs opacity-55">
-          Secure access for authorized POPWAM teams and partners.
+          {t("auth.login.secureAccess")}
         </p>
       </section>
 
@@ -68,20 +72,19 @@ export default function LoginPage() {
             <div className="ui-card p-6 shadow-[var(--shadow-lg)] sm:p-8">
               <div className="mb-7">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                  Authorized workspace
+                  {t("auth.login.formEyebrow")}
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--color-foreground)]">
-                  Welcome back
+                  {t("auth.login.formTitle")}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                  Sign in with your platform, developer, or brokerage account.
+                  {t("auth.login.formDescription")}
                 </p>
               </div>
               <LoginForm />
             </div>
             <p className="mt-5 text-center text-xs leading-5 text-[var(--color-muted)]">
-              Access is limited to authorized POPWAM users. Your workspace is selected
-              automatically after sign-in.
+              {t("auth.login.accessNote")}
             </p>
           </div>
         </div>
