@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { OrganizationProjectsSection } from "@/components/organization/organization-projects-section";
 import { OrganizationProfileHero } from "@/components/organization/organization-profile-hero";
 import { OrganizationPublicShell } from "@/components/organization/organization-public-shell";
 import { OrganizationVerificationBadge } from "@/components/organization/organization-verification-badge";
 import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
+import { normalizeLocale, tServer } from "@/i18n/server";
 import { resolvePublicOrganizationByDomain } from "@/lib/public-data";
 import { createSeoMetadata } from "@/lib/seo";
 
@@ -27,6 +29,8 @@ export async function generateMetadata({ params }: DomainAboutPageProps) {
 
 export default async function DomainAboutPage({ params }: DomainAboutPageProps) {
   const { domain } = await params;
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
+  const t = (key: string, params?: Record<string, string | number>) => tServer(locale, key, params);
   const organization = await resolvePublicOrganizationByDomain(domain);
 
   if (!organization) {
@@ -34,14 +38,14 @@ export default async function DomainAboutPage({ params }: DomainAboutPageProps) 
   }
 
   return (
-    <OrganizationPublicShell domain={domain} organization={organization}>
+    <OrganizationPublicShell domain={domain} organization={organization} locale={locale}>
       <OrganizationProfileHero
         organization={organization}
-        eyebrow={`About ${organization.type === "DEVELOPER" ? "developer" : "brokerage"}`}
+        eyebrow={t(organization.type === "DEVELOPER" ? "organization.about.developer" : "organization.about.brokerage")}
         primaryHref={`/${domain}/projects`}
-        primaryLabel="View projects"
+        primaryLabel={t("organization.about.viewProjects")}
         secondaryHref={`/${domain}/contact`}
-        secondaryLabel="Contact team"
+        secondaryLabel={t("organization.about.contactTeam")}
       />
       <OrganizationTrustStrip
         organization={organization}
@@ -52,7 +56,7 @@ export default async function DomainAboutPage({ params }: DomainAboutPageProps) 
           <OrganizationVerificationBadge label={organization.verifiedLabel} />
           <dl className="mt-6 grid gap-4 text-sm text-[var(--color-muted)]">
             <div>
-              <dt className="font-semibold text-[var(--color-foreground)]">Location</dt>
+              <dt className="font-semibold text-[var(--color-foreground)]">{t("common.location")}</dt>
               <dd>
                 {organization.city}, {organization.country}
               </dd>
@@ -60,7 +64,7 @@ export default async function DomainAboutPage({ params }: DomainAboutPageProps) 
             {organization.serviceAreas?.length ? (
               <div>
                 <dt className="font-semibold text-[var(--color-foreground)]">
-                  Service areas
+                  {t("developer.profile.serviceAreas")}
                 </dt>
                 <dd>{organization.serviceAreas.join(", ")}</dd>
               </div>
@@ -69,7 +73,7 @@ export default async function DomainAboutPage({ params }: DomainAboutPageProps) 
         </aside>
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-            About
+            {t("nav.about")}
           </p>
           <h1 className="mt-3 text-4xl font-semibold text-[var(--color-foreground)]">
             {organization.name}
@@ -89,8 +93,8 @@ export default async function DomainAboutPage({ params }: DomainAboutPageProps) 
       <OrganizationProjectsSection
         domain={domain}
         projects={organization.projects}
-        title="Projects from this organization"
-        intro="Public projects appear when this organization has approved them for viewing."
+        title={t("organization.about.projectsTitle")}
+        intro={t("organization.about.projectsIntro")}
       />
     </OrganizationPublicShell>
   );

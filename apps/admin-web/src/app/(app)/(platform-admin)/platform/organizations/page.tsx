@@ -8,8 +8,10 @@ import { PageHeader } from "@/components/layout/page-header";
 import { OrganizationResponsiveList } from "@/components/platform/organization-responsive-list";
 import { useOrganizations } from "@/hooks/use-platform-admin";
 import { CreateOrganizationForm } from "@/components/platform/create-organization-form";
+import { useI18n } from "@/i18n";
 
 export default function PlatformOrganizationsPage() {
+  const { t } = useI18n();
   const { data = [], isLoading, error } = useOrganizations();
   const [type, setType] = useState("ALL");
   const [status, setStatus] = useState("ALL");
@@ -26,8 +28,8 @@ export default function PlatformOrganizationsPage() {
   return (
     <>
       <PageHeader
-        title="Organizations"
-        description="Trust and access control center for developers, brokerages, individual brokers, and platform-owned entities."
+        title={t("platformOrganizations.title")}
+        description={t("platformOrganizations.description")}
       />
       <CreateOrganizationForm />
       <section className="ui-card mb-5 p-4">
@@ -37,52 +39,52 @@ export default function PlatformOrganizationsPage() {
               <Filter className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Review filters</h2>
+              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">{t("platformOrganizations.filters.title")}</h2>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Showing {rows.length} of {data.length} organization records.
+                {t("platformOrganizations.filters.showing", { shown: rows.length, total: data.length })}
               </p>
             </div>
           </div>
           <div className="inline-flex items-center gap-2 text-sm text-[var(--color-muted)]">
             <Building2 className="h-4 w-4" aria-hidden="true" />
-            Result count is based on the loaded organization list.
+            {t("platformOrganizations.filters.countNote")}
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <label className="space-y-2 text-sm font-medium text-[var(--color-foreground)]">
-            <span>Type</span>
+            <span>{t("common.type")}</span>
           <select
             className="ui-input"
             value={type}
             onChange={(event) => setType(event.target.value)}
           >
-            <option value="ALL">All types</option>
-            <option value="PLATFORM">Platform</option>
-            <option value="DEVELOPER">Developer</option>
-            <option value="BROKERAGE">Brokerage</option>
-            <option value="INDIVIDUAL_BROKER">Individual broker</option>
+            <option value="ALL">{t("platformOrganizations.filters.allTypes")}</option>
+            <option value="PLATFORM">{t("organizationType.platform")}</option>
+            <option value="DEVELOPER">{t("organizationType.developer")}</option>
+            <option value="BROKERAGE">{t("organizationType.brokerage")}</option>
+            <option value="INDIVIDUAL_BROKER">{t("organizationType.individualBroker")}</option>
           </select>
         </label>
           <label className="space-y-2 text-sm font-medium text-[var(--color-foreground)]">
-            <span>Status</span>
+            <span>{t("common.status")}</span>
           <select
             className="ui-input"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
-            <option value="ALL">All statuses</option>
-            <option value="DRAFT">Draft</option>
-            <option value="PENDING_REVIEW">Pending review</option>
-            <option value="APPROVED">Approved</option>
-            <option value="SUSPENDED">Suspended</option>
-            <option value="REVOKED">Revoked</option>
+            <option value="ALL">{t("platformOrganizations.filters.allStatuses")}</option>
+            <option value="DRAFT">{t("status.draft")}</option>
+            <option value="PENDING_REVIEW">{t("status.pendingReview")}</option>
+            <option value="APPROVED">{t("status.approved")}</option>
+            <option value="SUSPENDED">{t("status.suspended")}</option>
+            <option value="REVOKED">{t("status.revoked")}</option>
           </select>
         </label>
       </div>
       </section>
-      {isLoading ? <LoadingState label="Loading organizations" /> : null}
+      {isLoading ? <LoadingState label={t("platformOrganizations.loading")} /> : null}
       {error ? (
-        <FeedbackState tone="error" title="Could not load organizations" description={error.message} />
+        <FeedbackState tone="error" title={t("platformOrganizations.error")} description={error.message} />
       ) : null}
       {!isLoading && !error ? (
         <OrganizationResponsiveList organizations={rows} totalCount={data.length} />

@@ -23,8 +23,10 @@ import {
   useUpdateDealRoomStatus,
 } from "@/hooks/use-deal-rooms";
 import { dealRoomErrorCopy } from "@/lib/deal-room-error-copy";
+import { useI18n } from "@/i18n";
 
 export function DealRoomDetailView({ id }: { id?: string }) {
+  const { t } = useI18n();
   const dealRoomId = id?.trim() ?? "";
   const { data: room, isLoading, error, refetch } = useDealRoom(dealRoomId);
   const messages = useDealRoomMessages(dealRoomId);
@@ -38,13 +40,13 @@ export function DealRoomDetailView({ id }: { id?: string }) {
     return (
       <FeedbackState
         tone="error"
-        title="Deal room not found"
-        description="The route did not include a deal room id."
+        title={t("dealRooms.notFound")}
+        description={t("dealRooms.missingRouteId")}
       />
     );
   }
 
-  if (isLoading) return <LoadingState label="Loading deal room" />;
+  if (isLoading) return <LoadingState label={t("dealRooms.loading")} />;
 
   if (error) {
     const copy = dealRoomErrorCopy(error);
@@ -55,7 +57,7 @@ export function DealRoomDetailView({ id }: { id?: string }) {
         description={copy.description}
         action={
           <Button className="ui-button-secondary" onClick={() => void refetch()}>
-            Try again
+            {t("common.retry")}
           </Button>
         }
       />
@@ -66,21 +68,21 @@ export function DealRoomDetailView({ id }: { id?: string }) {
     return (
       <FeedbackState
         tone="error"
-        title="Deal room not found"
-        description="The API returned no deal room for this id."
+        title={t("dealRooms.notFound")}
+        description={t("dealRooms.noApiRoom")}
       />
     );
   }
 
   const messageError = messages.error ? dealRoomErrorCopy(messages.error) : undefined;
   const description = room.unit?.unitNumber
-    ? `Unit ${room.unit.unitNumber} - Coordinate the parties and move this approved reservation through a clear handoff.`
-    : "Coordinate the parties and move this approved reservation through a clear handoff.";
+    ? t("dealRooms.descriptionWithUnit", { unit: room.unit.unitNumber })
+    : t("dealRooms.description");
 
   return (
     <>
       <PageHeader
-        title={room.project?.name ? `${room.project.name} negotiation` : "Deal room"}
+        title={room.project?.name ? t("dealRooms.projectNegotiation", { name: room.project.name }) : t("dealRooms.title")}
         description={description}
         actions={
           <>
@@ -88,7 +90,7 @@ export function DealRoomDetailView({ id }: { id?: string }) {
               currentStatus={room.status}
               isPending={updateStatus.isPending}
               error={updateStatus.error}
-              trigger={<Button className="ui-button-secondary">Update status</Button>}
+              trigger={<Button className="ui-button-secondary">{t("dealRooms.updateStatus")}</Button>}
               onConfirm={(status) => updateStatus.mutateAsync(status)}
             />
             {room.status === "APPROVED" || room.status === "PENDING_APPROVAL" ? (
@@ -97,7 +99,7 @@ export function DealRoomDetailView({ id }: { id?: string }) {
                 defaultDealRoomId={room.id}
                 isPending={createDeal.isPending}
                 error={createDeal.error}
-                trigger={<Button>Finalize as deal</Button>}
+                trigger={<Button>{t("dealRooms.finalizeAsDeal")}</Button>}
                 onConfirm={(input) =>
                   createDeal.mutateAsync({
                     dealRoomId: room.id,
@@ -113,8 +115,8 @@ export function DealRoomDetailView({ id }: { id?: string }) {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
           <DealRoomSummaryCard room={room} />
-          <DetailCard title="Negotiation activity">
-            {messages.isLoading ? <LoadingState label="Loading messages" /> : null}
+          <DetailCard title={t("dealRooms.negotiationActivity")}>
+            {messages.isLoading ? <LoadingState label={t("dealRooms.loadingMessages")} /> : null}
             {messageError ? (
               <FeedbackState
                 tone="error"
@@ -122,7 +124,7 @@ export function DealRoomDetailView({ id }: { id?: string }) {
                 description={messageError.description}
                 action={
                   <Button className="ui-button-secondary" onClick={() => void messages.refetch()}>
-                    Try again
+                    {t("common.retry")}
                   </Button>
                 }
               />
@@ -142,17 +144,17 @@ export function DealRoomDetailView({ id }: { id?: string }) {
           </DetailCard>
         </div>
         <div className="space-y-6">
-          <DetailCard title="Participants">
+          <DetailCard title={t("dealRooms.participants")}>
             <DealRoomParticipantsList participants={room.participants} />
           </DetailCard>
-          <DetailCard title="Invite client">
+          <DetailCard title={t("dealRooms.inviteClient")}>
             <ClientInviteDialog
               isPending={inviteClient.isPending}
               error={inviteClient.error}
               onInvite={() => inviteClient.mutateAsync()}
             />
           </DetailCard>
-          <DetailCard title="Add participant">
+          <DetailCard title={t("dealRooms.addParticipant")}>
             <DealRoomParticipantForm
               isPending={addParticipant.isPending}
               error={addParticipant.error}

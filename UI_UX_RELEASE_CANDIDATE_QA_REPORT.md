@@ -1,33 +1,29 @@
 # UI/UX Release Candidate QA Report
 
-Date: 2026-06-28
+Date: 2026-06-30
 
-## Mobile Public-First UX
+## I18N Status
 
-The mobile app now launches as a public browsing experience instead of requiring immediate login.
+- Admin Web true/accessibility candidates: 523 remaining.
+- Public Web true/accessibility candidates: 0 remaining.
+- Mobile true/accessibility candidates: 0 remaining.
+- Missing Arabic keys: 0.
+- Missing French keys: 0.
 
-## Verified
+## Verification
 
-- Signed-out startup opens marketplace.
-- Login remains optional.
-- Continue as guest is available.
-- Protected workspace routes redirect guests to login with return intent.
-- Successful login routes a developer-role test user to CRM leads.
-- Logout returns to marketplace.
-- Arabic RTL public marketplace test passes.
-
-## Commands
-
+- `pnpm i18n:audit`: passed with 0 missing Arabic/French keys.
+- `pnpm --filter admin-web lint`: passed.
+- `pnpm --filter admin-web build`: passed.
+- `pnpm --filter public-web lint`: passed.
+- `pnpm --filter public-web build`: passed.
 - `flutter gen-l10n`: passed.
 - `flutter analyze`: passed.
 - `flutter test`: passed.
+- `git diff --check`: passed with line-ending warnings only.
 
-## Not Run
+## Remaining QA
 
-- Manual Android/iOS device QA.
-- Real staging login by developer and brokerage accounts.
-- Expired-token manual QA against staging.
+Manual Arabic/French viewport QA was not completed.
 
-## Release Recommendation
-
-Staging demo is improved and can show public-first mobile behavior with caveats. Production still needs manual device QA and real-account staging verification.
+Production remains No-Go because Admin i18n is still partial and manual runtime visual QA is incomplete.

@@ -7,9 +7,11 @@ import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/i18n";
 import { formatDate } from "@/lib/format";
 
 export function OrganizationInvitationsCard({ id, organizationType }: { id: string; organizationType: string }) {
+  const { t } = useI18n();
   const invitations = useOrganizationInvitations(id);
   const create = useCreateOrganizationInvitation(id);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -35,34 +37,34 @@ export function OrganizationInvitationsCard({ id, organizationType }: { id: stri
   return (
     <div className="space-y-4">
       <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
-        <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Create invitation link</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-foreground)]">{t("organizationInvites.createLink")}</h3>
         <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-          This creates an invite token and link for the recipient. Share the link manually if email delivery is not configured.
+          {t("organizationInvites.description")}
         </p>
       </div>
       <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto]" onSubmit={submit}>
         <div className="space-y-2">
-          <Label htmlFor="organization-invite-email">Recipient email</Label>
+          <Label htmlFor="organization-invite-email">{t("organizationInvites.recipientEmail")}</Label>
           <Input required type="email" id="organization-invite-email" name="email" placeholder="owner@company.com" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="organization-invite-role">Intended role</Label>
+          <Label htmlFor="organization-invite-role">{t("organizationInvites.intendedRole")}</Label>
           <select id="organization-invite-role" name="intendedRole" className="ui-input">
             {roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
         </select>
         </div>
         <div className="flex items-end">
           <Button className="w-full" disabled={create.isPending} type="submit">
-            {create.isPending ? "Creating" : "Create invite"}
+            {create.isPending ? t("common.creating") : t("organizationInvites.createInvite")}
           </Button>
         </div>
       </form>
       {create.error ? (
-        <FeedbackState tone="error" title="Could not create invitation" description={create.error.message} />
+        <FeedbackState tone="error" title={t("organizationInvites.errorCreate")} description={create.error.message} />
       ) : null}
       {inviteUrl ? (
         <div className="ui-feedback ui-feedback-success space-y-2" role="status">
-          <p className="text-sm font-medium">Invitation link created. Share this link manually with the recipient.</p>
+          <p className="text-sm font-medium">{t("organizationInvites.created")}</p>
           <div className="flex flex-wrap items-center gap-2">
             <code className="min-w-0 flex-1 break-all text-xs">{inviteUrl}</code>
             <Button
@@ -73,7 +75,7 @@ export function OrganizationInvitationsCard({ id, organizationType }: { id: stri
                 setCopied(true);
               }}
             >
-              {copied ? "Copied" : "Copy invite link"}
+              {copied ? t("common.copied") : t("organizationInvites.copyLink")}
             </Button>
           </div>
         </div>
@@ -85,17 +87,19 @@ export function OrganizationInvitationsCard({ id, organizationType }: { id: stri
             <span className="text-[var(--color-muted)]">{invite.intendedRole.replaceAll("_", " ")}</span>
             <span className="ui-badge w-fit">{invite.status.replaceAll("_", " ")}</span>
             <span className="text-[var(--color-muted)]">
-              {invite.acceptedAt ? `Accepted ${formatDate(invite.acceptedAt)}` : `Expires ${formatDate(invite.expiresAt)}`}
+              {invite.acceptedAt
+                ? t("organizationInvites.accepted", { date: formatDate(invite.acceptedAt) })
+                : t("organizationInvites.expires", { date: formatDate(invite.expiresAt) })}
             </span>
           </div>
         ))}
         {invitations.isLoading ? (
-          <p className="text-sm text-[var(--color-muted)]">Loading invitations...</p>
+          <p className="text-sm text-[var(--color-muted)]">{t("organizationInvites.loading")}</p>
         ) : null}
         {!invitations.isLoading && !invitations.data?.length ? (
           <EmptyState
-            title="No invitations yet"
-            description="Create an invite when the organization is ready for an owner or admin to join."
+            title={t("organizationInvites.emptyTitle")}
+            description={t("organizationInvites.emptyDescription")}
           />
         ) : null}
       </div>

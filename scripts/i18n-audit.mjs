@@ -31,6 +31,7 @@ const API_OR_CODE_TEXT = [
   /^[a-z][a-zA-Z0-9]*$/,
   /^[a-z][a-zA-Z0-9]*(Id|At|Token|Url|Key|Size|Name|Role|Type|Status)$/,
   /^[A-Z][A-Z0-9_]+$/,
+  /^\$[a-zA-Z]\w*\/$/,
   /^Bearer /,
   /^Accept$/,
   /^Authorization$/,
@@ -55,6 +56,7 @@ const STRING_ALLOWLIST = [
   /^rgb/i,
   /^hsl/i,
   /^\/api\//,
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   /^[A-Z0-9_]+$/,
   /^[a-z0-9_.:/?&=-]+$/,
 ];
@@ -368,7 +370,7 @@ function toMarkdown(result) {
       lines.push(`- ${classification}: ${count}`);
     }
     lines.push("");
-    for (const file of scan.files.slice(0, 40)) {
+    for (const file of scan.files) {
       lines.push(`- ${file.file}: ${file.count}`);
       for (const entry of file.entries.slice(0, 5)) {
         lines.push(`  - L${entry.line}: [${entry.classification}] ${entry.text}`);

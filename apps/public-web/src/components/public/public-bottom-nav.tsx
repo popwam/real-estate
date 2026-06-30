@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PublicPreferences } from "@/components/public/public-preferences";
+import { useI18n } from "@/i18n";
 
 type PublicNavItem = {
   href: string;
@@ -13,11 +14,12 @@ type PublicNavItem = {
 };
 
 const visibleItems: PublicNavItem[] = [
-  { href: "/", label: "Home", icon: HomeIcon },
-  { href: "/projects", label: "Projects", icon: SearchIcon },
+  { href: "/", label: "nav.home", icon: HomeIcon },
+  { href: "/projects", label: "nav.projects", icon: SearchIcon },
 ];
 
 export function PublicBottomNav() {
+  const { t } = useI18n();
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -38,7 +40,7 @@ export function PublicBottomNav() {
             type="button"
             className="fixed inset-0 z-[39] cursor-default bg-[var(--color-overlay)]"
             onClick={() => setMoreOpen(false)}
-            aria-label="Close more options"
+            aria-label={t("publicNav.closeMore")}
           />
           <section
             className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom))] z-40 rounded-t-[var(--radius-xl)] border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 pb-5 pt-4 shadow-[var(--shadow-xl)]"
@@ -47,8 +49,8 @@ export function PublicBottomNav() {
             aria-labelledby="public-more-title"
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--color-border-strong)]" aria-hidden="true" />
-            <h2 id="public-more-title" className="text-lg font-semibold text-[var(--color-foreground)]">Display & language</h2>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">Choose a comfortable theme, text size, and reading direction.</p>
+            <h2 id="public-more-title" className="text-lg font-semibold text-[var(--color-foreground)]">{t("publicNav.displayLanguage")}</h2>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">{t("publicNav.displayLanguageDescription")}</p>
             <div className="mt-4">
               <PublicPreferences expanded />
             </div>
@@ -59,7 +61,7 @@ export function PublicBottomNav() {
       <nav
         className="fixed inset-x-0 bottom-0 z-[var(--z-fixed)] border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        aria-label="Mobile marketplace navigation"
+        aria-label={t("publicNav.mobileAria")}
       >
         <div className="grid h-[var(--bottom-nav-height)] grid-cols-3">
           {visibleItems.map((item) => {
@@ -71,11 +73,11 @@ export function PublicBottomNav() {
                 href={item.href}
                 onClick={() => setMoreOpen(false)}
                 className={navClass(active)}
-                aria-label={item.label}
+                aria-label={t(item.label)}
                 aria-current={active ? "page" : undefined}
               >
                 <Icon className="h-5 w-5 shrink-0" />
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
               </Link>
             );
           })}
@@ -83,11 +85,11 @@ export function PublicBottomNav() {
             type="button"
             className={navClass(moreOpen)}
             onClick={() => setMoreOpen((open) => !open)}
-            aria-label="Display and language options"
+            aria-label={t("publicNav.displayLanguageOptions")}
             aria-expanded={moreOpen}
           >
             <MoreIcon className="h-5 w-5 shrink-0" />
-            <span>More</span>
+            <span>{t("publicNav.more")}</span>
           </button>
         </div>
       </nav>

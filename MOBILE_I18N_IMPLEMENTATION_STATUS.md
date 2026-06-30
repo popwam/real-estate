@@ -1,18 +1,12 @@
 # Mobile I18N Implementation Status
 
-Date: 2026-06-28
+Date: 2026-06-30
 
-## Summary
+## Status
 
-New mobile public-first/auth copy was added to English, Arabic, and French ARB catalogs.
-
-## Added Keys
-
-- `continueAsGuest`
-- `continueBrowsing`
-- `guestMarketplaceTitle`
-- `guestMarketplaceMessage`
-- `signInToRequest`
+- Mobile true/accessibility candidates: 0
+- Missing Arabic keys: 0
+- Missing French keys: 0
 
 ## Verification
 
@@ -20,7 +14,4 @@ New mobile public-first/auth copy was added to English, Arabic, and French ARB c
 - `flutter analyze`: passed.
 - `flutter test`: passed.
 
-## RTL/LTR
-
-- Arabic RTL widget coverage remains in tests.
-- Manual Android/iOS large-text QA is still pending.
+No mobile source changes were required for this i18n-only pass.

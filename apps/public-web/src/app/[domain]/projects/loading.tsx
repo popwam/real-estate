@@ -1,4 +1,8 @@
+import { tServer } from "@/i18n/server";
+
 export default function DomainProjectsLoading() {
+  const t = (key: string) => tServer(undefined, key);
+
   return (
     <div className="bg-[var(--color-background)]">
       <section className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
@@ -9,9 +13,9 @@ export default function DomainProjectsLoading() {
         </div>
       </section>
       <section className="mx-auto grid max-w-7xl gap-5 px-4 py-10 sm:px-6 md:grid-cols-2 xl:grid-cols-3">
-        <div className="ui-card h-80 animate-pulse" aria-label="Loading project" />
-        <div className="ui-card h-80 animate-pulse" aria-label="Loading project" />
-        <div className="ui-card h-80 animate-pulse" aria-label="Loading project" />
+        <div className="ui-card h-80 animate-pulse" aria-label={t("loading.project")} />
+        <div className="ui-card h-80 animate-pulse" aria-label={t("loading.project")} />
+        <div className="ui-card h-80 animate-pulse" aria-label={t("loading.project")} />
       </section>
     </div>
   );

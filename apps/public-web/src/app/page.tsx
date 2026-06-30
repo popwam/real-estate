@@ -15,12 +15,33 @@ export const metadata = createSeoMetadata({
 
 export default async function Home() {
   const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
-  const t = (key: string) => tServer(locale, key);
+  const t = (key: string, params?: Record<string, string | number>) =>
+    tServer(locale, key, params);
   const projects = await safeListFeaturedPublicProjects();
 
   return (
     <div className="bg-[var(--color-background)]">
-      <MarketplaceHero featuredCount={projects.length} />
+      <MarketplaceHero
+        featuredCount={projects.length}
+        copy={{
+          eyebrow: t("marketplace.hero.eyebrow"),
+          title: t("marketplace.hero.title"),
+          description: t("marketplace.hero.description"),
+          browse: t("home.empty.browse"),
+          focusEyebrow: t("marketplace.hero.focusEyebrow"),
+          focusTitle: t("marketplace.hero.focusTitle"),
+          focusDescription: t("marketplace.hero.focusDescription"),
+          signals: [
+            t("marketplace.hero.signal.verified"),
+            t("marketplace.hero.signal.inventory"),
+            t("marketplace.hero.signal.crm"),
+          ],
+          featuredCount: t("marketplace.hero.featuredCount", {
+            count: projects.length,
+          }),
+          featuredEmpty: t("marketplace.hero.featuredEmpty"),
+        }}
+      />
 
       <ProjectTrustStrip />
 
@@ -44,7 +65,7 @@ export default async function Home() {
 
         <div className="mt-8">
           {projects.length > 0 ? (
-            <ProjectResultsGrid projects={projects} />
+            <ProjectResultsGrid projects={projects} locale={locale} />
           ) : (
             <div className="ui-card border-dashed p-8 text-center sm:p-10">
               <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">

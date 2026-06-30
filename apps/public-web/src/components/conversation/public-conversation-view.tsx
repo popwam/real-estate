@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PublicConversationComposer } from "@/components/conversation/public-conversation-composer";
 import { PublicConversationShell } from "@/components/conversation/public-conversation-shell";
 import { PublicMessageBubble } from "@/components/conversation/public-message-bubble";
+import { useI18n } from "@/i18n";
 import {
   getPublicConversationByToken,
   isPublicConversationMessageRateLimitError,
@@ -29,6 +30,7 @@ export function PublicConversationView({
   const [sentMessage, setSentMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isOpen = conversation.status?.toUpperCase() === "OPEN";
+  const { t, formatNumber } = useI18n();
 
   const sortedMessages = useMemo(
     () =>
@@ -48,12 +50,12 @@ export function PublicConversationView({
     setSentMessage(null);
 
     if (!trimmedBody) {
-      setError("Please enter a message before sending.");
+      setError(t("conversation.error.required"));
       return;
     }
 
     if (trimmedBody.length > 2000) {
-      setError("Message is too long. Please keep it under 2000 characters.");
+      setError(t("conversation.error.tooLong"));
       return;
     }
 
@@ -65,7 +67,7 @@ export function PublicConversationView({
         });
 
         setBody("");
-        setSentMessage("Your message was sent.");
+        setSentMessage(t("conversation.sent"));
 
         try {
           const refreshed = await getPublicConversationByToken(token);
@@ -77,19 +79,22 @@ export function PublicConversationView({
           }));
         }
       } catch (caught) {
-        setError(errorMessage(caught));
+        setError(errorMessage(caught, t));
       }
     });
   }
 
   return (
     <PublicConversationShell
-      title={conversation.project?.name ?? "Private conversation"}
-      description="This private link shows public-safe conversation details only. Do not share sensitive payment or identity documents here."
+      title={conversation.project?.name ?? t("conversation.title")}
+      description={t("conversation.description")}
       context={
         <ConversationContext
           conversation={conversation}
-          messageCount={sortedMessages.length}
+          messageCountLabel={t("conversation.messageCount", {
+            count: formatNumber(sortedMessages.length),
+          })}
+          statusLabel={readableStatus(conversation.status, t)}
         />
       }
       composer={
@@ -113,14 +118,13 @@ export function PublicConversationView({
               id="conversation-messages-title"
               className="text-xl font-semibold text-[var(--color-foreground)]"
             >
-              Messages
+              {t("conversation.messages")}
             </h2>
             <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-              Replies are added to this conversation using the existing secure
-              link.
+              {t("conversation.repliesDescription")}
             </p>
           </div>
-          <span className="ui-badge">{readableStatus(conversation.status)}</span>
+          <span className="ui-badge">{readableStatus(conversation.status, t)}</span>
         </div>
 
         {sortedMessages.length ? (
@@ -132,14 +136,13 @@ export function PublicConversationView({
         ) : (
           <div className="ui-card mt-5 border-dashed p-6 text-center">
             <h3 className="text-xl font-semibold text-[var(--color-foreground)]">
-              This conversation is ready.
+              {t("conversation.ready")}
             </h3>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--color-muted)]">
-              Messages from you and the project team will appear here when they
-              are available.
+              {t("conversation.emptyMessages")}
             </p>
             <Link href="#conversation-composer" className="ui-button ui-button-primary mt-5">
-              Start with a reply
+              {t("conversation.startReply")}
             </Link>
           </div>
         )}
@@ -150,11 +153,14 @@ export function PublicConversationView({
 
 function ConversationContext({
   conversation,
-  messageCount,
+  messageCountLabel,
+  statusLabel,
 }: {
   conversation: PublicConversationByToken;
-  messageCount: number;
+  messageCountLabel: string;
+  statusLabel: string;
 }) {
+  const { t } = useI18n();
   const participants = conversation.participants.filter(
     (participant) => participant.displayName || participant.publicRole,
   );
@@ -162,17 +168,17 @@ function ConversationContext({
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       {conversation.project?.name ? (
-        <ContextCard label="Project" value={conversation.project.name} />
+        <ContextCard label={t("conversation.project")} value={conversation.project.name} />
       ) : null}
-      <ContextCard label="Status" value={readableStatus(conversation.status)} />
+      <ContextCard label={t("conversation.status")} value={statusLabel} />
       <ContextCard
-        label="Messages"
-        value={`${messageCount} message${messageCount === 1 ? "" : "s"}`}
+        label={t("conversation.messages")}
+        value={messageCountLabel}
       />
       {participants.length ? (
         <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 sm:col-span-3">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-muted)]">
-            Participants
+            {t("conversation.participants")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {participants.map((participant, index) => (
@@ -180,7 +186,7 @@ function ConversationContext({
                 key={`${participant.publicRole}-${participant.displayName}-${index}`}
                 className="ui-badge"
               >
-                {participant.displayName?.trim() || readableStatus(participant.publicRole)}
+                {participant.displayName?.trim() || readableStatus(participant.publicRole, t)}
               </span>
             ))}
           </div>
@@ -203,34 +209,34 @@ function ContextCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function readableStatus(value: string | null | undefined) {
-  if (!value) return "Available";
+function readableStatus(value: string | null | undefined, t: (key: string) => string) {
+  if (!value) return t("status.available");
 
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  const normalized = value.toUpperCase();
+  if (normalized === "OPEN") return t("status.open");
+  if (normalized === "CLOSED") return t("status.closed");
+  if (normalized === "ARCHIVED") return t("status.archived");
+  return value;
 }
 
-function errorMessage(error: unknown) {
+function errorMessage(error: unknown, t: (key: string) => string) {
   if (isPublicConversationMessageRateLimitError(error)) {
-    return "Too many messages were sent from this browser. Please try again shortly.";
+    return t("conversation.error.rateLimit");
   }
 
   if (error instanceof PublicApiError) {
     if (error.status === 400) {
       return error.message.toLowerCase().includes("2000")
-        ? "Message is too long. Please keep it under 2000 characters."
-        : "Please check your message and try again.";
+        ? t("conversation.error.tooLong")
+        : t("conversation.error.validation");
     }
     if (error.status === 404) {
-      return "This conversation link is no longer available.";
+      return t("conversation.error.notFound");
     }
     if (error.status === 410) {
-      return "This conversation link has expired.";
+      return t("conversation.error.expired");
     }
   }
 
-  return "Could not send your message. Please try again.";
+  return t("conversation.error.generic");
 }

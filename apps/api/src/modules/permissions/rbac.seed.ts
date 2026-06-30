@@ -458,7 +458,7 @@ export async function seedBaseRolesAndPermissions(prisma: PrismaClient) {
     const existingRole = await prisma.role.findFirst({
       where: { organizationId: null, name },
     });
-    const role = existingRole
+    const systemRole = existingRole
       ? await prisma.role.update({
           where: { id: existingRole.id },
           data: { isSystem: true },
@@ -472,28 +472,43 @@ export async function seedBaseRolesAndPermissions(prisma: PrismaClient) {
         });
     rolesSeeded += 1;
 
-    for (const permissionKey of ROLE_PERMISSIONS[name]) {
-      const permission = await prisma.permission.findUniqueOrThrow({
-        where: { key: permissionKey },
-      });
+    const rolesToSync = await prisma.role.findMany({ where: { name } });
+    const uniqueRoles = new Map(
+      [systemRole, ...rolesToSync].map((role) => [role.id, role]),
+    );
 
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId: role.id,
-            permissionId: permission.id,
-          },
-        },
-        create: {
-          roleId: role.id,
-          permissionId: permission.id,
-        },
-        update: {},
-      });
+    for (const role of uniqueRoles.values()) {
+      await syncRolePermissions(prisma, role.id, name);
     }
   }
 
   return { rolesSeeded, permissionsSeeded };
+}
+
+async function syncRolePermissions(
+  prisma: Pick<PrismaClient, 'permission' | 'rolePermission'>,
+  roleId: string,
+  roleName: (typeof BASE_ROLES)[number],
+) {
+  for (const permissionKey of ROLE_PERMISSIONS[roleName]) {
+    const permission = await prisma.permission.findUniqueOrThrow({
+      where: { key: permissionKey },
+    });
+
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId,
+          permissionId: permission.id,
+        },
+      },
+      create: {
+        roleId,
+        permissionId: permission.id,
+      },
+      update: {},
+    });
+  }
 }
 
 if (require.main === module) {

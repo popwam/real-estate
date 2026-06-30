@@ -1,11 +1,15 @@
-export function WhatsAppPlaceholderButton() {
+import { tServer } from "@/i18n/server";
+
+export function WhatsAppPlaceholderButton({ locale }: { locale?: string }) {
+  const t = (key: string) => tServer(locale, key);
+
   return (
     <a
       href="#lead-form"
-      aria-label="Open the contact form to request WhatsApp contact"
+      aria-label={t("cta.whatsappAria")}
       className="ui-button ui-button-accent"
     >
-      WhatsApp contact
+      {t("cta.whatsappContact")}
     </a>
   );
 }

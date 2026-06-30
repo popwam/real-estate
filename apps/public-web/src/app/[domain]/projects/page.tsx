@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { OrganizationProjectsSection } from "@/components/organization/organization-projects-section";
 import { OrganizationPublicShell } from "@/components/organization/organization-public-shell";
 import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
+import { normalizeLocale, tServer } from "@/i18n/server";
 import { resolvePublicOrganizationByDomain } from "@/lib/public-data";
 import { createSeoMetadata } from "@/lib/seo";
 
@@ -26,6 +28,8 @@ export async function generateMetadata({ params }: DomainProjectsPageProps) {
 
 export default async function DomainProjectsPage({ params }: DomainProjectsPageProps) {
   const { domain } = await params;
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
+  const t = (key: string, params?: Record<string, string | number>) => tServer(locale, key, params);
   const organization = await resolvePublicOrganizationByDomain(domain);
 
   if (!organization) {
@@ -33,19 +37,17 @@ export default async function DomainProjectsPage({ params }: DomainProjectsPageP
   }
 
   return (
-    <OrganizationPublicShell domain={domain} organization={organization}>
+    <OrganizationPublicShell domain={domain} organization={organization} locale={locale}>
       <section className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-            Organization projects
+            {t("domainProjects.eyebrow")}
           </p>
           <h1 className="mt-3 text-4xl font-semibold text-[var(--color-foreground)]">
             {organization.name} projects
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-muted)]">
-            Browse this organization&apos;s public portfolio. The current
-            collection has {organization.projects.length} project
-            {organization.projects.length === 1 ? "" : "s"} available.
+            {t("domainProjects.description", { count: organization.projects.length })}
           </p>
         </div>
       </section>
@@ -56,8 +58,8 @@ export default async function DomainProjectsPage({ params }: DomainProjectsPageP
       <OrganizationProjectsSection
         domain={domain}
         projects={organization.projects}
-        title="Project portfolio"
-        intro="Project cards show public facts from this organization profile only."
+        title={t("domainProjects.portfolio")}
+        intro={t("domainProjects.portfolioIntro")}
         showViewAll={false}
       />
     </OrganizationPublicShell>

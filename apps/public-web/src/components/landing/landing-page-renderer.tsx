@@ -1,12 +1,16 @@
+ "use client";
+
 import { StickyCtaBar } from "@/components/cta/sticky-cta-bar";
 import { LandingConversionSection } from "@/components/landing/landing-conversion-section";
 import { LandingProjectShowcase } from "@/components/landing/landing-project-showcase";
 import { ProjectMediaVisual } from "@/components/marketplace/project-media-visual";
 import { OrganizationVerificationBadge } from "@/components/organization/organization-verification-badge";
+import { useI18n } from "@/i18n";
 import type { ResolvedLandingPage } from "@/lib/mock-landing-pages";
 
 export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage }) {
   const project = landing.project;
+  const { t } = useI18n();
 
   return (
     <div className="bg-[var(--color-background)]">
@@ -14,7 +18,7 @@ export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage 
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.04fr_0.96fr] lg:items-center lg:py-14">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-              Featured opportunity
+              {t("landing.featuredOpportunity")}
             </p>
             <h1 className="mt-4 max-w-5xl text-4xl font-semibold leading-tight text-[var(--color-foreground)] sm:text-5xl lg:text-6xl">
               {landing.title}
@@ -28,7 +32,7 @@ export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage 
               </a>
               {project ? (
                 <a href="#project" className="ui-button ui-button-secondary">
-                  View project details
+                  {t("landing.viewProjectDetails")}
                 </a>
               ) : null}
             </div>
@@ -52,10 +56,10 @@ export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage 
         <section className="border-y border-[var(--color-border)] bg-[var(--color-surface)]">
           <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-              Highlights
+              {t("landing.highlights")}
             </p>
             <h2 className="mt-3 text-3xl font-semibold text-[var(--color-foreground)]">
-              Campaign highlights
+              {t("landing.campaignHighlights")}
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {landing.amenities.map((amenity) => (
@@ -73,10 +77,10 @@ export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.38fr_0.62fr]">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-            Organization
+            {t("common.organization")}
           </p>
           <h2 className="mt-3 text-3xl font-semibold text-[var(--color-foreground)]">
-            Published by {landing.organization.name}
+            {t("landing.publishedBy", { name: landing.organization.name })}
           </h2>
         </div>
         <div className="ui-card p-5 sm:p-6">
@@ -85,8 +89,7 @@ export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage 
             {landing.organization.name}
           </p>
           <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
-            Review the organization&apos;s public profile and project information
-            before making contact.
+            {t("landing.organizationReview")}
           </p>
         </div>
       </section>
@@ -96,7 +99,7 @@ export function LandingPageRenderer({ landing }: { landing: ResolvedLandingPage 
       {landing.faq.length > 0 ? (
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
           <h2 className="text-3xl font-semibold text-[var(--color-foreground)]">
-            Questions
+            {t("landing.questions")}
           </h2>
           <div className="mt-6 grid gap-4">
             {landing.faq.map((item) => (

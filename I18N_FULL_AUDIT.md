@@ -1,0 +1,824 @@
+# I18N Full Audit
+
+Date: 2026-06-30
+
+## Summary
+
+- Total hardcoded visible-string candidates found: 842
+- Scope: Admin Web, Public Web, and Mobile source trees requested in the prompt.
+- Method: conservative static scan for JSX text/visible attributes and Dart string literals, plus catalog key parity.
+- Note: candidates require human review because static scans can include non-visible constants and API/status values.
+
+## Catalog Parity
+
+| App | English message keys | Arabic message keys | French message keys | Arabic DOM keys | French DOM keys | Missing Arabic | Missing French |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| admin-web | 269 | 269 | 269 | 170 | 170 | 0 | 0 |
+| public-web | 260 | 260 | 260 | 122 | 122 | 0 | 0 |
+| mobile | 303 | 303 | 303 | 0 | 0 | 0 | 0 |
+
+## Remaining English Literal Candidates
+
+### admin-web
+
+Total candidates reviewed: 611
+Converted/already localized by DOM safety net: 88
+Ignored/classified non-UI: 0
+Remaining true visible UI candidates: 523
+
+Classification counts:
+
+- placeholder-or-accessibility-label: 251
+- translated-dom-safety-net: 88
+- true-visible-ui-copy: 272
+
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/verifications/[id]/page.tsx: 21
+  - L42: [placeholder-or-accessibility-label] Could not load verification detail
+  - L55: [true-visible-ui-copy] Back
+  - L65: [true-visible-ui-copy] Decision state
+  - L71: [translated-dom-safety-net] Organization
+  - L77: [true-visible-ui-copy] Submitted
+- apps/admin-web/src/components/admin-crm/crm-lead-detail-view.tsx: 21
+  - L28: [placeholder-or-accessibility-label] CRM lead could not be loaded
+  - L29: [placeholder-or-accessibility-label] CRM lead is unavailable
+  - L47: [placeholder-or-accessibility-label] Conversation could not be opened
+  - L51: [true-visible-ui-copy] Lead overview
+  - L51: [translated-dom-safety-net] Created
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/[id]/page.tsx: 16
+  - L23: [placeholder-or-accessibility-label] Project could not be loaded
+  - L24: [placeholder-or-accessibility-label] Project is unavailable
+  - L38: [translated-dom-safety-net] Inventory
+  - L39: [true-visible-ui-copy] Visibility
+  - L48: [translated-dom-safety-net] Overview
+- apps/admin-web/src/components/developer/project-selling-permissions.tsx: 16
+  - L48: [true-visible-ui-copy] Who can sell this project?
+  - L49: [true-visible-ui-copy] Choose the commercial rule that controls eligible broker attribution.
+  - L66: [true-visible-ui-copy] Current saved mode:
+  - L73: [placeholder-or-accessibility-label] Selling mode updated
+  - L74: [placeholder-or-accessibility-label] Selling permissions could not be updated
+- apps/admin-web/src/components/admin-crm/conversation-detail-view.tsx: 15
+  - L30: [placeholder-or-accessibility-label] Conversation could not be loaded
+  - L31: [placeholder-or-accessibility-label] Conversation is unavailable
+  - L42: [translated-dom-safety-net] Conversation overview
+  - L42: [true-visible-ui-copy] Open lead
+  - L42: [true-visible-ui-copy] Status note:
+- apps/admin-web/src/components/admin-operations/operations-page.tsx: 14
+  - L90: [translated-dom-safety-net] Filters
+  - L93: [translated-dom-safety-net] Search
+  - L96: [placeholder-or-accessibility-label] Search visible records
+  - L109: [true-visible-ui-copy] All
+  - L116: [placeholder-or-accessibility-label] Create record
+- apps/admin-web/src/components/layout/icon-sidebar-more-menu.tsx: 13
+  - L74: [placeholder-or-accessibility-label] More navigation
+  - L75: [placeholder-or-accessibility-label] Open more navigation
+  - L81: [translated-dom-safety-net] More
+  - L99: [true-visible-ui-copy] Workspace navigation
+  - L102: [true-visible-ui-copy] More tools
+- apps/admin-web/src/app/(app)/(developer)/developer/inventory/page.tsx: 12
+  - L44: [placeholder-or-accessibility-label] Inventory control
+  - L44: [true-visible-ui-copy] Create unit
+  - L48: [true-visible-ui-copy] Filter inventory
+  - L48: [true-visible-ui-copy] Narrow the organization-scoped inventory without hiding project context.
+  - L49: [translated-dom-safety-net] Clear filters
+- apps/admin-web/src/app/invite/[token]/page.tsx: 12
+  - L50: [true-visible-ui-copy] Company invitation
+  - L52: [true-visible-ui-copy] Join
+  - L55: [true-visible-ui-copy] Set your password to activate your POPWAM login for this organization.
+  - L62: [placeholder-or-accessibility-label] Invitation accepted
+  - L66: [translated-dom-safety-net] Sign in
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/[id]/payment-plans/page.tsx: 11
+  - L26: [true-visible-ui-copy] Project overview
+  - L26: [true-visible-ui-copy] New plan
+  - L29: [placeholder-or-accessibility-label] Project-level plan
+  - L30: [placeholder-or-accessibility-label] Unit-level plan
+  - L33: [placeholder-or-accessibility-label] Create payment plan
+- apps/admin-web/src/components/admin-import-export/import-preview-form.tsx: 11
+  - L104: [placeholder-or-accessibility-label] Preview project and inventory import
+  - L108: [true-visible-ui-copy] Source format
+  - L117: [true-visible-ui-copy] JSON rows
+  - L118: [true-visible-ui-copy] CSV text
+  - L122: [true-visible-ui-copy] Original file name
+- apps/admin-web/src/components/platform/domain-review-list.tsx: 11
+  - L34: [placeholder-or-accessibility-label] No organization domains waiting for review
+  - L57: [true-visible-ui-copy] Submitted:
+  - L61: [true-visible-ui-copy] Updated:
+  - L65: [true-visible-ui-copy] Last DNS check:
+  - L69: [true-visible-ui-copy] Verified:
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/[id]/visibility/page.tsx: 10
+  - L24: [placeholder-or-accessibility-label] Visibility could not be loaded
+  - L25: [placeholder-or-accessibility-label] Project is unavailable
+  - L36: [true-visible-ui-copy] Project overview
+  - L40: [placeholder-or-accessibility-label] Who can discover this project?
+  - L43: [true-visible-ui-copy] Current saved visibility:
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/new/page.tsx: 10
+  - L18: [placeholder-or-accessibility-label] Create a project
+  - L20: [true-visible-ui-copy] Back to projects
+  - L23: [placeholder-or-accessibility-label] Project setup
+  - L34: [placeholder-or-accessibility-label] Project creation guidance
+  - L36: [true-visible-ui-copy] What happens next
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/page.tsx: 10
+  - L23: [placeholder-or-accessibility-label] Project portfolio
+  - L28: [translated-dom-safety-net] New project
+  - L36: [true-visible-ui-copy] Find a project
+  - L37: [true-visible-ui-copy] Filter the current developer portfolio by lifecycle, audience, or location.
+  - L42: [translated-dom-safety-net] Clear filters
+- apps/admin-web/src/components/crm/lead-responsive-list.tsx: 10
+  - L19: [true-visible-ui-copy] Lead
+  - L19: [true-visible-ui-copy] Interest
+  - L19: [true-visible-ui-copy] Stage / status
+  - L19: [true-visible-ui-copy] Owner
+  - L19: [translated-dom-safety-net] Source
+- apps/admin-web/src/components/developer/project-form.tsx: 10
+  - L76: [placeholder-or-accessibility-label] Basic information
+  - L80: [placeholder-or-accessibility-label] Example: North Coast Residence
+  - L102: [placeholder-or-accessibility-label] Location
+  - L105: [placeholder-or-accessibility-label] City
+  - L106: [placeholder-or-accessibility-label] District or area
+- apps/admin-web/src/components/layout/mobile-bottom-nav.tsx: 10
+  - L58: [placeholder-or-accessibility-label] Close more navigation
+  - L68: [translated-dom-safety-net] Workspace
+  - L69: [true-visible-ui-copy] More tools
+  - L75: [placeholder-or-accessibility-label] Close more navigation
+  - L83: [true-visible-ui-copy] Search navigation
+- apps/admin-web/src/components/developer/inventory-unit-form.tsx: 9
+  - L85: [placeholder-or-accessibility-label] Unit identity
+  - L88: [true-visible-ui-copy] Select project
+  - L93: [placeholder-or-accessibility-label] Example: A-204
+  - L97: [placeholder-or-accessibility-label] Specifications
+  - L102: [true-visible-ui-copy] Not set
+- apps/admin-web/src/components/lead-reservations/reservation-request-detail-view.tsx: 9
+  - L22: [placeholder-or-accessibility-label] Reservation request could not be loaded
+  - L24: [true-visible-ui-copy] Approve and hold unit
+  - L24: [true-visible-ui-copy] Reject request
+  - L24: [true-visible-ui-copy] Cancel request
+  - L26: [placeholder-or-accessibility-label] Deal room could not be created
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/[id]/inventory/page.tsx: 8
+  - L43: [placeholder-or-accessibility-label] Project could not be loaded
+  - L50: [true-visible-ui-copy] Project overview
+  - L50: [true-visible-ui-copy] Create unit
+  - L54: [placeholder-or-accessibility-label] Project inventory could not be loaded
+  - L89: [true-visible-ui-copy] Units
+- apps/admin-web/src/components/commercial/commission-rules-page-content.tsx: 8
+  - L21: [translated-dom-safety-net] Commission Rules
+  - L23: [placeholder-or-accessibility-label] Existing rules
+  - L25: [placeholder-or-accessibility-label] Commission rules could not be loaded
+  - L26: [true-visible-ui-copy] No commission rules
+  - L26: [true-visible-ui-copy] Create the first scoped rule before finalizing eligible deals.
+- apps/admin-web/src/components/inventory/inventory-responsive-list.tsx: 8
+  - L22: [true-visible-ui-copy] Unit
+  - L52: [true-visible-ui-copy] Unit
+  - L53: [true-visible-ui-copy] Project / phase
+  - L54: [true-visible-ui-copy] Specifications
+  - L55: [true-visible-ui-copy] Price
+- apps/admin-web/src/app/(app)/(developer)/developer/dashboard/page.tsx: 7
+  - L50: [placeholder-or-accessibility-label] Business readiness
+  - L124: [placeholder-or-accessibility-label] Next recommended actions
+  - L129: [placeholder-or-accessibility-label] Create a project
+  - L137: [placeholder-or-accessibility-label] Review project readiness
+  - L144: [placeholder-or-accessibility-label] Keep inventory current
+- apps/admin-web/src/components/admin-public/public-lead-detail-view.tsx: 7
+  - L42: [true-visible-ui-copy] Mark reviewed
+  - L52: [true-visible-ui-copy] Mark spam
+  - L59: [true-visible-ui-copy] Convert placeholder
+  - L68: [placeholder-or-accessibility-label] Lead information
+  - L85: [placeholder-or-accessibility-label] Organization and project
+- apps/admin-web/src/components/admin-public/public-leads-page-content.tsx: 7
+  - L31: [placeholder-or-accessibility-label] Public leads
+  - L33: [placeholder-or-accessibility-label] Lead inbox
+  - L40: [true-visible-ui-copy] All statuses
+  - L41: [true-visible-ui-copy] New
+  - L42: [true-visible-ui-copy] Reviewed
+- apps/admin-web/src/components/commercial/commission-detail-view.tsx: 7
+  - L24: [placeholder-or-accessibility-label] Commission could not be loaded
+  - L34: [true-visible-ui-copy] Approve
+  - L35: [true-visible-ui-copy] Reject
+  - L40: [placeholder-or-accessibility-label] Commission calculation
+  - L48: [true-visible-ui-copy] Open related deal
+- apps/admin-web/src/components/commercial/commission-rule-form.tsx: 7
+  - L70: [translated-dom-safety-net] Brokerage
+  - L70: [translated-dom-safety-net] Broker
+  - L70: [translated-dom-safety-net] Platform
+  - L70: [translated-dom-safety-net] Developer
+  - L73: [true-visible-ui-copy] Percentage of deal value
+- apps/admin-web/src/components/lead-reservations/reservation-request-table.tsx: 7
+  - L22: [true-visible-ui-copy] No reservation requests
+  - L31: [true-visible-ui-copy] Reservation request
+  - L42: [true-visible-ui-copy] Developer response:
+  - L44: [true-visible-ui-copy] Review request
+  - L45: [true-visible-ui-copy] Approve
+- apps/admin-web/src/components/platform/organization-responsive-list.tsx: 7
+  - L33: [placeholder-or-accessibility-label] No organizations match these filters
+  - L65: [true-visible-ui-copy] Plan:
+  - L69: [true-visible-ui-copy] Plan expires:
+  - L73: [true-visible-ui-copy] Created:
+  - L77: [true-visible-ui-copy] Updated:
+- apps/admin-web/src/components/platform/verification-responsive-list.tsx: 7
+  - L23: [placeholder-or-accessibility-label] No verification requests waiting for review
+  - L51: [true-visible-ui-copy] Submitted:
+  - L55: [true-visible-ui-copy] Updated:
+  - L59: [true-visible-ui-copy] Expires:
+  - L63: [true-visible-ui-copy] Reviewed:
+- apps/admin-web/src/app/(app)/(brokerage)/brokerage/dashboard/page.tsx: 6
+  - L52: [placeholder-or-accessibility-label] Today’s work
+  - L137: [placeholder-or-accessibility-label] Quick actions
+  - L142: [placeholder-or-accessibility-label] Find available leads
+  - L150: [placeholder-or-accessibility-label] Reply to clients
+  - L157: [placeholder-or-accessibility-label] Review client protection
+- apps/admin-web/src/app/(app)/(developer)/developer/agreements/page.tsx: 6
+  - L23: [translated-dom-safety-net] Agreements
+  - L25: [placeholder-or-accessibility-label] Create Agreement Proposal
+  - L28: [translated-dom-safety-net] Agreements
+  - L39: [true-visible-ui-copy] Approve
+  - L40: [true-visible-ui-copy] Suspend
+- apps/admin-web/src/app/(app)/(developer)/developer/broker-access/page.tsx: 6
+  - L25: [translated-dom-safety-net] Broker Access
+  - L27: [placeholder-or-accessibility-label] Create Access Rule
+  - L30: [placeholder-or-accessibility-label] Access Rules
+  - L35: [true-visible-ui-copy] Selected update level for table actions.
+  - L49: [translated-dom-safety-net] Update
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/dashboard/page.tsx: 6
+  - L49: [placeholder-or-accessibility-label] Needs your attention
+  - L112: [placeholder-or-accessibility-label] Quick actions
+  - L117: [placeholder-or-accessibility-label] Create an organization
+  - L125: [placeholder-or-accessibility-label] Review trust documents
+  - L132: [placeholder-or-accessibility-label] Resolve marketplace exceptions
+- apps/admin-web/src/components/admin-crm/crm-leads-page-content.tsx: 6
+  - L26: [true-visible-ui-copy] Claim responsibly
+  - L26: [true-visible-ui-copy] A confirmed claim assigns the lead through the existing eligibility rules. Contact details may remain masked until the backend authorizes access. No availability timer is assumed.
+  - L27: [true-visible-ui-copy] Filter leads
+  - L27: [true-visible-ui-copy] Use existing CRM filters; result ownership and visibility remain backend-scoped.
+  - L29: [true-visible-ui-copy] total results
+- apps/admin-web/src/components/commercial/deal-detail-view.tsx: 6
+  - L19: [placeholder-or-accessibility-label] Deal could not be loaded
+  - L27: [true-visible-ui-copy] Approve
+  - L27: [true-visible-ui-copy] Cancel deal
+  - L32: [placeholder-or-accessibility-label] Deal progress
+  - L33: [placeholder-or-accessibility-label] Commission entries
+- apps/admin-web/src/app/(app)/(auth)/login/login-form.tsx: 5
+  - L47: [true-visible-ui-copy] Email or phone
+  - L51: [placeholder-or-accessibility-label] name@company.com or +201001234567
+  - L65: [translated-dom-safety-net] Password
+  - L70: [translated-dom-safety-net] Enter your password
+  - L100: [translated-dom-safety-net] We could not sign you in
+- apps/admin-web/src/components/admin-crm/conversation-share-link-box.tsx: 5
+  - L15: [true-visible-ui-copy] No private share link is available for this conversation.
+  - L23: [true-visible-ui-copy] Private client link
+  - L23: [true-visible-ui-copy] Open link
+  - L23: [placeholder-or-accessibility-label] Link could not be copied
+  - L23: [true-visible-ui-copy] Share only with the intended client. Anyone holding this private link may be able to access the public conversation.
+- apps/admin-web/src/components/admin-crm/conversation-status-update-dialog.tsx: 5
+  - L18: [translated-dom-safety-net] Status
+  - L18: [true-visible-ui-copy] Status note
+  - L18: [placeholder-or-accessibility-label] Optional reason or handoff note
+  - L18: [placeholder-or-accessibility-label] Conversation status could not be updated
+  - L18: [placeholder-or-accessibility-label] Conversation status updated
+- apps/admin-web/src/components/admin-crm/conversations-page-content.tsx: 5
+  - L16: [placeholder-or-accessibility-label] Conversation inbox
+  - L16: [true-visible-ui-copy] Filter conversations
+  - L16: [true-visible-ui-copy] Unread state is not assumed because the current list contract does not provide it.
+  - L16: [true-visible-ui-copy] Inbox
+  - L16: [placeholder-or-accessibility-label] Conversations could not be loaded
+- apps/admin-web/src/components/admin-crm/crm-lead-status-update-dialog.tsx: 5
+  - L19: [translated-dom-safety-net] Status
+  - L19: [true-visible-ui-copy] Status note
+  - L19: [placeholder-or-accessibility-label] Optional business context for this change
+  - L19: [placeholder-or-accessibility-label] Lead status could not be updated
+  - L19: [placeholder-or-accessibility-label] Lead status updated
+- apps/admin-web/src/components/admin-import-export/export-data-panel.tsx: 5
+  - L42: [translated-dom-safety-net] Data export
+  - L44: [placeholder-or-accessibility-label] Choose export
+  - L47: [true-visible-ui-copy] Dataset
+  - L70: [true-visible-ui-copy] Exports are JSON only in this slice. The frontend relies on backend authorization for organization and platform scoping.
+  - L73: [placeholder-or-accessibility-label] JSON preview
+- apps/admin-web/src/components/admin-public/domain-create-form.tsx: 5
+  - L42: [true-visible-ui-copy] Domain
+  - L43: [placeholder-or-accessibility-label] example.com or my-brand
+  - L47: [translated-dom-safety-net] Type
+  - L52: [true-visible-ui-copy] Custom domain
+  - L53: [true-visible-ui-copy] POPWAM subdomain
+- apps/admin-web/src/components/deal-rooms/deal-room-status-action-dialog.tsx: 5
+  - L45: [placeholder-or-accessibility-label] Update deal room status
+  - L49: [true-visible-ui-copy] Update deal room status
+  - L51: [true-visible-ui-copy] SOLD is intentionally hidden in Team 3 Slice 5; finalization belongs to the later deal/commission flow.
+  - L56: [translated-dom-safety-net] Status
+  - L72: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/lead-reservations/conflict-resolution-dialog.tsx: 5
+  - L50: [true-visible-ui-copy] Resolve claim conflict
+  - L52: [true-visible-ui-copy] Choose the platform resolution outcome. Broker identity is shown only when the backend returns it.
+  - L57: [true-visible-ui-copy] Resolution
+  - L69: [true-visible-ui-copy] Notes (optional)
+  - L81: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/platform/review-action-dialog.tsx: 5
+  - L93: [true-visible-ui-copy] Reason
+  - L97: [placeholder-or-accessibility-label] Add a clear compliance reason.
+  - L105: [true-visible-ui-copy] Internal notes (optional)
+  - L108: [placeholder-or-accessibility-label] Add notes for the platform audit trail.
+  - L127: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/app/(app)/(brokerage)/brokerage/lead-claims/[id]/page.tsx: 4
+  - L27: [placeholder-or-accessibility-label] Lead Claim Detail
+  - L29: [true-visible-ui-copy] Release claim
+  - L32: [placeholder-or-accessibility-label] Claim Summary
+  - L42: [placeholder-or-accessibility-label] Create Reservation
+- apps/admin-web/src/app/(app)/(brokerage)/brokerage/reservation-requests/page.tsx: 4
+  - L19: [translated-dom-safety-net] Reservation Requests
+  - L22: [placeholder-or-accessibility-label] Request history
+  - L24: [placeholder-or-accessibility-label] Reservation requests could not be loaded
+  - L27: [placeholder-or-accessibility-label] Create reservation request
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/verifications/page.tsx: 4
+  - L16: [translated-dom-safety-net] Verifications
+  - L26: [true-visible-ui-copy] Review queue
+  - L33: [true-visible-ui-copy] No risk score or document preview is shown unless returned by the existing API.
+  - L39: [placeholder-or-accessibility-label] Could not load verification queue
+- apps/admin-web/src/components/admin-crm/claim-lead-button.tsx: 4
+  - L31: [true-visible-ui-copy] Claiming assigns this marketplace lead to your eligible broker context. Confirm only when you are ready to follow up.
+  - L31: [translated-dom-safety-net] Cancel
+  - L34: [translated-dom-safety-net] Claim lead
+  - L34: [placeholder-or-accessibility-label] Lead could not be claimed
+- apps/admin-web/src/components/admin-crm/conversation-message-composer.tsx: 4
+  - L19: [true-visible-ui-copy] Message
+  - L19: [placeholder-or-accessibility-label] Write a clear reply…
+  - L19: [placeholder-or-accessibility-label] Message could not be sent
+  - L19: [true-visible-ui-copy] Messages are sent through the existing conversation API.
+- apps/admin-web/src/components/admin-crm/crm-activity-item.tsx: 4
+  - L22: [true-visible-ui-copy] Actor:
+  - L23: [true-visible-ui-copy] Lead:
+  - L24: [true-visible-ui-copy] Project:
+  - L25: [true-visible-ui-copy] Conversation:
+- apps/admin-web/src/components/admin-operations/operations-detail-page.tsx: 4
+  - L56: [placeholder-or-accessibility-label] Record summary
+  - L59: [placeholder-or-accessibility-label] Edit record
+  - L70: [true-visible-ui-copy] Select
+  - L91: [placeholder-or-accessibility-label] Operations activity
+- apps/admin-web/src/components/admin-operations/operations-overview-page.tsx: 4
+  - L24: [placeholder-or-accessibility-label] Operations overview
+  - L26: [placeholder-or-accessibility-label] Summary cards
+  - L39: [placeholder-or-accessibility-label] Module links
+  - L48: [placeholder-or-accessibility-label] Recent operations activity
+- apps/admin-web/src/components/admin-public/domain-reject-dialog.tsx: 4
+  - L47: [true-visible-ui-copy] Reject domain
+  - L49: [true-visible-ui-copy] Store a clear reason for the organization before this domain is rejected.
+  - L54: [true-visible-ui-copy] Reason
+  - L67: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/admin-public/platform-domains-page-content.tsx: 4
+  - L19: [placeholder-or-accessibility-label] Domain review
+  - L29: [true-visible-ui-copy] Domain governance queue
+  - L36: [true-visible-ui-copy] Approve or reject using only the returned domain status, notes, and DNS verification data.
+  - L42: [placeholder-or-accessibility-label] Could not load domain review queue
+- apps/admin-web/src/components/admin-public/public-leads-table.tsx: 4
+  - L45: [translated-dom-safety-net] Open
+  - L52: [true-visible-ui-copy] Review
+  - L62: [true-visible-ui-copy] Spam
+  - L69: [true-visible-ui-copy] Convert
+- apps/admin-web/src/components/commercial/deal-table.tsx: 4
+  - L10: [true-visible-ui-copy] No deals yet
+  - L10: [true-visible-ui-copy] Deals created from eligible negotiation rooms will appear here.
+  - L12: [true-visible-ui-copy] Commercial outcome
+  - L19: [true-visible-ui-copy] Review deal
+- apps/admin-web/src/components/commercial/deals-page-content.tsx: 4
+  - L22: [translated-dom-safety-net] Deals
+  - L29: [true-visible-ui-copy] Finalize eligible room
+  - L42: [placeholder-or-accessibility-label] Deal pipeline
+  - L44: [placeholder-or-accessibility-label] Deals could not be loaded
+- apps/admin-web/src/components/deal-rooms/deal-room-table.tsx: 4
+  - L10: [true-visible-ui-copy] No deal rooms yet
+  - L10: [true-visible-ui-copy] Approved reservations can move here for negotiation and deal handoff.
+  - L13: [true-visible-ui-copy] Negotiation workspace
+  - L21: [true-visible-ui-copy] Open workspace
+- apps/admin-web/src/components/developer/payment-plan-form.tsx: 4
+  - L42: [placeholder-or-accessibility-label] Example: 10% over 8 years
+  - L43: [true-visible-ui-copy] Project level
+  - L43: [true-visible-ui-copy] Unit level
+  - L53: [placeholder-or-accessibility-label] Payment plan could not be created
+- apps/admin-web/src/app/(app)/(brokerage)/brokerage/lead-claims/page.tsx: 3
+  - L17: [translated-dom-safety-net] Lead Claims
+  - L19: [placeholder-or-accessibility-label] Create Lead Claim
+  - L22: [placeholder-or-accessibility-label] My Lead Claims
+- apps/admin-web/src/app/(app)/(developer)/developer/import-export/page.tsx: 3
+  - L11: [placeholder-or-accessibility-label] Import project inventory
+  - L16: [true-visible-ui-copy] Job history
+  - L19: [translated-dom-safety-net] Exports
+- apps/admin-web/src/app/(app)/(developer)/developer/reservation-requests/page.tsx: 3
+  - L23: [translated-dom-safety-net] Reservation Requests
+  - L27: [placeholder-or-accessibility-label] Reservation Queue
+  - L29: [placeholder-or-accessibility-label] Reservation requests could not be loaded
+- apps/admin-web/src/components/admin-crm/crm-activities-page-content.tsx: 3
+  - L18: [translated-dom-safety-net] CRM activity
+  - L22: [translated-dom-safety-net] Filters
+  - L25: [translated-dom-safety-net] Activity timeline
+- apps/admin-web/src/components/admin-crm/crm-activity-filters.tsx: 3
+  - L27: [translated-dom-safety-net] Type
+  - L33: [true-visible-ui-copy] All activity
+  - L42: [true-visible-ui-copy] From
+- apps/admin-web/src/components/admin-import-export/import-job-detail-view.tsx: 3
+  - L55: [placeholder-or-accessibility-label] Job metadata
+  - L67: [placeholder-or-accessibility-label] Summary JSON
+  - L70: [placeholder-or-accessibility-label] Rows
+- apps/admin-web/src/components/admin-import-export/import-jobs-page-content.tsx: 3
+  - L22: [translated-dom-safety-net] Import jobs
+  - L27: [true-visible-ui-copy] New import preview
+  - L32: [placeholder-or-accessibility-label] Job history
+- apps/admin-web/src/components/admin-public/domain-verification-instructions.tsx: 3
+  - L12: [true-visible-ui-copy] TXT verification
+  - L14: [true-visible-ui-copy] Add this TXT record at your DNS provider, then request verification. No DNS provider is called from this UI.
+  - L38: [true-visible-ui-copy] Copy
+- apps/admin-web/src/components/admin-public/organization-domains-page-content.tsx: 3
+  - L27: [translated-dom-safety-net] Domains
+  - L29: [placeholder-or-accessibility-label] Add domain
+  - L32: [placeholder-or-accessibility-label] Domain records
+- apps/admin-web/src/components/admin-public/organization-domains-table.tsx: 3
+  - L42: [true-visible-ui-copy] Request verification
+  - L45: [true-visible-ui-copy] Check DNS
+  - L49: [true-visible-ui-copy] Dev verify
+- apps/admin-web/src/components/commercial/commission-action-dialog.tsx: 3
+  - L54: [true-visible-ui-copy] This reviews the calculated entry only; it does not initiate a payout.
+  - L59: [true-visible-ui-copy] Reason
+  - L67: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/commercial/commission-table.tsx: 3
+  - L11: [true-visible-ui-copy] No commission entries yet
+  - L11: [true-visible-ui-copy] Calculated entries from eligible finalized deals will appear here.
+  - L15: [true-visible-ui-copy] Review calculation
+- apps/admin-web/src/components/commercial/commissions-page-content.tsx: 3
+  - L16: [translated-dom-safety-net] Commissions
+  - L18: [placeholder-or-accessibility-label] Commission ledger
+  - L20: [placeholder-or-accessibility-label] Commissions could not be loaded
+- apps/admin-web/src/components/commercial/deal-summary-card.tsx: 3
+  - L10: [placeholder-or-accessibility-label] Deal Summary
+  - L20: [placeholder-or-accessibility-label] Project And Parties
+  - L30: [placeholder-or-accessibility-label] Cancellation
+- apps/admin-web/src/components/conversations/conversation-responsive-list.tsx: 3
+  - L9: [placeholder-or-accessibility-label] No conversations match this view
+  - L11: [translated-dom-safety-net] Updated
+  - L11: [true-visible-ui-copy] Open conversation
+- apps/admin-web/src/components/deal-rooms/client-invite-dialog.tsx: 3
+  - L31: [true-visible-ui-copy] Client invite creates or refreshes the client participant. External SMS/email delivery is a placeholder and is not implemented yet.
+  - L36: [true-visible-ui-copy] Client participant is
+  - L36: [true-visible-ui-copy] . Delivery:
+- apps/admin-web/src/components/deal-rooms/deal-room-summary-card.tsx: 3
+  - L10: [placeholder-or-accessibility-label] Deal Room Summary
+  - L20: [placeholder-or-accessibility-label] Project And Unit
+  - L30: [placeholder-or-accessibility-label] Reservation And Lead
+- apps/admin-web/src/components/layout/icon-sidebar.tsx: 3
+  - L31: [placeholder-or-accessibility-label] POPWAM workspace home
+  - L32: [placeholder-or-accessibility-label] POPWAM workspace home
+  - L41: [placeholder-or-accessibility-label] Primary admin navigation
+- apps/admin-web/src/components/lead-reservations/reason-dialog.tsx: 3
+  - L78: [true-visible-ui-copy] Reason
+  - L83: [true-visible-ui-copy] Notes (optional)
+  - L101: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/lead-reservations/reservation-request-form.tsx: 3
+  - L48: [true-visible-ui-copy] Lead claim ID
+  - L53: [true-visible-ui-copy] Unit ID (optional)
+  - L57: [true-visible-ui-copy] Notes
+- apps/admin-web/src/components/platform/document-metadata-list.tsx: 3
+  - L18: [placeholder-or-accessibility-label] No verification documents
+  - L50: [true-visible-ui-copy] Review
+  - L60: [translated-dom-safety-net] Open
+- apps/admin-web/src/app/(app)/(developer)/developer/lead-claims/page.tsx: 2
+  - L15: [translated-dom-safety-net] Lead Claims
+  - L18: [placeholder-or-accessibility-label] Claim Conflicts On Developer Projects
+- apps/admin-web/src/app/(app)/(developer)/developer/projects/[id]/phases/page.tsx: 2
+  - L39: [placeholder-or-accessibility-label] Phases
+  - L50: [translated-dom-safety-net] Edit
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/lead-claim-conflicts/page.tsx: 2
+  - L16: [placeholder-or-accessibility-label] Lead Claim Conflicts
+  - L19: [placeholder-or-accessibility-label] Conflicts
+- apps/admin-web/src/components/admin-crm/conversation-messages-timeline.tsx: 2
+  - L7: [placeholder-or-accessibility-label] No messages yet
+  - L8: [placeholder-or-accessibility-label] Conversation messages
+- apps/admin-web/src/components/admin-crm/crm-activity-timeline.tsx: 2
+  - L30: [placeholder-or-accessibility-label] Activity could not be loaded
+  - L34: [translated-dom-safety-net] No activity recorded yet
+- apps/admin-web/src/components/admin-crm/crm-summary-cards.tsx: 2
+  - L11: [placeholder-or-accessibility-label] CRM summary could not be loaded
+  - L25: [true-visible-ui-copy] CRM summary
+- apps/admin-web/src/components/admin-import-export/import-summary-card.tsx: 2
+  - L30: [translated-dom-safety-net] Import summary
+  - L35: [translated-dom-safety-net] View job
+- apps/admin-web/src/components/admin-public/platform-domain-review-table.tsx: 2
+  - L39: [true-visible-ui-copy] Approve
+  - L44: [true-visible-ui-copy] Reject
+- apps/admin-web/src/components/admin-public/public-lead-action-dialog.tsx: 2
+  - L79: [true-visible-ui-copy] Note (optional)
+  - L98: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/admin-public/website-settings-form.tsx: 2
+  - L110: [true-visible-ui-copy] Published on public website routes
+  - L120: [true-visible-ui-copy] Website settings saved.
+- apps/admin-web/src/components/admin-public/website-settings-page-content.tsx: 2
+  - L16: [placeholder-or-accessibility-label] Website settings
+  - L17: [placeholder-or-accessibility-label] Public website
+- apps/admin-web/src/components/deal-rooms/deal-rooms-page-content.tsx: 2
+  - L30: [translated-dom-safety-net] Deal Rooms
+  - L66: [translated-dom-safety-net] Try again
+- apps/admin-web/src/components/developer/visibility-selector.tsx: 2
+  - L17: [true-visible-ui-copy] Choose project visibility
+  - L29: [true-visible-ui-copy] Who can see it:
+- apps/admin-web/src/components/lead-reservations/lead-claim-table.tsx: 2
+  - L36: [translated-dom-safety-net] Open
+  - L40: [true-visible-ui-copy] Release
+- apps/admin-web/src/app/(app)/(brokerage)/brokerage/crm/tasks/page.tsx: 1
+  - L6: [placeholder-or-accessibility-label] CRM tasks
+- apps/admin-web/src/app/(app)/(developer)/developer/accounting/categories/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Accounting category detail
+- apps/admin-web/src/app/(app)/(developer)/developer/accounting/categories/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Accounting categories
+- apps/admin-web/src/app/(app)/(developer)/developer/accounting/summary/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Accounting summary
+- apps/admin-web/src/app/(app)/(developer)/developer/accounting/transactions/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Accounting transaction detail
+- apps/admin-web/src/app/(app)/(developer)/developer/accounting/transactions/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Accounting transactions
+- apps/admin-web/src/app/(app)/(developer)/developer/ads/campaigns/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Ads campaign detail
+- apps/admin-web/src/app/(app)/(developer)/developer/ads/campaigns/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Ads campaigns
+- apps/admin-web/src/app/(app)/(developer)/developer/cameras/devices/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Camera device detail
+- apps/admin-web/src/app/(app)/(developer)/developer/cameras/devices/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Camera devices
+- apps/admin-web/src/app/(app)/(developer)/developer/crm/tasks/page.tsx: 1
+  - L6: [placeholder-or-accessibility-label] CRM tasks
+- apps/admin-web/src/app/(app)/(developer)/developer/hr/attendance/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] HR attendance detail
+- apps/admin-web/src/app/(app)/(developer)/developer/hr/attendance/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] HR attendance
+- apps/admin-web/src/app/(app)/(developer)/developer/hr/departments/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] HR department detail
+- apps/admin-web/src/app/(app)/(developer)/developer/hr/departments/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] HR departments
+- apps/admin-web/src/app/(app)/(developer)/developer/hr/employees/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] HR employee detail
+- apps/admin-web/src/app/(app)/(developer)/developer/hr/employees/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] HR employees
+- apps/admin-web/src/app/(app)/(developer)/developer/legal/cases/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Legal case detail
+- apps/admin-web/src/app/(app)/(developer)/developer/legal/cases/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Legal cases
+- apps/admin-web/src/app/(app)/(developer)/developer/legal/documents/[id]/page.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Legal document detail
+- apps/admin-web/src/app/(app)/(developer)/developer/legal/documents/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Legal documents
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/accounting/overview/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Accounting overview
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/ads/overview/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Ads overview
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/cameras/overview/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Cameras overview
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/crm/tasks/page.tsx: 1
+  - L6: [placeholder-or-accessibility-label] CRM tasks
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/hr/overview/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] HR overview
+- apps/admin-web/src/app/(app)/(platform-admin)/platform/legal/overview/page.tsx: 1
+  - L8: [placeholder-or-accessibility-label] Legal overview
+- apps/admin-web/src/components/admin-import-export/download-json-button.tsx: 1
+  - L28: [translated-dom-safety-net] Download JSON
+- apps/admin-web/src/components/admin-import-export/import-jobs-table.tsx: 1
+  - L26: [translated-dom-safety-net] View
+- apps/admin-web/src/components/admin-operations/operations-activity-timeline.tsx: 1
+  - L14: [true-visible-ui-copy] No operations activity recorded yet.
+- apps/admin-web/src/components/admin-operations/operations-summary-page.tsx: 1
+  - L25: [placeholder-or-accessibility-label] Summary
+- apps/admin-web/src/components/brokerage/brokerage-guard.tsx: 1
+  - L19: [placeholder-or-accessibility-label] Brokerage access required
+- apps/admin-web/src/components/commercial/deal-action-dialog.tsx: 1
+  - L87: [translated-dom-safety-net] Cancel
+- apps/admin-web/src/components/commercial/deal-status-timeline.tsx: 1
+  - L11: [placeholder-or-accessibility-label] Deal progress
+- apps/admin-web/src/components/deal-rooms/deal-room-messages-timeline.tsx: 1
+  - L9: [true-visible-ui-copy] No negotiation messages yet. Start the discussion when the parties are ready.
+- apps/admin-web/src/components/deal-rooms/deal-room-participants-list.tsx: 1
+  - L6: [true-visible-ui-copy] No participants have been added.
+- apps/admin-web/src/components/developer/broker-access-rule-form.tsx: 1
+  - L24: [true-visible-ui-copy] Select project
+- apps/admin-web/src/components/developer/developer-guard.tsx: 1
+  - L17: [placeholder-or-accessibility-label] Developer access required
+- apps/admin-web/src/components/layout/sidebar.tsx: 1
+  - L39: [translated-dom-safety-net] POPWAM Admin
+- apps/admin-web/src/components/lead-reservations/conflict-list.tsx: 1
+  - L38: [true-visible-ui-copy] Resolve
+- apps/admin-web/src/components/lead-reservations/reservation-status-timeline.tsx: 1
+  - L7: [placeholder-or-accessibility-label] Reservation progress
+- apps/admin-web/src/components/permission-guard.tsx: 1
+  - L27: [placeholder-or-accessibility-label] Permission required
+- apps/admin-web/src/components/platform/platform-guard.tsx: 1
+  - L28: [placeholder-or-accessibility-label] Platform access required
+
+### public-web
+
+Total candidates reviewed: 21
+Converted/already localized by DOM safety net: 21
+Ignored/classified non-UI: 0
+Remaining true visible UI candidates: 0
+
+Classification counts:
+
+- translated-dom-safety-net: 21
+
+- apps/public-web/src/components/cta/sticky-cta-bar.tsx: 4
+  - L25: [translated-dom-safety-net] Request details
+  - L30: [translated-dom-safety-net] Open the contact form to request a call
+  - L32: [translated-dom-safety-net] Request a call
+  - L41: [translated-dom-safety-net] WhatsApp
+- apps/public-web/src/components/marketplace/project-media-visual.tsx: 3
+  - L36: [translated-dom-safety-net] Project media not available
+  - L45: [translated-dom-safety-net] Project media will appear here when available.
+  - L48: [translated-dom-safety-net] The listing can still be reviewed through its published details.
+- apps/public-web/src/components/organization/organization-project-grid.tsx: 3
+  - L60: [translated-dom-safety-net] Type
+  - L68: [translated-dom-safety-net] Pricing
+  - L75: [translated-dom-safety-net] View project
+- apps/public-web/src/components/public/public-header.tsx: 3
+  - L13: [translated-dom-safety-net] POPWAM home
+  - L20: [translated-dom-safety-net] Verified real estate
+  - L25: [translated-dom-safety-net] Marketplace navigation
+- apps/public-web/src/components/public/public-shell.tsx: 3
+  - L37: [translated-dom-safety-net] POPWAM home
+  - L41: [translated-dom-safety-net] Private conversation link
+  - L43: [translated-dom-safety-net] Private conversation
+- apps/public-web/src/components/cta/call-placeholder-button.tsx: 2
+  - L5: [translated-dom-safety-net] Open the contact form to request a call
+  - L8: [translated-dom-safety-net] Request a call
+- apps/public-web/src/components/conversation/public-conversation-shell.tsx: 1
+  - L22: [translated-dom-safety-net] Private conversation
+- apps/public-web/src/components/forms/form-privacy-notice.tsx: 1
+  - L4: [translated-dom-safety-net] POPWAM uses your details only to route this request to the relevant organization for follow-up.
+- apps/public-web/src/components/marketplace/project-detail-hero.tsx: 1
+  - L51: [translated-dom-safety-net] Request details
+
+### mobile
+
+Total candidates reviewed: 210
+Converted/already localized by DOM safety net: 0
+Ignored/classified non-UI: 210
+Remaining true visible UI candidates: 0
+
+Classification counts:
+
+- api-or-code-data: 179
+- debug-only: 12
+- non-visible-code-constant: 19
+
+- apps/mobile/lib/features/marketplace/data/marketplace_models.dart: 23
+  - L45: [api-or-code-data] Location pending
+  - L50: [api-or-code-data] Price on request
+  - L56: [api-or-code-data] From $value
+  - L57: [api-or-code-data] From $currency $value
+  - L62: [api-or-code-data] inventoryUnits
+- apps/mobile/lib/features/deal_rooms/data/deal_room_models.dart: 18
+  - L103: [api-or-code-data] reservationRequest
+  - L121: [api-or-code-data] reservationRequestId
+  - L122: [api-or-code-data] projectId
+  - L123: [api-or-code-data] unitId
+  - L124: [api-or-code-data] createdAt
+- apps/mobile/lib/features/crm/data/crm_models.dart: 14
+  - L79: [api-or-code-data] newLeads
+  - L80: [api-or-code-data] newMessages
+  - L95: [api-or-code-data] preferredContactMethod
+  - L96: [api-or-code-data] pageSize
+  - L120: [api-or-code-data] Client
+- apps/mobile/lib/features/conversations/data/conversation_models.dart: 13
+  - L30: [api-or-code-data] pageSize
+  - L56: [api-or-code-data] publicRole
+  - L57: [api-or-code-data] displayName
+  - L58: [api-or-code-data] joinedAt
+  - L79: [api-or-code-data] senderParticipant
+- apps/mobile/lib/features/lead_claims/data/lead_claim_models.dart: 12
+  - L58: [api-or-code-data] Phone hidden
+  - L71: [api-or-code-data] projectId
+  - L72: [api-or-code-data] unitId
+  - L78: [api-or-code-data] expiresAt
+  - L79: [api-or-code-data] createdAt
+- apps/mobile/lib/core/errors/api_error.dart: 11
+  - L13: [non-visible-code-constant] The API is taking too long to respond. Please check your connection and try again.
+  - L15: [non-visible-code-constant] Could not reach the API. Check your internet connection or API environment.
+  - L17: [non-visible-code-constant] The secure connection could not be verified. Please contact support.
+  - L19: [non-visible-code-constant] The request was cancelled. Please try again.
+  - L28: [non-visible-code-constant] Invalid login details.
+- apps/mobile/lib/features/deals/data/deal_models.dart: 11
+  - L69: [api-or-code-data] dealRoom
+  - L75: [api-or-code-data] firstName
+  - L76: [api-or-code-data] lastName
+  - L83: [api-or-code-data] dealRoomId
+  - L84: [api-or-code-data] projectId
+- apps/mobile/lib/core/network/api_client.dart: 9
+  - L14: [api-or-code-data] Accept
+  - L42: [api-or-code-data] Authorization
+  - L42: [api-or-code-data] Bearer $accessToken
+  - L66: [api-or-code-data] refreshToken
+  - L67: [api-or-code-data] Authorization
+- apps/mobile/lib/features/auth/data/auth_repository.dart: 9
+  - L22: [debug-only] Login request started
+  - L32: [api-or-code-data] accessToken
+  - L33: [api-or-code-data] refreshToken
+  - L36: [debug-only] Login failed: token payload missing
+  - L38: [api-or-code-data] Login response was incomplete. Please try again.
+- apps/mobile/lib/features/auth/presentation/auth_controller.dart: 9
+  - L52: [debug-only] Restoring stored mobile session
+  - L59: [debug-only] No stored session found
+  - L65: [debug-only] Stored session found; loading current user
+  - L67: [debug-only] Stored session restored
+  - L74: [debug-only] Stored session restore failed
+- apps/mobile/lib/features/marketplace/data/marketplace_filters.dart: 9
+  - L50: [api-or-code-data] unitType
+  - L51: [api-or-code-data] minPrice
+  - L52: [api-or-code-data] maxPrice
+  - L58: [api-or-code-data] projectId
+  - L61: [api-or-code-data] unitType
+- apps/mobile/lib/features/reservation_requests/data/reservation_request_models.dart: 9
+  - L64: [api-or-code-data] leadClaim
+  - L69: [api-or-code-data] leadClaimId
+  - L70: [api-or-code-data] projectId
+  - L71: [api-or-code-data] unitId
+  - L73: [api-or-code-data] rejectionReason
+- apps/mobile/lib/core/localization/l10n_extensions.dart: 7
+  - L104: [non-visible-code-constant] Invalid login details.
+  - L105: [non-visible-code-constant] Your session expired. Please sign in again.
+  - L106: [non-visible-code-constant] You do not have access to this mobile workspace.
+  - L108: [non-visible-code-constant] The requested mobile resource was not found.
+  - L110: [non-visible-code-constant] You do not have access to this deal room
+- apps/mobile/lib/features/commissions/data/commission_models.dart: 7
+  - L87: [api-or-code-data] dealId
+  - L89: [api-or-code-data] partyType
+  - L92: [api-or-code-data] commissionType
+  - L93: [api-or-code-data] createdAt
+  - L94: [api-or-code-data] approvedAt
+- apps/mobile/lib/features/crm/data/crm_repository.dart: 7
+  - L38: [api-or-code-data] /crm/leads/$id
+  - L44: [api-or-code-data] /crm/leads/$id/claim
+  - L55: [api-or-code-data] /crm/leads/$id/status
+  - L59: [api-or-code-data] statusNote
+  - L67: [api-or-code-data] /conversations/from-crm-lead/$id
+- apps/mobile/lib/features/deal_rooms/data/deal_rooms_repository.dart: 7
+  - L21: [api-or-code-data] /deal-rooms/$id
+  - L27: [api-or-code-data] /deal-rooms/from-reservation/$reservationRequestId
+  - L33: [api-or-code-data] /deal-rooms/$id/invite-client
+  - L38: [api-or-code-data] /deal-rooms/$id/status
+  - L45: [api-or-code-data] /deal-rooms/$id/messages
+- apps/mobile/lib/features/marketplace/data/marketplace_repository.dart: 6
+  - L28: [api-or-code-data] /marketplace/projects/$id
+  - L49: [api-or-code-data] /marketplace/units/$id
+  - L65: [api-or-code-data] minLat
+  - L66: [api-or-code-data] maxLat
+  - L67: [api-or-code-data] minLng
+- apps/mobile/lib/features/conversations/data/conversations_repository.dart: 5
+  - L23: [api-or-code-data] /conversations/$id
+  - L29: [api-or-code-data] /conversations/$id/messages
+  - L39: [api-or-code-data] /conversations/$id/messages
+  - L51: [api-or-code-data] /conversations/$id/status
+  - L55: [api-or-code-data] statusNote
+- apps/mobile/lib/features/lead_claims/data/lead_claims_repository.dart: 5
+  - L22: [api-or-code-data] clientName
+  - L24: [api-or-code-data] projectId
+  - L25: [api-or-code-data] unitId
+  - L42: [api-or-code-data] /lead-claims/$id
+  - L48: [api-or-code-data] /lead-claims/$id/release
+- apps/mobile/lib/features/reservation_requests/data/reservation_requests_repository.dart: 4
+  - L20: [api-or-code-data] leadClaimId
+  - L21: [api-or-code-data] unitId
+  - L38: [api-or-code-data] /reservation-requests/$id
+  - L45: [api-or-code-data] /reservation-requests/$id/cancel
+- apps/mobile/lib/features/auth/data/auth_models.dart: 3
+  - L32: [api-or-code-data] userRole
+  - L33: [api-or-code-data] firstName
+  - L34: [api-or-code-data] lastName
+- apps/mobile/lib/features/profile/data/broker_profile_models.dart: 3
+  - L27: [api-or-code-data] licenseNumber
+  - L28: [api-or-code-data] displayName
+  - L33: [api-or-code-data] yearsOfExperience
+- apps/mobile/lib/core/router/app_router.dart: 2
+  - L222: [api-or-code-data] projectId
+  - L231: [api-or-code-data] unitId
+- apps/mobile/lib/core/router/auth_route_policy.dart: 2
+  - L34: [api-or-code-data] $prefix/
+  - L199: [api-or-code-data] $prefix/
+- apps/mobile/lib/core/utils/auth_debug_log.dart: 1
+  - L5: [debug-only] [auth] $message
+- apps/mobile/lib/core/utils/money_formatters.dart: 1
+  - L9: [non-visible-code-constant] Amount pending
+- apps/mobile/lib/features/commissions/data/commissions_repository.dart: 1
+  - L21: [api-or-code-data] /commissions/$id
+- apps/mobile/lib/features/crm/presentation/crm_lead_detail_screen.dart: 1
+  - L210: [api-or-code-data] /crm-conversations/$conversationId
+- apps/mobile/lib/features/deals/data/deals_repository.dart: 1
+  - L21: [api-or-code-data] /deals/$id
+
+## Fixed In This Slice
+
+- Added repeatable i18n audit and missing-key report generation through `scripts/i18n-audit.mjs`.
+- Added catalog parity reporting for Admin Web, Public Web, and Mobile.
+- Added server-safe web i18n helpers in Admin Web and Public Web.
+- Mirrored the selected web locale to a `popwam-locale` cookie so Server Components can use the same catalog on subsequent requests.
+- Converted Admin login and CRM tasks visible copy to keyed translations.
+- Converted Public home, projects, and public contact form visible copy to keyed translations.
+- Classified mobile auth debug log strings as debug-only rather than visible UI copy.
+- Current reviewed counts after this slice: Admin 770 reviewed / 663 remaining, Public 176 reviewed / 93 remaining, Mobile 208 reviewed / 0 remaining.
+- Catalog parity remains 0 missing Arabic keys and 0 missing French keys for Admin Web, Public Web, and Mobile.
+
+## Intentionally API-Provided Data
+
+- Organization names, project names, user names, domains, emails, phone numbers, message bodies, notes, free-text descriptions, and token values remain API-provided data.
+- Frontend enum/status labels should stay localized through frontend maps/catalog keys.
+
+## Remaining Work
+
+- Continue converting the remaining Admin/Public literal candidates to explicit `t()`/`tServer()` keys where they are visible UI copy.
+- Keep DOM translation only as a compatibility safety net, not the primary production strategy.

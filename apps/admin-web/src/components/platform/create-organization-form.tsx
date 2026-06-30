@@ -6,8 +6,10 @@ import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/i18n";
 
 export function CreateOrganizationForm() {
+  const { t } = useI18n();
   const create = useCreatePlatformOrganization();
   const [createdName, setCreatedName] = useState<string | null>(null);
 
@@ -28,42 +30,42 @@ export function CreateOrganizationForm() {
   return (
     <section className="ui-card mb-5 p-4">
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Create organization record</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-foreground)]">{t("organizationCreate.title")}</h2>
         <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-          Create the company shell first, then open its dossier to review profile data and issue invitations.
+          {t("organizationCreate.description")}
         </p>
       </div>
       <form className="grid gap-3 lg:grid-cols-[1.2fr_220px_1fr_1fr_auto]" onSubmit={submit}>
         <div className="space-y-2">
-          <Label htmlFor="platform-org-name">Company name</Label>
-          <Input required id="platform-org-name" name="name" placeholder="Company name" />
+          <Label htmlFor="platform-org-name">{t("organizationCreate.companyName")}</Label>
+          <Input required id="platform-org-name" name="name" placeholder={t("organizationCreate.companyName")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="platform-org-type">Company type</Label>
+          <Label htmlFor="platform-org-type">{t("organizationCreate.companyType")}</Label>
           <select id="platform-org-type" name="type" className="ui-input">
-            <option value="DEVELOPER">Developer</option>
-            <option value="BROKERAGE">Brokerage</option>
-            <option value="INDIVIDUAL_BROKER">Individual broker</option>
+            <option value="DEVELOPER">{t("organizationType.developer")}</option>
+            <option value="BROKERAGE">{t("organizationType.brokerage")}</option>
+            <option value="INDIVIDUAL_BROKER">{t("organizationType.individualBroker")}</option>
           </select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="platform-org-city">City</Label>
-          <Input id="platform-org-city" name="city" placeholder="City" />
+          <Label htmlFor="platform-org-city">{t("organizationCreate.city")}</Label>
+          <Input id="platform-org-city" name="city" placeholder={t("organizationCreate.city")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="platform-org-country">Country</Label>
-          <Input id="platform-org-country" name="country" placeholder="Country" />
+          <Label htmlFor="platform-org-country">{t("organizationCreate.country")}</Label>
+          <Input id="platform-org-country" name="country" placeholder={t("organizationCreate.country")} />
         </div>
         <div className="flex items-end">
           <Button className="w-full" disabled={create.isPending} type="submit">
-            {create.isPending ? "Creating" : "Create"}
+            {create.isPending ? t("common.creating") : t("common.create")}
           </Button>
         </div>
         {create.error ? (
           <FeedbackState
             className="lg:col-span-5"
             tone="error"
-            title="Could not create organization"
+            title={t("organizationCreate.error")}
             description={create.error.message}
           />
         ) : null}
@@ -71,8 +73,8 @@ export function CreateOrganizationForm() {
           <FeedbackState
             className="lg:col-span-5"
             tone="success"
-            title={`${createdName} was created`}
-            description="Open the dossier below to review details, add verification context, and create invitations."
+            title={t("organizationCreate.success", { name: createdName })}
+            description={t("organizationCreate.successDescription")}
           />
         ) : null}
       </form>

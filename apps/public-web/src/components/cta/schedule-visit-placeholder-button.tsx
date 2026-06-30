@@ -1,11 +1,15 @@
-export function ScheduleVisitPlaceholderButton() {
+import { tServer } from "@/i18n/server";
+
+export function ScheduleVisitPlaceholderButton({ locale }: { locale?: string }) {
+  const t = (key: string) => tServer(locale, key);
+
   return (
     <a
       href="#lead-form"
-      aria-label="Open the contact form to schedule a visit"
+      aria-label={t("cta.scheduleVisitAria")}
       className="ui-button ui-button-secondary"
     >
-      Schedule a visit
+      {t("cta.scheduleVisit")}
     </a>
   );
 }

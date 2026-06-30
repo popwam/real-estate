@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { PublicConversationState } from "@/components/conversation/public-conversation-state";
 import { PublicConversationView } from "@/components/conversation/public-conversation-view";
+import { normalizeLocale, tServer } from "@/i18n/server";
 import { getPublicConversationByToken } from "@/lib/public-data";
 import { PublicApiError } from "@/lib/public-api";
 import { createSeoMetadata } from "@/lib/seo";
@@ -29,12 +31,13 @@ export default async function PublicConversationPage({
   params,
 }: ConversationPageProps) {
   const { token } = await params;
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
   const result = await getConversationResult(token);
 
   return (
     <div className="bg-[var(--color-background)] px-4 py-8 sm:px-6">
       {"error" in result ? (
-        <ConversationErrorState error={result.error} />
+        <ConversationErrorState error={result.error} locale={locale} />
       ) : (
         <PublicConversationView token={token} initialConversation={result} />
       )}
@@ -60,14 +63,18 @@ async function getConversationResult(token: string): Promise<ConversationResult>
 
 function ConversationErrorState({
   error,
+  locale,
 }: {
   error: ConversationError;
+  locale: string;
 }) {
+  const t = (key: string) => tServer(locale, key);
+
   if (error === "expired") {
     return (
       <PublicConversationState
-        title="This conversation link has expired."
-        body="The private link can no longer be opened. Please send a new interest request or contact the organization again."
+        title={t("conversation.error.expired")}
+        body={t("conversation.error.expiredBody")}
       />
     );
   }
@@ -75,8 +82,8 @@ function ConversationErrorState({
   if (error === "inaccessible") {
     return (
       <PublicConversationState
-        title="This conversation cannot be opened."
-        body="This private link is not accessible from here. Please use the latest link shared with you."
+        title={t("conversation.error.inaccessibleTitle")}
+        body={t("conversation.error.inaccessibleBody")}
       />
     );
   }
@@ -84,16 +91,16 @@ function ConversationErrorState({
   if (error === "network") {
     return (
       <PublicConversationState
-        title="We could not load this conversation."
-        body="Please refresh the page. If the issue continues, the conversation service may be temporarily unavailable."
+        title={t("conversation.errorLoadTitle")}
+        body={t("conversation.error.networkBody")}
       />
     );
   }
 
   return (
     <PublicConversationState
-      title="This conversation link is not valid."
-      body="Please check that you opened the full private link. You can also send a new interest request from a project page."
+      title={t("conversation.error.invalidTitle")}
+      body={t("conversation.error.invalidBody")}
     />
   );
 }

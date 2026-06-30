@@ -13,6 +13,7 @@ import { OrganizationStatusBadge } from "@/components/platform/organization-stat
 import { ReviewActionDialog } from "@/components/platform/review-action-dialog";
 import { TrustStatusTimeline, trustToneFromStatus } from "@/components/platform/trust-status-timeline";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/i18n";
 import {
   useApproveOrganization,
   useOrganizationReview,
@@ -23,6 +24,7 @@ import {
 import { formatDate, formatPlainDate } from "@/lib/format";
 
 export default function OrganizationReviewPage() {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const id = params.id;
   const { data, isLoading, error } = useOrganizationReview(id);
@@ -35,29 +37,29 @@ export default function OrganizationReviewPage() {
     ["PENDING_REVIEW", "UNDER_REVIEW"].includes(item.status),
   ).length;
 
-  if (isLoading) return <LoadingState label="Loading organization review" />;
+  if (isLoading) return <LoadingState label={t("organizationReview.loading")} />;
 
   if (error) {
-    return <FeedbackState tone="error" title="Could not load organization dossier" description={error.message} />;
+    return <FeedbackState tone="error" title={t("organizationReview.error")} description={error.message} />;
   }
 
   if (!data) return null;
 
   const nextAction = data.status === "PENDING_REVIEW" || pendingVerificationCount
-    ? "Review evidence and decide"
+    ? t("organizationReview.next.review")
     : data.status === "SUSPENDED"
-      ? "Resolve suspension or reactivate"
-      : "Monitor company readiness";
+      ? t("organizationReview.next.resolve")
+      : t("organizationReview.next.monitor");
 
   return (
     <>
       <PageHeader
         title={data.name}
-        description="Review the company profile, submitted evidence, invitations, and trust decisions before changing marketplace access."
+        description={t("organizationReview.description")}
         actions={
           <Link className="ui-button ui-button-secondary" href="/platform/organizations">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back
+            {t("common.back")}
           </Link>
         }
       />
@@ -67,64 +69,64 @@ export default function OrganizationReviewPage() {
           <section className="ui-card p-5">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Organization status</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("organizationReview.status")}</p>
                 <div className="mt-2">
                   <OrganizationStatusBadge status={data.status} />
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Pending documents</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("organizationReview.pendingDocuments")}</p>
                 <p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">{pendingVerificationCount}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Company type</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("organizationReview.companyType")}</p>
                 <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">{data.type.replaceAll("_", " ")}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Next action</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("organizationReview.nextAction")}</p>
                 <p className="mt-2 text-sm font-medium text-[var(--color-foreground)]">{nextAction}</p>
               </div>
             </div>
           </section>
 
-          <DetailCard title="Organization Summary">
+          <DetailCard title={t("organizationReview.summary")}>
             <DetailGrid
               items={[
-                { label: "Status", value: <OrganizationStatusBadge status={data.status} /> },
-                { label: "Type", value: data.type.replaceAll("_", " ") },
-                { label: "Plan", value: data.plan ?? "Not set" },
-                { label: "Location", value: [data.city, data.country].filter(Boolean).join(", ") || "Not set" },
-                { label: "Created", value: formatDate(data.createdAt) },
-                { label: "Updated", value: formatDate(data.updatedAt) },
-                { label: "Plan expires", value: formatPlainDate(data.planExpiresAt) },
+                { label: t("common.status"), value: <OrganizationStatusBadge status={data.status} /> },
+                { label: t("common.type"), value: data.type.replaceAll("_", " ") },
+                { label: t("organizationReview.plan"), value: data.plan ?? t("common.notSet") },
+                { label: t("organizationReview.location"), value: [data.city, data.country].filter(Boolean).join(", ") || t("common.notSet") },
+                { label: t("common.created"), value: formatDate(data.createdAt) },
+                { label: t("common.updated"), value: formatDate(data.updatedAt) },
+                { label: t("organizationReview.planExpires"), value: formatPlainDate(data.planExpiresAt) },
               ]}
             />
           </DetailCard>
 
-          <DetailCard title="Profile">
+          <DetailCard title={t("organizationReview.profile")}>
             <DetailGrid
               items={[
-                { label: "Legal name", value: data.profile?.legalName },
-                { label: "Trade name", value: data.profile?.tradeName },
-                { label: "Commercial registration", value: data.profile?.commercialRegNumber },
-                { label: "Tax number", value: data.profile?.taxNumber },
-                { label: "Website", value: data.profile?.website },
-                { label: "Email", value: data.profile?.email },
-                { label: "Phone", value: data.profile?.phone },
-                { label: "Address", value: data.profile?.address },
+                { label: t("organizationReview.legalName"), value: data.profile?.legalName },
+                { label: t("organizationReview.tradeName"), value: data.profile?.tradeName },
+                { label: t("organizationReview.commercialRegistration"), value: data.profile?.commercialRegNumber },
+                { label: t("organizationReview.taxNumber"), value: data.profile?.taxNumber },
+                { label: t("organizationReview.website"), value: data.profile?.website },
+                { label: t("organizationReview.email"), value: data.profile?.email },
+                { label: t("organizationReview.phone"), value: data.profile?.phone },
+                { label: t("organizationReview.address"), value: data.profile?.address },
               ]}
             />
           </DetailCard>
 
-          <DetailCard title="Verification documents">
+          <DetailCard title={t("organizationReview.verificationDocuments")}>
             <DocumentMetadataList documents={verifications} />
           </DetailCard>
 
-          <DetailCard title="Company invitations">
+          <DetailCard title={t("organizationReview.companyInvitations")}>
             <OrganizationInvitationsCard id={id} organizationType={data.type} />
           </DetailCard>
 
-          <DetailCard title="Trust timeline">
+          <DetailCard title={t("organizationReview.trustTimeline")}>
             <TrustStatusTimeline
               items={verifications.map((item) => ({
                 id: item.id,
@@ -134,35 +136,35 @@ export default function OrganizationReviewPage() {
                 description: item.notes ?? item.rejectionReason ?? undefined,
                 tone: trustToneFromStatus(item.status),
               }))}
-              emptyText="No document review events have been returned for this organization yet."
+              emptyText={t("organizationReview.noReviewEvents")}
             />
           </DetailCard>
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">
-          <DetailCard title="Review actions">
+          <DetailCard title={t("organizationReview.actions")}>
             <div className="mb-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
               <div className="flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />
                 <p className="text-sm leading-6 text-[var(--color-muted)]">
-                  These actions change company access and trust state. Use the reason field when rejecting or suspending access.
+                  {t("organizationReview.actionsDescription")}
                 </p>
               </div>
             </div>
             <div className="space-y-3">
               <ReviewActionDialog
-                title="Approve organization"
-                description="Approves this organization for platform use based on the currently returned profile and evidence."
-                confirmLabel="Approve"
+                title={t("organizationReview.approveTitle")}
+                description={t("organizationReview.approveDescription")}
+                confirmLabel={t("common.approve")}
                 isPending={approve.isPending}
                 error={approve.error}
                 onConfirm={(input) => approve.mutateAsync({ id, input })}
-                trigger={<Button className="w-full">Approve organization</Button>}
+                trigger={<Button className="w-full">{t("organizationReview.approveButton")}</Button>}
               />
               <ReviewActionDialog
-                title="Reject organization"
-                description="Rejects the organization review and records the reason for the company."
-                confirmLabel="Reject"
+                title={t("organizationReview.rejectTitle")}
+                description={t("organizationReview.rejectDescription")}
+                confirmLabel={t("common.reject")}
                 requireReason
                 tone="danger"
                 isPending={reject.isPending}
@@ -170,14 +172,14 @@ export default function OrganizationReviewPage() {
                 onConfirm={(input) => reject.mutateAsync({ id, input })}
                 trigger={
                   <Button className="w-full bg-[var(--color-danger)] text-[var(--color-danger-foreground)] hover:opacity-90">
-                    Reject organization
+                    {t("organizationReview.rejectButton")}
                   </Button>
                 }
               />
               <ReviewActionDialog
-                title="Suspend organization"
-                description="Suspends marketplace access because of a compliance or operational issue."
-                confirmLabel="Suspend"
+                title={t("organizationReview.suspendTitle")}
+                description={t("organizationReview.suspendDescription")}
+                confirmLabel={t("common.suspend")}
                 requireReason
                 tone="warning"
                 isPending={suspend.isPending}
@@ -185,19 +187,19 @@ export default function OrganizationReviewPage() {
                 onConfirm={(input) => suspend.mutateAsync({ id, input })}
                 trigger={
                   <Button className="w-full bg-[var(--color-warning)] text-[var(--color-warning-foreground)] hover:opacity-90">
-                    Suspend organization
+                    {t("organizationReview.suspendButton")}
                   </Button>
                 }
               />
               <ReviewActionDialog
-                title="Reactivate organization"
-                description="Returns a suspended organization to approved status when the issue is resolved."
-                confirmLabel="Reactivate"
+                title={t("organizationReview.reactivateTitle")}
+                description={t("organizationReview.reactivateDescription")}
+                confirmLabel={t("common.reactivate")}
                 tone="neutral"
                 isPending={reactivate.isPending}
                 error={reactivate.error}
                 onConfirm={(input) => reactivate.mutateAsync({ id, input })}
-                trigger={<Button className="ui-button-secondary w-full">Reactivate organization</Button>}
+                trigger={<Button className="ui-button-secondary w-full">{t("organizationReview.reactivateButton")}</Button>}
               />
             </div>
           </DetailCard>

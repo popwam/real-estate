@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/i18n";
 import type { CreateDealRoomMessageInput, DealRoomMessageType } from "@/types/deal-rooms";
 
 const schema = z.object({
@@ -24,6 +25,7 @@ export function DealRoomMessageComposer({
   error?: Error | null;
   onSubmit: (input: CreateDealRoomMessageInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { messageType: "TEXT", body: "" },
@@ -40,18 +42,18 @@ export function DealRoomMessageComposer({
   return (
     <form className="space-y-4" onSubmit={handleSubmit(submit)}>
       <div className="space-y-2">
-        <Label>Type</Label>
+        <Label>{t("common.type")}</Label>
         <select className="ui-input" {...register("messageType")}>
-          <option value="TEXT">Message</option>
-          <option value="SYSTEM">System note</option>
-          <option value="DOCUMENT">Document reference</option>
-          <option value="STATUS_UPDATE">Status update</option>
+          <option value="TEXT">{t("dealRooms.messageType.message")}</option>
+          <option value="SYSTEM">{t("dealRooms.messageType.system")}</option>
+          <option value="DOCUMENT">{t("dealRooms.messageType.document")}</option>
+          <option value="STATUS_UPDATE">{t("dealRooms.messageType.status")}</option>
         </select>
       </div>
       <div className="space-y-2">
-        <Label>Message</Label>
-        <Textarea placeholder="Write a deal room message." {...register("body")} />
-        {errors.body ? <p className="text-sm text-[var(--color-danger)]" role="alert">{errors.body.message}</p> : null}
+        <Label>{t("dealRooms.message")}</Label>
+        <Textarea placeholder={t("dealRooms.messagePlaceholder")} {...register("body")} />
+        {errors.body ? <p className="text-sm text-[var(--color-danger)]" role="alert">{t("dealRooms.messageRequired")}</p> : null}
       </div>
       {error ? (
         <div className="ui-feedback ui-feedback-error flex gap-2 text-sm" role="alert">
@@ -59,7 +61,7 @@ export function DealRoomMessageComposer({
           <span>{error.message}</span>
         </div>
       ) : null}
-      <Button disabled={isPending} type="submit">{isPending ? "Sending" : "Send message"}</Button>
+      <Button disabled={isPending} type="submit">{isPending ? t("common.sending") : t("dealRooms.sendMessage")}</Button>
     </form>
   );
 }

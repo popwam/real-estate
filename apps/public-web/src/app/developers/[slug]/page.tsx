@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { OrganizationContactPanel } from "@/components/organization/organization-contact-panel";
 import { OrganizationProfileHero } from "@/components/organization/organization-profile-hero";
 import { OrganizationProjectGrid } from "@/components/organization/organization-project-grid";
 import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
+import { normalizeLocale, tServer } from "@/i18n/server";
 import { getPublicDeveloperBySlug } from "@/lib/public-data";
 import { createSeoMetadata } from "@/lib/seo";
 
@@ -25,6 +27,8 @@ export async function generateMetadata({ params }: DeveloperPageProps) {
 
 export default async function DeveloperProfilePage({ params }: DeveloperPageProps) {
   const { slug } = await params;
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
+  const t = (key: string, params?: Record<string, string | number>) => tServer(locale, key, params);
   const developer = await getPublicDeveloperBySlug(slug);
 
   if (!developer) {
@@ -35,11 +39,11 @@ export default async function DeveloperProfilePage({ params }: DeveloperPageProp
     <div className="bg-[var(--color-background)]">
       <OrganizationProfileHero
         organization={developer}
-        eyebrow="Developer profile"
+        eyebrow={t("developer.profile.eyebrow")}
         primaryHref="#projects"
-        primaryLabel="View public projects"
+        primaryLabel={t("developer.profile.viewProjects")}
         secondaryHref="#contact"
-        secondaryLabel="Contact developer"
+        secondaryLabel={t("developer.profile.contact")}
       />
       <OrganizationTrustStrip
         organization={developer}
@@ -50,19 +54,17 @@ export default async function DeveloperProfilePage({ params }: DeveloperPageProp
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-              Projects
+              {t("nav.projects")}
             </p>
             <h2 className="mt-3 text-3xl font-semibold text-[var(--color-foreground)]">
-              Public project portfolio
+              {t("developer.profile.portfolio")}
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-              Projects appear here when this developer has approved them for
-              public viewing.
+              {t("developer.profile.portfolioDescription")}
             </p>
           </div>
           <p className="text-sm font-semibold text-[var(--color-foreground)]">
-            {developer.projects.length} project
-            {developer.projects.length === 1 ? "" : "s"}
+            {t("developer.profile.projectCount", { count: developer.projects.length })}
           </p>
         </div>
         <div className="mt-8">
@@ -74,13 +76,13 @@ export default async function DeveloperProfilePage({ params }: DeveloperPageProp
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.36fr_0.64fr]">
           <aside className="ui-card p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
-              Developer overview
+              {t("developer.profile.overview")}
             </h2>
             <dl className="mt-5 grid gap-4 text-sm text-[var(--color-muted)]">
               {developer.establishedLabel ? (
                 <div>
                   <dt className="font-semibold text-[var(--color-foreground)]">
-                    Track record
+                    {t("developer.profile.trackRecord")}
                   </dt>
                   <dd>{developer.establishedLabel}</dd>
                 </div>
@@ -88,7 +90,7 @@ export default async function DeveloperProfilePage({ params }: DeveloperPageProp
               {developer.serviceAreas?.length ? (
                 <div>
                   <dt className="font-semibold text-[var(--color-foreground)]">
-                    Service areas
+                    {t("developer.profile.serviceAreas")}
                   </dt>
                   <dd>{developer.serviceAreas.join(", ")}</dd>
                 </div>

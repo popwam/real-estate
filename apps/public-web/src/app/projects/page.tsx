@@ -55,9 +55,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             filters={filters}
             filterOptions={filterOptions}
             resultCount={projects.length}
+            locale={locale}
           />
         </div>
-        <ProjectResultsGrid projects={projects} />
+        <ProjectResultsGrid projects={projects} locale={locale} />
       </section>
     </div>
   );

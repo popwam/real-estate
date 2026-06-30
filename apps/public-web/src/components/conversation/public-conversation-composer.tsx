@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { useI18n } from "@/i18n";
 
 type PublicConversationComposerProps = {
   senderName: string;
@@ -25,6 +26,7 @@ export function PublicConversationComposer({
   onBodyChange,
   onSubmit,
 }: PublicConversationComposerProps) {
+  const { t, formatNumber } = useI18n();
   const errorId = "public-conversation-compose-error";
   const successId = "public-conversation-compose-success";
 
@@ -32,7 +34,7 @@ export function PublicConversationComposer({
     return (
       <div className="sticky bottom-0 shrink-0 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-surface-raised)_96%,transparent)] p-4 backdrop-blur">
         <p className="ui-feedback text-[var(--color-muted)]">
-          This conversation is closed, so new replies cannot be sent from this link.
+          {t("conversation.closed")}
         </p>
       </div>
     );
@@ -49,7 +51,10 @@ export function PublicConversationComposer({
     >
       <div className="grid gap-4 sm:grid-cols-[0.36fr_0.64fr]">
         <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-          Your name <span className="font-normal text-[var(--color-muted)]">(optional)</span>
+          {t("lead.yourName")}{" "}
+          <span className="font-normal text-[var(--color-muted)]">
+            {t("lead.optionalSuffix")}
+          </span>
           <input
             value={senderName}
             onChange={(event) => onSenderNameChange(event.target.value)}
@@ -59,7 +64,7 @@ export function PublicConversationComposer({
           />
         </label>
         <label className="grid gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-          Message
+          {t("lead.message")}
           <textarea
             value={body}
             onChange={(event) => onBodyChange(event.target.value)}
@@ -73,14 +78,17 @@ export function PublicConversationComposer({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-xs text-[var(--color-muted)]">
-          {body.trim().length}/2000 characters
+          {t("conversation.characterCount", {
+            count: formatNumber(body.trim().length),
+            max: formatNumber(2000),
+          })}
         </span>
         <button
           type="submit"
           disabled={isPending}
           className="ui-button ui-button-primary"
         >
-          {isPending ? "Sending..." : "Send message"}
+          {isPending ? t("lead.sending") : t("lead.sendMessage")}
         </button>
       </div>
 

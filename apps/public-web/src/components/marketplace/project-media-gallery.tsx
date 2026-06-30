@@ -1,17 +1,19 @@
 import { ProjectMediaVisual } from "@/components/marketplace/project-media-visual";
+import { tServer } from "@/i18n/server";
 import type { PublicProject } from "@/lib/mock-public-marketplace";
 
-export function ProjectMediaGallery({ project }: { project: PublicProject }) {
+export function ProjectMediaGallery({ project, locale }: { project: PublicProject; locale?: string }) {
+  const t = (key: string, params?: Record<string, string | number>) => tServer(locale, key, params);
   const images = project.galleryImageUrls.filter(Boolean);
 
   if (images.length === 0) {
     return (
       <section className="grid gap-4">
         <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-          Project media
+          {t("project.media.title")}
         </h2>
         <ProjectMediaVisual
-          label={`${project.name} media area`}
+          label={t("project.media.areaLabel", { name: project.name })}
           className="min-h-72 rounded-[var(--radius-lg)]"
         />
       </section>
@@ -22,11 +24,11 @@ export function ProjectMediaGallery({ project }: { project: PublicProject }) {
     return (
       <section className="grid gap-4">
         <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-          Project image
+          {t("project.media.imageTitle")}
         </h2>
         <ProjectMediaVisual
           imageUrl={images[0]}
-          label={`${project.name} project image`}
+          label={t("project.media.imageLabel", { name: project.name })}
           className="min-h-72 rounded-[var(--radius-lg)]"
         />
       </section>
@@ -37,10 +39,10 @@ export function ProjectMediaGallery({ project }: { project: PublicProject }) {
     <section className="grid gap-4">
       <div>
         <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-          Project media
+          {t("project.media.title")}
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-          Published images from the current project record.
+          {t("project.media.description")}
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -48,7 +50,7 @@ export function ProjectMediaGallery({ project }: { project: PublicProject }) {
           <ProjectMediaVisual
             key={`${imageUrl}-${index}`}
             imageUrl={imageUrl}
-            label={`${project.name} project image ${index + 1}`}
+            label={t("project.media.numberedImageLabel", { name: project.name, number: index + 1 })}
             className={index === 0 ? "min-h-72 rounded-[var(--radius-lg)] md:col-span-2" : "min-h-72 rounded-[var(--radius-lg)]"}
           />
         ))}

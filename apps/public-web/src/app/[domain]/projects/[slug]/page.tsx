@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { StickyCtaBar } from "@/components/cta/sticky-cta-bar";
 import { ProjectContactPanel } from "@/components/marketplace/project-contact-panel";
@@ -6,6 +7,7 @@ import { ProjectDetailHero } from "@/components/marketplace/project-detail-hero"
 import { ProjectMediaGallery } from "@/components/marketplace/project-media-gallery";
 import { OrganizationPublicShell } from "@/components/organization/organization-public-shell";
 import { OrganizationTrustStrip } from "@/components/organization/organization-trust-strip";
+import { normalizeLocale, tServer } from "@/i18n/server";
 import {
   getPublicProjectForOrganization,
   resolvePublicOrganizationByDomain,
@@ -18,16 +20,22 @@ type DomainProjectDetailPageProps = {
 
 export async function generateMetadata({ params }: DomainProjectDetailPageProps) {
   const { domain, slug } = await params;
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
   const organization = await resolvePublicOrganizationByDomain(domain);
   const project = organization
     ? await getPublicProjectForOrganization(organization.slug, slug)
     : null;
 
   return createSeoMetadata({
-    title: project ? `${project.name} by ${organization?.name}` : "Project not found",
+    title: project
+      ? tServer(locale, "project.meta.byOrganization", {
+          name: project.name,
+          organization: organization?.name ?? "",
+        })
+      : tServer(locale, "project.meta.notFoundTitle"),
     description:
       project?.summary ??
-      "The requested organization project could not be resolved publicly.",
+      tServer(locale, "project.meta.organizationNotFoundDescription"),
     path: `/${domain}/projects/${slug}`,
     image: project?.ogImageUrl,
     noindex: true,
@@ -39,6 +47,9 @@ export default async function DomainProjectDetailPage({
 }: DomainProjectDetailPageProps) {
   const { domain, slug } = await params;
   const organization = await resolvePublicOrganizationByDomain(domain);
+  const locale = normalizeLocale((await cookies()).get("popwam-locale")?.value);
+  const t = (key: string, params?: Record<string, string | number>) =>
+    tServer(locale, key, params);
   const project = organization
     ? await getPublicProjectForOrganization(organization.slug, slug)
     : null;
@@ -61,14 +72,14 @@ export default async function DomainProjectDetailPage({
 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.64fr_0.36fr] lg:items-start lg:py-14">
         <div className="grid gap-10">
-          <ProjectMediaGallery project={project} />
+          <ProjectMediaGallery project={project} locale={locale} />
 
           <section className="ui-card p-5 sm:p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
               {organization.name}
             </p>
             <h2 className="mt-3 text-2xl font-semibold text-[var(--color-foreground)]">
-              Project overview
+              {t("project.detail.projectOverview")}
             </h2>
             <p className="mt-4 text-base leading-7 text-[var(--color-muted)]">
               {project.summary}
@@ -90,19 +101,19 @@ export default async function DomainProjectDetailPage({
           <section className="grid gap-6 md:grid-cols-2">
             <article className="ui-card p-5 sm:p-6">
               <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-                Location
+                {t("project.detail.location")}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
-                {location || "Location details are available on request."}
+                {location || t("project.detail.locationOnRequest")}
               </p>
             </article>
 
             <article className="ui-card p-5 sm:p-6">
               <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-                Organization
+                {t("project.detail.organization")}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--color-muted)]">
-                Published by{" "}
+                {t("project.detail.publishedBy")}{" "}
                 <Link
                   href={`/${domain}`}
                   className="font-semibold text-[var(--color-foreground)] underline"
@@ -117,7 +128,7 @@ export default async function DomainProjectDetailPage({
           {project.unitTypes.length > 0 ? (
             <section className="ui-card p-5 sm:p-6">
               <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-                Units and inventory summary
+                {t("project.detail.unitsSummary")}
               </h2>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 {project.unitTypes.map((unitType) => (
@@ -133,7 +144,7 @@ export default async function DomainProjectDetailPage({
                     </p>
                     {project.hasPrice ? (
                       <p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">
-                        From {unitType.startingPrice}
+                        {t("project.detail.fromPrice", { price: unitType.startingPrice })}
                       </p>
                     ) : null}
                   </article>
@@ -145,13 +156,13 @@ export default async function DomainProjectDetailPage({
           {project.hasPaymentPlan ? (
             <section className="ui-card p-5 sm:p-6">
               <h2 className="text-2xl font-semibold text-[var(--color-foreground)]">
-                Payment plan
+                {t("project.detail.paymentPlan")}
               </h2>
               <dl className="mt-6 grid gap-4 text-sm text-[var(--color-muted)] sm:grid-cols-2">
-                <DetailFact label="Down payment" value={project.paymentPlan.downPayment} />
-                <DetailFact label="Installments" value={project.paymentPlan.installments} />
-                <DetailFact label="Delivery" value={project.paymentPlan.delivery} />
-                <DetailFact label="Maintenance" value={project.paymentPlan.maintenance} />
+                <DetailFact label={t("project.detail.downPayment")} value={project.paymentPlan.downPayment} />
+                <DetailFact label={t("project.detail.installments")} value={project.paymentPlan.installments} />
+                <DetailFact label={t("project.detail.delivery")} value={project.paymentPlan.delivery} />
+                <DetailFact label={t("project.detail.maintenance")} value={project.paymentPlan.maintenance} />
               </dl>
             </section>
           ) : null}
@@ -161,7 +172,7 @@ export default async function DomainProjectDetailPage({
       </section>
 
       <StickyCtaBar
-        label={`Interested in ${project.name}?`}
+        label={t("project.detail.interestedIn", { name: project.name })}
         whatsappUrl={project.developerContact?.whatsappUrl}
         avoidBottomNav={false}
       />
