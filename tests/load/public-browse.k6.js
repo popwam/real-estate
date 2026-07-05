@@ -2,7 +2,11 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Rate } from "k6/metrics";
 
-const publicHost = (__ENV.PUBLIC_BASE_URL || "https://staging.popwam.com").replace(/\/$/, "");
+const publicHost = (
+  __ENV.LOAD_BASE_URL ||
+  __ENV.PUBLIC_BASE_URL ||
+  "https://staging.popwam.com"
+).replace(/\/$/, "");
 const errorRate = new Rate("errors");
 
 export const options = {

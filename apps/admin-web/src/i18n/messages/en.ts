@@ -16,20 +16,28 @@ export const messages = {
   "auth.login.brandSubtitle": "Real Estate Marketplace & CRM",
   "auth.login.eyebrow": "One trusted workspace",
   "auth.login.heroTitle": "Move property operations forward with clarity.",
-  "auth.login.heroDescription": "Review organizations, manage projects and inventory, follow leads, and keep every deal moving from one secure workspace.",
+  "auth.login.heroDescription":
+    "Review organizations, manage projects and inventory, follow leads, and keep every deal moving from one secure workspace.",
   "auth.login.capabilitiesAria": "Platform capabilities",
   "auth.login.capabilityMarketplace": "Verified marketplace operations",
   "auth.login.capabilityWorkspaces": "Role-focused company workspaces",
-  "auth.login.capabilityWorkflow": "CRM, reservations, deals, and governance in one flow",
-  "auth.login.secureAccess": "Secure access for authorized POPWAM teams and partners.",
+  "auth.login.capabilityWorkflow":
+    "CRM, reservations, deals, and governance in one flow",
+  "auth.login.secureAccess":
+    "Secure access for authorized POPWAM teams and partners.",
   "auth.login.formEyebrow": "Authorized workspace",
   "auth.login.formTitle": "Welcome back",
-  "auth.login.formDescription": "Sign in with your platform, developer, or brokerage account.",
-  "auth.login.accessNote": "Access is limited to authorized POPWAM users. Your workspace is selected automatically after sign-in.",
+  "auth.login.formDescription":
+    "Sign in with your platform, developer, or brokerage account.",
+  "auth.login.accessNote":
+    "Access is limited to authorized POPWAM users. Your workspace is selected automatically after sign-in.",
   "common.all": "All",
   "common.create": "Create",
   "common.add": "Add",
   "common.copied": "Copied",
+  "adminOperations.loadingRecord": "Loading record",
+  "adminOperations.saving": "Saving...",
+  "adminOperations.saveChanges": "Save changes",
   "common.dueDate": "Due date",
   "common.priority": "Priority",
   "common.creating": "Creating",
@@ -51,9 +59,11 @@ export const messages = {
   "crm.tasks.title": "CRM tasks",
   "crm.tasks.description": "Follow-up tasks for CRM leads.",
   "crm.tasks.filters.title": "Filter tasks",
-  "crm.tasks.filters.description": "Review open, completed, cancelled, priority, and due-date states.",
+  "crm.tasks.filters.description":
+    "Review open, completed, cancelled, priority, and due-date states.",
   "crm.tasks.create.title": "Create follow-up task",
-  "crm.tasks.create.description": "Choose an available lead by name instead of entering a raw lead ID. The task can also remain unlinked.",
+  "crm.tasks.create.description":
+    "Choose an available lead by name instead of entering a raw lead ID. The task can also remain unlinked.",
   "crm.tasks.field.title": "Task title",
   "crm.tasks.field.titlePlaceholder": "Follow-up action",
   "crm.tasks.field.lead": "Lead",
@@ -70,14 +80,17 @@ export const messages = {
   "crm.tasks.unlinked": "Unlinked task",
   "crm.tasks.markComplete": "Mark complete",
   "crm.tasks.empty.title": "No tasks match these filters",
-  "crm.tasks.empty.description": "Clear the filters or create a new follow-up task.",
+  "crm.tasks.empty.description":
+    "Clear the filters or create a new follow-up task.",
   "crm.tasks.error.complete": "Task could not be completed",
   "crm.leadOperations.stage.title": "Pipeline stage",
-  "crm.leadOperations.stage.description": "Move the lead using the existing stage workflow; no drag-and-drop behavior is assumed.",
+  "crm.leadOperations.stage.description":
+    "Move the lead using the existing stage workflow; no drag-and-drop behavior is assumed.",
   "crm.leadOperations.stage.field.stage": "Stage",
   "crm.leadOperations.stage.field.selectStage": "Select stage",
   "crm.leadOperations.stage.field.note": "Move note",
-  "crm.leadOperations.stage.field.notePlaceholder": "Optional reason or context",
+  "crm.leadOperations.stage.field.notePlaceholder":
+    "Optional reason or context",
   "crm.leadOperations.stage.updating": "Updating...",
   "crm.leadOperations.stage.update": "Update stage",
   "crm.leadOperations.stage.error.update": "Stage could not be updated",
@@ -87,7 +100,8 @@ export const messages = {
   "crm.leadOperations.stage.changed": "Stage changed",
   "crm.leadOperations.stage.emptyHistory": "No stage history yet.",
   "crm.leadOperations.notes.title": "Internal notes",
-  "crm.leadOperations.notes.description": "Notes stay inside the authenticated CRM workspace.",
+  "crm.leadOperations.notes.description":
+    "Notes stay inside the authenticated CRM workspace.",
   "crm.leadOperations.notes.field.body": "New note",
   "crm.leadOperations.notes.field.bodyPlaceholder": "Add useful sales context",
   "crm.leadOperations.notes.add": "Add note",
@@ -96,12 +110,15 @@ export const messages = {
   "crm.leadOperations.notes.error.load": "Notes could not be loaded",
   "crm.leadOperations.notes.empty": "No private notes yet.",
   "crm.leadOperations.tasks.title": "Follow-up tasks",
-  "crm.leadOperations.tasks.description": "Create a dated next action and close it when the follow-up is complete.",
-  "crm.leadOperations.tasks.titlePlaceholder": "Example: Call after document review",
+  "crm.leadOperations.tasks.description":
+    "Create a dated next action and close it when the follow-up is complete.",
+  "crm.leadOperations.tasks.titlePlaceholder":
+    "Example: Call after document review",
   "crm.leadOperations.tasks.complete": "Complete",
   "crm.leadOperations.tasks.empty": "No follow-up tasks yet.",
   "crm.pipeline.title": "CRM pipeline",
-  "crm.pipeline.description": "Review leads by stage and use the explicit move action on desktop or mobile. Drag-and-drop is not assumed.",
+  "crm.pipeline.description":
+    "Review leads by stage and use the explicit move action on desktop or mobile. Drag-and-drop is not assumed.",
   "crm.pipeline.error.load": "Pipeline could not be loaded",
   "crm.pipeline.loading": "Loading CRM pipeline",
   "crm.pipeline.controls": "Pipeline controls",
@@ -118,10 +135,12 @@ export const messages = {
   "crm.pipeline.move.submit": "Move lead",
   "crm.pipeline.move.error": "Lead could not be moved",
   "crm.pipeline.board.title": "Stage board",
-  "crm.pipeline.board.description": "Up to 100 leads are loaded by the existing pipeline view contract.",
+  "crm.pipeline.board.description":
+    "Up to 100 leads are loaded by the existing pipeline view contract.",
   "crm.pipeline.board.emptyStage": "No leads in this stage.",
   "crm.pipeline.board.emptyTitle": "No pipeline stages yet",
-  "crm.pipeline.board.emptyDescription": "Create the first stage using the existing stage setup control.",
+  "crm.pipeline.board.emptyDescription":
+    "Create the first stage using the existing stage setup control.",
   "filters.allStatuses": "All statuses",
   "filters.allTypes": "All types",
   "filters.allMethods": "All methods",
@@ -162,8 +181,10 @@ export const messages = {
   "dealRooms.missingRouteId": "The route did not include a deal room id.",
   "dealRooms.noApiRoom": "The API returned no deal room for this id.",
   "dealRooms.loading": "Loading deal room",
-  "dealRooms.description": "Coordinate the parties and move this approved reservation through a clear handoff.",
-  "dealRooms.descriptionWithUnit": "Unit {unit} - Coordinate the parties and move this approved reservation through a clear handoff.",
+  "dealRooms.description":
+    "Coordinate the parties and move this approved reservation through a clear handoff.",
+  "dealRooms.descriptionWithUnit":
+    "Unit {unit} - Coordinate the parties and move this approved reservation through a clear handoff.",
   "dealRooms.updateStatus": "Update status",
   "dealRooms.finalizeAsDeal": "Finalize as deal",
   "dealRooms.negotiationActivity": "Negotiation activity",
@@ -180,27 +201,32 @@ export const messages = {
   "dealRooms.messageType.document": "Document reference",
   "dealRooms.messageType.status": "Status update",
   "organizationInvites.createLink": "Create invitation link",
-  "organizationInvites.description": "This creates an invite token and link for the recipient. Share the link manually if email delivery is not configured.",
+  "organizationInvites.description":
+    "This creates an invite token and link for the recipient. Share the link manually if email delivery is not configured.",
   "organizationInvites.recipientEmail": "Recipient email",
   "organizationInvites.intendedRole": "Intended role",
   "organizationInvites.createInvite": "Create invite",
   "organizationInvites.errorCreate": "Could not create invitation",
-  "organizationInvites.created": "Invitation link created. Share this link manually with the recipient.",
+  "organizationInvites.created":
+    "Invitation link created. Share this link manually with the recipient.",
   "organizationInvites.copyLink": "Copy invite link",
   "organizationInvites.accepted": "Accepted {date}",
   "organizationInvites.expires": "Expires {date}",
   "organizationInvites.loading": "Loading invitations...",
   "organizationInvites.emptyTitle": "No invitations yet",
-  "organizationInvites.emptyDescription": "Create an invite when the organization is ready for an owner or admin to join.",
+  "organizationInvites.emptyDescription":
+    "Create an invite when the organization is ready for an owner or admin to join.",
   "organizationCreate.title": "Create organization record",
-  "organizationCreate.description": "Create the company shell first, then open its dossier to review profile data and issue invitations.",
+  "organizationCreate.description":
+    "Create the company shell first, then open its dossier to review profile data and issue invitations.",
   "organizationCreate.companyName": "Company name",
   "organizationCreate.companyType": "Company type",
   "organizationCreate.city": "City",
   "organizationCreate.country": "Country",
   "organizationCreate.error": "Could not create organization",
   "organizationCreate.success": "{name} was created",
-  "organizationCreate.successDescription": "Open the dossier below to review details, add verification context, and create invitations.",
+  "organizationCreate.successDescription":
+    "Open the dossier below to review details, add verification context, and create invitations.",
   "organizationType.developer": "Developer",
   "organizationType.brokerage": "Brokerage",
   "organizationType.individualBroker": "Individual broker",
@@ -257,10 +283,12 @@ export const messages = {
   "unitVisibility.SELECTED_BROKERS": "Selected brokers",
   "unitVisibility.HIDDEN": "Hidden",
   "developerProjects.title": "Project portfolio",
-  "developerProjects.description": "Control project readiness, inventory, visibility, payment plans, and selling access from one portfolio.",
+  "developerProjects.description":
+    "Control project readiness, inventory, visibility, payment plans, and selling access from one portfolio.",
   "developerProjects.newProject": "New project",
   "developerProjects.findProject": "Find a project",
-  "developerProjects.filterDescription": "Filter the current developer portfolio by lifecycle, audience, or location.",
+  "developerProjects.filterDescription":
+    "Filter the current developer portfolio by lifecycle, audience, or location.",
   "developerProjects.projectStatus": "Project status",
   "developerProjects.filterByCity": "Filter by city",
   "developerProjects.filterByDistrict": "Filter by district",
@@ -271,14 +299,18 @@ export const messages = {
   "developerProjects.pricingNote": "Pricing is managed at unit level.",
   "developerProjects.noMatches": "No projects match these filters",
   "developerProjects.createFirst": "Create your first project",
-  "developerProjects.noMatchesDescription": "Clear or adjust the filters to return to the full portfolio.",
-  "developerProjects.createFirstDescription": "Start with the project identity and location, then add inventory, visibility, and selling permissions.",
+  "developerProjects.noMatchesDescription":
+    "Clear or adjust the filters to return to the full portfolio.",
+  "developerProjects.createFirstDescription":
+    "Start with the project identity and location, then add inventory, visibility, and selling permissions.",
   "developerProjects.createFirstAction": "Create first project",
   "developerInventory.title": "Inventory control",
-  "developerInventory.description": "Manage unit availability, pricing, and visibility across the developer portfolio.",
+  "developerInventory.description":
+    "Manage unit availability, pricing, and visibility across the developer portfolio.",
   "developerInventory.createUnit": "Create unit",
   "developerInventory.filterInventory": "Filter inventory",
-  "developerInventory.filterDescription": "Narrow the organization-scoped inventory without hiding project context.",
+  "developerInventory.filterDescription":
+    "Narrow the organization-scoped inventory without hiding project context.",
   "developerInventory.allProjects": "All projects",
   "developerInventory.unitType": "Unit type",
   "developerInventory.loading": "Loading inventory",
@@ -288,16 +320,20 @@ export const messages = {
   "developerInventory.unitUpdated": "Unit {unit} updated",
   "developerInventory.unitCreated": "Unit created",
   "developerInventory.results": "Inventory results",
-  "developerInventory.resultCount": "{count} {units} in the current result set.",
+  "developerInventory.resultCount":
+    "{count} {units} in the current result set.",
   "developerInventory.unitSingular": "unit",
   "developerInventory.unitPlural": "units",
   "developerInventory.noMatches": "No units match these filters",
   "developerInventory.noneYet": "No inventory units yet",
-  "developerInventory.noMatchesDescription": "Clear or adjust filters to return to the full inventory.",
-  "developerInventory.noneYetDescription": "Create the first unit and connect it to an existing project.",
+  "developerInventory.noMatchesDescription":
+    "Clear or adjust filters to return to the full inventory.",
+  "developerInventory.noneYetDescription":
+    "Create the first unit and connect it to an existing project.",
   "developerInventory.createFirstUnit": "Create first unit",
   "domainReview.emptyTitle": "No organization domains waiting for review",
-  "domainReview.emptyDescription": "Submitted custom domains and subdomains will appear here when an organization requests platform review.",
+  "domainReview.emptyDescription":
+    "Submitted custom domains and subdomains will appear here when an organization requests platform review.",
   "domainReview.organizationNameMissing": "Organization name not returned",
   "domainReview.submitted": "Submitted",
   "domainReview.lastDnsCheck": "Last DNS check",
@@ -306,11 +342,14 @@ export const messages = {
   "domainReview.note": "Note",
   "domainReview.guidance": "Review guidance",
   "domainReview.nextAction.pending": "Review ownership and approve or reject",
-  "domainReview.nextAction.failed": "Read the failure reason and request correction",
+  "domainReview.nextAction.failed":
+    "Read the failure reason and request correction",
   "domainReview.nextAction.none": "No review action needed",
-  "domainReview.guidanceDescription": "Approving records platform approval only. Use the returned DNS fields and notes as the evidence source.",
+  "domainReview.guidanceDescription":
+    "Approving records platform approval only. Use the returned DNS fields and notes as the evidence source.",
   "verificationList.emptyTitle": "No verification requests waiting for review",
-  "verificationList.emptyDescription": "New organization documents will appear here when companies submit them for platform approval.",
+  "verificationList.emptyDescription":
+    "New organization documents will appear here when companies submit them for platform approval.",
   "verificationList.expires": "Expires",
   "verificationList.reviewed": "Reviewed",
   "verificationList.nextAction": "Next action",
@@ -322,8 +361,10 @@ export const messages = {
   "verificationList.review": "Review",
   "leadList.emptyMarketplace": "No marketplace leads are available",
   "leadList.emptyCrm": "No CRM leads match this view",
-  "leadList.emptyMarketplaceDescription": "New eligible marketplace opportunities will appear here when they are available.",
-  "leadList.emptyCrmDescription": "Adjust the current filters or wait for a new lead to enter this workspace.",
+  "leadList.emptyMarketplaceDescription":
+    "New eligible marketplace opportunities will appear here when they are available.",
+  "leadList.emptyCrmDescription":
+    "Adjust the current filters or wait for a new lead to enter this workspace.",
   "leadList.lead": "Lead",
   "leadList.interest": "Interest",
   "leadList.stageStatus": "Stage / status",
@@ -352,8 +393,10 @@ export const messages = {
   "operations.records": "Records",
   "operations.loadingRecords": "Loading records",
   "operations.empty": "No records match these filters.",
-  "attendance.admin.description": "Employee attendance records for check-in, check-out, and manual HR adjustments. Payroll automation is not included.",
-  "attendance.admin.detailDescription": "Attendance record detail with check-in, check-out, note, and activity history.",
+  "attendance.admin.description":
+    "Employee attendance records for check-in, check-out, and manual HR adjustments. Payroll automation is not included.",
+  "attendance.admin.detailDescription":
+    "Attendance record detail with check-in, check-out, note, and activity history.",
   "attendance.admin.employee": "Employee",
   "attendance.admin.employeeId": "Employee ID",
   "attendance.admin.date": "Date",
@@ -372,6 +415,13 @@ export const messages = {
   "attendance.admin.photoEvidence": "Photo evidence",
   "attendance.admin.checkInPhotoFileId": "Check-in photo file ID",
   "attendance.admin.checkOutPhotoFileId": "Check-out photo file ID",
+  "attendance.admin.checkInPhotoEvidence": "Check-in photo evidence",
+  "attendance.admin.checkOutPhotoEvidence": "Check-out photo evidence",
+  "attendance.admin.noPhotoEvidence": "No photo evidence uploaded.",
+  "attendance.admin.previewUnavailable": "Preview is unavailable.",
+  "attendance.admin.loadingPreview": "Loading protected preview...",
+  "attendance.admin.downloadPhoto": "Download photo",
+  "attendance.admin.fileId": "File ID",
   "attendance.admin.dvrStatus": "DVR status",
   "attendance.admin.dvrReference": "DVR reference",
   "attendance.admin.source": "Source",
@@ -403,26 +453,33 @@ export const messages = {
   "inventoryList.projectUnavailable": "Project unavailable",
   "inventoryList.noPhase": "No phase",
   "projectSelling.title": "Who can sell this project?",
-  "projectSelling.description": "Choose the commercial rule that controls eligible broker attribution.",
+  "projectSelling.description":
+    "Choose the commercial rule that controls eligible broker attribution.",
   "projectSelling.mode.OWNER_ONLY.title": "Owner only",
-  "projectSelling.mode.OWNER_ONLY.description": "The developer team owns lead handling and broker attribution is not accepted.",
+  "projectSelling.mode.OWNER_ONLY.description":
+    "The developer team owns lead handling and broker attribution is not accepted.",
   "projectSelling.mode.AUTHORIZED_BROKERS.title": "Authorized brokers",
-  "projectSelling.mode.AUTHORIZED_BROKERS.description": "Only brokerages or brokers explicitly added below can sell and receive attribution.",
+  "projectSelling.mode.AUTHORIZED_BROKERS.description":
+    "Only brokerages or brokers explicitly added below can sell and receive attribution.",
   "projectSelling.mode.OPEN_BROKERAGE.title": "Open brokerage",
-  "projectSelling.mode.OPEN_BROKERAGE.description": "Eligible marketplace brokerages can participate without a project-specific authorization record.",
+  "projectSelling.mode.OPEN_BROKERAGE.description":
+    "Eligible marketplace brokerages can participate without a project-specific authorization record.",
   "projectSelling.currentMode": "Current saved mode:",
   "projectSelling.updated": "Selling mode updated",
-  "projectSelling.updatedDescription": "The project now uses the selected broker participation rule.",
+  "projectSelling.updatedDescription":
+    "The project now uses the selected broker participation rule.",
   "projectSelling.error": "Selling permissions could not be updated",
   "projectSelling.authorizations": "Explicit broker authorizations",
-  "projectSelling.authorizationsDescription": "These records are used when the project requires specifically authorized brokerages or broker users.",
+  "projectSelling.authorizationsDescription":
+    "These records are used when the project requires specifically authorized brokerages or broker users.",
   "projectSelling.authorizationType": "Authorization type",
   "projectSelling.brokerageOrganization": "Brokerage organization",
   "projectSelling.brokerUser": "Broker user",
   "projectSelling.organizationOrUserId": "Organization or user ID",
   "projectSelling.existingIdPlaceholder": "Enter an existing ID",
   "publicLeads.title": "Public leads",
-  "publicLeads.description": "Website and public marketplace inquiries scoped by backend authorization.",
+  "publicLeads.description":
+    "Website and public marketplace inquiries scoped by backend authorization.",
   "publicLeads.inbox": "Lead inbox",
   "publicLeads.allStatuses": "All statuses",
   "publicLeads.status.new": "New",
@@ -431,7 +488,8 @@ export const messages = {
   "publicLeads.status.spam": "Spam",
   "publicLeads.loading": "Loading public leads",
   "publicLeadDetail.loading": "Loading public lead",
-  "publicLeadDetail.description": "Public lead detail. Conversion is a placeholder and does not create LeadClaim, ReservationRequest, broker assignment, deal, or CRM records.",
+  "publicLeadDetail.description":
+    "Public lead detail. Conversion is a placeholder and does not create LeadClaim, ReservationRequest, broker assignment, deal, or CRM records.",
   "publicLeadDetail.markReviewed": "Mark reviewed",
   "publicLeadDetail.markSpam": "Mark spam",
   "publicLeadDetail.convertPlaceholder": "Convert placeholder",
@@ -464,10 +522,13 @@ export const messages = {
   "status.suspended": "Suspended",
   "status.revoked": "Revoked",
   "platformOrganizations.title": "Organizations",
-  "platformOrganizations.description": "Trust and access control center for developers, brokerages, individual brokers, and platform-owned entities.",
+  "platformOrganizations.description":
+    "Trust and access control center for developers, brokerages, individual brokers, and platform-owned entities.",
   "platformOrganizations.filters.title": "Review filters",
-  "platformOrganizations.filters.showing": "Showing {shown} of {total} organization records.",
-  "platformOrganizations.filters.countNote": "Result count is based on the loaded organization list.",
+  "platformOrganizations.filters.showing":
+    "Showing {shown} of {total} organization records.",
+  "platformOrganizations.filters.countNote":
+    "Result count is based on the loaded organization list.",
   "platformOrganizations.filters.allTypes": "All types",
   "platformOrganizations.filters.allStatuses": "All statuses",
   "platformOrganizations.loading": "Loading organizations",
@@ -477,7 +538,8 @@ export const messages = {
   "organizationReview.next.review": "Review evidence and decide",
   "organizationReview.next.resolve": "Resolve suspension or reactivate",
   "organizationReview.next.monitor": "Monitor company readiness",
-  "organizationReview.description": "Review the company profile, submitted evidence, invitations, and trust decisions before changing marketplace access.",
+  "organizationReview.description":
+    "Review the company profile, submitted evidence, invitations, and trust decisions before changing marketplace access.",
   "organizationReview.status": "Organization status",
   "organizationReview.pendingDocuments": "Pending documents",
   "organizationReview.companyType": "Company type",
@@ -498,23 +560,30 @@ export const messages = {
   "organizationReview.verificationDocuments": "Verification documents",
   "organizationReview.companyInvitations": "Company invitations",
   "organizationReview.trustTimeline": "Trust timeline",
-  "organizationReview.noReviewEvents": "No document review events have been returned for this organization yet.",
+  "organizationReview.noReviewEvents":
+    "No document review events have been returned for this organization yet.",
   "organizationReview.actions": "Review actions",
-  "organizationReview.actionsDescription": "These actions change company access and trust state. Use the reason field when rejecting or suspending access.",
+  "organizationReview.actionsDescription":
+    "These actions change company access and trust state. Use the reason field when rejecting or suspending access.",
   "organizationReview.approveTitle": "Approve organization",
-  "organizationReview.approveDescription": "Approves this organization for platform use based on the currently returned profile and evidence.",
+  "organizationReview.approveDescription":
+    "Approves this organization for platform use based on the currently returned profile and evidence.",
   "organizationReview.approveButton": "Approve organization",
   "organizationReview.rejectTitle": "Reject organization",
-  "organizationReview.rejectDescription": "Rejects the organization review and records the reason for the company.",
+  "organizationReview.rejectDescription":
+    "Rejects the organization review and records the reason for the company.",
   "organizationReview.rejectButton": "Reject organization",
   "organizationReview.suspendTitle": "Suspend organization",
-  "organizationReview.suspendDescription": "Suspends marketplace access because of a compliance or operational issue.",
+  "organizationReview.suspendDescription":
+    "Suspends marketplace access because of a compliance or operational issue.",
   "organizationReview.suspendButton": "Suspend organization",
   "organizationReview.reactivateTitle": "Reactivate organization",
-  "organizationReview.reactivateDescription": "Returns a suspended organization to approved status when the issue is resolved.",
+  "organizationReview.reactivateDescription":
+    "Returns a suspended organization to approved status when the issue is resolved.",
   "organizationReview.reactivateButton": "Reactivate organization",
   "adminSweep.email.or.phone.5a698f5f": "Email or phone",
-  "adminSweep.name.company.com.or.201001234567.e1780975": "name@company.com or +201001234567",
+  "adminSweep.name.company.com.or.201001234567.e1780975":
+    "name@company.com or +201001234567",
   "adminSweep.password.8be3c943": "Password",
   "adminSweep.enter.your.password.1378167d": "Enter your password",
   "adminSweep.we.could.not.sign.you.in.0085c4c3": "We could not sign you in",
@@ -534,13 +603,17 @@ export const messages = {
   "adminSweep.create.reservation.30303fe6": "Create Reservation",
   "adminSweep.reservation.requests.c40ed840": "Reservation Requests",
   "adminSweep.request.history.f232ba25": "Request history",
-  "adminSweep.reservation.requests.could.not.be.loaded.6a70cf82": "Reservation requests could not be loaded",
-  "adminSweep.create.reservation.request.aeace377": "Create reservation request",
+  "adminSweep.reservation.requests.could.not.be.loaded.6a70cf82":
+    "Reservation requests could not be loaded",
+  "adminSweep.create.reservation.request.aeace377":
+    "Create reservation request",
   "adminSweep.accounting.categories.738806a0": "Accounting categories",
-  "adminSweep.accounting.category.detail.71c5f08d": "Accounting category detail",
+  "adminSweep.accounting.category.detail.71c5f08d":
+    "Accounting category detail",
   "adminSweep.accounting.summary.5d48c439": "Accounting summary",
   "adminSweep.accounting.transactions.09b72e43": "Accounting transactions",
-  "adminSweep.accounting.transaction.detail.5429fe95": "Accounting transaction detail",
+  "adminSweep.accounting.transaction.detail.5429fe95":
+    "Accounting transaction detail",
   "adminSweep.ads.campaigns.ac5049ea": "Ads campaigns",
   "adminSweep.ads.campaign.detail.7aef876a": "Ads campaign detail",
   "adminSweep.agreements.8fd739f0": "Agreements",
@@ -551,7 +624,8 @@ export const messages = {
   "adminSweep.broker.access.d48993dc": "Broker Access",
   "adminSweep.create.access.rule.70ac95be": "Create Access Rule",
   "adminSweep.access.rules.39158c78": "Access Rules",
-  "adminSweep.selected.update.level.for.table.actions.66e3198e": "Selected update level for table actions.",
+  "adminSweep.selected.update.level.for.table.actions.66e3198e":
+    "Selected update level for table actions.",
   "adminSweep.update.fb91e24f": "Update",
   "adminSweep.revoke.0be72075": "Revoke",
   "adminSweep.camera.devices.71fb8eb4": "Camera devices",
@@ -562,7 +636,8 @@ export const messages = {
   "adminSweep.review.project.readiness.068288d8": "Review project readiness",
   "adminSweep.keep.inventory.current.2ff0a36e": "Keep inventory current",
   "adminSweep.respond.to.buyer.interest.33c2b8c8": "Respond to buyer interest",
-  "adminSweep.advance.the.sales.pipeline.00055ab9": "Advance the sales pipeline",
+  "adminSweep.advance.the.sales.pipeline.00055ab9":
+    "Advance the sales pipeline",
   "adminSweep.hr.attendance.c2fcb0b7": "HR attendance",
   "adminSweep.hr.attendance.detail.e3c35354": "HR attendance detail",
   "adminSweep.hr.departments.cbd4b154": "HR departments",
@@ -572,7 +647,8 @@ export const messages = {
   "adminSweep.import.project.inventory.d287c8a0": "Import project inventory",
   "adminSweep.job.history.888eaa84": "Job history",
   "adminSweep.exports.0e165379": "Exports",
-  "adminSweep.claim.conflicts.on.developer.projects.4abc25ef": "Claim Conflicts On Developer Projects",
+  "adminSweep.claim.conflicts.on.developer.projects.4abc25ef":
+    "Claim Conflicts On Developer Projects",
   "adminSweep.legal.cases.a6f95b14": "Legal cases",
   "adminSweep.legal.case.detail.711e6dca": "Legal case detail",
   "adminSweep.legal.documents.1a83177c": "Legal documents",
@@ -585,11 +661,14 @@ export const messages = {
   "adminSweep.add.inventory.c5e4ed2f": "Add inventory",
   "adminSweep.prepare.distribution.81f9490d": "Prepare distribution",
   "adminSweep.no.autosave.599d8af2": "No autosave",
-  "adminSweep.this.form.saves.only.when.you.select.create.proj.460c0ab8": "This form saves only when you select Create project. No unsupported draft or autosave behavior has been added.",
-  "adminSweep.project.could.not.be.loaded.889f976e": "Project could not be loaded",
+  "adminSweep.this.form.saves.only.when.you.select.create.proj.460c0ab8":
+    "This form saves only when you select Create project. No unsupported draft or autosave behavior has been added.",
+  "adminSweep.project.could.not.be.loaded.889f976e":
+    "Project could not be loaded",
   "adminSweep.project.overview.d4ae1b1a": "Project overview",
   "adminSweep.create.unit.0e2460ab": "Create unit",
-  "adminSweep.project.inventory.could.not.be.loaded.161cf929": "Project inventory could not be loaded",
+  "adminSweep.project.inventory.could.not.be.loaded.161cf929":
+    "Project inventory could not be loaded",
   "adminSweep.units.12748281": "Units",
   "adminSweep.results.in.this.project.28e3606c": "results in this project.",
   "adminSweep.no.units.in.this.project.eb1bea3b": "No units in this project",
@@ -599,19 +678,22 @@ export const messages = {
   "adminSweep.visibility.7d9ff4f0": "Visibility",
   "adminSweep.overview.0efc2e6b": "Overview",
   "adminSweep.readiness.6dc1222c": "Readiness",
-  "adminSweep.use.available.project.facts.to.identify.the.next.0a171f64": "Use available project facts to identify the next setup step. No readiness score is fabricated.",
+  "adminSweep.use.available.project.facts.to.identify.the.next.0a171f64":
+    "Use available project facts to identify the next setup step. No readiness score is fabricated.",
   "adminSweep.identity.and.location.2f6b0b79": "Identity and location",
   "adminSweep.public.visibility.ac1cbda5": "Public visibility",
   "adminSweep.selling.permissions.fd7729ab": "Selling permissions",
   "adminSweep.payment.plans.9d8577f7": "Payment plans",
   "adminSweep.project.workflows.7d5c9c7d": "Project workflows",
-  "adminSweep.open.focused.workspaces.instead.of.crowding.ever.b988ad5c": "Open focused workspaces instead of crowding every task into this page.",
+  "adminSweep.open.focused.workspaces.instead.of.crowding.ever.b988ad5c":
+    "Open focused workspaces instead of crowding every task into this page.",
   "adminSweep.edit.project.details.189013d4": "Edit project details",
   "adminSweep.new.plan.06a18c99": "New plan",
   "adminSweep.project.level.plan.57581079": "Project-level plan",
   "adminSweep.unit.level.plan.8f3201f5": "Unit-level plan",
   "adminSweep.create.payment.plan.3e7e57af": "Create payment plan",
-  "adminSweep.payment.plans.could.not.be.loaded.e57d2e09": "Payment plans could not be loaded",
+  "adminSweep.payment.plans.could.not.be.loaded.e57d2e09":
+    "Payment plans could not be loaded",
   "adminSweep.payment.plan.created.532cb951": "Payment plan created",
   "adminSweep.saved.plans.5ef2b528": "Saved plans",
   "adminSweep.unit.da43633a": "Unit:",
@@ -619,12 +701,17 @@ export const messages = {
   "adminSweep.create.first.plan.40b61062": "Create first plan",
   "adminSweep.phases.1299c5da": "Phases",
   "adminSweep.edit.5301648d": "Edit",
-  "adminSweep.visibility.could.not.be.loaded.8f4f1022": "Visibility could not be loaded",
-  "adminSweep.who.can.discover.this.project.0d9784b9": "Who can discover this project?",
+  "adminSweep.visibility.could.not.be.loaded.8f4f1022":
+    "Visibility could not be loaded",
+  "adminSweep.who.can.discover.this.project.0d9784b9":
+    "Who can discover this project?",
   "adminSweep.current.saved.visibility.fd2df228": "Current saved visibility:",
-  "adminSweep.visibility.could.not.be.updated.af8a7bf2": "Visibility could not be updated",
-  "adminSweep.project.visibility.updated.ffb74f8f": "Project visibility updated",
-  "adminSweep.selected.visibility.impact.562bfcc5": "Selected visibility impact",
+  "adminSweep.visibility.could.not.be.updated.af8a7bf2":
+    "Visibility could not be updated",
+  "adminSweep.project.visibility.updated.ffb74f8f":
+    "Project visibility updated",
+  "adminSweep.selected.visibility.impact.562bfcc5":
+    "Selected visibility impact",
   "adminSweep.selected.audience.dd967fdb": "Selected audience",
   "adminSweep.before.saving.6ce8a2d2": "Before saving",
   "adminSweep.reservation.queue.01c869d8": "Reservation Queue",
@@ -634,7 +721,8 @@ export const messages = {
   "adminSweep.needs.your.attention.e51f4266": "Needs your attention",
   "adminSweep.create.an.organization.b7310649": "Create an organization",
   "adminSweep.review.trust.documents.2de8828c": "Review trust documents",
-  "adminSweep.resolve.marketplace.exceptions.f24ad15a": "Resolve marketplace exceptions",
+  "adminSweep.resolve.marketplace.exceptions.f24ad15a":
+    "Resolve marketplace exceptions",
   "adminSweep.support.conversations.9f5c09b8": "Support conversations",
   "adminSweep.hr.overview.4d1c415e": "HR overview",
   "adminSweep.lead.claim.conflicts.89e245d0": "Lead Claim Conflicts",
@@ -642,9 +730,12 @@ export const messages = {
   "adminSweep.legal.overview.530e5a6a": "Legal overview",
   "adminSweep.verifications.9fa7e678": "Verifications",
   "adminSweep.review.queue.696d8d49": "Review queue",
-  "adminSweep.no.risk.score.or.document.preview.is.shown.unles.45c3624b": "No risk score or document preview is shown unless returned by the existing API.",
-  "adminSweep.could.not.load.verification.queue.57ab5641": "Could not load verification queue",
-  "adminSweep.could.not.load.verification.detail.4d267f89": "Could not load verification detail",
+  "adminSweep.no.risk.score.or.document.preview.is.shown.unles.45c3624b":
+    "No risk score or document preview is shown unless returned by the existing API.",
+  "adminSweep.could.not.load.verification.queue.57ab5641":
+    "Could not load verification queue",
+  "adminSweep.could.not.load.verification.detail.4d267f89":
+    "Could not load verification detail",
   "adminSweep.back.b52b36b7": "Back",
   "adminSweep.decision.state.69f82c18": "Decision state",
   "adminSweep.organization.519255ae": "Organization",
@@ -654,105 +745,138 @@ export const messages = {
   "adminSweep.open.file.f11b8781": "Open file",
   "adminSweep.recorded.rejection.reason.db01a47b": "Recorded rejection reason",
   "adminSweep.document.metadata.a5c99d4e": "Document metadata",
-  "adminSweep.no.safe.file.url.was.returned.so.this.ui.only.sh.9f27bad8": "No safe file URL was returned, so this UI only shows the submitted metadata.",
+  "adminSweep.no.safe.file.url.was.returned.so.this.ui.only.sh.9f27bad8":
+    "No safe file URL was returned, so this UI only shows the submitted metadata.",
   "adminSweep.decision.timeline.2c6215a3": "Decision timeline",
   "adminSweep.decision.actions.d292fb97": "Decision actions",
-  "adminSweep.decision.actions.use.the.existing.review.contrac.8c5ad529": "Decision actions use the existing review contract. Rejection and request-info actions require a reason.",
+  "adminSweep.decision.actions.use.the.existing.review.contrac.8c5ad529":
+    "Decision actions use the existing review contract. Rejection and request-info actions require a reason.",
   "adminSweep.approve.verification.82c4bdf0": "Approve verification",
   "adminSweep.reject.verification.bd34e6b1": "Reject verification",
   "adminSweep.request.more.information.1cd0f07e": "Request more information",
   "adminSweep.request.more.7ea2c5d1": "Request more",
   "adminSweep.company.invitation.45b88642": "Company invitation",
   "adminSweep.join.e0d73143": "Join",
-  "adminSweep.set.your.password.to.activate.your.popwam.login..400a6c68": "Set your password to activate your POPWAM login for this organization.",
+  "adminSweep.set.your.password.to.activate.your.popwam.login..400a6c68":
+    "Set your password to activate your POPWAM login for this organization.",
   "adminSweep.invitation.accepted.62114516": "Invitation accepted",
   "adminSweep.sign.in.ada2e9e9": "Sign in",
   "adminSweep.first.name.7e568a90": "First name",
   "adminSweep.last.name.adec36a8": "Last name",
-  "adminSweep.phone.number.for.login.optional.dce75820": "Phone number for login (optional)",
+  "adminSweep.phone.number.for.login.optional.dce75820":
+    "Phone number for login (optional)",
   "adminSweep.at.least.10.characters.41addac0": "At least 10 characters",
   "adminSweep.invitation.unavailable.8fe7a384": "Invitation unavailable",
   "adminSweep.invitation.error.de7c519d": "Invitation error",
-  "adminSweep.claiming.assigns.this.marketplace.lead.to.your.e.096cdcd0": "Claiming assigns this marketplace lead to your eligible broker context. Confirm only when you are ready to follow up.",
+  "adminSweep.claiming.assigns.this.marketplace.lead.to.your.e.096cdcd0":
+    "Claiming assigns this marketplace lead to your eligible broker context. Confirm only when you are ready to follow up.",
   "adminSweep.cancel.77dfd213": "Cancel",
   "adminSweep.claim.lead.e78671ee": "Claim lead",
   "adminSweep.lead.could.not.be.claimed.82b7454f": "Lead could not be claimed",
-  "adminSweep.conversation.could.not.be.loaded.4c82bc79": "Conversation could not be loaded",
-  "adminSweep.conversation.is.unavailable.3e3d0c47": "Conversation is unavailable",
+  "adminSweep.conversation.could.not.be.loaded.4c82bc79":
+    "Conversation could not be loaded",
+  "adminSweep.conversation.is.unavailable.3e3d0c47":
+    "Conversation is unavailable",
   "adminSweep.conversation.overview.ec35b62c": "Conversation overview",
   "adminSweep.open.lead.51135f94": "Open lead",
   "adminSweep.status.note.97cd7f1f": "Status note:",
   "adminSweep.messages.f1702b46": "Messages",
-  "adminSweep.no.unread.state.is.inferred.from.this.message.li.aa755ff3": "No unread state is inferred from this message list.",
-  "adminSweep.messages.could.not.be.loaded.257240eb": "Messages could not be loaded",
+  "adminSweep.no.unread.state.is.inferred.from.this.message.li.aa755ff3":
+    "No unread state is inferred from this message list.",
+  "adminSweep.messages.could.not.be.loaded.257240eb":
+    "Messages could not be loaded",
   "adminSweep.conversation.activity.3d97b368": "Conversation activity",
-  "adminSweep.conversation.context.and.actions.c9eb6e18": "Conversation context and actions",
+  "adminSweep.conversation.context.and.actions.c9eb6e18":
+    "Conversation context and actions",
   "adminSweep.status.bae7d5be": "Status",
   "adminSweep.private.share.link.ada5af98": "Private share link",
   "adminSweep.participants.cd56e083": "Participants",
-  "adminSweep.no.participant.details.were.returned.0b003f0e": "No participant details were returned.",
+  "adminSweep.no.participant.details.were.returned.0b003f0e":
+    "No participant details were returned.",
   "adminSweep.lead.context.44cdb42a": "Lead context",
   "adminSweep.message.68f4145f": "Message",
   "adminSweep.write.a.clear.reply.7f680879": "Write a clear reply…",
   "adminSweep.message.could.not.be.sent.c8e1407a": "Message could not be sent",
-  "adminSweep.messages.are.sent.through.the.existing.conversat.fa0757c1": "Messages are sent through the existing conversation API.",
-  "adminSweep.no.private.share.link.is.available.for.this.conv.4db68641": "No private share link is available for this conversation.",
+  "adminSweep.messages.are.sent.through.the.existing.conversat.fa0757c1":
+    "Messages are sent through the existing conversation API.",
+  "adminSweep.no.private.share.link.is.available.for.this.conv.4db68641":
+    "No private share link is available for this conversation.",
   "adminSweep.private.client.link.b04cecc1": "Private client link",
   "adminSweep.open.link.d2de1a28": "Open link",
   "adminSweep.link.could.not.be.copied.a39c9833": "Link could not be copied",
-  "adminSweep.share.only.with.the.intended.client.anyone.holdi.43d0fa66": "Share only with the intended client. Anyone holding this private link may be able to access the public conversation.",
+  "adminSweep.share.only.with.the.intended.client.anyone.holdi.43d0fa66":
+    "Share only with the intended client. Anyone holding this private link may be able to access the public conversation.",
   "adminSweep.status.note.dc2f8f3c": "Status note",
-  "adminSweep.optional.reason.or.handoff.note.49b6fb01": "Optional reason or handoff note",
-  "adminSweep.conversation.status.could.not.be.updated.05e9772a": "Conversation status could not be updated",
-  "adminSweep.conversation.status.updated.5138480f": "Conversation status updated",
+  "adminSweep.optional.reason.or.handoff.note.49b6fb01":
+    "Optional reason or handoff note",
+  "adminSweep.conversation.status.could.not.be.updated.05e9772a":
+    "Conversation status could not be updated",
+  "adminSweep.conversation.status.updated.5138480f":
+    "Conversation status updated",
   "adminSweep.conversation.inbox.7e45354e": "Conversation inbox",
   "adminSweep.filter.conversations.a70369ae": "Filter conversations",
-  "adminSweep.unread.state.is.not.assumed.because.the.current..8d5e41a6": "Unread state is not assumed because the current list contract does not provide it.",
+  "adminSweep.unread.state.is.not.assumed.because.the.current..8d5e41a6":
+    "Unread state is not assumed because the current list contract does not provide it.",
   "adminSweep.inbox.44caf746": "Inbox",
-  "adminSweep.conversations.could.not.be.loaded.d0aa3c97": "Conversations could not be loaded",
+  "adminSweep.conversations.could.not.be.loaded.d0aa3c97":
+    "Conversations could not be loaded",
   "adminSweep.crm.activity.66256e79": "CRM activity",
   "adminSweep.filters.96e57821": "Filters",
   "adminSweep.activity.timeline.3e53cf95": "Activity timeline",
   "adminSweep.type.3deb7456": "Type",
   "adminSweep.all.activity.18524b83": "All activity",
   "adminSweep.from.3f66052a": "From",
-  "adminSweep.activity.could.not.be.loaded.dec85656": "Activity could not be loaded",
+  "adminSweep.activity.could.not.be.loaded.dec85656":
+    "Activity could not be loaded",
   "adminSweep.no.activity.recorded.yet.e861e835": "No activity recorded yet",
-  "adminSweep.crm.lead.could.not.be.loaded.333f41b9": "CRM lead could not be loaded",
+  "adminSweep.crm.lead.could.not.be.loaded.333f41b9":
+    "CRM lead could not be loaded",
   "adminSweep.crm.lead.is.unavailable.190e843c": "CRM lead is unavailable",
-  "adminSweep.conversation.could.not.be.opened.b856da67": "Conversation could not be opened",
+  "adminSweep.conversation.could.not.be.opened.b856da67":
+    "Conversation could not be opened",
   "adminSweep.lead.overview.599b9213": "Lead overview",
   "adminSweep.created.accf40c8": "Created",
   "adminSweep.updated.3874ded4": "· Updated",
   "adminSweep.project.and.attribution.2e4ae84f": "Project and attribution",
   "adminSweep.visitor.behavior.b384380e": "Visitor behavior",
-  "adminSweep.pipeline.notes.and.follow.up.f72add88": "Pipeline, notes, and follow-up",
+  "adminSweep.pipeline.notes.and.follow.up.f72add88":
+    "Pipeline, notes, and follow-up",
   "adminSweep.lead.actions.and.contact.5bc20917": "Lead actions and contact",
   "adminSweep.contact.b37456c4": "Contact",
   "adminSweep.next.action.d816c3c7": "Next action",
-  "adminSweep.continue.the.conversation.before.moving.to.reser.69f63684": "Continue the conversation before moving to reservation or deal workflows.",
+  "adminSweep.continue.the.conversation.before.moving.to.reser.69f63684":
+    "Continue the conversation before moving to reservation or deal workflows.",
   "adminSweep.lead.status.20dd0f14": "Lead status",
   "adminSweep.ownership.3e90e4cb": "Ownership",
-  "adminSweep.no.visitor.journey.is.attached.e581bd73": "No visitor journey is attached",
+  "adminSweep.no.visitor.journey.is.attached.e581bd73":
+    "No visitor journey is attached",
   "adminSweep.pages.viewed.e2dfa6d8": "Pages viewed",
-  "adminSweep.no.campaign.attribution.values.are.attached.f809d2ea": "No campaign attribution values are attached.",
+  "adminSweep.no.campaign.attribution.values.are.attached.f809d2ea":
+    "No campaign attribution values are attached.",
   "adminSweep.campaign.attribution.360ab01c": "Campaign attribution",
-  "adminSweep.optional.business.context.for.this.change.e2e12b0b": "Optional business context for this change",
-  "adminSweep.lead.status.could.not.be.updated.2a966f5b": "Lead status could not be updated",
+  "adminSweep.optional.business.context.for.this.change.e2e12b0b":
+    "Optional business context for this change",
+  "adminSweep.lead.status.could.not.be.updated.2a966f5b":
+    "Lead status could not be updated",
   "adminSweep.lead.status.updated.3b7c10cd": "Lead status updated",
   "adminSweep.claim.responsibly.4023f8d7": "Claim responsibly",
-  "adminSweep.a.confirmed.claim.assigns.the.lead.through.the.e.dea6dac4": "A confirmed claim assigns the lead through the existing eligibility rules. Contact details may remain masked until the backend authorizes access. No availability timer is assumed.",
+  "adminSweep.a.confirmed.claim.assigns.the.lead.through.the.e.dea6dac4":
+    "A confirmed claim assigns the lead through the existing eligibility rules. Contact details may remain masked until the backend authorizes access. No availability timer is assumed.",
   "adminSweep.filter.leads.665da41a": "Filter leads",
-  "adminSweep.use.existing.crm.filters.result.ownership.and.vi.7558700e": "Use existing CRM filters; result ownership and visibility remain backend-scoped.",
+  "adminSweep.use.existing.crm.filters.result.ownership.and.vi.7558700e":
+    "Use existing CRM filters; result ownership and visibility remain backend-scoped.",
   "adminSweep.total.results.6dca0437": "total results",
-  "adminSweep.crm.leads.could.not.be.loaded.48acc953": "CRM leads could not be loaded",
-  "adminSweep.crm.summary.could.not.be.loaded.71cd389a": "CRM summary could not be loaded",
+  "adminSweep.crm.leads.could.not.be.loaded.48acc953":
+    "CRM leads could not be loaded",
+  "adminSweep.crm.summary.could.not.be.loaded.71cd389a":
+    "CRM summary could not be loaded",
   "adminSweep.crm.summary.58aa6924": "CRM summary",
   "adminSweep.download.json.d296a30a": "Download JSON",
   "adminSweep.data.export.61534a81": "Data export",
   "adminSweep.choose.export.dc379970": "Choose export",
   "adminSweep.dataset.10526894": "Dataset",
-  "adminSweep.exports.are.json.only.in.this.slice.the.frontend.f4b61809": "Exports are JSON only in this slice. The frontend relies on backend authorization for organization and platform scoping.",
+  "adminSweep.exports.are.json.only.in.this.slice.the.frontend.f4b61809":
+    "Exports are JSON only in this slice. The frontend relies on backend authorization for organization and platform scoping.",
   "adminSweep.json.preview.8eb99b41": "JSON preview",
   "adminSweep.job.metadata.776b5805": "Job metadata",
   "adminSweep.summary.json.8a9e0866": "Summary JSON",
@@ -760,7 +884,8 @@ export const messages = {
   "adminSweep.import.jobs.ca93ba38": "Import jobs",
   "adminSweep.new.import.preview.bb3dedc0": "New import preview",
   "adminSweep.view.69bd4ef9": "View",
-  "adminSweep.preview.project.and.inventory.import.85b8ad45": "Preview project and inventory import",
+  "adminSweep.preview.project.and.inventory.import.85b8ad45":
+    "Preview project and inventory import",
   "adminSweep.source.format.ccbf10e4": "Source format",
   "adminSweep.json.rows.052566c8": "JSON rows",
   "adminSweep.csv.text.5fa38a72": "CSV text",
@@ -769,7 +894,8 @@ export const messages = {
   "adminSweep.use.json.sample.48f0f792": "Use JSON sample",
   "adminSweep.use.csv.sample.41995afe": "Use CSV sample",
   "adminSweep.row.validation.b7f598c0": "Row validation",
-  "adminSweep.no.operations.activity.recorded.yet.8997ee13": "No operations activity recorded yet.",
+  "adminSweep.no.operations.activity.recorded.yet.8997ee13":
+    "No operations activity recorded yet.",
   "adminSweep.record.summary.784394f7": "Record summary",
   "adminSweep.edit.record.ab680b51": "Edit record",
   "adminSweep.select.85982229": "Select",
@@ -777,17 +903,20 @@ export const messages = {
   "adminSweep.operations.overview.77c5f57a": "Operations overview",
   "adminSweep.summary.cards.015ef995": "Summary cards",
   "adminSweep.module.links.3243d3b8": "Module links",
-  "adminSweep.recent.operations.activity.2451ba4a": "Recent operations activity",
+  "adminSweep.recent.operations.activity.2451ba4a":
+    "Recent operations activity",
   "adminSweep.summary.12b71c3e": "Summary",
   "adminSweep.domain.9b10914d": "Domain",
   "adminSweep.example.com.or.my.brand.98595025": "example.com or my-brand",
   "adminSweep.custom.domain.0354c889": "Custom domain",
   "adminSweep.popwam.subdomain.abee9d48": "POPWAM subdomain",
   "adminSweep.reject.domain.c2e6fb71": "Reject domain",
-  "adminSweep.store.a.clear.reason.for.the.organization.before.7faa04d1": "Store a clear reason for the organization before this domain is rejected.",
+  "adminSweep.store.a.clear.reason.for.the.organization.before.7faa04d1":
+    "Store a clear reason for the organization before this domain is rejected.",
   "adminSweep.reason.f219cc06": "Reason",
   "adminSweep.txt.verification.9ad6a815": "TXT verification",
-  "adminSweep.add.this.txt.record.at.your.dns.provider.then.re.6757bddf": "Add this TXT record at your DNS provider, then request verification. No DNS provider is called from this UI.",
+  "adminSweep.add.this.txt.record.at.your.dns.provider.then.re.6757bddf":
+    "Add this TXT record at your DNS provider, then request verification. No DNS provider is called from this UI.",
   "adminSweep.copy.af74f7c5": "Copy",
   "adminSweep.domains.a0d641b3": "Domains",
   "adminSweep.add.domain.76d74001": "Add domain",
@@ -798,24 +927,30 @@ export const messages = {
   "adminSweep.reject.2b03b592": "Reject",
   "adminSweep.domain.review.4106ed98": "Domain review",
   "adminSweep.domain.governance.queue.62bf9a61": "Domain governance queue",
-  "adminSweep.approve.or.reject.using.only.the.returned.domain.4c32e66c": "Approve or reject using only the returned domain status, notes, and DNS verification data.",
-  "adminSweep.could.not.load.domain.review.queue.726facc7": "Could not load domain review queue",
+  "adminSweep.approve.or.reject.using.only.the.returned.domain.4c32e66c":
+    "Approve or reject using only the returned domain status, notes, and DNS verification data.",
+  "adminSweep.could.not.load.domain.review.queue.726facc7":
+    "Could not load domain review queue",
   "adminSweep.note.optional.4e395670": "Note (optional)",
   "adminSweep.open.cf9b7706": "Open",
   "adminSweep.review.e29a79fe": "Review",
   "adminSweep.spam.d8628a52": "Spam",
   "adminSweep.convert.3f15ce79": "Convert",
-  "adminSweep.published.on.public.website.routes.a236ad5c": "Published on public website routes",
+  "adminSweep.published.on.public.website.routes.a236ad5c":
+    "Published on public website routes",
   "adminSweep.website.settings.saved.cb618eb3": "Website settings saved.",
   "adminSweep.website.settings.016ff8af": "Website settings",
   "adminSweep.public.website.e403cd62": "Public website",
   "adminSweep.brokerage.access.required.452fbe58": "Brokerage access required",
-  "adminSweep.this.reviews.the.calculated.entry.only.it.does.n.04f0337a": "This reviews the calculated entry only; it does not initiate a payout.",
-  "adminSweep.commission.could.not.be.loaded.97a1e068": "Commission could not be loaded",
+  "adminSweep.this.reviews.the.calculated.entry.only.it.does.n.04f0337a":
+    "This reviews the calculated entry only; it does not initiate a payout.",
+  "adminSweep.commission.could.not.be.loaded.97a1e068":
+    "Commission could not be loaded",
   "adminSweep.commission.calculation.ad418c4f": "Commission calculation",
   "adminSweep.open.related.deal.8f727eec": "Open related deal",
   "adminSweep.what.this.status.means.ef9605b2": "What this status means",
-  "adminSweep.this.record.reflects.commission.calculation.and..cd984586": "This record reflects commission calculation and review only. It does not represent bank transfer or payout automation.",
+  "adminSweep.this.record.reflects.commission.calculation.and..cd984586":
+    "This record reflects commission calculation and review only. It does not represent bank transfer or payout automation.",
   "adminSweep.brokerage.1452e468": "Brokerage",
   "adminSweep.broker.a882cca9": "Broker",
   "adminSweep.platform.123a7f2f": "Platform",
@@ -825,38 +960,47 @@ export const messages = {
   "adminSweep.active.for.eligible.deals.b1f1b47c": "Active for eligible deals",
   "adminSweep.commission.rules.08f3de01": "Commission Rules",
   "adminSweep.existing.rules.e8961d92": "Existing rules",
-  "adminSweep.commission.rules.could.not.be.loaded.643f6c3d": "Commission rules could not be loaded",
+  "adminSweep.commission.rules.could.not.be.loaded.643f6c3d":
+    "Commission rules could not be loaded",
   "adminSweep.no.commission.rules.fcac8f8e": "No commission rules",
-  "adminSweep.create.the.first.scoped.rule.before.finalizing.e.06a7c270": "Create the first scoped rule before finalizing eligible deals.",
+  "adminSweep.create.the.first.scoped.rule.before.finalizing.e.06a7c270":
+    "Create the first scoped rule before finalizing eligible deals.",
   "adminSweep.calculation.dc6751bd": "Calculation",
   "adminSweep.edit.rule.1f53b227": "Edit rule",
   "adminSweep.new.rule.b9ac14b0": "New rule",
   "adminSweep.no.commission.entries.yet.a3152393": "No commission entries yet",
-  "adminSweep.calculated.entries.from.eligible.finalized.deals.e0e2171a": "Calculated entries from eligible finalized deals will appear here.",
+  "adminSweep.calculated.entries.from.eligible.finalized.deals.e0e2171a":
+    "Calculated entries from eligible finalized deals will appear here.",
   "adminSweep.review.calculation.d81e2a7d": "Review calculation",
   "adminSweep.commissions.c51e0bc1": "Commissions",
   "adminSweep.commission.ledger.edf36067": "Commission ledger",
-  "adminSweep.commissions.could.not.be.loaded.4818429f": "Commissions could not be loaded",
+  "adminSweep.commissions.could.not.be.loaded.4818429f":
+    "Commissions could not be loaded",
   "adminSweep.deal.could.not.be.loaded.35e9197b": "Deal could not be loaded",
   "adminSweep.cancel.deal.56a865a1": "Cancel deal",
   "adminSweep.deal.progress.d85dcecc": "Deal progress",
   "adminSweep.commission.entries.e087e2b8": "Commission entries",
-  "adminSweep.no.commission.entries.returned.for.this.deal.3e1dfa58": "No commission entries returned for this deal.",
+  "adminSweep.no.commission.entries.returned.for.this.deal.3e1dfa58":
+    "No commission entries returned for this deal.",
   "adminSweep.no.deals.yet.3ea5c55c": "No deals yet",
-  "adminSweep.deals.created.from.eligible.negotiation.rooms.wi.6e94d8bc": "Deals created from eligible negotiation rooms will appear here.",
+  "adminSweep.deals.created.from.eligible.negotiation.rooms.wi.6e94d8bc":
+    "Deals created from eligible negotiation rooms will appear here.",
   "adminSweep.commercial.outcome.570dcd6b": "Commercial outcome",
   "adminSweep.review.deal.4b268c81": "Review deal",
   "adminSweep.deals.2c874671": "Deals",
   "adminSweep.finalize.eligible.room.be1c75b7": "Finalize eligible room",
   "adminSweep.deal.pipeline.f8510389": "Deal pipeline",
   "adminSweep.deals.could.not.be.loaded.5fb2c848": "Deals could not be loaded",
-  "adminSweep.client.invite.creates.or.refreshes.the.client.pa.ad5aefbd": "Client invite creates or refreshes the client participant. External SMS/email delivery is a placeholder and is not implemented yet.",
+  "adminSweep.client.invite.creates.or.refreshes.the.client.pa.ad5aefbd":
+    "Client invite creates or refreshes the client participant. External SMS/email delivery is a placeholder and is not implemented yet.",
   "adminSweep.client.participant.is.d83cf09f": "Client participant is",
   "adminSweep.delivery.06b8c065": ". Delivery:",
   "adminSweep.update.deal.room.status.e73c790b": "Update deal room status",
-  "adminSweep.sold.is.intentionally.hidden.in.team.3.slice.5.f.27ed9bab": "SOLD is intentionally hidden in Team 3 Slice 5; finalization belongs to the later deal/commission flow.",
+  "adminSweep.sold.is.intentionally.hidden.in.team.3.slice.5.f.27ed9bab":
+    "SOLD is intentionally hidden in Team 3 Slice 5; finalization belongs to the later deal/commission flow.",
   "adminSweep.no.deal.rooms.yet.d05ebd5e": "No deal rooms yet",
-  "adminSweep.approved.reservations.can.move.here.for.negotiat.a23db429": "Approved reservations can move here for negotiation and deal handoff.",
+  "adminSweep.approved.reservations.can.move.here.for.negotiat.a23db429":
+    "Approved reservations can move here for negotiation and deal handoff.",
   "adminSweep.negotiation.workspace.489ec39b": "Negotiation workspace",
   "adminSweep.open.workspace.8b23311b": "Open workspace",
   "adminSweep.deal.rooms.260989e9": "Deal Rooms",
@@ -873,21 +1017,31 @@ export const messages = {
   "adminSweep.example.10.over.8.years.f3202449": "Example: 10% over 8 years",
   "adminSweep.project.level.acf97d76": "Project level",
   "adminSweep.unit.level.bd9de50e": "Unit level",
-  "adminSweep.payment.plan.could.not.be.created.51d1fd91": "Payment plan could not be created",
+  "adminSweep.payment.plan.could.not.be.created.51d1fd91":
+    "Payment plan could not be created",
   "adminSweep.basic.information.d8bc7383": "Basic information",
-  "adminSweep.example.north.coast.residence.7c564608": "Example: North Coast Residence",
+  "adminSweep.example.north.coast.residence.7c564608":
+    "Example: North Coast Residence",
   "adminSweep.location.d219c681": "Location",
   "adminSweep.city.4271627f": "City",
   "adminSweep.district.or.area.b266f3e0": "District or area",
-  "adminSweep.street.or.development.address.edd2b614": "Street or development address",
-  "adminSweep.description.and.publishing.f5c470ac": "Description and publishing",
-  "adminSweep.project.overview.positioning.and.key.information.477868f1": "Project overview, positioning, and key information",
-  "adminSweep.creating.or.editing.this.record.does.not.add.inv.8d3d26c5": "Creating or editing this record does not add inventory, payment plans, broker permissions, or publish it automatically. Complete those readiness steps from the project command center.",
-  "adminSweep.project.could.not.be.saved.f3096a4e": "Project could not be saved",
-  "adminSweep.loading.broker.authorizations.1dfd493a": "Loading broker authorizations…",
+  "adminSweep.street.or.development.address.edd2b614":
+    "Street or development address",
+  "adminSweep.description.and.publishing.f5c470ac":
+    "Description and publishing",
+  "adminSweep.project.overview.positioning.and.key.information.477868f1":
+    "Project overview, positioning, and key information",
+  "adminSweep.creating.or.editing.this.record.does.not.add.inv.8d3d26c5":
+    "Creating or editing this record does not add inventory, payment plans, broker permissions, or publish it automatically. Complete those readiness steps from the project command center.",
+  "adminSweep.project.could.not.be.saved.f3096a4e":
+    "Project could not be saved",
+  "adminSweep.loading.broker.authorizations.1dfd493a":
+    "Loading broker authorizations…",
   "adminSweep.remove.e963907d": "Remove",
-  "adminSweep.no.explicit.broker.authorizations.have.been.adde.b2b32cd8": "No explicit broker authorizations have been added.",
-  "adminSweep.authorizations.could.not.be.loaded.2091d429": "Authorizations could not be loaded",
+  "adminSweep.no.explicit.broker.authorizations.have.been.adde.b2b32cd8":
+    "No explicit broker authorizations have been added.",
+  "adminSweep.authorizations.could.not.be.loaded.2091d429":
+    "Authorizations could not be loaded",
   "adminSweep.choose.project.visibility.2da9cc50": "Choose project visibility",
   "adminSweep.who.can.see.it.22814f5d": "Who can see it:",
   "adminSweep.esc.1f7a4f9e": "Esc",
@@ -896,15 +1050,18 @@ export const messages = {
   "adminSweep.popwam.admin.963a65a6": "POPWAM Admin",
   "adminSweep.resolve.ac7f958c": "Resolve",
   "adminSweep.resolve.claim.conflict.e79ebc8f": "Resolve claim conflict",
-  "adminSweep.choose.the.platform.resolution.outcome.broker.id.5ab97e3f": "Choose the platform resolution outcome. Broker identity is shown only when the backend returns it.",
+  "adminSweep.choose.the.platform.resolution.outcome.broker.id.5ab97e3f":
+    "Choose the platform resolution outcome. Broker identity is shown only when the backend returns it.",
   "adminSweep.resolution.516aae52": "Resolution",
   "adminSweep.notes.optional.4d56ca9b": "Notes (optional)",
   "adminSweep.release.d41f56ce": "Release",
-  "adminSweep.reservation.request.could.not.be.loaded.467cccd7": "Reservation request could not be loaded",
+  "adminSweep.reservation.request.could.not.be.loaded.467cccd7":
+    "Reservation request could not be loaded",
   "adminSweep.approve.and.hold.unit.cd033c25": "Approve and hold unit",
   "adminSweep.reject.request.75946dcf": "Reject request",
   "adminSweep.cancel.request.84837a21": "Cancel request",
-  "adminSweep.deal.room.could.not.be.created.e3652340": "Deal room could not be created",
+  "adminSweep.deal.room.could.not.be.created.e3652340":
+    "Deal room could not be created",
   "adminSweep.property.and.parties.5f4d6f4d": "Property and parties",
   "adminSweep.request.context.b4ccb0ae": "Request context",
   "adminSweep.reservation.progress.6a22a281": "Reservation progress",
@@ -916,7 +1073,8 @@ export const messages = {
   "adminSweep.developer.response.353e4994": "Developer response:",
   "adminSweep.review.request.525f174f": "Review request",
   "adminSweep.permission.required.291ee371": "Permission required",
-  "adminSweep.no.organizations.match.these.filters.1ae9cdba": "No organizations match these filters",
+  "adminSweep.no.organizations.match.these.filters.1ae9cdba":
+    "No organizations match these filters",
   "adminSweep.plan.335c04da": "Plan:",
   "adminSweep.plan.expires.90599f88": "Plan expires:",
   "adminSweep.created.0c78dab1": "Created:",
@@ -924,9 +1082,11 @@ export const messages = {
   "adminSweep.next.required.action.5c39ddd2": "Next required action",
   "adminSweep.open.dossier.4f24d6eb": "Open dossier",
   "adminSweep.platform.access.required.0d7ecbc3": "Platform access required",
-  "adminSweep.add.a.clear.compliance.reason.4fdaac7c": "Add a clear compliance reason.",
+  "adminSweep.add.a.clear.compliance.reason.4fdaac7c":
+    "Add a clear compliance reason.",
   "adminSweep.internal.notes.optional.0170b302": "Internal notes (optional)",
-  "adminSweep.add.notes.for.the.platform.audit.trail.7c0fad75": "Add notes for the platform audit trail.",
+  "adminSweep.add.notes.for.the.platform.audit.trail.7c0fad75":
+    "Add notes for the platform audit trail.",
   "adminSweep.actor.64270b5a": "Actor:",
   "adminSweep.lead.7ae696d5": "Lead:",
   "adminSweep.project.2a16a5bd": "Project:",
@@ -934,7 +1094,8 @@ export const messages = {
   "adminSweep.deal.summary.a4d44a7d": "Deal Summary",
   "adminSweep.project.and.parties.cf1b8e2c": "Project And Parties",
   "adminSweep.cancellation.319aaae4": "Cancellation",
-  "adminSweep.no.conversations.match.this.view.2529f9b9": "No conversations match this view",
+  "adminSweep.no.conversations.match.this.view.2529f9b9":
+    "No conversations match this view",
   "adminSweep.updated.f2f8570d": "Updated",
   "adminSweep.open.conversation.c1e01db4": "Open conversation",
   "adminSweep.deal.room.summary.436bb43d": "Deal Room Summary",
@@ -945,8 +1106,10 @@ export const messages = {
   "adminSweep.conversation.messages.a4abc945": "Conversation messages",
   "adminSweep.import.summary.2f1bd454": "Import summary",
   "adminSweep.view.job.1c1b839b": "View job",
-  "adminSweep.no.negotiation.messages.yet.start.the.discussion.66b0736c": "No negotiation messages yet. Start the discussion when the parties are ready.",
-  "adminSweep.no.participants.have.been.added.070cf384": "No participants have been added.",
+  "adminSweep.no.negotiation.messages.yet.start.the.discussion.66b0736c":
+    "No negotiation messages yet. Start the discussion when the parties are ready.",
+  "adminSweep.no.participants.have.been.added.070cf384":
+    "No participants have been added.",
 } as const;
 
 export const domTranslations = {} as const;

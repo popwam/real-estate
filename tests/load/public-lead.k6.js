@@ -2,8 +2,15 @@ import http from "k6/http";
 import { check, fail, sleep } from "k6";
 import { Rate } from "k6/metrics";
 
-const apiHost = (__ENV.API_BASE_URL || "https://api-staging.popwam.com").replace(/\/$/, "");
-const projectSlug = __ENV.PROJECT_SLUG || "northline-residences";
+const apiHost = (
+  __ENV.LOAD_API_URL ||
+  __ENV.API_BASE_URL ||
+  "https://api-staging.popwam.com"
+).replace(/\/$/, "");
+const projectSlug =
+  __ENV.LOAD_PUBLIC_TEST_PROJECT_ID ||
+  __ENV.PROJECT_SLUG ||
+  "northline-residences";
 const organizationSlug = __ENV.ORGANIZATION_SLUG || "";
 const enableWrites = __ENV.ENABLE_WRITES === "true";
 const errorRate = new Rate("errors");
@@ -32,10 +39,14 @@ export const options = {
 
 export function setup() {
   if (!enableWrites) {
-    fail("Refusing to create lead data. Re-run with ENABLE_WRITES=true after staging seed and cleanup are ready.");
+    fail(
+      "Refusing to create lead data. Re-run with ENABLE_WRITES=true after staging seed and cleanup are ready.",
+    );
   }
 
-  const project = http.get(`${apiHost}/public/projects/${encodeURIComponent(projectSlug)}`);
+  const project = http.get(
+    `${apiHost}/public/projects/${encodeURIComponent(projectSlug)}`,
+  );
   check(project, { "project detail available": (res) => res.status === 200 });
   const body = project.json();
   return {
@@ -60,10 +71,17 @@ export default function (data) {
     companyWebsite: "",
   };
 
-  const response = http.post(`${apiHost}/public/leads`, JSON.stringify(payload), {
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    tags: { flow: "public_lead" },
-  });
+  const response = http.post(
+    `${apiHost}/public/leads`,
+    JSON.stringify(payload),
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      tags: { flow: "public_lead" },
+    },
+  );
 
   const ok = check(response, {
     "lead accepted": (res) => res.status === 200 || res.status === 201,

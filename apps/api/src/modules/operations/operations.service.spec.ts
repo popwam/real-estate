@@ -1,4 +1,8 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { HrAttendanceStatus, HrEmployeeStatus } from '@prisma/client';
 import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
 import { OperationsService } from './operations.service';
@@ -344,5 +348,82 @@ describe('OperationsService self attendance', () => {
 
     expect(result.verificationStatus).toBe('PENDING_REVIEW');
     expect(result.dvrVerificationStatus).toBe('PENDING');
+  });
+
+  it('allows HR admin to mark DVR review matched and audits the update', async () => {
+    const { prisma, service } = setup();
+    const admin = {
+      ...user,
+      role: 'developer_admin',
+      organizationType: 'DEVELOPER',
+      permissions: ['hr.attendance.manage'],
+    } as unknown as AuthenticatedRequestUser;
+    prisma.hrAttendanceRecord.findFirst.mockResolvedValueOnce({
+      id: 'attendance_1',
+      organizationId: employee.organizationId,
+    });
+
+    await service.updateHrAttendance(
+      'attendance_1',
+      {
+        dvrVerificationStatus: 'MATCHED',
+        dvrReferenceId: 'cam-1:2026-07-05T09:00:00Z',
+      },
+      admin,
+    );
+
+    expect(prisma.hrAttendanceRecord.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'attendance_1' },
+        data: expect.objectContaining({
+          dvrVerificationStatus: 'MATCHED',
+          dvrReferenceId: 'cam-1:2026-07-05T09:00:00Z',
+        }),
+      }),
+    );
+    expect(prisma.operationsActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'UPDATED',
+          entityType: 'HrAttendanceRecord',
+        }),
+      }),
+    );
+  });
+
+  it('blocks DVR review updates without attendance management permission', async () => {
+    const { service } = setup();
+    const unauthorized = {
+      ...user,
+      organizationType: 'DEVELOPER',
+      permissions: ['hr.view'],
+    } as unknown as AuthenticatedRequestUser;
+
+    await expect(
+      service.updateHrAttendance(
+        'attendance_1',
+        { dvrVerificationStatus: 'NOT_MATCHED' },
+        unauthorized,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('blocks cross-organization DVR review updates', async () => {
+    const { prisma, service } = setup();
+    const admin = {
+      ...user,
+      role: 'developer_admin',
+      organizationType: 'DEVELOPER',
+      permissions: ['hr.attendance.manage'],
+    } as unknown as AuthenticatedRequestUser;
+    prisma.hrAttendanceRecord.findFirst.mockResolvedValueOnce(null);
+
+    await expect(
+      service.updateHrAttendance(
+        'attendance_other_org',
+        { dvrVerificationStatus: 'NOT_MATCHED' },
+        admin,
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

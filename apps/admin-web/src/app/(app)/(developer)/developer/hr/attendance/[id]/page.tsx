@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { AttendanceEvidencePreview } from "@/components/admin-operations/attendance-evidence-preview";
 import { OperationsDetailPage } from "@/components/admin-operations/operations-detail-page";
 import { useI18n } from "@/i18n";
 
@@ -16,16 +17,66 @@ export default function HrAttendanceDetailPage() {
       path={`/hr/attendance/${id}`}
       queryKey={`hr-attendance-${id}`}
       activityPath={`/operations/activities/HR/HrAttendanceRecord/${id}`}
+      renderAfterSummary={(record) => (
+        <AttendanceEvidencePreview
+          items={[
+            {
+              label: t("attendance.admin.checkInPhotoEvidence"),
+              fileId: String(record.checkInPhotoFileId ?? ""),
+            },
+            {
+              label: t("attendance.admin.checkOutPhotoEvidence"),
+              fileId: String(record.checkOutPhotoFileId ?? ""),
+            },
+          ]}
+        />
+      )}
       fields={[
         { name: "date", label: t("attendance.admin.date"), type: "date" },
-        { name: "checkInAt", label: t("attendance.admin.checkInAt"), type: "datetime-local" },
-        { name: "checkOutAt", label: t("attendance.admin.checkOutAt"), type: "datetime-local" },
-        { name: "status", label: t("attendance.admin.status"), type: "select", options: ["PRESENT", "ABSENT", "LATE", "OFF"] },
-        { name: "verificationStatus", label: t("attendance.admin.verificationStatus"), type: "select", options: ["VERIFIED", "PENDING_REVIEW", "REJECTED", "FAILED"] },
-        { name: "dvrVerificationStatus", label: t("attendance.admin.dvrStatus"), type: "select", options: ["NOT_REQUIRED", "PENDING", "MATCHED", "NOT_MATCHED", "MANUAL_REVIEW", "UNAVAILABLE"] },
+        {
+          name: "checkInAt",
+          label: t("attendance.admin.checkInAt"),
+          type: "datetime-local",
+        },
+        {
+          name: "checkOutAt",
+          label: t("attendance.admin.checkOutAt"),
+          type: "datetime-local",
+        },
+        {
+          name: "status",
+          label: t("attendance.admin.status"),
+          type: "select",
+          options: ["PRESENT", "ABSENT", "LATE", "OFF"],
+        },
+        {
+          name: "verificationStatus",
+          label: t("attendance.admin.verificationStatus"),
+          type: "select",
+          options: ["VERIFIED", "PENDING_REVIEW", "REJECTED", "FAILED"],
+        },
+        {
+          name: "dvrVerificationStatus",
+          label: t("attendance.admin.dvrStatus"),
+          type: "select",
+          options: [
+            "NOT_REQUIRED",
+            "PENDING",
+            "MATCHED",
+            "NOT_MATCHED",
+            "MANUAL_REVIEW",
+            "UNAVAILABLE",
+          ],
+        },
         { name: "dvrReferenceId", label: t("attendance.admin.dvrReference") },
-        { name: "checkInPhotoFileId", label: t("attendance.admin.checkInPhotoFileId") },
-        { name: "checkOutPhotoFileId", label: t("attendance.admin.checkOutPhotoFileId") },
+        {
+          name: "checkInPhotoFileId",
+          label: t("attendance.admin.checkInPhotoFileId"),
+        },
+        {
+          name: "checkOutPhotoFileId",
+          label: t("attendance.admin.checkOutPhotoFileId"),
+        },
         { name: "note", label: t("attendance.admin.note") },
       ]}
     />

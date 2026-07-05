@@ -18,6 +18,9 @@
     "prisma:migrate": "pnpm dlx prisma migrate dev --config prisma/prisma.config.ts",
     "seed:rbac": "ts-node src/modules/permissions/rbac.seed.ts",
     "seed:demo": "ts-node src/demo/seed-demo.ts",
+    "staging:validate": "ts-node src/scripts/staging-readiness.ts",
+    "smoke:attendance-staging": "ts-node src/scripts/attendance-staging-smoke.ts",
+    "rbac:verify": "ts-node src/scripts/rbac-verify.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -25,6 +28,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1079.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",

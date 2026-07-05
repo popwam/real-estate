@@ -5,8 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { mkdir, writeFile } from 'fs/promises';
-import { extname, join } from 'path';
+import { extname } from 'path';
 import {
   assertSameOrganizationOrPlatform,
   isPlatformUser,
@@ -15,6 +14,7 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
 import { PrismaService } from '../database/prisma.service';
 import { CreateFileMetadataDto } from './dto/create-file-metadata.dto';
+import { FileStorageService } from './file-storage.service';
 import { LinkFileToVerificationDto } from './dto/link-file-to-verification.dto';
 
 @Injectable()
@@ -22,6 +22,7 @@ export class FilesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogs: AuditLogsService,
+    private readonly storage: FileStorageService,
   ) {}
 
   async createMetadata(
@@ -85,30 +86,28 @@ export class FilesService {
       throw new BadRequestException('Attendance photo is too large.');
     }
 
-    const root =
-      process.env.FILE_STORAGE_LOCAL_ROOT || join(process.cwd(), 'storage');
     const objectKey = [
       'attendance',
       currentUser.organizationId,
       currentUser.userId,
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
-    const absolutePath = join(root, objectKey);
-    await mkdir(
-      join(root, 'attendance', currentUser.organizationId, currentUser.userId),
-      { recursive: true },
-    );
-    await writeFile(absolutePath, file.buffer);
+    const stored = await this.storage.putObject({
+      objectKey,
+      body: file.buffer,
+      mimeType,
+    });
 
     const record = await this.prisma.uploadedFile.create({
       data: {
         organizationId: currentUser.organizationId,
         uploadedById: currentUser.userId,
         bucket: 'attendance-evidence',
-        objectKey,
+        objectKey: stored.objectKey,
         mimeType,
         sizeBytes: file.size,
         checksum: this.optionalString(file.originalname),
+        url: `${stored.provider}:${stored.bucket}`,
       },
     });
 
@@ -119,11 +118,11 @@ export class FilesService {
       organizationId: currentUser.organizationId,
       actor: currentUser,
       metadata: {
-        objectKey,
+        objectKey: stored.objectKey,
         purpose: normalizedPurpose,
         mimeType,
         sizeBytes: file.size,
-        storageProvider: 'local',
+        storageProvider: stored.provider,
       },
     });
 
@@ -145,6 +144,7 @@ export class FilesService {
 
     const file = await this.prisma.uploadedFile.findUnique({ where: { id } });
     if (!file) return 'PHOTO_FILE_NOT_FOUND';
+    if ((file as any).deletedAt) return 'PHOTO_FILE_NOT_FOUND';
     if (file.organizationId !== currentUser.organizationId)
       return 'PHOTO_FILE_NOT_IN_ORGANIZATION';
     if (file.uploadedById !== currentUser.userId)
@@ -167,6 +167,91 @@ export class FilesService {
     if (ageMs > freshnessMinutes * 60 * 1000) return 'PHOTO_FILE_TOO_OLD';
 
     return undefined;
+  }
+
+  async openAttendanceEvidenceFile(
+    id: string,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const file = await this.prisma.uploadedFile.findUnique({ where: { id } });
+    if (!file || (file as any).deletedAt) {
+      throw new NotFoundException('File not found.');
+    }
+    this.assertCanAccessAttendanceEvidence(file, currentUser);
+    const object = await this.storage.readObject({
+      bucket: this.storageBucket(file),
+      objectKey: file.objectKey,
+    });
+    return {
+      stream: object.body,
+      mimeType: file.mimeType || 'application/octet-stream',
+      sizeBytes: file.sizeBytes,
+      fileName: this.safeDownloadName(file),
+    };
+  }
+
+  async attendanceEvidenceMetadata(
+    id: string,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const file = await this.prisma.uploadedFile.findUnique({ where: { id } });
+    if (!file || (file as any).deletedAt) {
+      throw new NotFoundException('File not found.');
+    }
+    this.assertCanAccessAttendanceEvidence(file, currentUser);
+    return {
+      id: file.id,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+      createdAt: file.createdAt,
+      uploadedById: file.uploadedById,
+    };
+  }
+
+  async listExpiredAttendanceEvidenceDryRun(now = new Date()) {
+    const retentionDays = Number(
+      process.env.ATTENDANCE_EVIDENCE_RETENTION_DAYS,
+    );
+    if (!Number.isFinite(retentionDays) || retentionDays <= 0) {
+      return {
+        cleanupEnabled:
+          process.env.ATTENDANCE_EVIDENCE_CLEANUP_ENABLED === 'true',
+        retentionDays: null,
+        expiredCount: 0,
+        files: [],
+        note: 'ATTENDANCE_EVIDENCE_RETENTION_DAYS is not configured.',
+      };
+    }
+    const cutoff = new Date(
+      now.getTime() - retentionDays * 24 * 60 * 60 * 1000,
+    );
+    const files = await this.prisma.uploadedFile.findMany({
+      where: {
+        bucket: 'attendance-evidence',
+        objectKey: { startsWith: 'attendance/' },
+        createdAt: { lt: cutoff },
+      },
+      select: {
+        id: true,
+        organizationId: true,
+        uploadedById: true,
+        mimeType: true,
+        sizeBytes: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 500,
+    });
+
+    return {
+      cleanupEnabled:
+        process.env.ATTENDANCE_EVIDENCE_CLEANUP_ENABLED === 'true',
+      retentionDays,
+      cutoff: cutoff.toISOString(),
+      expiredCount: files.length,
+      files,
+      note: 'Dry run only. No files were deleted.',
+    };
   }
 
   async findOne(id: string, currentUser: AuthenticatedRequestUser) {
@@ -305,6 +390,59 @@ export class FilesService {
       );
     }
     return extension === '.jpeg' ? '.jpg' : extension;
+  }
+
+  private assertCanAccessAttendanceEvidence(
+    file: {
+      organizationId: string | null;
+      uploadedById: string | null;
+      bucket: string;
+      objectKey: string;
+      mimeType: string | null;
+    },
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    if (file.organizationId !== currentUser.organizationId) {
+      throw new ForbiddenException(
+        'File is not available in this organization.',
+      );
+    }
+    if (
+      file.bucket !== 'attendance-evidence' ||
+      !file.objectKey.startsWith('attendance/')
+    ) {
+      throw new ForbiddenException('File is not attendance evidence.');
+    }
+    if (
+      !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimeType ?? '')
+    ) {
+      throw new ForbiddenException('File type is not previewable.');
+    }
+    const permissions = currentUser.permissions ?? [];
+    const canManageAttendance =
+      permissions.includes('hr.attendance.manage') ||
+      permissions.includes('hr.manage') ||
+      permissions.includes('hr.view');
+    if (canManageAttendance) return;
+    if (file.uploadedById === currentUser.userId) return;
+    throw new ForbiddenException('You do not have access to this file.');
+  }
+
+  private storageBucket(file: { url: string | null; bucket: string }) {
+    if (file.url?.includes(':')) {
+      return file.url.split(':').slice(1).join(':') || file.bucket;
+    }
+    return process.env.FILE_STORAGE_BUCKET?.trim() || 'local-private';
+  }
+
+  private safeDownloadName(file: { id: string; mimeType: string | null }) {
+    const extension =
+      file.mimeType === 'image/png'
+        ? 'png'
+        : file.mimeType === 'image/webp'
+          ? 'webp'
+          : 'jpg';
+    return `attendance-evidence-${file.id}.${extension}`;
   }
 
   private optionalString(value: string | undefined) {

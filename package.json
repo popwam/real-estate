@@ -11,6 +11,10 @@
     "smoke:stage2": "powershell -ExecutionPolicy Bypass -File scripts/local-smoke.ps1",
     "smoke:staging": "powershell -ExecutionPolicy Bypass -File scripts/staging-smoke.ps1",
     "i18n:audit": "node scripts/i18n-audit.mjs",
+    "load:public-browse": "k6 run tests/load/public-browse.k6.js",
+    "load:public-lead": "k6 run tests/load/public-lead.k6.js",
+    "load:public-conversation": "k6 run tests/load/public-conversation.k6.js",
+    "load:admin-light": "k6 run tests/load/admin-light.k6.js",
     "test:stage2:browser": "playwright test --config=playwright.stage2.config.ts",
     "test:stage4:browser": "playwright test --config=playwright.stage4.config.ts"
   },

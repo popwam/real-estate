@@ -2,7 +2,11 @@ import http from "k6/http";
 import { check, fail, sleep } from "k6";
 import { Rate } from "k6/metrics";
 
-const apiHost = (__ENV.API_BASE_URL || "https://api-staging.popwam.com").replace(/\/$/, "");
+const apiHost = (
+  __ENV.LOAD_API_URL ||
+  __ENV.API_BASE_URL ||
+  "https://api-staging.popwam.com"
+).replace(/\/$/, "");
 const token = __ENV.CONVERSATION_TOKEN || "";
 const enableWrites = __ENV.ENABLE_WRITES === "true";
 const errorRate = new Rate("errors");
@@ -31,18 +35,25 @@ export const options = {
 
 export function setup() {
   if (!token) {
-    fail("CONVERSATION_TOKEN is required. Use a staging test token and do not paste it into reports.");
+    fail(
+      "CONVERSATION_TOKEN is required. Use a staging test token and do not paste it into reports.",
+    );
   }
   if (!enableWrites) {
-    fail("Refusing to create conversation messages. Re-run with ENABLE_WRITES=true after cleanup is ready.");
+    fail(
+      "Refusing to create conversation messages. Re-run with ENABLE_WRITES=true after cleanup is ready.",
+    );
   }
 }
 
 export default function () {
-  const read = http.get(`${apiHost}/conversations/by-token/${encodeURIComponent(token)}`, {
-    headers: { Accept: "application/json" },
-    tags: { flow: "public_conversation_read" },
-  });
+  const read = http.get(
+    `${apiHost}/conversations/by-token/${encodeURIComponent(token)}`,
+    {
+      headers: { Accept: "application/json" },
+      tags: { flow: "public_conversation_read" },
+    },
+  );
   const readOk = check(read, {
     "conversation loads": (res) => res.status === 200,
   });
@@ -55,7 +66,10 @@ export default function () {
       body: `Load test message ${stamp}`,
     }),
     {
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
       tags: { flow: "public_conversation_write" },
     },
   );
