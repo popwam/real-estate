@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { developerNav, brokerageNav, platformNav, type NavItem } from "@/components/layout/nav";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n";
 
 function getNavItems(role?: string, organizationType?: string | null): NavItem[] {
   if (role?.startsWith("platform_") || organizationType === "PLATFORM") return platformNav;
@@ -28,6 +29,8 @@ function getNavItems(role?: string, organizationType?: string | null): NavItem[]
  * Kept for backward compatibility
  */
 export function Sidebar() {
+  const { t } = useI18n();
+
   const pathname = usePathname();
   const { data } = useCurrentUser();
   const navItems = getNavItems(data?.user.role, data?.organization?.type);
@@ -35,9 +38,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-background)] lg:block">
       <div className="flex h-[var(--topbar-height)] items-center border-b border-[var(--color-border)] px-5">
-        <Link href="/" className="text-base font-semibold tracking-tight text-[var(--color-foreground)]">
-          POPWAM Admin
-        </Link>
+        <Link href="/" className="text-base font-semibold tracking-tight text-[var(--color-foreground)]">{t("adminSweep.popwam.admin.963a65a6")}</Link>
       </div>
       <nav className="space-y-1 p-3">
         {navItems.map((item) => {

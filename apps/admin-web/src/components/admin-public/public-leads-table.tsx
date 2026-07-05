@@ -7,6 +7,7 @@ import { DataTable } from "@/components/tables/data-table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import type { PublicLead } from "@/types/admin-public";
+import { useI18n } from "@/i18n";
 
 export function PublicLeadsTable({
   leads,
@@ -25,6 +26,8 @@ export function PublicLeadsTable({
   isWorking?: boolean;
   actionError?: Error | null;
 }) {
+  const { t } = useI18n();
+
   return (
     <DataTable<PublicLead>
       columns={[
@@ -41,15 +44,13 @@ export function PublicLeadsTable({
           header: "Actions",
           cell: (row) => (
             <div className="flex flex-wrap gap-2">
-              <Link className="text-sm font-medium text-zinc-950 hover:underline" href={`${basePath}/${row.id}`}>
-                Open
-              </Link>
+              <Link className="text-sm font-medium text-zinc-950 hover:underline" href={`${basePath}/${row.id}`}>{t("adminSweep.open.cf9b7706")}</Link>
               {row.status === "NEW" ? (
                 <PublicLeadActionDialog
                   action="review"
                   error={actionError}
                   isPending={isWorking}
-                  trigger={<Button className="h-8 bg-white px-2 text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50">Review</Button>}
+                  trigger={<Button className="h-8 bg-white px-2 text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50">{t("adminSweep.review.e29a79fe")}</Button>}
                   onConfirm={(input) => onReview(row.id, input.note)}
                 />
               ) : null}
@@ -59,14 +60,14 @@ export function PublicLeadsTable({
                     action="spam"
                     error={actionError}
                     isPending={isWorking}
-                    trigger={<Button className="h-8 bg-white px-2 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50">Spam</Button>}
+                    trigger={<Button className="h-8 bg-white px-2 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50">{t("adminSweep.spam.d8628a52")}</Button>}
                     onConfirm={() => onSpam(row.id)}
                   />
                   <PublicLeadActionDialog
                     action="convert"
                     error={actionError}
                     isPending={isWorking}
-                    trigger={<Button className="h-8 bg-white px-2 text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50">Convert</Button>}
+                    trigger={<Button className="h-8 bg-white px-2 text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50">{t("adminSweep.convert.3f15ce79")}</Button>}
                     onConfirm={() => onConvert(row.id)}
                   />
                 </>

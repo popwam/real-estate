@@ -7,22 +7,25 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { useCrmActivities } from "@/hooks/use-admin-crm";
 import type { CrmActivityListQuery } from "@/types/admin-crm";
+import { useI18n } from "@/i18n";
 
 export function CrmActivitiesPageContent() {
+  const { t } = useI18n();
+
   const [filters, setFilters] = useState<CrmActivityListQuery>({ page: 1, pageSize: 20 });
   const activities = useCrmActivities(filters);
 
   return (
     <>
       <PageHeader
-        title="CRM activity"
+        title={t("adminSweep.crm.activity.66256e79")}
         description="Scoped CRM activity timeline for lead and conversation events. Public token users cannot access this view."
       />
       <div className="space-y-6">
-        <DetailCard title="Filters">
+        <DetailCard title={t("adminSweep.filters.96e57821")}>
           <CrmActivityFilters filters={filters} onChange={setFilters} />
         </DetailCard>
-        <DetailCard title="Activity timeline">
+        <DetailCard title={t("adminSweep.activity.timeline.3e53cf95")}>
           <CrmActivityTimeline
             activities={activities.data?.items}
             error={activities.error}

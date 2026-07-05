@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { OperationsActivityTimeline } from "@/components/admin-operations/operations-activity-timeline";
 import { useOperationSummary } from "@/hooks/use-admin-operations";
+import { useI18n } from "@/i18n";
 
 const links = [
   { href: "/developer/hr/employees", label: "HR employees" },
@@ -16,14 +17,16 @@ const links = [
 ];
 
 export function OperationsOverviewPage({ platform = false }: { platform?: boolean }) {
+  const { t } = useI18n();
+
   const summary = useOperationSummary(platform ? "platform-operations-summary" : "operations-summary", "/operations/summary");
   const data = summary.data ?? {};
 
   return (
     <>
-      <PageHeader title="Operations overview" description="Internal operations dashboard for HR, accounting, legal, ads, and camera foundations." />
+      <PageHeader title={t("adminSweep.operations.overview.77c5f57a")} description="Internal operations dashboard for HR, accounting, legal, ads, and camera foundations." />
       <div className="space-y-6">
-        <DetailCard title="Summary cards">
+        <DetailCard title={t("adminSweep.summary.cards.015ef995")}>
           {summary.isLoading ? <LoadingState label="Loading operations summary" /> : null}
           {summary.error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{summary.error.message}</p> : null}
           {!summary.isLoading && !summary.error ? (
@@ -36,7 +39,7 @@ export function OperationsOverviewPage({ platform = false }: { platform?: boolea
             </div>
           ) : null}
         </DetailCard>
-        <DetailCard title="Module links">
+        <DetailCard title={t("adminSweep.module.links.3243d3b8")}>
           <div className="flex flex-wrap gap-3">
             {links.map((link) => (
               <Link className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-50" href={platform ? link.href.replace("/developer", "/platform").replace("/employees", "/overview").replace("/transactions", "/overview").replace("/documents", "/overview").replace("/campaigns", "/overview").replace("/devices", "/overview") : link.href} key={link.href}>
@@ -45,7 +48,7 @@ export function OperationsOverviewPage({ platform = false }: { platform?: boolea
             ))}
           </div>
         </DetailCard>
-        <DetailCard title="Recent operations activity">
+        <DetailCard title={t("adminSweep.recent.operations.activity.2451ba4a")}>
           <OperationsActivityTimeline path="/operations/activities?page=1&pageSize=10" queryKey={platform ? "platform-operations-activity" : "operations-activity"} />
         </DetailCard>
       </div>

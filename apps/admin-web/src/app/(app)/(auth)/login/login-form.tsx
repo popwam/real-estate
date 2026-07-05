@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLogin } from "@/hooks/use-login";
 import { getRoleHome } from "@/lib/auth";
+import { useI18n } from "@/i18n";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or phone is required."),
@@ -21,6 +22,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
+  const { t } = useI18n();
+
   const router = useRouter();
   const login = useLogin();
   const [showPassword, setShowPassword] = useState(false);
@@ -44,11 +47,11 @@ export function LoginForm() {
   return (
     <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-2">
-        <Label htmlFor="identifier">Email or phone</Label>
+        <Label htmlFor="identifier">{t("adminSweep.email.or.phone.5a698f5f")}</Label>
         <Input
           id="identifier"
           autoComplete="username"
-          placeholder="name@company.com or +201001234567"
+          placeholder={t("adminSweep.name.company.com.or.201001234567.e1780975")}
           type="text"
           inputMode="email"
           aria-invalid={Boolean(errors.identifier)}
@@ -62,12 +65,12 @@ export function LoginForm() {
         ) : null}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">{t("adminSweep.password.8be3c943")}</Label>
         <div className="relative">
           <Input
             id="password"
             autoComplete="current-password"
-            placeholder="Enter your password"
+            placeholder={t("adminSweep.enter.your.password.1378167d")}
             type={showPassword ? "text" : "password"}
             className="pe-12"
             aria-invalid={Boolean(errors.password)}
@@ -97,7 +100,7 @@ export function LoginForm() {
       {login.error ? (
         <FeedbackState
           tone="error"
-          title="We could not sign you in"
+          title={t("adminSweep.we.could.not.sign.you.in.0085c4c3")}
           description={login.error.message}
         />
       ) : null}

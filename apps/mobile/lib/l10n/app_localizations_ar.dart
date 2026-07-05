@@ -101,6 +101,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservations => 'الحجوزات';
 
   @override
+  String get attendance => 'الحضور';
+
+  @override
   String get profile => 'الملف الشخصي';
 
   @override
@@ -162,6 +165,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get refreshCommissions => 'تحديث العمولات';
+
+  @override
+  String get refreshAttendance => 'تحديث الحضور';
 
   @override
   String get refreshConversations => 'تحديث المحادثات';
@@ -491,6 +497,169 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get updateStatus => 'تحديث الحالة';
+
+  @override
+  String get attendanceToday => 'اليوم';
+
+  @override
+  String get attendanceHistory => 'سجل الحضور الأخير';
+
+  @override
+  String get attendanceUnavailable => 'الحضور غير متاح';
+
+  @override
+  String get attendanceDate => 'التاريخ';
+
+  @override
+  String get attendanceDuration => 'المدة';
+
+  @override
+  String get checkIn => 'تسجيل الدخول';
+
+  @override
+  String get checkOut => 'تسجيل الخروج';
+
+  @override
+  String get checkInTime => 'وقت الدخول';
+
+  @override
+  String get checkOutTime => 'وقت الخروج';
+
+  @override
+  String get attendanceCompletedToday => 'تم إكمال حضور اليوم';
+
+  @override
+  String get attendanceNote => 'ملاحظة';
+
+  @override
+  String durationMinutes(Object count) {
+    return '$count دقيقة';
+  }
+
+  @override
+  String get noAttendanceHistory => 'لا يوجد سجل حضور';
+
+  @override
+  String get attendanceHistoryAppearsHere =>
+      'تظهر هنا سجلات تسجيل الدخول والخروج الأخيرة الخاصة بك.';
+
+  @override
+  String get noEmployeeProfileLinked => 'لا يوجد ملف موظف مرتبط بهذا الحساب.';
+
+  @override
+  String get alreadyCheckedIn => 'لقد سجّلت الدخول بالفعل.';
+
+  @override
+  String get checkInBeforeCheckOut => 'يجب تسجيل الدخول قبل تسجيل الخروج.';
+
+  @override
+  String get attendanceVerificationStatus => 'التحقق';
+
+  @override
+  String get attendanceDvrStatus => 'مراجعة DVR';
+
+  @override
+  String get attendanceFailureReasons => 'أسباب الرفض';
+
+  @override
+  String get attendanceSecureChecks => 'فحوصات الأمان';
+
+  @override
+  String get attendanceNativeChecksUnavailable =>
+      'تحتاج فحوصات الموقع وشبكة Wi-Fi والكاميرا وسلامة الجهاز إلى نسخة الجوال الآمنة. ستفرض واجهة API سياسة الشركة عند إرسال الأدلة.';
+
+  @override
+  String get attendanceNativeChecksActive =>
+      'تجمع هذه النسخة الآمنة موقع GPS وتفاصيل شبكة Wi-Fi عندما يسمح النظام بذلك وإشارات سلامة الجهاز وصورة مباشرة من الكاميرا قبل إرسال الحضور إلى واجهة API.';
+
+  @override
+  String get collectingAttendanceEvidence => 'جارٍ جمع أدلة الحضور الآمنة';
+
+  @override
+  String get attendanceEvidenceWarnings => 'تنبيهات الأدلة';
+
+  @override
+  String get attendanceLocationPermissionDenied => 'تم رفض إذن الموقع.';
+
+  @override
+  String get attendanceLocationServiceDisabled => 'خدمات الموقع غير مفعّلة.';
+
+  @override
+  String get attendanceWifiUnavailable => 'الهاتف غير متصل بشبكة Wi-Fi.';
+
+  @override
+  String get attendanceWifiRestricted =>
+      'اسم شبكة Wi-Fi أو عنوان BSSID غير متاح على هذا الجهاز أو النظام.';
+
+  @override
+  String get attendanceCameraPermissionDenied => 'تم رفض إذن الكاميرا.';
+
+  @override
+  String get attendancePhotoCaptureCancelled =>
+      'تم إلغاء التقاط الصورة المباشرة.';
+
+  @override
+  String get attendancePhotoUploadFailed =>
+      'فشل رفع الصورة المباشرة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get attendanceCapturingPhoto => 'جارٍ التقاط الصورة المباشرة';
+
+  @override
+  String get attendancePhotoCaptured => 'تم التقاط الصورة';
+
+  @override
+  String get attendanceUploadingPhoto => 'جارٍ رفع صورة الحضور';
+
+  @override
+  String get attendancePhotoUploadSuccess => 'تم رفع صورة الحضور';
+
+  @override
+  String get attendancePhotoTooLarge => 'صورة الحضور كبيرة جداً.';
+
+  @override
+  String get attendanceInvalidPhotoType =>
+      'يجب أن تكون صورة الحضور بصيغة JPEG أو PNG أو WebP.';
+
+  @override
+  String get attendancePhotoRejected => 'رفض الخادم صورة الحضور.';
+
+  @override
+  String get attendanceRetryUpload => 'إعادة محاولة الرفع';
+
+  @override
+  String get attendanceDvrPending => 'مراجعة DVR قيد الانتظار.';
+
+  @override
+  String get attendanceManualReviewRequired => 'المراجعة اليدوية مطلوبة.';
+
+  @override
+  String get attendanceVerificationFailed => 'فشل التحقق من الحضور.';
+
+  @override
+  String get developerOptionsEnabled => 'خيارات المطوّر مفعّلة.';
+
+  @override
+  String get usbDebuggingEnabled => 'تصحيح USB مفعّل.';
+
+  @override
+  String get attendanceLocationRequired => 'الموقع مطلوب.';
+
+  @override
+  String get attendanceLocationPolicyMissing => 'موقع حضور الشركة غير مضبوط.';
+
+  @override
+  String get outsideAllowedLocation => 'أنت خارج نطاق موقع الشركة المسموح.';
+
+  @override
+  String get attendanceWifiRequired => 'شبكة Wi-Fi الخاصة بالشركة مطلوبة.';
+
+  @override
+  String get notConnectedToCompanyWifi =>
+      'أنت غير متصل بشبكة Wi-Fi الخاصة بالشركة.';
+
+  @override
+  String get attendancePhotoRequired => 'صورة مباشرة داخل المكتب مطلوبة.';
 
   @override
   String get updateLeadStatus => 'تحديث حالة العميل';

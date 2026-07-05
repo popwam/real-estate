@@ -7,20 +7,23 @@ import { ProjectForm } from "@/components/developer/project-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { useCreateProject } from "@/hooks/use-developer";
+import { useI18n } from "@/i18n";
 
 export default function NewProjectPage() {
+  const { t } = useI18n();
+
   const router = useRouter();
   const create = useCreateProject();
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Create a project"
+        title={t("adminSweep.create.a.project.a469a595")}
         description="Build the project foundation now; inventory, payment plans, and selling access remain separate readiness steps."
-        actions={<Link href="/developer/projects" className="ui-button ui-button-secondary"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Back to projects</Link>}
+        actions={<Link href="/developer/projects" className="ui-button ui-button-secondary"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t("adminSweep.back.to.projects.0559813d")}</Link>}
       />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <DetailCard title="Project setup">
+        <DetailCard title={t("adminSweep.project.setup.a0e72cd3")}>
           <ProjectForm
             submitLabel="Create project"
             isPending={create.isPending}
@@ -31,18 +34,18 @@ export default function NewProjectPage() {
             }}
           />
         </DetailCard>
-        <aside className="space-y-4" aria-label="Project creation guidance">
+        <aside className="space-y-4" aria-label={t("adminSweep.project.creation.guidance.76d6079a")}>
           <div className="ui-card p-5">
-            <h2 className="text-sm font-semibold text-[var(--color-foreground)]">What happens next</h2>
+            <h2 className="text-sm font-semibold text-[var(--color-foreground)]">{t("adminSweep.what.happens.next.51ecc5b2")}</h2>
             <ol className="mt-4 space-y-4">
-              <Step icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} title="Create the record" description="Save supported project identity, location, and audience fields." />
-              <Step icon={<Package className="h-4 w-4" aria-hidden="true" />} title="Add inventory" description="Create units and manage their prices, status, and visibility." />
-              <Step icon={<Send className="h-4 w-4" aria-hidden="true" />} title="Prepare distribution" description="Review project visibility and broker selling permissions." />
+              <Step icon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />} title={t("adminSweep.create.the.record.5355b3c4")} description="Save supported project identity, location, and audience fields." />
+              <Step icon={<Package className="h-4 w-4" aria-hidden="true" />} title={t("adminSweep.add.inventory.c5e4ed2f")} description="Create units and manage their prices, status, and visibility." />
+              <Step icon={<Send className="h-4 w-4" aria-hidden="true" />} title={t("adminSweep.prepare.distribution.81f9490d")} description="Review project visibility and broker selling permissions." />
             </ol>
           </div>
           <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]"><CircleDot className="h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />No autosave</div>
-            <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">This form saves only when you select Create project. No unsupported draft or autosave behavior has been added.</p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]"><CircleDot className="h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />{t("adminSweep.no.autosave.599d8af2")}</div>
+            <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">{t("adminSweep.this.form.saves.only.when.you.select.create.proj.460c0ab8")}</p>
           </div>
         </aside>
       </div>

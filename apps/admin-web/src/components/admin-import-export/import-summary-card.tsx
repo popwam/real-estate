@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { ImportJobStatusBadge } from "@/components/admin-import-export/badges";
 import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import type { ImportCommitResponse, ImportJob, ImportPreviewResponse } from "@/types/admin-import-export";
+import { useI18n } from "@/i18n";
 
 export function ImportSummaryCard({
   preview,
@@ -20,6 +23,8 @@ export function ImportSummaryCard({
   onCommit?: (id: string) => Promise<unknown>;
   isCommitting?: boolean;
 }) {
+  const { t } = useI18n();
+
   const jobId = preview?.jobId ?? job?.id ?? commitResult?.jobId;
   const validRows = preview?.validRows ?? job?.validRows ?? 0;
   const status = job?.status ?? commitResult?.status;
@@ -27,13 +32,11 @@ export function ImportSummaryCard({
 
   return (
     <DetailCard
-      title="Import summary"
+      title={t("adminSweep.import.summary.2f1bd454")}
       actions={
         <div className="flex flex-wrap gap-2">
           {jobsBasePath && jobId ? (
-            <Link className="inline-flex h-10 items-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50" href={`${jobsBasePath}/${jobId}`}>
-              View job
-            </Link>
+            <Link className="inline-flex h-10 items-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50" href={`${jobsBasePath}/${jobId}`}>{t("adminSweep.view.job.1c1b839b")}</Link>
           ) : null}
           {onCommit && jobId ? (
             <Button disabled={!canCommit || isCommitting} onClick={() => onCommit(jobId)}>

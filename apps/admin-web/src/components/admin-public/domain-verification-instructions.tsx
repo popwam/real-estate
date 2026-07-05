@@ -2,17 +2,18 @@
 
 import { Copy } from "lucide-react";
 import type { OrganizationDomain } from "@/types/admin-public";
+import { useI18n } from "@/i18n";
 
 export function DomainVerificationInstructions({ domain }: { domain: OrganizationDomain }) {
+  const { t } = useI18n();
+
   const instructions = domain.verificationInstructions;
 
   return (
     <div className="space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
       <div>
-        <h3 className="text-sm font-semibold text-zinc-950">TXT verification</h3>
-        <p className="mt-1 text-sm leading-6 text-zinc-500">
-          Add this TXT record at your DNS provider, then request verification. No DNS provider is called from this UI.
-        </p>
+        <h3 className="text-sm font-semibold text-zinc-950">{t("adminSweep.txt.verification.9ad6a815")}</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">{t("adminSweep.add.this.txt.record.at.your.dns.provider.then.re.6757bddf")}</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <Instruction label="TXT name" value={instructions?.txtName ?? `_popwam.${domain.domain}`} />
@@ -23,6 +24,8 @@ export function DomainVerificationInstructions({ domain }: { domain: Organizatio
 }
 
 function Instruction({ label, value }: { label: string; value: string }) {
+  const { t } = useI18n();
+
   return (
     <div>
       <dt className="text-xs font-medium uppercase text-zinc-500">{label}</dt>
@@ -35,7 +38,7 @@ function Instruction({ label, value }: { label: string; value: string }) {
           onClick={() => void navigator.clipboard?.writeText(value)}
         >
           <Copy className="h-4 w-4" aria-hidden="true" />
-          <span className="sr-only">Copy {label}</span>
+          <span className="sr-only">{t("adminSweep.copy.af74f7c5")}{label}</span>
         </button>
       </dd>
     </div>

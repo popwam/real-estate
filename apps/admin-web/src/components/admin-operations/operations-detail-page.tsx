@@ -6,11 +6,12 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
 import { OperationsActivityTimeline } from "@/components/admin-operations/operations-activity-timeline";
 import { useOperationDetail, usePatchOperation } from "@/hooks/use-admin-operations";
+import { useI18n } from "@/i18n";
 
 type Field = {
   name: string;
   label: string;
-  type?: "text" | "number" | "date" | "select";
+  type?: "text" | "number" | "date" | "datetime-local" | "select";
   options?: string[];
 };
 
@@ -29,6 +30,8 @@ export function OperationsDetailPage({
   fields: Field[];
   activityPath: string;
 }) {
+  const { t } = useI18n();
+
   const detail = useOperationDetail(queryKey, path);
   const patch = usePatchOperation(queryKey);
   const record = detail.data;
@@ -53,10 +56,10 @@ export function OperationsDetailPage({
       {detail.error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{detail.error.message}</p> : null}
       {record ? (
         <div className="space-y-6">
-          <DetailCard title="Record summary">
+          <DetailCard title={t("adminSweep.record.summary.784394f7")}>
             <DetailGrid items={Object.entries(record).slice(0, 12).map(([key, value]) => ({ label: key, value: formatValue(value) }))} />
           </DetailCard>
-          <DetailCard title="Edit record">
+          <DetailCard title={t("adminSweep.edit.record.ab680b51")}>
             <form className="grid gap-3 md:grid-cols-3" onSubmit={submit}>
               {fields.map((field) => (
                 <label className="grid gap-1 text-sm" key={field.name}>
@@ -67,7 +70,7 @@ export function OperationsDetailPage({
                       value={valueFor(field)}
                       onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
                     >
-                      <option value="">Select</option>
+                      <option value="">{t("adminSweep.select.85982229")}</option>
                       {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   ) : (
@@ -88,7 +91,7 @@ export function OperationsDetailPage({
             </form>
             {patch.error ? <p className="mt-3 text-sm text-red-700">{patch.error.message}</p> : null}
           </DetailCard>
-          <DetailCard title="Operations activity">
+          <DetailCard title={t("adminSweep.operations.activity.153e2b23")}>
             <OperationsActivityTimeline path={activityPath} queryKey={`${queryKey}-activity`} />
           </DetailCard>
         </div>

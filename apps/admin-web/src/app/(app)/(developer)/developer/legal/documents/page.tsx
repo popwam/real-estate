@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperLegalDocumentsPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="Legal documents"
+      title={t("adminSweep.legal.documents.1a83177c")}
       description="Document register foundation. No e-signature or storage workflow is included."
       listPath="/legal/documents"
       queryKey="legal-documents"

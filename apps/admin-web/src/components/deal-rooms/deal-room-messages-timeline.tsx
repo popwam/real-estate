@@ -1,12 +1,17 @@
+"use client";
+
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DealRoomMessage } from "@/types/deal-rooms";
+import { useI18n } from "@/i18n";
 
 export function DealRoomMessagesTimeline({ messages = [] }: { messages?: DealRoomMessage[] }) {
+  const { t } = useI18n();
+
   if (!messages.length) {
     return (
       <div className="ui-empty-state">
-        <p>No negotiation messages yet. Start the discussion when the parties are ready.</p>
+        <p>{t("adminSweep.no.negotiation.messages.yet.start.the.discussion.66b0736c")}</p>
       </div>
     );
   }

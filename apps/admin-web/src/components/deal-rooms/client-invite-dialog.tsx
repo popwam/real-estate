@@ -4,6 +4,7 @@ import { CheckCircle2, Send } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ClientInviteResponse } from "@/types/deal-rooms";
+import { useI18n } from "@/i18n";
 
 export function ClientInviteDialog({
   isPending,
@@ -14,6 +15,8 @@ export function ClientInviteDialog({
   error?: Error | null;
   onInvite: () => Promise<ClientInviteResponse>;
 }) {
+  const { t } = useI18n();
+
   const [result, setResult] = useState<ClientInviteResponse | null>(null);
 
   async function invite() {
@@ -27,13 +30,11 @@ export function ClientInviteDialog({
         <Send className="h-4 w-4" />
         {isPending ? "Inviting" : "Invite client"}
       </Button>
-      <p className="text-sm leading-6 text-[var(--color-text-muted)]">
-        Client invite creates or refreshes the client participant. External SMS/email delivery is a placeholder and is not implemented yet.
-      </p>
+      <p className="text-sm leading-6 text-[var(--color-text-muted)]">{t("adminSweep.client.invite.creates.or.refreshes.the.client.pa.ad5aefbd")}</p>
       {result ? (
         <div className="ui-feedback ui-feedback-success flex gap-2 text-sm" role="status">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Client participant is {result.participant.status}. Delivery: {result.invite.delivery}.</span>
+          <span>{t("adminSweep.client.participant.is.d83cf09f")}{result.participant.status}{t("adminSweep.delivery.06b8c065")}{result.invite.delivery}.</span>
         </div>
       ) : null}
       {error ? <p className="ui-feedback ui-feedback-error text-sm" role="alert">{error.message}</p> : null}

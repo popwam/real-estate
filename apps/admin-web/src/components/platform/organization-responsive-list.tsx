@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { OrganizationStatusBadge } from "@/components/platform/organization-status-badge";
 import { formatDate, formatPlainDate } from "@/lib/format";
 import type { Organization } from "@/types/platform";
+import { useI18n } from "@/i18n";
 
 function organizationNextAction(organization: Organization) {
   if (organization.status === "PENDING_REVIEW") return "Review profile and documents";
@@ -26,11 +27,13 @@ export function OrganizationResponsiveList({
   organizations: Organization[];
   totalCount: number;
 }) {
+  const { t } = useI18n();
+
   if (!organizations.length) {
     return (
       <EmptyState
         icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
-        title="No organizations match these filters"
+        title={t("adminSweep.no.organizations.match.these.filters.1ae9cdba")}
         description={
           totalCount
             ? "Change the type or status filter to broaden the trust queue."
@@ -62,19 +65,19 @@ export function OrganizationResponsiveList({
             </p>
             <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Plan:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("adminSweep.plan.335c04da")}</span>{" "}
                 <span className="text-[var(--color-muted)]">{organization.plan ?? "Not set"}</span>
               </p>
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Plan expires:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("adminSweep.plan.expires.90599f88")}</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatPlainDate(organization.planExpiresAt)}</span>
               </p>
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Created:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("adminSweep.created.0c78dab1")}</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatDate(organization.createdAt)}</span>
               </p>
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Updated:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("adminSweep.updated.702cad2f")}</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatDate(organization.updatedAt)}</span>
               </p>
             </div>
@@ -83,7 +86,7 @@ export function OrganizationResponsiveList({
             <div className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Next required action</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("adminSweep.next.required.action.5c39ddd2")}</p>
                 <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">
                   {organizationNextAction(organization)}
                 </p>
@@ -94,9 +97,7 @@ export function OrganizationResponsiveList({
             <Link
               className="ui-button ui-button-secondary w-full justify-center md:w-auto"
               href={`/platform/organizations/${organization.id}`}
-            >
-              Open dossier
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            >{t("adminSweep.open.dossier.4f24d6eb")}<ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
         </article>

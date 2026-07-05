@@ -5,6 +5,7 @@ import { DataTable } from "@/components/tables/data-table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import type { LeadClaimConflict, ResolveLeadClaimConflictInput } from "@/types/lead-reservations";
+import { useI18n } from "@/i18n";
 
 export function ConflictList({
   conflicts,
@@ -19,6 +20,8 @@ export function ConflictList({
   error?: Error | null;
   onResolve?: (id: string, input: ResolveLeadClaimConflictInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   return (
     <DataTable<LeadClaimConflict>
       columns={[
@@ -35,7 +38,7 @@ export function ConflictList({
               <ConflictResolutionDialog
                 isPending={isResolving}
                 error={error}
-                trigger={<Button className="h-8 px-2">Resolve</Button>}
+                trigger={<Button className="h-8 px-2">{t("adminSweep.resolve.ac7f958c")}</Button>}
                 onConfirm={(input) => onResolve(row.id, input)}
               />
             ) : (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { MoreHorizontal, Search, X } from "lucide-react";
 import type { NavItem } from "@/components/layout/nav";
+import { useI18n } from "@/i18n";
 import { groupNavItems } from "@/lib/navigation-engine";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export function IconSidebarMoreMenu({
   onOpenChange,
   activePathname,
 }: IconSidebarMoreMenuProps) {
+  const { t } = useI18n();
   const dialogRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,14 +73,14 @@ export function IconSidebarMoreMenu({
           "group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
           isOpen && "bg-[var(--color-surface-muted)] text-[var(--color-foreground)]",
         )}
-        title="More navigation"
-        aria-label="Open more navigation"
+        title={t("navigation.moreNavigation")}
+        aria-label={t("navigation.openMore")}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
         <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
         <span className="pointer-events-none absolute start-full z-[var(--z-tooltip)] ms-3 hidden whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--color-foreground)] shadow-[var(--shadow-md)] group-hover:block group-focus-visible:block">
-          More
+          {t("navigation.more")}
         </span>
       </button>
 
@@ -96,17 +98,17 @@ export function IconSidebarMoreMenu({
             <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                  Workspace navigation
+                  {t("navigation.workspace")}
                 </p>
                 <h2 id="admin-more-title" className="mt-1 text-lg font-semibold text-[var(--color-foreground)]">
-                  More tools
+                  {t("navigation.moreTools")}
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={closeMenu}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]"
-                aria-label="Close more navigation"
+                aria-label={t("navigation.closeMore")}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -114,12 +116,12 @@ export function IconSidebarMoreMenu({
 
             <div className="border-b border-[var(--color-border)] px-5 py-4">
               <label className="relative block">
-                <span className="sr-only">Search navigation</span>
+                <span className="sr-only">{t("navigation.search")}</span>
                 <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" aria-hidden="true" />
                 <input
                   ref={searchRef}
                   type="search"
-                  placeholder="Search pages and workflows"
+                  placeholder={t("navigation.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   className="ui-input ps-10"
@@ -164,14 +166,14 @@ export function IconSidebarMoreMenu({
                 ))
               ) : (
                 <div className="ui-card px-4 py-10 text-center">
-                  <p className="text-sm font-semibold text-[var(--color-foreground)]">No navigation matches</p>
-                  <p className="mt-1 text-sm text-[var(--color-muted)]">Try a page name or workflow.</p>
+                  <p className="text-sm font-semibold text-[var(--color-foreground)]">{t("navigation.noMatches")}</p>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">{t("navigation.noMatchesDescription")}</p>
                 </div>
               )}
             </div>
 
             <div className="border-t border-[var(--color-border)] px-5 py-3 text-xs text-[var(--color-muted)]">
-              Press <kbd className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 font-mono">Esc</kbd> to close
+              {t("navigation.pressEscPrefix")} <kbd className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 font-mono">{t("adminSweep.esc.1f7a4f9e")}</kbd> {t("navigation.pressEscSuffix")}
             </div>
           </div>
         </>

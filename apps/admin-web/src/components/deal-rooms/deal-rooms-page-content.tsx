@@ -9,6 +9,7 @@ import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { useDealRooms } from "@/hooks/use-deal-rooms";
 import { dealRoomErrorCopy } from "@/lib/deal-room-error-copy";
+import { useI18n } from "@/i18n";
 
 export function DealRoomsPageContent({
   basePath,
@@ -17,6 +18,8 @@ export function DealRoomsPageContent({
   basePath: string;
   audience: "developer" | "brokerage" | "platform";
 }) {
+  const { t } = useI18n();
+
   const { data = [], isLoading, error, refetch } = useDealRooms();
   const descriptions = {
     developer: "Coordinate approved reservations with brokers and move qualified negotiations toward a deal.",
@@ -27,7 +30,7 @@ export function DealRoomsPageContent({
 
   return (
     <>
-      <PageHeader title="Deal Rooms" description={descriptions[audience]} />
+      <PageHeader title={t("adminSweep.deal.rooms.260989e9")} description={descriptions[audience]} />
       {!isLoading && !error ? (
         <CommercialSummaryStrip
           items={[
@@ -62,9 +65,7 @@ export function DealRoomsPageContent({
             title={errorCopy.title}
             description={errorCopy.description}
             action={
-              <Button className="ui-button-secondary" onClick={() => void refetch()}>
-                Try again
-              </Button>
+              <Button className="ui-button-secondary" onClick={() => void refetch()}>{t("adminSweep.try.again.042c862e")}</Button>
             }
           />
         ) : null}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CreateOrganizationDomainInput } from "@/types/admin-public";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({
   domain: z.string().min(1, "Domain is required."),
@@ -25,6 +26,8 @@ export function DomainCreateForm({
   error?: Error | null;
   onSubmit: (input: CreateOrganizationDomainInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: { domain: "", type: "CUSTOM_DOMAIN" },
@@ -39,18 +42,18 @@ export function DomainCreateForm({
     <form className="space-y-4" onSubmit={handleSubmit(submit)}>
       <div className="grid gap-4 md:grid-cols-[1fr_220px_auto] md:items-end">
         <div className="space-y-2">
-          <Label>Domain</Label>
-          <Input placeholder="example.com or my-brand" {...register("domain")} />
+          <Label>{t("adminSweep.domain.9b10914d")}</Label>
+          <Input placeholder={t("adminSweep.example.com.or.my.brand.98595025")} {...register("domain")} />
           {errors.domain ? <p className="text-sm text-red-600">{errors.domain.message}</p> : null}
         </div>
         <div className="space-y-2">
-          <Label>Type</Label>
+          <Label>{t("adminSweep.type.3deb7456")}</Label>
           <select
             className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
             {...register("type")}
           >
-            <option value="CUSTOM_DOMAIN">Custom domain</option>
-            <option value="SUBDOMAIN">POPWAM subdomain</option>
+            <option value="CUSTOM_DOMAIN">{t("adminSweep.custom.domain.0354c889")}</option>
+            <option value="SUBDOMAIN">{t("adminSweep.popwam.subdomain.abee9d48")}</option>
           </select>
         </div>
         <Button disabled={isPending} type="submit">

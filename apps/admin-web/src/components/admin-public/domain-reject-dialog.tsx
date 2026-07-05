@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({ reason: z.string().min(1, "Reason is required.") });
 type Values = z.infer<typeof schema>;
@@ -23,6 +24,8 @@ export function DomainRejectDialog({
   error?: Error | null;
   onConfirm: (reason: string) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -44,14 +47,12 @@ export function DomainRejectDialog({
           <div className="ui-dialog w-full max-w-lg" role="dialog" aria-modal="true" aria-labelledby={dialogTitleId}>
             <form onSubmit={handleSubmit(submit)}>
               <div className="border-b border-[var(--color-border)] px-5 py-4">
-                <h2 id={dialogTitleId} className="text-base font-semibold text-[var(--color-foreground)]">Reject domain</h2>
-                <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">
-                  Store a clear reason for the organization before this domain is rejected.
-                </p>
+                <h2 id={dialogTitleId} className="text-base font-semibold text-[var(--color-foreground)]">{t("adminSweep.reject.domain.c2e6fb71")}</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">{t("adminSweep.store.a.clear.reason.for.the.organization.before.7faa04d1")}</p>
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
-                  <Label htmlFor="domain-reject-reason">Reason</Label>
+                  <Label htmlFor="domain-reject-reason">{t("adminSweep.reason.f219cc06")}</Label>
                   <Textarea id="domain-reject-reason" {...register("reason")} aria-invalid={Boolean(errors.reason)} />
                   {errors.reason ? <p className="text-sm text-[var(--color-danger)]">{errors.reason.message}</p> : null}
                 </div>
@@ -63,9 +64,7 @@ export function DomainRejectDialog({
                 ) : null}
               </div>
               <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
-                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
+                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button className="bg-[var(--color-danger)] text-[var(--color-danger-foreground)] hover:opacity-90" disabled={isPending} type="submit">
                   {isPending ? "Rejecting" : "Reject"}
                 </Button>

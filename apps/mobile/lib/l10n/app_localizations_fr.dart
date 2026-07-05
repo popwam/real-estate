@@ -102,6 +102,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reservations => 'Réservations';
 
   @override
+  String get attendance => 'Présence';
+
+  @override
   String get profile => 'Profil';
 
   @override
@@ -163,6 +166,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get refreshCommissions => 'Actualiser les commissions';
+
+  @override
+  String get refreshAttendance => 'Actualiser la présence';
 
   @override
   String get refreshConversations => 'Actualiser les conversations';
@@ -495,6 +501,183 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updateStatus => 'Mettre à jour le statut';
+
+  @override
+  String get attendanceToday => 'Aujourd\'hui';
+
+  @override
+  String get attendanceHistory => 'Présences récentes';
+
+  @override
+  String get attendanceUnavailable => 'Présence indisponible';
+
+  @override
+  String get attendanceDate => 'Date';
+
+  @override
+  String get attendanceDuration => 'Durée';
+
+  @override
+  String get checkIn => 'Pointer l\'arrivée';
+
+  @override
+  String get checkOut => 'Pointer le départ';
+
+  @override
+  String get checkInTime => 'Arrivée';
+
+  @override
+  String get checkOutTime => 'Départ';
+
+  @override
+  String get attendanceCompletedToday => 'Présence terminée aujourd\'hui';
+
+  @override
+  String get attendanceNote => 'Note';
+
+  @override
+  String durationMinutes(Object count) {
+    return '$count min';
+  }
+
+  @override
+  String get noAttendanceHistory => 'Aucun historique de présence';
+
+  @override
+  String get attendanceHistoryAppearsHere =>
+      'Vos pointages récents d\'arrivée et de départ apparaissent ici.';
+
+  @override
+  String get noEmployeeProfileLinked =>
+      'Aucun profil employé n’est lié à ce compte.';
+
+  @override
+  String get alreadyCheckedIn => 'Vous avez déjà pointé votre arrivée.';
+
+  @override
+  String get checkInBeforeCheckOut =>
+      'Vous devez pointer votre arrivée avant de pointer votre départ.';
+
+  @override
+  String get attendanceVerificationStatus => 'Vérification';
+
+  @override
+  String get attendanceDvrStatus => 'Revue DVR';
+
+  @override
+  String get attendanceFailureReasons => 'Raisons d\'échec';
+
+  @override
+  String get attendanceSecureChecks => 'Contrôles de sécurité';
+
+  @override
+  String get attendanceNativeChecksUnavailable =>
+      'Les contrôles natifs de localisation, Wi-Fi, caméra et intégrité de l\'appareil nécessitent le build mobile sécurisé. L\'API appliquera la politique de l\'entreprise lorsque les preuves sont fournies.';
+
+  @override
+  String get attendanceNativeChecksActive =>
+      'Ce build sécurisé collecte la position GPS, les détails Wi-Fi quand l’OS les autorise, les signaux d’intégrité de l’appareil et une photo en direct avant d’envoyer la présence à l’API.';
+
+  @override
+  String get collectingAttendanceEvidence => 'Collecte des preuves sécurisées';
+
+  @override
+  String get attendanceEvidenceWarnings => 'Alertes sur les preuves';
+
+  @override
+  String get attendanceLocationPermissionDenied =>
+      'L’autorisation de localisation a été refusée.';
+
+  @override
+  String get attendanceLocationServiceDisabled =>
+      'Les services de localisation sont désactivés.';
+
+  @override
+  String get attendanceWifiUnavailable =>
+      'Le téléphone n’est pas connecté au Wi-Fi.';
+
+  @override
+  String get attendanceWifiRestricted =>
+      'Le SSID/BSSID Wi-Fi n\'est pas disponible sur cet appareil ou cet OS.';
+
+  @override
+  String get attendanceCameraPermissionDenied =>
+      'L’autorisation caméra a été refusée.';
+
+  @override
+  String get attendancePhotoCaptureCancelled =>
+      'La capture de la photo en direct a été annulée.';
+
+  @override
+  String get attendancePhotoUploadFailed =>
+      'L’envoi de la photo en direct a échoué. Veuillez réessayer.';
+
+  @override
+  String get attendanceCapturingPhoto => 'Capture de la photo en direct';
+
+  @override
+  String get attendancePhotoCaptured => 'Photo capturée';
+
+  @override
+  String get attendanceUploadingPhoto => 'Envoi de la photo de présence';
+
+  @override
+  String get attendancePhotoUploadSuccess => 'Photo de présence envoyée';
+
+  @override
+  String get attendancePhotoTooLarge =>
+      'La photo de présence est trop volumineuse.';
+
+  @override
+  String get attendanceInvalidPhotoType =>
+      'La photo de présence doit être au format JPEG, PNG ou WebP.';
+
+  @override
+  String get attendancePhotoRejected =>
+      'La photo de présence a été refusée par le serveur.';
+
+  @override
+  String get attendanceRetryUpload => 'Réessayer l’envoi';
+
+  @override
+  String get attendanceDvrPending => 'La vérification DVR est en attente.';
+
+  @override
+  String get attendanceManualReviewRequired =>
+      'Une revue manuelle est requise.';
+
+  @override
+  String get attendanceVerificationFailed =>
+      'La vérification de présence a échoué.';
+
+  @override
+  String get developerOptionsEnabled =>
+      'Les options développeur sont activées.';
+
+  @override
+  String get usbDebuggingEnabled => 'Le débogage USB est activé.';
+
+  @override
+  String get attendanceLocationRequired => 'La localisation est requise.';
+
+  @override
+  String get attendanceLocationPolicyMissing =>
+      'Le site de présence de l\'entreprise n\'est pas configuré.';
+
+  @override
+  String get outsideAllowedLocation =>
+      'Vous êtes hors du périmètre autorisé de l\'entreprise.';
+
+  @override
+  String get attendanceWifiRequired => 'Le Wi-Fi de l\'entreprise est requis.';
+
+  @override
+  String get notConnectedToCompanyWifi =>
+      'Vous n\'êtes pas connecté au Wi-Fi de l\'entreprise.';
+
+  @override
+  String get attendancePhotoRequired =>
+      'Une photo en direct au bureau est requise.';
 
   @override
   String get updateLeadStatus => 'Mettre à jour le statut du prospect';

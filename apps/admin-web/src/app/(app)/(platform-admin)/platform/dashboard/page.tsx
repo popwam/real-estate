@@ -19,8 +19,11 @@ import { usePlatformDomains } from "@/hooks/use-admin-public";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useLeadClaimConflicts } from "@/hooks/use-lead-reservations";
 import { useOrganizations, useVerificationQueue } from "@/hooks/use-platform-admin";
+import { useI18n } from "@/i18n";
 
 export default function PlatformDashboardPage() {
+  const { t } = useI18n();
+
   const currentUser = useCurrentUser();
   const organizations = useOrganizations();
   const verifications = useVerificationQueue();
@@ -46,7 +49,7 @@ export default function PlatformDashboardPage() {
       />
 
       <DashboardSection
-        title="Needs your attention"
+        title={t("adminSweep.needs.your.attention.e51f4266")}
         description="Current counts come from existing platform and CRM endpoints. A clear queue is shown as zero—not as missing data."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -109,12 +112,12 @@ export default function PlatformDashboardPage() {
       </DashboardSection>
 
       <DashboardSection
-        title="Quick actions"
+        title={t("adminSweep.quick.actions.e47e8042")}
         description="Start the most common platform reviews without searching through every module."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardActionCard
-            title="Create an organization"
+            title={t("adminSweep.create.an.organization.b7310649")}
             description="Open the organization workspace to register a developer or brokerage and begin review."
             href="/platform/organizations"
             actionLabel="Create organization"
@@ -122,21 +125,21 @@ export default function PlatformDashboardPage() {
             emphasis
           />
           <DashboardActionCard
-            title="Review trust documents"
+            title={t("adminSweep.review.trust.documents.2de8828c")}
             description="Work through submitted organization evidence and record a clear decision."
             href="/platform/verifications"
             actionLabel="Open verification queue"
             icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Resolve marketplace exceptions"
+            title={t("adminSweep.resolve.marketplace.exceptions.f24ad15a")}
             description="Compare claim evidence and settle unresolved lead ownership conflicts."
             href="/platform/lead-claim-conflicts"
             actionLabel="Open conflicts"
             icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Support conversations"
+            title={t("adminSweep.support.conversations.9f5c09b8")}
             description="Review active conversations when a participant needs platform assistance."
             href="/platform/conversations"
             actionLabel="Open conversations"

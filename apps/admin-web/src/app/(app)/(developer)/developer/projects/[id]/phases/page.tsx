@@ -11,8 +11,11 @@ import { DataTable } from "@/components/tables/data-table";
 import { useCreateProjectPhase, useProject, useProjectPhases, useUpdateProjectPhase } from "@/hooks/use-developer";
 import { formatPlainDate } from "@/lib/format";
 import type { ProjectPhase } from "@/types/developer";
+import { useI18n } from "@/i18n";
 
 export default function ProjectPhasesPage() {
+  const { t } = useI18n();
+
   const { id } = useParams<{ id: string }>();
   const { data: project } = useProject(id);
   const { data = [], isLoading, error } = useProjectPhases(id);
@@ -36,7 +39,7 @@ export default function ProjectPhasesPage() {
             }
           />
         </DetailCard>
-        <DetailCard title="Phases">
+        <DetailCard title={t("adminSweep.phases.1299c5da")}>
           {isLoading ? <LoadingState label="Loading phases" /> : null}
           {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
           {!isLoading && !error ? (
@@ -47,7 +50,7 @@ export default function ProjectPhasesPage() {
                 { key: "deliveryDate", header: "Delivery", cell: (row) => formatPlainDate(row.deliveryDate) },
                 { key: "totalUnits", header: "Total" },
                 { key: "availableUnits", header: "Available" },
-                { key: "actions", header: "Actions", cell: (row) => <button className="text-sm font-medium text-zinc-950 underline" onClick={() => setEditing(row)}>Edit</button> },
+                { key: "actions", header: "Actions", cell: (row) => <button className="text-sm font-medium text-zinc-950 underline" onClick={() => setEditing(row)}>{t("adminSweep.edit.5301648d")}</button> },
               ]}
               data={data}
             />

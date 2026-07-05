@@ -1,8 +1,13 @@
+"use client";
+
 import { CrmActivityTypeBadge } from "@/components/admin-crm/crm-activity-type-badge";
 import { formatDate } from "@/lib/format";
 import type { CrmActivity } from "@/types/admin-crm";
+import { useI18n } from "@/i18n";
 
 export function CrmActivityItem({ activity }: { activity: CrmActivity }) {
+  const { t } = useI18n();
+
   const metadata = safeMetadata(activity.metadata);
   const actor = activity.publicActorName ?? activity.actorRole ?? activity.actorOrganization?.name ?? activity.actorUser?.name;
 
@@ -19,10 +24,10 @@ export function CrmActivityItem({ activity }: { activity: CrmActivity }) {
         <time className="text-sm text-[var(--color-muted)]">{formatDate(activity.createdAt)}</time>
       </div>
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--color-muted)]">
-        {actor ? <span>Actor: {actor}</span> : null}
-        {activity.crmLead?.client?.name ? <span>Lead: {activity.crmLead.client.name}</span> : null}
-        {activity.crmLead?.project?.name ? <span>Project: {activity.crmLead.project.name}</span> : null}
-        {activity.conversation?.type ? <span>Conversation: {activity.conversation.type.replaceAll("_", " ")}</span> : null}
+        {actor ? <span>{t("adminSweep.actor.64270b5a")}{actor}</span> : null}
+        {activity.crmLead?.client?.name ? <span>{t("adminSweep.lead.7ae696d5")}{activity.crmLead.client.name}</span> : null}
+        {activity.crmLead?.project?.name ? <span>{t("adminSweep.project.2a16a5bd")}{activity.crmLead.project.name}</span> : null}
+        {activity.conversation?.type ? <span>{t("adminSweep.conversation.8dd71aff")}{activity.conversation.type.replaceAll("_", " ")}</span> : null}
       </div>
       {metadata ? <dl className="mt-3 grid gap-2 rounded-[var(--radius-md)] bg-[var(--color-surface-muted)] p-3 sm:grid-cols-2">{Object.entries(metadata).map(([key, value]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{formatLabel(key)}</dt><dd className="mt-1 text-xs text-[var(--color-foreground)]">{value == null ? "Not set" : String(value)}</dd></div>)}</dl> : null}
     </li>

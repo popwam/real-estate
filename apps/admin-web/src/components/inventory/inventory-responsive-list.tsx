@@ -1,5 +1,8 @@
+"use client";
+
 import { BedDouble, Building2, Maximize2, Pencil, ShowerHead } from "lucide-react";
 import { UnitStatusBadge, UnitVisibilityBadge } from "@/components/developer/badges";
+import { useI18n } from "@/i18n";
 import type { InventoryUnit } from "@/types/developer";
 
 export function InventoryResponsiveList({
@@ -11,6 +14,8 @@ export function InventoryResponsiveList({
   onEdit?: (unit: InventoryUnit) => void;
   showProject?: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <>
       <div className="grid gap-3 xl:hidden">
@@ -19,11 +24,11 @@ export function InventoryResponsiveList({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-accent)]">{formatLabel(unit.unitType)}</p>
-                <h3 className="mt-1 text-lg font-semibold text-[var(--color-foreground)]">Unit {unit.unitNumber}</h3>
+                <h3 className="mt-1 text-lg font-semibold text-[var(--color-foreground)]">{t("inventoryList.unitTitle", { unit: unit.unitNumber })}</h3>
                 {showProject ? (
                   <p className="mt-2 flex items-center gap-2 text-sm text-[var(--color-muted)]">
                     <Building2 className="h-4 w-4" aria-hidden="true" />
-                    {unit.project?.name ?? "Project context unavailable"}
+                    {unit.project?.name ?? t("inventoryList.projectContextUnavailable")}
                   </p>
                 ) : null}
               </div>
@@ -49,13 +54,13 @@ export function InventoryResponsiveList({
         <table className="w-full border-collapse text-start text-sm">
           <thead className="bg-[var(--color-surface-muted)] text-xs uppercase tracking-wide text-[var(--color-muted)]">
             <tr>
-              <Header>Unit</Header>
-              {showProject ? <Header>Project / phase</Header> : null}
-              <Header>Specifications</Header>
-              <Header>Price</Header>
-              <Header>Status</Header>
-              <Header>Visibility</Header>
-              {onEdit ? <Header><span className="sr-only">Actions</span></Header> : null}
+              <Header>{t("inventoryList.unit")}</Header>
+              {showProject ? <Header>{t("inventoryList.projectPhase")}</Header> : null}
+              <Header>{t("inventoryList.specifications")}</Header>
+              <Header>{t("inventoryList.price")}</Header>
+              <Header>{t("common.status")}</Header>
+              <Header>{t("inventoryList.visibility")}</Header>
+              {onEdit ? <Header><span className="sr-only">{t("inventoryList.actions")}</span></Header> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-surface)]">
@@ -67,8 +72,8 @@ export function InventoryResponsiveList({
                 </Cell>
                 {showProject ? (
                   <Cell>
-                    <p className="font-medium text-[var(--color-foreground)]">{unit.project?.name ?? "Project unavailable"}</p>
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">{unit.phase?.name ?? "No phase"}</p>
+                    <p className="font-medium text-[var(--color-foreground)]">{unit.project?.name ?? t("inventoryList.projectUnavailable")}</p>
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">{unit.phase?.name ?? t("inventoryList.noPhase")}</p>
                   </Cell>
                 ) : null}
                 <Cell>{specification(unit)}</Cell>

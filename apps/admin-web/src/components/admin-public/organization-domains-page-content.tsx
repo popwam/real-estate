@@ -5,6 +5,7 @@ import { OrganizationDomainsTable } from "@/components/admin-public/organization
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
+import { useI18n } from "@/i18n";
 import {
   useCreateOrganizationDomain,
   useCheckDomainDns,
@@ -14,6 +15,8 @@ import {
 } from "@/hooks/use-admin-public";
 
 export function OrganizationDomainsPageContent() {
+  const { t } = useI18n();
+
   const { data = [], isLoading, error } = useOrganizationDomains();
   const create = useCreateOrganizationDomain();
   const requestVerification = useRequestDomainVerification();
@@ -24,12 +27,12 @@ export function OrganizationDomainsPageContent() {
 
   return (
     <>
-      <PageHeader title="Domains" description="Manage public domain verification records. DNS checks and Cloudflare automation are not implemented in this slice." />
+      <PageHeader title={t("adminSweep.domains.a0d641b3")} description="Manage public domain verification records. DNS checks and Cloudflare automation are not implemented in this slice." />
       <div className="space-y-5">
-        <DetailCard title="Add domain">
+        <DetailCard title={t("adminSweep.add.domain.76d74001")}>
           <DomainCreateForm error={create.error} isPending={create.isPending} onSubmit={(input) => create.mutateAsync(input)} />
         </DetailCard>
-        <DetailCard title="Domain records">
+        <DetailCard title={t("adminSweep.domain.records.bdcc4d3d")}>
           {isLoading ? <LoadingState label="Loading domains" /> : null}
           {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
           {actionError ? <p className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{actionError.message}</p> : null}

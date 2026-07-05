@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { DealRoomStatus } from "@/types/deal-rooms";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({
   status: z.enum(["NEGOTIATION", "PENDING_APPROVAL", "APPROVED"]),
@@ -27,6 +28,8 @@ export function DealRoomStatusActionDialog({
   error?: Error | null;
   onConfirm: (status: DealRoomStatus) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const { register, handleSubmit } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -42,18 +45,16 @@ export function DealRoomStatusActionDialog({
     <>
       <span onClick={() => setOpen(true)}>{trigger}</span>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] px-4 py-6" role="dialog" aria-modal="true" aria-label="Update deal room status">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] px-4 py-6" role="dialog" aria-modal="true" aria-label={t("adminSweep.update.deal.room.status.e73c790b")}>
           <div className="ui-card w-full max-w-lg shadow-xl">
             <form onSubmit={handleSubmit(submit)}>
               <div className="border-b border-[var(--color-border)] px-5 py-4">
-                <h2 className="text-base font-semibold text-[var(--color-text)]">Update deal room status</h2>
-                <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">
-                  SOLD is intentionally hidden in Team 3 Slice 5; finalization belongs to the later deal/commission flow.
-                </p>
+                <h2 className="text-base font-semibold text-[var(--color-text)]">{t("adminSweep.update.deal.room.status.e73c790b")}</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">{t("adminSweep.sold.is.intentionally.hidden.in.team.3.slice.5.f.27ed9bab")}</p>
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label>{t("adminSweep.status.bae7d5be")}</Label>
                   <select className="ui-input" {...register("status")}>
                     <option value="NEGOTIATION">NEGOTIATION</option>
                     <option value="PENDING_APPROVAL">PENDING_APPROVAL</option>
@@ -68,9 +69,7 @@ export function DealRoomStatusActionDialog({
                 ) : null}
               </div>
               <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
-                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
+                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button disabled={isPending} type="submit">{isPending ? "Updating" : "Update status"}</Button>
               </div>
             </form>

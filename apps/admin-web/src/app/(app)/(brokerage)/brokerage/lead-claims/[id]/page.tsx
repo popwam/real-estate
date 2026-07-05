@@ -10,8 +10,11 @@ import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { useCreateReservationRequest, useLeadClaim, useReleaseLeadClaim } from "@/hooks/use-lead-reservations";
 import { formatDate } from "@/lib/format";
+import { useI18n } from "@/i18n";
 
 export default function BrokerageLeadClaimDetailPage() {
+  const { t } = useI18n();
+
   const { id } = useParams<{ id: string }>();
   const { data: claim, isLoading, error } = useLeadClaim(id);
   const release = useReleaseLeadClaim();
@@ -24,12 +27,12 @@ export default function BrokerageLeadClaimDetailPage() {
   return (
     <>
       <PageHeader
-        title="Lead Claim Detail"
+        title={t("adminSweep.lead.claim.detail.b726f2ea")}
         description="Safe lead claim details for brokerage follow-up."
-        actions={claim.status === "ACTIVE" ? <Button onClick={() => release.mutate(id)} disabled={release.isPending}>Release claim</Button> : null}
+        actions={claim.status === "ACTIVE" ? <Button onClick={() => release.mutate(id)} disabled={release.isPending}>{t("adminSweep.release.claim.8d1ea671")}</Button> : null}
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <DetailCard title="Claim Summary">
+        <DetailCard title={t("adminSweep.claim.summary.da50a4ba")}>
           <DetailGrid items={[
             { label: "Status", value: <LeadClaimStatusBadge status={claim.status} /> },
             { label: "Client", value: safeClientLabel(claim) },
@@ -39,7 +42,7 @@ export default function BrokerageLeadClaimDetailPage() {
             { label: "Created", value: formatDate(claim.createdAt) },
           ]} />
         </DetailCard>
-        <DetailCard title="Create Reservation">
+        <DetailCard title={t("adminSweep.create.reservation.30303fe6")}>
           <ReservationRequestForm
             defaultLeadClaimId={claim.id}
             isPending={createReservation.isPending}

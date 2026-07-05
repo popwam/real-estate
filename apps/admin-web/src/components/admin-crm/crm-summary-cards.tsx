@@ -3,12 +3,15 @@
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { useCrmSummary } from "@/hooks/use-admin-crm";
+import { useI18n } from "@/i18n";
 
 export function CrmSummaryCards() {
+  const { t } = useI18n();
+
   const { data, isLoading, error } = useCrmSummary();
 
   if (isLoading) return <LoadingState label="Loading CRM summary" />;
-  if (error) return <FeedbackState tone="error" title="CRM summary could not be loaded" description={error.message} />;
+  if (error) return <FeedbackState tone="error" title={t("adminSweep.crm.summary.could.not.be.loaded.71cd389a")} description={error.message} />;
   if (!data) return null;
 
   const cards = [
@@ -22,5 +25,5 @@ export function CrmSummaryCards() {
     { label: "Messages today", value: data.today.newMessages },
   ];
 
-  return <section aria-labelledby="crm-summary-title"><h2 id="crm-summary-title" className="sr-only">CRM summary</h2><div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-8">{cards.map((card) => <div key={card.label} className="ui-card p-4"><p className="text-xs font-semibold text-[var(--color-muted)]">{card.label}</p><p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">{card.value.toLocaleString()}</p></div>)}</div></section>;
+  return <section aria-labelledby="crm-summary-title"><h2 id="crm-summary-title" className="sr-only">{t("adminSweep.crm.summary.58aa6924")}</h2><div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-8">{cards.map((card) => <div key={card.label} className="ui-card p-4"><p className="text-xs font-semibold text-[var(--color-muted)]">{card.label}</p><p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">{card.value.toLocaleString()}</p></div>)}</div></section>;
 }

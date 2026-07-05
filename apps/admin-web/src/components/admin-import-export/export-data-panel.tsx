@@ -14,8 +14,11 @@ import {
   useExportProjects,
 } from "@/hooks/use-admin-import-export";
 import type { ExportDataType, ExportResponse } from "@/types/admin-import-export";
+import { useI18n } from "@/i18n";
 
 export function ExportDataPanel({ allowedTypes }: { allowedTypes?: ExportDataType[] }) {
+  const { t } = useI18n();
+
   const [selected, setSelected] = useState<ExportDataType>(allowedTypes?.[0] ?? "projects");
   const [data, setData] = useState<ExportResponse | null>(null);
   const projects = useExportProjects();
@@ -39,12 +42,12 @@ export function ExportDataPanel({ allowedTypes }: { allowedTypes?: ExportDataTyp
 
   return (
     <>
-      <PageHeader title="Data export" description="Download backend-scoped JSON exports for review, demo, and compliance workflows." />
+      <PageHeader title={t("adminSweep.data.export.61534a81")} description="Download backend-scoped JSON exports for review, demo, and compliance workflows." />
       <div className="space-y-6">
-        <DetailCard title="Choose export">
+        <DetailCard title={t("adminSweep.choose.export.dc379970")}>
           <div className="grid gap-4 md:grid-cols-[260px_auto]">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-900">Dataset</label>
+              <label className="text-sm font-medium text-zinc-900">{t("adminSweep.dataset.10526894")}</label>
               <select
                 className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
                 value={selected}
@@ -66,11 +69,9 @@ export function ExportDataPanel({ allowedTypes }: { allowedTypes?: ExportDataTyp
             </div>
           </div>
           {error ? <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
-          <p className="mt-4 text-sm text-zinc-600">
-            Exports are JSON only in this slice. The frontend relies on backend authorization for organization and platform scoping.
-          </p>
+          <p className="mt-4 text-sm text-zinc-600">{t("adminSweep.exports.are.json.only.in.this.slice.the.frontend.f4b61809")}</p>
         </DetailCard>
-        <DetailCard title="JSON preview">
+        <DetailCard title={t("adminSweep.json.preview.8eb99b41")}>
           <JsonPreviewBlock value={data ?? { message: "Run an export to preview JSON here." }} />
         </DetailCard>
       </div>

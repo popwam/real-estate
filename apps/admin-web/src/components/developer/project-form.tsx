@@ -8,6 +8,7 @@ import { Field, SelectInput, TextAreaInput, TextInput } from "@/components/devel
 import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
 import type { Project, ProjectInput } from "@/types/developer";
+import { useI18n } from "@/i18n";
 
 const projectSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -40,6 +41,8 @@ export function ProjectForm({
   successMessage?: string;
   onSubmit: (input: ProjectInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const {
     register,
     handleSubmit,
@@ -73,11 +76,11 @@ export function ProjectForm({
       )}
     >
       <FormSection
-        title="Basic information"
+        title={t("adminSweep.basic.information.d8bc7383")}
         description="Name the project and define how it is classified inside the portfolio."
       >
         <Field label="Project name" error={errors.name?.message} required>
-          <TextInput placeholder="Example: North Coast Residence" {...register("name")} />
+          <TextInput placeholder={t("adminSweep.example.north.coast.residence.7c564608")} {...register("name")} />
         </Field>
         <Field label="Public slug" error={errors.slug?.message} hint="Used in public URLs when the project is published.">
           <TextInput placeholder="north-coast-residence" {...register("slug")} />
@@ -99,13 +102,13 @@ export function ProjectForm({
       </FormSection>
 
       <FormSection
-        title="Location"
+        title={t("adminSweep.location.d219c681")}
         description="Add the customer-facing location first; coordinates are optional operational metadata."
       >
-        <Field label="City"><TextInput placeholder="City" {...register("city")} /></Field>
-        <Field label="District"><TextInput placeholder="District or area" {...register("district")} /></Field>
+        <Field label="City"><TextInput placeholder={t("adminSweep.city.4271627f")} {...register("city")} /></Field>
+        <Field label="District"><TextInput placeholder={t("adminSweep.district.or.area.b266f3e0")} {...register("district")} /></Field>
         <div className="md:col-span-2">
-          <Field label="Address"><TextInput placeholder="Street or development address" {...register("address")} /></Field>
+          <Field label="Address"><TextInput placeholder={t("adminSweep.street.or.development.address.edd2b614")} {...register("address")} /></Field>
         </div>
         <Field label="Latitude" hint="Optional decimal coordinate.">
           <TextInput type="number" step="any" inputMode="decimal" {...register("latitude")} />
@@ -116,12 +119,12 @@ export function ProjectForm({
       </FormSection>
 
       <FormSection
-        title="Description and publishing"
+        title={t("adminSweep.description.and.publishing.f5c470ac")}
         description="Set the private/public description and choose the current audience. Unit pricing is managed from Inventory."
       >
         <div className="md:col-span-2">
           <Field label="Project description" hint="Explain the project clearly without private notes.">
-            <TextAreaInput className="min-h-32" placeholder="Project overview, positioning, and key information" {...register("description")} />
+            <TextAreaInput className="min-h-32" placeholder={t("adminSweep.project.overview.positioning.and.key.information.477868f1")} {...register("description")} />
           </Field>
         </div>
         <div className="md:col-span-2">
@@ -133,13 +136,11 @@ export function ProjectForm({
             </SelectInput>
           </Field>
         </div>
-        <div className="md:col-span-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm leading-6 text-[var(--color-muted)]">
-          Creating or editing this record does not add inventory, payment plans, broker permissions, or publish it automatically. Complete those readiness steps from the project command center.
-        </div>
+        <div className="md:col-span-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm leading-6 text-[var(--color-muted)]">{t("adminSweep.creating.or.editing.this.record.does.not.add.inv.8d3d26c5")}</div>
       </FormSection>
 
       {error ? (
-        <FeedbackState tone="error" title="Project could not be saved" description={error.message} />
+        <FeedbackState tone="error" title={t("adminSweep.project.could.not.be.saved.f3096a4e")} description={error.message} />
       ) : null}
       {successMessage ? <FeedbackState tone="success" title={successMessage} /> : null}
 

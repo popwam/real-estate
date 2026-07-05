@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { PublicLeadStatusInput } from "@/types/admin-public";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({ note: z.string() });
 type Values = z.infer<typeof schema>;
@@ -49,6 +50,8 @@ export function PublicLeadActionDialog({
   error?: Error | null;
   onConfirm: (input: Partial<PublicLeadStatusInput>) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const { register, handleSubmit, reset } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -76,7 +79,7 @@ export function PublicLeadActionDialog({
               <div className="space-y-4 px-5 py-5">
                 {action === "review" ? (
                   <div className="space-y-2">
-                    <Label>Note (optional)</Label>
+                    <Label>{t("adminSweep.note.optional.4e395670")}</Label>
                     <Textarea {...register("note")} />
                   </div>
                 ) : null}
@@ -94,9 +97,7 @@ export function PublicLeadActionDialog({
                     reset();
                     setOpen(false);
                   }}
-                >
-                  Cancel
-                </Button>
+                >{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button className={cn(copy.tone)} disabled={isPending} type="submit">
                   {isPending ? "Working" : copy.confirm}
                 </Button>

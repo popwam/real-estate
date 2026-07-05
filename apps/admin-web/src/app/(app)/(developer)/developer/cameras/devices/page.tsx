@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperCameraDevicesPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="Camera devices"
+      title={t("adminSweep.camera.devices.71fb8eb4")}
       description="Camera registry placeholder only. No streaming, DVR, credentials, or AI analysis are connected."
       listPath="/cameras/devices"
       queryKey="camera-devices"

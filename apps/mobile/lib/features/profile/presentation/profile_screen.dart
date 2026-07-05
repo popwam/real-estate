@@ -207,6 +207,16 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.payments_outlined,
               label: l10n.myCommissions,
             ),
+          if (session != null &&
+              canAccessWorkspaceFeature(
+                session,
+                MobileWorkspaceFeature.attendance,
+              ))
+            _ProfileAction(
+              route: '/attendance',
+              icon: Icons.event_available_outlined,
+              label: l10n.attendance,
+            ),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () async {

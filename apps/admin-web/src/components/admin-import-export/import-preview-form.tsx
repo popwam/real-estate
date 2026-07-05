@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCommitImportJob, usePreviewProjectInventoryImport } from "@/hooks/use-admin-import-export";
 import type { ImportSourceFormat } from "@/types/admin-import-export";
+import { useI18n } from "@/i18n";
 
 const sampleRows = [
   {
@@ -53,6 +54,8 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 export function ImportPreviewForm({ jobsBasePath }: { jobsBasePath: string }) {
+  const { t } = useI18n();
+
   const [parseError, setParseError] = useState<string | null>(null);
   const [sourceFormat, setSourceFormat] = useState<Extract<ImportSourceFormat, "CSV" | "JSON">>("JSON");
   const preview = usePreviewProjectInventoryImport();
@@ -101,11 +104,11 @@ export function ImportPreviewForm({ jobsBasePath }: { jobsBasePath: string }) {
 
   return (
     <div className="space-y-6">
-      <DetailCard title="Preview project and inventory import">
+      <DetailCard title={t("adminSweep.preview.project.and.inventory.import.85b8ad45")}>
         <form className="space-y-5" onSubmit={handleSubmit(submit)}>
           <div className="grid gap-4 md:grid-cols-[220px_1fr]">
             <div className="space-y-2">
-              <Label>Source format</Label>
+              <Label>{t("adminSweep.source.format.ccbf10e4")}</Label>
               <select
                 className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
                 {...sourceFormatField}
@@ -114,24 +117,24 @@ export function ImportPreviewForm({ jobsBasePath }: { jobsBasePath: string }) {
                   setSourceFormat(event.target.value as Extract<ImportSourceFormat, "CSV" | "JSON">);
                 }}
               >
-                <option value="JSON">JSON rows</option>
-                <option value="CSV">CSV text</option>
+                <option value="JSON">{t("adminSweep.json.rows.052566c8")}</option>
+                <option value="CSV">{t("adminSweep.csv.text.5fa38a72")}</option>
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Original file name</Label>
+              <Label>{t("adminSweep.original.file.name.28583609")}</Label>
               <Input placeholder="inventory-import.csv" {...register("originalFileName")} />
             </div>
           </div>
           {sourceFormat === "CSV" ? (
             <div className="space-y-2">
-              <Label>CSV text</Label>
+              <Label>{t("adminSweep.csv.text.5fa38a72")}</Label>
               <Textarea className="min-h-72 font-mono text-xs" {...register("csv")} />
               {errors.csv ? <p className="text-sm text-red-600">{errors.csv.message}</p> : null}
             </div>
           ) : (
             <div className="space-y-2">
-              <Label>JSON rows</Label>
+              <Label>{t("adminSweep.json.rows.052566c8")}</Label>
               <Textarea className="min-h-72 font-mono text-xs" {...register("rowsJson")} />
               {errors.rowsJson ? <p className="text-sm text-red-600">{errors.rowsJson.message}</p> : null}
             </div>
@@ -147,17 +150,13 @@ export function ImportPreviewForm({ jobsBasePath }: { jobsBasePath: string }) {
       </DetailCard>
 
       <DetailCard
-        title="Template helper"
+        title={t("adminSweep.template.helper.787571d2")}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button className="gap-2 bg-white text-zinc-900 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" onClick={() => setValue("rowsJson", JSON.stringify(sampleRows, null, 2))}>
-              <Copy className="h-4 w-4" aria-hidden="true" />
-              Use JSON sample
-            </Button>
+              <Copy className="h-4 w-4" aria-hidden="true" />{t("adminSweep.use.json.sample.48f0f792")}</Button>
             <Button className="gap-2 bg-white text-zinc-900 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" onClick={() => setValue("csv", sampleCsv)}>
-              <Copy className="h-4 w-4" aria-hidden="true" />
-              Use CSV sample
-            </Button>
+              <Copy className="h-4 w-4" aria-hidden="true" />{t("adminSweep.use.csv.sample.41995afe")}</Button>
           </div>
         }
       >
@@ -174,7 +173,7 @@ export function ImportPreviewForm({ jobsBasePath }: { jobsBasePath: string }) {
             onCommit={(id) => commit.mutateAsync(id)}
           />
           {commit.error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{commit.error.message}</p> : null}
-          <DetailCard title="Row validation">
+          <DetailCard title={t("adminSweep.row.validation.b7f598c0")}>
             <ImportRowErrorsTable preview={previewData} />
           </DetailCard>
         </>

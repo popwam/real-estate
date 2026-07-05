@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { DisplayPreferences } from "@/components/layout/display-preferences";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useI18n } from "@/i18n";
 import {
   getMobileBottomNavItems,
   getNavItemsForUser,
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 
 export function MobileBottomNav() {
+  const { t } = useI18n();
   const pathname = usePathname();
   const { data } = useCurrentUser();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -55,7 +57,7 @@ export function MobileBottomNav() {
             type="button"
             className="fixed inset-0 z-[39] cursor-default bg-[var(--color-overlay)]"
             onClick={closeMore}
-            aria-label="Close more navigation"
+            aria-label={t("navigation.closeMore")}
           />
           <section
             className="fixed inset-x-0 bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom))] z-40 flex max-h-[min(78vh,calc(100vh-var(--bottom-nav-height)-env(safe-area-inset-bottom)-1rem))] flex-col rounded-t-[var(--radius-xl)] border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[var(--shadow-xl)]"
@@ -65,14 +67,14 @@ export function MobileBottomNav() {
           >
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-accent)]">Workspace</p>
-                <h2 id="mobile-more-title" className="text-lg font-semibold text-[var(--color-foreground)]">More tools</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--color-accent)]">{t("navigation.workspaceShort")}</p>
+                <h2 id="mobile-more-title" className="text-lg font-semibold text-[var(--color-foreground)]">{t("navigation.moreTools")}</h2>
               </div>
               <button
                 type="button"
                 onClick={closeMore}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)]"
-                aria-label="Close more navigation"
+                aria-label={t("navigation.closeMore")}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -80,13 +82,13 @@ export function MobileBottomNav() {
 
             <div className="border-b border-[var(--color-border)] px-4 py-3">
               <label className="relative block">
-                <span className="sr-only">Search navigation</span>
+                <span className="sr-only">{t("navigation.search")}</span>
                 <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" aria-hidden="true" />
                 <input
                   type="search"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search pages and workflows"
+                  placeholder={t("navigation.searchPlaceholder")}
                   className="ui-input ps-10"
                   autoFocus
                 />
@@ -95,7 +97,7 @@ export function MobileBottomNav() {
 
             <div className="overflow-y-auto px-4 py-4">
               <div className="mb-5">
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted)]">Display</p>
+                <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted)]">{t("navigation.display")}</p>
                 <DisplayPreferences />
               </div>
 
@@ -127,7 +129,7 @@ export function MobileBottomNav() {
                   </section>
                 ))
               ) : (
-                <div className="ui-card px-4 py-8 text-center text-sm text-[var(--color-muted)]">No matching pages.</div>
+                <div className="ui-card px-4 py-8 text-center text-sm text-[var(--color-muted)]">{t("navigation.noMatchingPages")}</div>
               )}
             </div>
           </section>
@@ -137,7 +139,7 @@ export function MobileBottomNav() {
       <nav
         className="fixed inset-x-0 bottom-0 z-[var(--z-fixed)] border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        aria-label="Mobile admin navigation"
+        aria-label={t("navigation.mobileAdmin")}
       >
         <div className="grid h-[var(--bottom-nav-height)] grid-cols-5">
           {primaryItems.map((item) => {
@@ -162,7 +164,7 @@ export function MobileBottomNav() {
             type="button"
             onClick={() => setMoreOpen((open) => !open)}
             className={navClass(moreOpen)}
-            aria-label="More admin navigation"
+            aria-label={t("navigation.moreAdmin")}
             aria-expanded={moreOpen}
           >
             <MoreIcon className="h-5 w-5 shrink-0" aria-hidden="true" />

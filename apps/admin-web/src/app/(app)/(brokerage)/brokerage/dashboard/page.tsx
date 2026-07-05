@@ -19,8 +19,11 @@ import { useCrmSummary, useMarketplaceCrmLeads } from "@/hooks/use-admin-crm";
 import { useCommissions, useDeals } from "@/hooks/use-commercial";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useMyLeadClaims, useReservationRequests } from "@/hooks/use-lead-reservations";
+import { useI18n } from "@/i18n";
 
 export default function BrokerageDashboardPage() {
+  const { t } = useI18n();
+
   const currentUser = useCurrentUser();
   const marketplaceLeads = useMarketplaceCrmLeads({ page: 1, pageSize: 1 });
   const crm = useCrmSummary();
@@ -49,7 +52,7 @@ export default function BrokerageDashboardPage() {
       />
 
       <DashboardSection
-        title="Today’s work"
+        title={t("adminSweep.today.s.work.9e6f6594")}
         description="Live, role-scoped summaries show the work available to this broker or brokerage account."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
@@ -134,12 +137,12 @@ export default function BrokerageDashboardPage() {
       </DashboardSection>
 
       <DashboardSection
-        title="Quick actions"
+        title={t("adminSweep.quick.actions.e47e8042")}
         description="Keep the daily broker journey close: discover, follow up, protect, and progress the deal."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardActionCard
-            title="Find available leads"
+            title={t("adminSweep.find.available.leads.6067a2f9")}
             description="Review marketplace opportunities and claim only the leads you are ready to serve."
             href="/brokerage/crm/marketplace-leads"
             actionLabel="Browse leads"
@@ -147,21 +150,21 @@ export default function BrokerageDashboardPage() {
             emphasis
           />
           <DashboardActionCard
-            title="Reply to clients"
+            title={t("adminSweep.reply.to.clients.338bd57a")}
             description="Continue active conversations and keep response times under control."
             href="/brokerage/conversations"
             actionLabel="Open conversations"
             icon={<MessageSquareText className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Review client protection"
+            title={t("adminSweep.review.client.protection.8e09301e")}
             description="Check active claims, expiry, and the next safe action for each client."
             href="/brokerage/lead-claims"
             actionLabel="Open claims"
             icon={<UserCheck className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Advance active deals"
+            title={t("adminSweep.advance.active.deals.10774053")}
             description="Review deal progress and open the related commercial workspace."
             href="/brokerage/deals"
             actionLabel="Open deals"

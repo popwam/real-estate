@@ -11,8 +11,11 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { useClaimCrmLead, useCrmLeads, useMarketplaceCrmLeads } from "@/hooks/use-admin-crm";
 import type { CrmLeadListQuery } from "@/types/admin-crm";
+import { useI18n } from "@/i18n";
 
 export function CrmLeadsPageContent({ basePath, marketplace = false }: { basePath: string; marketplace?: boolean }) {
+  const { t } = useI18n();
+
   const [filters, setFilters] = useState<CrmLeadListQuery>({ page: 1, pageSize: 20 });
   const regularQuery = useCrmLeads(filters, !marketplace);
   const marketplaceQuery = useMarketplaceCrmLeads(filters, marketplace);
@@ -23,12 +26,12 @@ export function CrmLeadsPageContent({ basePath, marketplace = false }: { basePat
   return (
     <div className="space-y-6">
       <PageHeader title={marketplace ? "Marketplace leads" : "CRM lead inbox"} description={marketplace ? "Review available opportunities and claim only the leads your brokerage is ready to serve." : "Scan ownership, project interest, source, stage, and recency before choosing the next action."} />
-      {marketplace ? <div className="flex gap-3 rounded-[var(--radius-lg)] border border-[var(--color-info)] bg-[var(--color-info-soft)] p-4 text-sm leading-6 text-[var(--color-foreground)]"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-info)]" aria-hidden="true" /><div><p className="font-semibold">Claim responsibly</p><p className="mt-1 text-[var(--color-muted)]">A confirmed claim assigns the lead through the existing eligibility rules. Contact details may remain masked until the backend authorizes access. No availability timer is assumed.</p></div></div> : <CrmSummaryCards />}
-      <section className="ui-card p-4 sm:p-5" aria-labelledby="lead-filters-title"><h2 id="lead-filters-title" className="text-sm font-semibold text-[var(--color-foreground)]">Filter leads</h2><p className="mt-1 mb-4 text-xs leading-5 text-[var(--color-muted)]">Use existing CRM filters; result ownership and visibility remain backend-scoped.</p><CrmLeadFilters filters={filters} onChange={setFilters} /></section>
+      {marketplace ? <div className="flex gap-3 rounded-[var(--radius-lg)] border border-[var(--color-info)] bg-[var(--color-info-soft)] p-4 text-sm leading-6 text-[var(--color-foreground)]"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-info)]" aria-hidden="true" /><div><p className="font-semibold">{t("adminSweep.claim.responsibly.4023f8d7")}</p><p className="mt-1 text-[var(--color-muted)]">{t("adminSweep.a.confirmed.claim.assigns.the.lead.through.the.e.dea6dac4")}</p></div></div> : <CrmSummaryCards />}
+      <section className="ui-card p-4 sm:p-5" aria-labelledby="lead-filters-title"><h2 id="lead-filters-title" className="text-sm font-semibold text-[var(--color-foreground)]">{t("adminSweep.filter.leads.665da41a")}</h2><p className="mt-1 mb-4 text-xs leading-5 text-[var(--color-muted)]">{t("adminSweep.use.existing.crm.filters.result.ownership.and.vi.7558700e")}</p><CrmLeadFilters filters={filters} onChange={setFilters} /></section>
       <section className="ui-card p-4 sm:p-5" aria-labelledby="lead-results-title">
-        <div className="mb-5"><h2 id="lead-results-title" className="text-lg font-semibold text-[var(--color-foreground)]">{marketplace ? "Available leads" : "Lead results"}</h2>{data ? <p className="mt-1 text-sm text-[var(--color-muted)]">{data.pagination.total.toLocaleString()} total results</p> : null}</div>
+        <div className="mb-5"><h2 id="lead-results-title" className="text-lg font-semibold text-[var(--color-foreground)]">{marketplace ? "Available leads" : "Lead results"}</h2>{data ? <p className="mt-1 text-sm text-[var(--color-muted)]">{data.pagination.total.toLocaleString()}{t("adminSweep.total.results.6dca0437")}</p> : null}</div>
         {query.isLoading ? <LoadingState label="Loading CRM leads" /> : null}
-        {query.error ? <FeedbackState tone="error" title="CRM leads could not be loaded" description={query.error.message} /> : null}
+        {query.error ? <FeedbackState tone="error" title={t("adminSweep.crm.leads.could.not.be.loaded.48acc953")} description={query.error.message} /> : null}
         {!query.isLoading && !query.error && data ? <><CrmLeadsTable basePath={basePath} isClaiming={claim.isPending} leads={data.items} showClaimAction={marketplace} onClaim={(id) => claim.mutateAsync(id)} /><CrmPaginationControls pagination={data.pagination} onPageChange={(page) => setFilters((current) => ({ ...current, page }))} onPageSizeChange={(pageSize) => setFilters((current) => ({ ...current, page: 1, pageSize }))} /></> : null}
       </section>
     </div>

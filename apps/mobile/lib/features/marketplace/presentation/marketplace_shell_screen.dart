@@ -25,6 +25,7 @@ class MarketplaceShellScreen extends StatelessWidget {
       '/deal-rooms' => 3,
       '/deals' => 3,
       '/commissions' => 3,
+      '/attendance' => 3,
       '/crm-leads' => 3,
       '/crm-marketplace-leads' => 3,
       '/crm-conversations' => 3,

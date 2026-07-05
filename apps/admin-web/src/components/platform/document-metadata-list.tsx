@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ExternalLink, FileText } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { VerificationStatusBadge } from "@/components/platform/verification-status-badge";
 import type { Verification } from "@/types/platform";
+import { useI18n } from "@/i18n";
 
 function formatBytes(value?: number | null) {
   if (!value) return "Unknown size";
@@ -12,10 +15,12 @@ function formatBytes(value?: number | null) {
 }
 
 export function DocumentMetadataList({ documents }: { documents: Verification[] }) {
+  const { t } = useI18n();
+
   if (!documents.length) {
     return (
       <EmptyState
-        title="No verification documents"
+        title={t("adminSweep.no.verification.documents.35bb0ee3")}
         description="Submitted document metadata will appear here when available."
       />
     );
@@ -46,9 +51,7 @@ export function DocumentMetadataList({ documents }: { documents: Verification[] 
             </div>
           </div>
           <div className="flex items-center gap-2 md:justify-end">
-            <Link className="ui-button ui-button-secondary h-9 px-3" href={`/platform/verifications/${document.id}`}>
-              Review
-            </Link>
+            <Link className="ui-button ui-button-secondary h-9 px-3" href={`/platform/verifications/${document.id}`}>{t("adminSweep.review.e29a79fe")}</Link>
             {document.documentUrl || document.uploadedFile?.url ? (
               <a
                 className="ui-button ui-button-secondary h-9 px-3"
@@ -56,9 +59,7 @@ export function DocumentMetadataList({ documents }: { documents: Verification[] 
                 target="_blank"
                 rel="noreferrer"
               >
-                <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                Open
-              </a>
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />{t("adminSweep.open.cf9b7706")}</a>
             ) : null}
           </div>
         </div>

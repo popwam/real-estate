@@ -2,13 +2,16 @@
 
 import { useParams } from "next/navigation";
 import { OperationsDetailPage } from "@/components/admin-operations/operations-detail-page";
+import { useI18n } from "@/i18n";
 
 export default function AdsCampaignDetailPage() {
+  const { t } = useI18n();
+
   const { id } = useParams<{ id: string }>();
 
   return (
     <OperationsDetailPage
-      title="Ads campaign detail"
+      title={t("adminSweep.ads.campaign.detail.7aef876a")}
       description="Campaign planning detail. This does not publish to Google, Meta, or TikTok yet."
       path={`/ads/campaigns/${id}`}
       queryKey={`ads-campaign-${id}`}

@@ -2,13 +2,16 @@
 
 import { useParams } from "next/navigation";
 import { OperationsDetailPage } from "@/components/admin-operations/operations-detail-page";
+import { useI18n } from "@/i18n";
 
 export default function HrEmployeeDetailPage() {
+  const { t } = useI18n();
+
   const { id } = useParams<{ id: string }>();
 
   return (
     <OperationsDetailPage
-      title="HR employee detail"
+      title={t("adminSweep.hr.employee.detail.4134c33a")}
       description="Safe employee record detail. Payroll is not included."
       path={`/hr/employees/${id}`}
       queryKey={`hr-employee-${id}`}

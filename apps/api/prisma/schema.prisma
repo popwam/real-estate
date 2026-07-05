@@ -377,6 +377,27 @@ enum HrAttendanceStatus {
   OFF
 }
 
+enum AttendanceVerificationStatus {
+  VERIFIED
+  PENDING_REVIEW
+  REJECTED
+  FAILED
+}
+
+enum DvrVerificationStatus {
+  NOT_REQUIRED
+  PENDING
+  MATCHED
+  NOT_MATCHED
+  MANUAL_REVIEW
+  UNAVAILABLE
+}
+
+enum AttendanceSource {
+  SELF_SERVICE
+  MANUAL_ADMIN
+}
+
 enum AccountingTransactionType {
   INCOME
   EXPENSE
@@ -545,6 +566,7 @@ model Organization {
   hrDepartments     HrDepartment[]
   hrEmployees       HrEmployee[]
   hrAttendanceRecords HrAttendanceRecord[]
+  attendanceSettings OrganizationAttendanceSettings?
   accountingAccounts AccountingAccount[]
   accountingCategories AccountingCategory[]
   accountingTransactions AccountingTransaction[]
@@ -1912,12 +1934,53 @@ model HrAttendanceRecord {
   checkOutAt     DateTime?
   status         HrAttendanceStatus
   note           String?
+  checkInLatitude  Float?
+  checkInLongitude Float?
+  checkOutLatitude Float?
+  checkOutLongitude Float?
+  checkInWifiSsid String?
+  checkInWifiBssid String?
+  checkOutWifiSsid String?
+  checkOutWifiBssid String?
+  checkInPhotoFileId String?
+  checkOutPhotoFileId String?
+  checkInDeviceId String?
+  checkOutDeviceId String?
+  developerOptionsEnabled Boolean?
+  usbDebuggingEnabled Boolean?
+  verificationStatus AttendanceVerificationStatus @default(PENDING_REVIEW)
+  verificationFailureReasons Json?
+  dvrVerificationStatus DvrVerificationStatus @default(NOT_REQUIRED)
+  dvrReferenceId String?
+  attendanceSource AttendanceSource @default(MANUAL_ADMIN)
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee       HrEmployee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, date])
   @@index([employeeId, date])
+  @@index([organizationId, verificationStatus])
   @@map("hr_attendance_records")
+}
+
+model OrganizationAttendanceSettings {
+  id                  String       @id @default(cuid())
+  organizationId      String       @unique
+  requireLocation     Boolean      @default(false)
+  allowedLatitude     Float?
+  allowedLongitude    Float?
+  allowedRadiusMeters Int?
+  requireWifi         Boolean      @default(false)
+  allowedWifiSsids    String[]     @default([])
+  allowedWifiBssids   String[]     @default([])
+  blockDeveloperOptions Boolean    @default(true)
+  blockUsbDebugging   Boolean      @default(true)
+  requirePhoto        Boolean      @default(false)
+  requireDvrReview    Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_attendance_settings")
 }
 
 model AccountingAccount {

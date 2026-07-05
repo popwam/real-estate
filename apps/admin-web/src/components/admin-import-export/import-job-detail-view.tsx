@@ -9,8 +9,11 @@ import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { useCancelImportJob, useCommitImportJob, useImportJob } from "@/hooks/use-admin-import-export";
 import { formatDate } from "@/lib/format";
+import { useI18n } from "@/i18n";
 
 export function ImportJobDetailView({ id, jobsBasePath }: { id: string; jobsBasePath: string }) {
+  const { t } = useI18n();
+
   const { data: job, isLoading, error } = useImportJob(id);
   const commit = useCommitImportJob();
   const cancel = useCancelImportJob();
@@ -52,7 +55,7 @@ export function ImportJobDetailView({ id, jobsBasePath }: { id: string; jobsBase
           isCommitting={commit.isPending}
           onCommit={(jobId) => commit.mutateAsync(jobId)}
         />
-        <DetailCard title="Job metadata">
+        <DetailCard title={t("adminSweep.job.metadata.776b5805")}>
           <DetailGrid
             items={[
               { label: "Type", value: job.type },
@@ -64,10 +67,10 @@ export function ImportJobDetailView({ id, jobsBasePath }: { id: string; jobsBase
             ]}
           />
         </DetailCard>
-        <DetailCard title="Summary JSON">
+        <DetailCard title={t("adminSweep.summary.json.8a9e0866")}>
           <JsonPreviewBlock value={job.summary ?? {}} />
         </DetailCard>
-        <DetailCard title="Rows">
+        <DetailCard title={t("adminSweep.rows.52d0b352")}>
           <ImportRowErrorsTable rows={job.rows ?? []} />
         </DetailCard>
       </div>

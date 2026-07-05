@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateReservationRequestInput } from "@/types/lead-reservations";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({
   leadClaimId: z.string().min(1, "Lead claim id is required."),
@@ -28,6 +29,8 @@ export function ReservationRequestForm({
   error?: Error | null;
   onSubmit: (input: CreateReservationRequestInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
     values: { leadClaimId: defaultLeadClaimId, unitId: "", notes: "" },
@@ -45,16 +48,16 @@ export function ReservationRequestForm({
   return (
     <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(submit)}>
       <div className="space-y-2">
-        <Label>Lead claim ID</Label>
+        <Label>{t("adminSweep.lead.claim.id.49128b44")}</Label>
         <Input {...register("leadClaimId")} />
         {errors.leadClaimId ? <p className="text-sm text-[var(--color-danger)]" role="alert">{errors.leadClaimId.message}</p> : null}
       </div>
       <div className="space-y-2">
-        <Label>Unit ID (optional)</Label>
+        <Label>{t("adminSweep.unit.id.optional.bb89c3e5")}</Label>
         <Input {...register("unitId")} />
       </div>
       <div className="space-y-2 md:col-span-2">
-        <Label>Notes</Label>
+        <Label>{t("adminSweep.notes.70440046")}</Label>
         <Textarea {...register("notes")} />
       </div>
       {error ? (

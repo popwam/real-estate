@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../localization/l10n_extensions.dart';
 import 'auth_route_policy.dart';
+import '../../features/attendance/presentation/attendance_screen.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
@@ -159,6 +160,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/commissions',
             builder: (context, state) => const CommissionsListScreen(),
+          ),
+          GoRoute(
+            path: '/attendance',
+            builder: (context, state) => const AttendanceScreen(),
           ),
           GoRoute(
             path: '/crm-leads',

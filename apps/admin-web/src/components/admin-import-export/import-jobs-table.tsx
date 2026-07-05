@@ -5,8 +5,11 @@ import { ImportJobStatusBadge } from "@/components/admin-import-export/badges";
 import { DataTable } from "@/components/tables/data-table";
 import { formatDate } from "@/lib/format";
 import type { ImportJob } from "@/types/admin-import-export";
+import { useI18n } from "@/i18n";
 
 export function ImportJobsTable({ jobs, basePath }: { jobs: ImportJob[]; basePath: string }) {
+  const { t } = useI18n();
+
   return (
     <DataTable<ImportJob>
       columns={[
@@ -22,9 +25,7 @@ export function ImportJobsTable({ jobs, basePath }: { jobs: ImportJob[]; basePat
           key: "actions",
           header: "Actions",
           cell: (row) => (
-            <Link className="text-sm font-medium text-zinc-950 hover:underline" href={`${basePath}/${row.id}`}>
-              View
-            </Link>
+            <Link className="text-sm font-medium text-zinc-950 hover:underline" href={`${basePath}/${row.id}`}>{t("adminSweep.view.69bd4ef9")}</Link>
           ),
         },
       ]}

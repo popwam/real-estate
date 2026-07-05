@@ -101,6 +101,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reservations => 'Reservations';
 
   @override
+  String get attendance => 'Attendance';
+
+  @override
   String get profile => 'Profile';
 
   @override
@@ -162,6 +165,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get refreshCommissions => 'Refresh commissions';
+
+  @override
+  String get refreshAttendance => 'Refresh attendance';
 
   @override
   String get refreshConversations => 'Refresh conversations';
@@ -491,6 +497,177 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateStatus => 'Update status';
+
+  @override
+  String get attendanceToday => 'Today';
+
+  @override
+  String get attendanceHistory => 'Recent attendance';
+
+  @override
+  String get attendanceUnavailable => 'Attendance unavailable';
+
+  @override
+  String get attendanceDate => 'Date';
+
+  @override
+  String get attendanceDuration => 'Duration';
+
+  @override
+  String get checkIn => 'Check in';
+
+  @override
+  String get checkOut => 'Check out';
+
+  @override
+  String get checkInTime => 'Check-in';
+
+  @override
+  String get checkOutTime => 'Check-out';
+
+  @override
+  String get attendanceCompletedToday => 'Attendance completed today';
+
+  @override
+  String get attendanceNote => 'Note';
+
+  @override
+  String durationMinutes(Object count) {
+    return '$count min';
+  }
+
+  @override
+  String get noAttendanceHistory => 'No attendance history';
+
+  @override
+  String get attendanceHistoryAppearsHere =>
+      'Your recent check-in and check-out records appear here.';
+
+  @override
+  String get noEmployeeProfileLinked =>
+      'No employee profile is linked to this account.';
+
+  @override
+  String get alreadyCheckedIn => 'You are already checked in.';
+
+  @override
+  String get checkInBeforeCheckOut => 'You must check in before checking out.';
+
+  @override
+  String get attendanceVerificationStatus => 'Verification';
+
+  @override
+  String get attendanceDvrStatus => 'DVR review';
+
+  @override
+  String get attendanceFailureReasons => 'Failure reasons';
+
+  @override
+  String get attendanceSecureChecks => 'Secure checks';
+
+  @override
+  String get attendanceNativeChecksUnavailable =>
+      'Native location, Wi-Fi, camera, and device-integrity checks need the secure mobile build. The API will enforce configured company policy when evidence is supplied.';
+
+  @override
+  String get attendanceNativeChecksActive =>
+      'This secure build collects GPS location, Wi-Fi details where the OS allows it, device-integrity signals, and a live camera photo before sending attendance to the API.';
+
+  @override
+  String get collectingAttendanceEvidence => 'Collecting secure evidence';
+
+  @override
+  String get attendanceEvidenceWarnings => 'Evidence warnings';
+
+  @override
+  String get attendanceLocationPermissionDenied =>
+      'Location permission was denied.';
+
+  @override
+  String get attendanceLocationServiceDisabled =>
+      'Location services are disabled.';
+
+  @override
+  String get attendanceWifiUnavailable =>
+      'The phone is not connected to Wi-Fi.';
+
+  @override
+  String get attendanceWifiRestricted =>
+      'Wi-Fi SSID/BSSID is unavailable on this device or OS.';
+
+  @override
+  String get attendanceCameraPermissionDenied =>
+      'Camera permission was denied.';
+
+  @override
+  String get attendancePhotoCaptureCancelled =>
+      'Live photo capture was cancelled.';
+
+  @override
+  String get attendancePhotoUploadFailed =>
+      'Live photo upload failed. Please try again.';
+
+  @override
+  String get attendanceCapturingPhoto => 'Capturing live photo';
+
+  @override
+  String get attendancePhotoCaptured => 'Photo captured';
+
+  @override
+  String get attendanceUploadingPhoto => 'Uploading attendance photo';
+
+  @override
+  String get attendancePhotoUploadSuccess => 'Attendance photo uploaded';
+
+  @override
+  String get attendancePhotoTooLarge => 'Attendance photo is too large.';
+
+  @override
+  String get attendanceInvalidPhotoType =>
+      'Attendance photo must be a JPEG, PNG, or WebP image.';
+
+  @override
+  String get attendancePhotoRejected =>
+      'Attendance photo was rejected by the server.';
+
+  @override
+  String get attendanceRetryUpload => 'Retry upload';
+
+  @override
+  String get attendanceDvrPending => 'DVR review is pending.';
+
+  @override
+  String get attendanceManualReviewRequired => 'Manual review is required.';
+
+  @override
+  String get attendanceVerificationFailed => 'Attendance verification failed.';
+
+  @override
+  String get developerOptionsEnabled => 'Developer options are enabled.';
+
+  @override
+  String get usbDebuggingEnabled => 'USB debugging is enabled.';
+
+  @override
+  String get attendanceLocationRequired => 'Location is required.';
+
+  @override
+  String get attendanceLocationPolicyMissing =>
+      'Company attendance location is not configured.';
+
+  @override
+  String get outsideAllowedLocation =>
+      'You are outside the allowed company location.';
+
+  @override
+  String get attendanceWifiRequired => 'Company Wi-Fi is required.';
+
+  @override
+  String get notConnectedToCompanyWifi =>
+      'You are not connected to the company Wi-Fi.';
+
+  @override
+  String get attendancePhotoRequired => 'Live office photo is required.';
 
   @override
   String get updateLeadStatus => 'Update lead status';

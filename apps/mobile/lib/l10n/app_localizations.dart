@@ -274,6 +274,12 @@ abstract class AppLocalizations {
   /// **'Reservations'**
   String get reservations;
 
+  /// No description provided for @attendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get attendance;
+
   /// No description provided for @profile.
   ///
   /// In en, this message translates to:
@@ -399,6 +405,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refresh commissions'**
   String get refreshCommissions;
+
+  /// No description provided for @refreshAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh attendance'**
+  String get refreshAttendance;
 
   /// No description provided for @refreshConversations.
   ///
@@ -987,6 +999,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update status'**
   String get updateStatus;
+
+  /// No description provided for @attendanceToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get attendanceToday;
+
+  /// No description provided for @attendanceHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent attendance'**
+  String get attendanceHistory;
+
+  /// No description provided for @attendanceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance unavailable'**
+  String get attendanceUnavailable;
+
+  /// No description provided for @attendanceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get attendanceDate;
+
+  /// No description provided for @attendanceDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get attendanceDuration;
+
+  /// No description provided for @checkIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Check in'**
+  String get checkIn;
+
+  /// No description provided for @checkOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out'**
+  String get checkOut;
+
+  /// No description provided for @checkInTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in'**
+  String get checkInTime;
+
+  /// No description provided for @checkOutTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-out'**
+  String get checkOutTime;
+
+  /// No description provided for @attendanceCompletedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance completed today'**
+  String get attendanceCompletedToday;
+
+  /// No description provided for @attendanceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get attendanceNote;
+
+  /// No description provided for @durationMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String durationMinutes(Object count);
+
+  /// No description provided for @noAttendanceHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'No attendance history'**
+  String get noAttendanceHistory;
+
+  /// No description provided for @attendanceHistoryAppearsHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Your recent check-in and check-out records appear here.'**
+  String get attendanceHistoryAppearsHere;
+
+  /// No description provided for @noEmployeeProfileLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'No employee profile is linked to this account.'**
+  String get noEmployeeProfileLinked;
+
+  /// No description provided for @alreadyCheckedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'You are already checked in.'**
+  String get alreadyCheckedIn;
+
+  /// No description provided for @checkInBeforeCheckOut.
+  ///
+  /// In en, this message translates to:
+  /// **'You must check in before checking out.'**
+  String get checkInBeforeCheckOut;
+
+  /// No description provided for @attendanceVerificationStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification'**
+  String get attendanceVerificationStatus;
+
+  /// No description provided for @attendanceDvrStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'DVR review'**
+  String get attendanceDvrStatus;
+
+  /// No description provided for @attendanceFailureReasons.
+  ///
+  /// In en, this message translates to:
+  /// **'Failure reasons'**
+  String get attendanceFailureReasons;
+
+  /// No description provided for @attendanceSecureChecks.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure checks'**
+  String get attendanceSecureChecks;
+
+  /// No description provided for @attendanceNativeChecksUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Native location, Wi-Fi, camera, and device-integrity checks need the secure mobile build. The API will enforce configured company policy when evidence is supplied.'**
+  String get attendanceNativeChecksUnavailable;
+
+  /// No description provided for @attendanceNativeChecksActive.
+  ///
+  /// In en, this message translates to:
+  /// **'This secure build collects GPS location, Wi-Fi details where the OS allows it, device-integrity signals, and a live camera photo before sending attendance to the API.'**
+  String get attendanceNativeChecksActive;
+
+  /// No description provided for @collectingAttendanceEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Collecting secure evidence'**
+  String get collectingAttendanceEvidence;
+
+  /// No description provided for @attendanceEvidenceWarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence warnings'**
+  String get attendanceEvidenceWarnings;
+
+  /// No description provided for @attendanceLocationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission was denied.'**
+  String get attendanceLocationPermissionDenied;
+
+  /// No description provided for @attendanceLocationServiceDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location services are disabled.'**
+  String get attendanceLocationServiceDisabled;
+
+  /// No description provided for @attendanceWifiUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The phone is not connected to Wi-Fi.'**
+  String get attendanceWifiUnavailable;
+
+  /// No description provided for @attendanceWifiRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi SSID/BSSID is unavailable on this device or OS.'**
+  String get attendanceWifiRestricted;
+
+  /// No description provided for @attendanceCameraPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera permission was denied.'**
+  String get attendanceCameraPermissionDenied;
+
+  /// No description provided for @attendancePhotoCaptureCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Live photo capture was cancelled.'**
+  String get attendancePhotoCaptureCancelled;
+
+  /// No description provided for @attendancePhotoUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Live photo upload failed. Please try again.'**
+  String get attendancePhotoUploadFailed;
+
+  /// No description provided for @attendanceCapturingPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Capturing live photo'**
+  String get attendanceCapturingPhoto;
+
+  /// No description provided for @attendancePhotoCaptured.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo captured'**
+  String get attendancePhotoCaptured;
+
+  /// No description provided for @attendanceUploadingPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading attendance photo'**
+  String get attendanceUploadingPhoto;
+
+  /// No description provided for @attendancePhotoUploadSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance photo uploaded'**
+  String get attendancePhotoUploadSuccess;
+
+  /// No description provided for @attendancePhotoTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance photo is too large.'**
+  String get attendancePhotoTooLarge;
+
+  /// No description provided for @attendanceInvalidPhotoType.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance photo must be a JPEG, PNG, or WebP image.'**
+  String get attendanceInvalidPhotoType;
+
+  /// No description provided for @attendancePhotoRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance photo was rejected by the server.'**
+  String get attendancePhotoRejected;
+
+  /// No description provided for @attendanceRetryUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get attendanceRetryUpload;
+
+  /// No description provided for @attendanceDvrPending.
+  ///
+  /// In en, this message translates to:
+  /// **'DVR review is pending.'**
+  String get attendanceDvrPending;
+
+  /// No description provided for @attendanceManualReviewRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual review is required.'**
+  String get attendanceManualReviewRequired;
+
+  /// No description provided for @attendanceVerificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance verification failed.'**
+  String get attendanceVerificationFailed;
+
+  /// No description provided for @developerOptionsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer options are enabled.'**
+  String get developerOptionsEnabled;
+
+  /// No description provided for @usbDebuggingEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'USB debugging is enabled.'**
+  String get usbDebuggingEnabled;
+
+  /// No description provided for @attendanceLocationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Location is required.'**
+  String get attendanceLocationRequired;
+
+  /// No description provided for @attendanceLocationPolicyMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Company attendance location is not configured.'**
+  String get attendanceLocationPolicyMissing;
+
+  /// No description provided for @outsideAllowedLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'You are outside the allowed company location.'**
+  String get outsideAllowedLocation;
+
+  /// No description provided for @attendanceWifiRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Company Wi-Fi is required.'**
+  String get attendanceWifiRequired;
+
+  /// No description provided for @notConnectedToCompanyWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not connected to the company Wi-Fi.'**
+  String get notConnectedToCompanyWifi;
+
+  /// No description provided for @attendancePhotoRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Live office photo is required.'**
+  String get attendancePhotoRequired;
 
   /// No description provided for @updateLeadStatus.
   ///

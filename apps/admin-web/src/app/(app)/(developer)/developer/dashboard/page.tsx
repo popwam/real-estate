@@ -18,8 +18,11 @@ import { usePublicLeads } from "@/hooks/use-admin-public";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useProjects, useInventoryUnits } from "@/hooks/use-developer";
 import { useReservationRequests } from "@/hooks/use-lead-reservations";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperDashboardPage() {
+  const { t } = useI18n();
+
   const currentUser = useCurrentUser();
   const projects = useProjects();
   const inventory = useInventoryUnits();
@@ -47,7 +50,7 @@ export default function DeveloperDashboardPage() {
       />
 
       <DashboardSection
-        title="Business readiness"
+        title={t("adminSweep.business.readiness.9f8ae71c")}
         description="Live organization-scoped summaries highlight what is ready and where the team should act next."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -121,12 +124,12 @@ export default function DeveloperDashboardPage() {
       </DashboardSection>
 
       <DashboardSection
-        title="Next recommended actions"
+        title={t("adminSweep.next.recommended.actions.1a853b71")}
         description="Move from project setup to buyer follow-up without losing the commercial thread."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <DashboardActionCard
-            title="Create a project"
+            title={t("adminSweep.create.a.project.a469a595")}
             description="Start a new project record and prepare its core public and commercial information."
             href="/developer/projects/new"
             actionLabel="New project"
@@ -134,28 +137,28 @@ export default function DeveloperDashboardPage() {
             emphasis
           />
           <DashboardActionCard
-            title="Review project readiness"
+            title={t("adminSweep.review.project.readiness.068288d8")}
             description="Check visibility, phases, payment plans, and selling permissions."
             href="/developer/projects"
             actionLabel="Open projects"
             icon={<FolderKanban className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Keep inventory current"
+            title={t("adminSweep.keep.inventory.current.2ff0a36e")}
             description="Review availability, pricing, and public visibility across all units."
             href="/developer/inventory"
             actionLabel="Open inventory"
             icon={<Package className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Respond to buyer interest"
+            title={t("adminSweep.respond.to.buyer.interest.33c2b8c8")}
             description="Triage new website enquiries before moving qualified buyers into CRM."
             href="/developer/public-leads"
             actionLabel="Review public leads"
             icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
           />
           <DashboardActionCard
-            title="Advance the sales pipeline"
+            title={t("adminSweep.advance.the.sales.pipeline.00055ab9")}
             description="Assign next actions, follow conversations, and keep leads moving."
             href="/developer/crm/leads"
             actionLabel="Open CRM"

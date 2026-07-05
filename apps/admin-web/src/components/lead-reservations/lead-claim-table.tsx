@@ -6,6 +6,7 @@ import { DataTable } from "@/components/tables/data-table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import type { LeadClaim } from "@/types/lead-reservations";
+import { useI18n } from "@/i18n";
 
 export function LeadClaimTable({
   claims,
@@ -18,6 +19,8 @@ export function LeadClaimTable({
   onRelease?: (id: string) => void;
   isReleasing?: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <DataTable<LeadClaim>
       columns={[
@@ -32,13 +35,9 @@ export function LeadClaimTable({
           header: "Actions",
           cell: (row) => (
             <div className="flex flex-wrap gap-2">
-              <Link className="text-sm font-medium text-zinc-950 hover:underline" href={`${basePath}/${row.id}`}>
-                Open
-              </Link>
+              <Link className="text-sm font-medium text-zinc-950 hover:underline" href={`${basePath}/${row.id}`}>{t("adminSweep.open.cf9b7706")}</Link>
               {onRelease && row.status === "ACTIVE" ? (
-                <Button className="h-8 bg-white px-2 text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" disabled={isReleasing} onClick={() => onRelease(row.id)}>
-                  Release
-                </Button>
+                <Button className="h-8 bg-white px-2 text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" disabled={isReleasing} onClick={() => onRelease(row.id)}>{t("adminSweep.release.d41f56ce")}</Button>
               ) : null}
             </div>
           ),

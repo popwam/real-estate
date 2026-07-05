@@ -8,6 +8,7 @@ import { Field, SelectInput, TextInput } from "@/components/developer/form-field
 import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
 import type { InventoryUnit, InventoryUnitInput, Project } from "@/types/developer";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({
   projectId: z.string().trim().min(1, "Project is required."),
@@ -60,6 +61,8 @@ export function InventoryUnitForm({
   onCancel?: () => void;
   onSubmit: (input: InventoryUnitInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const { register, handleSubmit, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -82,37 +85,37 @@ export function InventoryUnitForm({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit((values) => onSubmit(clean(values, projectId)))}>
-      <UnitFormSection title="Unit identity" description="Connect the unit to a project and record how the sales team identifies it.">
+      <UnitFormSection title={t("adminSweep.unit.identity.e880cad5")} description="Connect the unit to a project and record how the sales team identifies it.">
         <Field label="Project" error={errors.projectId?.message} required>
           <SelectInput {...register("projectId")} disabled={Boolean(projectId)}>
-            <option value="">Select project</option>
+            <option value="">{t("adminSweep.select.project.b4b37dd6")}</option>
             {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
           </SelectInput>
         </Field>
         <Field label="Phase ID" hint="Optional existing project phase identifier."><TextInput {...register("phaseId")} /></Field>
-        <Field label="Unit number" error={errors.unitNumber?.message} required><TextInput placeholder="Example: A-204" {...register("unitNumber")} /></Field>
+        <Field label="Unit number" error={errors.unitNumber?.message} required><TextInput placeholder={t("adminSweep.example.a.204.7b5423e5")} {...register("unitNumber")} /></Field>
         <Field label="Unit type" required><SelectInput {...register("unitType")}>{["APARTMENT", "VILLA", "TOWNHOUSE", "OFFICE", "SHOP", "STUDIO", "LAND", "CHALET"].map((value) => <option key={value} value={value}>{formatLabel(value)}</option>)}</SelectInput></Field>
       </UnitFormSection>
 
-      <UnitFormSection title="Specifications" description="Add the physical details buyers and sales teams use when comparing units.">
+      <UnitFormSection title={t("adminSweep.specifications.0c709f98")} description="Add the physical details buyers and sales teams use when comparing units.">
         <Field label="Floor"><TextInput {...register("floor")} /></Field>
         <Field label="Area (m²)"><TextInput type="number" step="any" min="0" inputMode="decimal" {...register("areaSqm")} /></Field>
         <Field label="Bedrooms"><TextInput type="number" min="0" inputMode="numeric" {...register("bedrooms")} /></Field>
         <Field label="Bathrooms"><TextInput type="number" min="0" inputMode="numeric" {...register("bathrooms")} /></Field>
-        <Field label="Finishing"><SelectInput {...register("finishing")}><option value="">Not set</option>{["CORE_SHELL", "SEMI_FINISHED", "FULLY_FINISHED", "FURNISHED"].map((value) => <option key={value} value={value}>{formatLabel(value)}</option>)}</SelectInput></Field>
-        <Field label="View"><TextInput placeholder="Garden, sea, street…" {...register("view")} /></Field>
+        <Field label="Finishing"><SelectInput {...register("finishing")}><option value="">{t("adminSweep.not.set.93039e60")}</option>{["CORE_SHELL", "SEMI_FINISHED", "FULLY_FINISHED", "FURNISHED"].map((value) => <option key={value} value={value}>{formatLabel(value)}</option>)}</SelectInput></Field>
+        <Field label="View"><TextInput placeholder={t("adminSweep.garden.sea.street.0e1ca66d")} {...register("view")} /></Field>
       </UnitFormSection>
 
-      <UnitFormSection title="Commercial availability" description="Set the supported price, lifecycle status, and audience for this unit.">
+      <UnitFormSection title={t("adminSweep.commercial.availability.7f323cab")} description="Set the supported price, lifecycle status, and audience for this unit.">
         <Field label="Base price"><TextInput type="number" step="any" min="0" inputMode="decimal" {...register("basePrice")} /></Field>
         <Field label="Currency"><TextInput placeholder="EGP" {...register("currency")} /></Field>
         <Field label="Unit status" required><SelectInput {...register("status")}>{["AVAILABLE", "RESERVED", "SOLD", "HELD", "UNAVAILABLE"].map((value) => <option key={value} value={value}>{formatLabel(value)}</option>)}</SelectInput></Field>
         <Field label="Unit visibility" required hint="Inherit project follows the project audience."><SelectInput {...register("visibility")}>{["INHERIT_PROJECT", "PRIVATE", "APPROVED_BROKERAGES", "OPEN_MARKETPLACE", "SELECTED_BROKERS", "HIDDEN"].map((value) => <option key={value} value={value}>{formatLabel(value)}</option>)}</SelectInput></Field>
       </UnitFormSection>
 
-      {error ? <FeedbackState tone="error" title="Unit could not be saved" description={error.message} /> : null}
+      {error ? <FeedbackState tone="error" title={t("adminSweep.unit.could.not.be.saved.3df4104b")} description={error.message} /> : null}
       <div className="flex flex-col-reverse gap-2 border-t border-[var(--color-border)] pt-5 sm:flex-row sm:justify-end">
-        {onCancel ? <button type="button" className="ui-button ui-button-secondary" onClick={onCancel}><X className="h-4 w-4" aria-hidden="true" />Cancel</button> : null}
+        {onCancel ? <button type="button" className="ui-button ui-button-secondary" onClick={onCancel}><X className="h-4 w-4" aria-hidden="true" />{t("adminSweep.cancel.77dfd213")}</button> : null}
         <Button type="submit" disabled={isPending}>{isPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}{isPending ? "Saving…" : submitLabel}</Button>
       </div>
     </form>

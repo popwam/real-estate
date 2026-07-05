@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { LeadClaimConflictResolution } from "@/types/lead-reservations";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({
   resolution: z.enum(["FIRST_WINS", "ESCALATED", "MANUAL_REVIEW"]),
@@ -27,6 +28,8 @@ export function ConflictResolutionDialog({
   error?: Error | null;
   onConfirm: (input: { resolution: LeadClaimConflictResolution; notes?: string }) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const { register, handleSubmit, reset } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -47,14 +50,12 @@ export function ConflictResolutionDialog({
           <div className="w-full max-w-lg rounded-md bg-white shadow-xl">
             <form onSubmit={handleSubmit(submit)}>
               <div className="border-b border-zinc-200 px-5 py-4">
-                <h2 className="text-base font-semibold text-zinc-950">Resolve claim conflict</h2>
-                <p className="mt-1 text-sm leading-6 text-zinc-500">
-                  Choose the platform resolution outcome. Broker identity is shown only when the backend returns it.
-                </p>
+                <h2 className="text-base font-semibold text-zinc-950">{t("adminSweep.resolve.claim.conflict.e79ebc8f")}</h2>
+                <p className="mt-1 text-sm leading-6 text-zinc-500">{t("adminSweep.choose.the.platform.resolution.outcome.broker.id.5ab97e3f")}</p>
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
-                  <Label htmlFor="resolution">Resolution</Label>
+                  <Label htmlFor="resolution">{t("adminSweep.resolution.516aae52")}</Label>
                   <select
                     id="resolution"
                     className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
@@ -66,7 +67,7 @@ export function ConflictResolutionDialog({
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="resolution-notes">Notes (optional)</Label>
+                  <Label htmlFor="resolution-notes">{t("adminSweep.notes.optional.4d56ca9b")}</Label>
                   <Textarea id="resolution-notes" {...register("notes")} />
                 </div>
                 {error ? (
@@ -77,9 +78,7 @@ export function ConflictResolutionDialog({
                 ) : null}
               </div>
               <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4">
-                <Button className="bg-white text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
+                <Button className="bg-white text-zinc-700 ring-1 ring-inset ring-zinc-200 hover:bg-zinc-50" onClick={() => setOpen(false)}>{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button disabled={isPending} type="submit">
                   {isPending ? "Resolving" : "Resolve conflict"}
                 </Button>

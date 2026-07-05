@@ -10,6 +10,7 @@ const _workspaceRoutePrefixes = [
   '/deal-rooms',
   '/deals',
   '/commissions',
+  '/attendance',
   '/crm-leads',
   '/crm-marketplace-leads',
   '/crm-conversations',
@@ -104,6 +105,9 @@ bool canAccessMobileRoute(AuthSession session, String location) {
   if (_matches(location, '/commissions')) {
     return canAccessWorkspaceFeature(session, MobileWorkspaceFeature.commissions);
   }
+  if (_matches(location, '/attendance')) {
+    return canAccessWorkspaceFeature(session, MobileWorkspaceFeature.attendance);
+  }
   return false;
 }
 
@@ -116,6 +120,7 @@ enum MobileWorkspaceFeature {
   dealRooms,
   deals,
   commissions,
+  attendance,
 }
 
 bool canAccessWorkspaceFeature(
@@ -192,6 +197,7 @@ bool canAccessWorkspaceFeature(
       role.startsWith('DEVELOPER_') ||
       role.startsWith('BROKERAGE_') ||
       role == 'BROKER',
+    MobileWorkspaceFeature.attendance => true,
   };
 }
 

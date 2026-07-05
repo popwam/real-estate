@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n";
 
 const reasonSchema = z.object({ reason: z.string(), notes: z.string() });
 type ReasonValues = z.infer<typeof reasonSchema>;
@@ -42,6 +43,8 @@ export function ReasonDialog({
   error?: Error | null;
   onConfirm: (input: { reason?: string; notes?: string }) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const schema = reasonSchema.superRefine((values, context) => {
     if (requireReason && !values.reason.trim()) {
@@ -75,12 +78,12 @@ export function ReasonDialog({
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
-                  <Label htmlFor={`${title}-reason`}>Reason {requireReason ? "" : "(optional)"}</Label>
+                  <Label htmlFor={`${title}-reason`}>{t("adminSweep.reason.f219cc06")}{requireReason ? "" : "(optional)"}</Label>
                   <Textarea id={`${title}-reason`} {...register("reason")} />
                   {errors.reason ? <p className="text-sm text-[var(--color-danger)]" role="alert">{errors.reason.message}</p> : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`${title}-notes`}>Notes (optional)</Label>
+                  <Label htmlFor={`${title}-notes`}>{t("adminSweep.notes.optional.4d56ca9b")}</Label>
                   <Textarea id={`${title}-notes`} {...register("notes")} />
                 </div>
                 {error ? (
@@ -97,9 +100,7 @@ export function ReasonDialog({
                     reset();
                     setOpen(false);
                   }}
-                >
-                  Cancel
-                </Button>
+                >{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button className={cn(toneClasses[tone])} disabled={isPending} type="submit">
                   {isPending ? "Working" : confirmLabel}
                 </Button>

@@ -6,8 +6,11 @@ import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { DomainReviewList } from "@/components/platform/domain-review-list";
 import { useApprovePlatformDomain, usePlatformDomains, useRejectPlatformDomain } from "@/hooks/use-admin-public";
+import { useI18n } from "@/i18n";
 
 export function PlatformDomainsPageContent() {
+  const { t } = useI18n();
+
   const { data = [], isLoading, error } = usePlatformDomains();
   const approve = useApprovePlatformDomain();
   const reject = useRejectPlatformDomain();
@@ -16,7 +19,7 @@ export function PlatformDomainsPageContent() {
   return (
     <>
       <PageHeader
-        title="Domain review"
+        title={t("adminSweep.domain.review.4106ed98")}
         description="Review organization domain records, approval state, and returned DNS evidence before allowing public use."
       />
       <section className="ui-card mb-5 p-4">
@@ -26,20 +29,18 @@ export function PlatformDomainsPageContent() {
               <Globe2 className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">Domain governance queue</h2>
+              <h2 className="text-sm font-semibold text-[var(--color-foreground)]">{t("adminSweep.domain.governance.queue.62bf9a61")}</h2>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
                 {data.length ? `${data.length} domain record${data.length === 1 ? "" : "s"} loaded.` : "No domain records waiting for review."}
               </p>
             </div>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-[var(--color-muted)]">
-            Approve or reject using only the returned domain status, notes, and DNS verification data.
-          </p>
+          <p className="max-w-xl text-sm leading-6 text-[var(--color-muted)]">{t("adminSweep.approve.or.reject.using.only.the.returned.domain.4c32e66c")}</p>
         </div>
       </section>
       {isLoading ? <LoadingState label="Loading domain records" /> : null}
       {error ? (
-        <FeedbackState tone="error" title="Could not load domain review queue" description={error.message} />
+        <FeedbackState tone="error" title={t("adminSweep.could.not.load.domain.review.queue.726facc7")} description={error.message} />
       ) : null}
       {!isLoading && !error ? (
         <DomainReviewList

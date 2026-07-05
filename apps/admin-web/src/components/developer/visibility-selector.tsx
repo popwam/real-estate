@@ -2,6 +2,7 @@
 
 import { Building2, EyeOff, Globe2, LockKeyhole, UserRoundCheck } from "lucide-react";
 import type { ProjectVisibility } from "@/types/developer";
+import { useI18n } from "@/i18n";
 
 export const visibilityOptions: Record<ProjectVisibility, { title: string; audience: string; description: string; caution?: string; icon: typeof Globe2 }> = {
   PRIVATE: { title: "Private", audience: "Developer organization users only", description: "Keep the project inside the developer workspace while setup is incomplete.", icon: LockKeyhole },
@@ -12,9 +13,11 @@ export const visibilityOptions: Record<ProjectVisibility, { title: string; audie
 };
 
 export function VisibilitySelector({ value, onChange }: { value: ProjectVisibility; onChange: (value: ProjectVisibility) => void }) {
+  const { t } = useI18n();
+
   return (
     <fieldset>
-      <legend className="sr-only">Choose project visibility</legend>
+      <legend className="sr-only">{t("adminSweep.choose.project.visibility.2da9cc50")}</legend>
       <div className="grid gap-3 lg:grid-cols-2">
         {(Object.keys(visibilityOptions) as ProjectVisibility[]).map((option) => {
           const meta = visibilityOptions[option];
@@ -26,7 +29,7 @@ export function VisibilitySelector({ value, onChange }: { value: ProjectVisibili
               <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-accent)]" aria-hidden="true" />
               <span>
                 <span className="block text-sm font-semibold text-[var(--color-foreground)]">{meta.title}</span>
-                <span className="mt-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Who can see it: {meta.audience}</span>
+                <span className="mt-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("adminSweep.who.can.see.it.22814f5d")}{meta.audience}</span>
                 <span className="mt-2 block text-sm leading-6 text-[var(--color-muted)]">{meta.description}</span>
                 {meta.caution ? <span className="mt-2 block text-xs leading-5 text-[var(--color-warning)]">{meta.caution}</span> : null}
               </span>

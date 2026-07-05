@@ -6,6 +6,7 @@ import { DataTable } from "@/components/tables/data-table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import type { OrganizationDomain } from "@/types/admin-public";
+import { useI18n } from "@/i18n";
 
 export function PlatformDomainReviewTable({
   domains,
@@ -20,6 +21,8 @@ export function PlatformDomainReviewTable({
   onApprove: (id: string) => Promise<unknown>;
   onReject: (id: string, reason: string) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   return (
     <DataTable<OrganizationDomain>
       columns={[
@@ -35,13 +38,11 @@ export function PlatformDomainReviewTable({
           header: "Actions",
           cell: (row) => (
             <div className="flex flex-wrap gap-2">
-              <Button className="h-8 bg-white px-2 text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50" disabled={isWorking} onClick={() => void onApprove(row.id)}>
-                Approve
-              </Button>
+              <Button className="h-8 bg-white px-2 text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-50" disabled={isWorking} onClick={() => void onApprove(row.id)}>{t("adminSweep.approve.7b2c7f14")}</Button>
               <DomainRejectDialog
                 error={actionError}
                 isPending={isWorking}
-                trigger={<Button className="h-8 bg-white px-2 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50">Reject</Button>}
+                trigger={<Button className="h-8 bg-white px-2 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50">{t("adminSweep.reject.2b03b592")}</Button>}
                 onConfirm={(reason) => onReject(row.id, reason)}
               />
             </div>

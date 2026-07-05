@@ -3,15 +3,18 @@
 import { LoadingState } from "@/components/loading-state";
 import { useOperationActivities } from "@/hooks/use-admin-operations";
 import { formatDate } from "@/lib/format";
+import { useI18n } from "@/i18n";
 
 export function OperationsActivityTimeline({ path, queryKey }: { path: string; queryKey: string }) {
+  const { t } = useI18n();
+
   const { data, isLoading, error } = useOperationActivities(queryKey, path);
 
   if (isLoading) return <LoadingState label="Loading operations activity" />;
   if (error) return <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p>;
 
   const items = data?.items ?? [];
-  if (!items.length) return <p className="text-sm text-zinc-500">No operations activity recorded yet.</p>;
+  if (!items.length) return <p className="text-sm text-zinc-500">{t("adminSweep.no.operations.activity.recorded.yet.8997ee13")}</p>;
 
   return (
     <ol className="space-y-3">

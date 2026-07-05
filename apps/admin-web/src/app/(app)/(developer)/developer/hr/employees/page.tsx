@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperHrEmployeesPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="HR employees"
+      title={t("adminSweep.hr.employees.058db91e")}
       description="Employee records for team operations. No payroll is included."
       listPath="/hr/employees"
       queryKey="hr-employees"

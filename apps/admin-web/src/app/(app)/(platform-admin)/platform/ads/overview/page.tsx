@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function PlatformAdsOverviewPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="Ads overview"
+      title={t("adminSweep.ads.overview.dfb12197")}
       description="Platform campaign planning placeholder."
       listPath="/ads/campaigns"
       queryKey="platform-ads-overview"

@@ -14,8 +14,11 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { useCreateInventoryUnit, useInventoryUnits, useProject, useProjects, useUpdateInventoryUnit } from "@/hooks/use-developer";
 import type { InventoryUnit } from "@/types/developer";
+import { useI18n } from "@/i18n";
 
 export default function ProjectInventoryPage() {
+  const { t } = useI18n();
+
   const { id } = useParams<{ id: string }>();
   const project = useProject(id);
   const { data: projects = [] } = useProjects();
@@ -40,18 +43,18 @@ export default function ProjectInventoryPage() {
   }
 
   if (project.isLoading) return <LoadingState label="Loading project inventory" />;
-  if (project.error) return <FeedbackState tone="error" title="Project could not be loaded" description={project.error.message} />;
+  if (project.error) return <FeedbackState tone="error" title={t("adminSweep.project.could.not.be.loaded.889f976e")} description={project.error.message} />;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`${project.data?.name ?? "Project"} inventory`}
         description="Scan unit availability, pricing, and exposure without losing the project context."
-        actions={<div className="flex flex-wrap gap-2"><Link href={`/developer/projects/${id}`} className="ui-button ui-button-secondary"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Project overview</Link><button type="button" className="ui-button ui-button-primary" onClick={() => { setSavedMessage(undefined); setEditing(undefined); setFormOpen(true); }}><Plus className="h-4 w-4" aria-hidden="true" />Create unit</button></div>}
+        actions={<div className="flex flex-wrap gap-2"><Link href={`/developer/projects/${id}`} className="ui-button ui-button-secondary"><ArrowLeft className="h-4 w-4" aria-hidden="true" />{t("adminSweep.project.overview.d4ae1b1a")}</Link><button type="button" className="ui-button ui-button-primary" onClick={() => { setSavedMessage(undefined); setEditing(undefined); setFormOpen(true); }}><Plus className="h-4 w-4" aria-hidden="true" />{t("adminSweep.create.unit.0e2460ab")}</button></div>}
       />
 
       {units.isLoading ? <LoadingState label="Loading project units" /> : null}
-      {units.error ? <FeedbackState tone="error" title="Project inventory could not be loaded" description={units.error.message} /> : null}
+      {units.error ? <FeedbackState tone="error" title={t("adminSweep.project.inventory.could.not.be.loaded.161cf929")} description={units.error.message} /> : null}
       {savedMessage ? <FeedbackState tone="success" title={savedMessage} /> : null}
       {!units.isLoading && !units.error ? <InventorySummaryCards units={units.data ?? []} /> : null}
 
@@ -86,12 +89,12 @@ export default function ProjectInventoryPage() {
       {!units.isLoading && !units.error ? (
         <section className="ui-card p-4 sm:p-5" aria-labelledby="project-units-title">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div><h2 id="project-units-title" className="text-lg font-semibold text-[var(--color-foreground)]">Units</h2><p className="mt-1 text-sm text-[var(--color-muted)]">{(units.data ?? []).length.toLocaleString()} results in this project.</p></div>
+            <div><h2 id="project-units-title" className="text-lg font-semibold text-[var(--color-foreground)]">{t("adminSweep.units.12748281")}</h2><p className="mt-1 text-sm text-[var(--color-muted)]">{(units.data ?? []).length.toLocaleString()}{t("adminSweep.results.in.this.project.28e3606c")}</p></div>
           </div>
           {(units.data ?? []).length ? (
             <InventoryResponsiveList units={units.data ?? []} showProject={false} onEdit={editUnit} />
           ) : (
-            <EmptyState icon={<PackagePlus className="h-5 w-5" aria-hidden="true" />} title="No units in this project" description="Create the first unit with its specifications, price, status, and visibility." action={<button type="button" className="ui-button ui-button-primary" onClick={() => setFormOpen(true)}><Plus className="h-4 w-4" aria-hidden="true" />Create first unit</button>} />
+            <EmptyState icon={<PackagePlus className="h-5 w-5" aria-hidden="true" />} title={t("adminSweep.no.units.in.this.project.eb1bea3b")} description="Create the first unit with its specifications, price, status, and visibility." action={<button type="button" className="ui-button ui-button-primary" onClick={() => setFormOpen(true)}><Plus className="h-4 w-4" aria-hidden="true" />{t("adminSweep.create.first.unit.55498cb1")}</button>} />
           )}
         </section>
       ) : null}

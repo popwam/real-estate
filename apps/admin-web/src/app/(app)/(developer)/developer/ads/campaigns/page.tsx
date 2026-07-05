@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperAdsCampaignsPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="Ads campaigns"
+      title={t("adminSweep.ads.campaigns.ac5049ea")}
       description="Campaign planning placeholder only. No provider APIs or publishing are connected."
       listPath="/ads/campaigns"
       queryKey="ads-campaigns"

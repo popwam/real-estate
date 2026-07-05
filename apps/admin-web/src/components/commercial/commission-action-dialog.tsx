@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({ reason: z.string() });
 type Values = z.infer<typeof schema>;
@@ -25,6 +26,8 @@ export function CommissionActionDialog({
   error?: Error | null;
   onConfirm: (input: { reason?: string }) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const scopedSchema = schema.superRefine((values, context) => {
     if (action === "reject" && !values.reason.trim()) {
@@ -51,12 +54,12 @@ export function CommissionActionDialog({
             <form onSubmit={handleSubmit(submit)}>
               <div className="border-b border-[var(--color-border)] px-5 py-4">
                 <h2 className="text-base font-semibold text-[var(--color-text)]">{action === "approve" ? "Approve commission" : "Reject commission"}</h2>
-                <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">This reviews the calculated entry only; it does not initiate a payout.</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">{t("adminSweep.this.reviews.the.calculated.entry.only.it.does.n.04f0337a")}</p>
               </div>
               <div className="space-y-4 px-5 py-5">
                 {action === "reject" ? (
                   <div className="space-y-2">
-                    <Label>Reason</Label>
+                    <Label>{t("adminSweep.reason.f219cc06")}</Label>
                     <Textarea {...register("reason")} />
                     {errors.reason ? <p className="text-sm text-[var(--color-danger)]" role="alert">{errors.reason.message}</p> : null}
                   </div>
@@ -64,7 +67,7 @@ export function CommissionActionDialog({
                 {error ? <div className="ui-feedback ui-feedback-error flex gap-2 text-sm" role="alert"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error.message}</span></div> : null}
               </div>
               <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
-                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button className={action === "reject" ? "bg-[var(--color-danger)] text-white hover:opacity-90" : undefined} disabled={isPending} type="submit">{isPending ? "Working" : action === "approve" ? "Approve" : "Reject"}</Button>
               </div>
             </form>

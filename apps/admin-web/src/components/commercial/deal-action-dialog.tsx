@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/i18n";
 
 type Action = "finalize" | "approve" | "cancel";
 const schema = z.object({
@@ -34,6 +35,8 @@ export function DealActionDialog({
   error?: Error | null;
   onConfirm: (input: { dealRoomId?: string; finalPrice?: number; currency?: string; reason?: string }) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const { register, handleSubmit, reset } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -84,7 +87,7 @@ export function DealActionDialog({
                 ) : null}
               </div>
               <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-4">
-                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>Cancel</Button>
+                <Button className="ui-button-secondary" onClick={() => setOpen(false)}>{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button disabled={isPending} type="submit">{isPending ? "Working" : copy[0]}</Button>
               </div>
             </form>

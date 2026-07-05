@@ -2,13 +2,16 @@
 
 import { useParams } from "next/navigation";
 import { OperationsDetailPage } from "@/components/admin-operations/operations-detail-page";
+import { useI18n } from "@/i18n";
 
 export default function LegalDocumentDetailPage() {
+  const { t } = useI18n();
+
   const { id } = useParams<{ id: string }>();
 
   return (
     <OperationsDetailPage
-      title="Legal document detail"
+      title={t("adminSweep.legal.document.detail.9e17504d")}
       description="Legal document register detail. No e-signature or upload workflow is included."
       path={`/legal/documents/${id}`}
       queryKey={`legal-document-${id}`}

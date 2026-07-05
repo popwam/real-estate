@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ReviewActionInput } from "@/types/platform";
+import { useI18n } from "@/i18n";
 
 type Tone = "primary" | "danger" | "warning" | "neutral";
 const reviewActionSchema = z.object({
@@ -46,6 +47,8 @@ export function ReviewActionDialog({
   error?: Error | null;
   onConfirm: (input: ReviewActionInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const [open, setOpen] = useState(false);
   const schema = reviewActionSchema.superRefine((values, context) => {
     if (requireReason && !values.reason.trim()) {
@@ -89,12 +92,11 @@ export function ReviewActionDialog({
               </div>
               <div className="space-y-4 px-5 py-5">
                 <div className="space-y-2">
-                  <Label htmlFor={`${title}-reason`}>
-                    Reason {requireReason ? "" : "(optional)"}
+                  <Label htmlFor={`${title}-reason`}>{t("adminSweep.reason.f219cc06")}{requireReason ? "" : "(optional)"}
                   </Label>
                   <Textarea
                     id={`${title}-reason`}
-                    placeholder="Add a clear compliance reason."
+                    placeholder={t("adminSweep.add.a.clear.compliance.reason.4fdaac7c")}
                     {...register("reason")}
                   />
                   {errors.reason ? (
@@ -102,10 +104,10 @@ export function ReviewActionDialog({
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`${title}-notes`}>Internal notes (optional)</Label>
+                  <Label htmlFor={`${title}-notes`}>{t("adminSweep.internal.notes.optional.0170b302")}</Label>
                   <Textarea
                     id={`${title}-notes`}
-                    placeholder="Add notes for the platform audit trail."
+                    placeholder={t("adminSweep.add.notes.for.the.platform.audit.trail.7c0fad75")}
                     {...register("notes")}
                   />
                 </div>
@@ -123,9 +125,7 @@ export function ReviewActionDialog({
                     reset();
                     setOpen(false);
                   }}
-                >
-                  Cancel
-                </Button>
+                >{t("adminSweep.cancel.77dfd213")}</Button>
                 <Button className={cn(toneClasses[tone])} disabled={isPending} type="submit">
                   {isPending ? "Working" : confirmLabel}
                 </Button>

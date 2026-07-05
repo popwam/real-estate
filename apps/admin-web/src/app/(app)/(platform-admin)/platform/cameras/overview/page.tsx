@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function PlatformCamerasOverviewPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="Cameras overview"
+      title={t("adminSweep.cameras.overview.b0694a93")}
       description="Platform camera registry placeholder. No streams or credentials are exposed."
       listPath="/cameras/devices"
       queryKey="platform-cameras-overview"

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { WebsiteSettings, WebsiteSettingsInput } from "@/types/admin-public";
+import { useI18n } from "@/i18n";
 
 const schema = z.object({
   publicSlug: z.string().min(1, "Public slug is required."),
@@ -40,6 +41,8 @@ export function WebsiteSettingsForm({
   error?: Error | null;
   onSubmit: (input: WebsiteSettingsInput) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   const {
     register,
     handleSubmit,
@@ -106,9 +109,7 @@ export function WebsiteSettingsForm({
         <Textarea {...register("siteDescription")} />
       </Field>
       <label className="flex items-center gap-3 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
-        <input className="h-4 w-4 rounded border-zinc-300" type="checkbox" {...register("isPublished")} />
-        Published on public website routes
-      </label>
+        <input className="h-4 w-4 rounded border-zinc-300" type="checkbox" {...register("isPublished")} />{t("adminSweep.published.on.public.website.routes.a236ad5c")}</label>
       {error ? (
         <div className="flex gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -116,9 +117,7 @@ export function WebsiteSettingsForm({
         </div>
       ) : null}
       {isSubmitSuccessful && !error ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          Website settings saved.
-        </p>
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{t("adminSweep.website.settings.saved.cb618eb3")}</p>
       ) : null}
       <Button disabled={isPending} type="submit">
         <Save className="h-4 w-4" aria-hidden="true" />

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>POPWAM uses the camera to capture a live attendance photo inside the office.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>POPWAM uses your location to verify attendance inside the company office radius.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

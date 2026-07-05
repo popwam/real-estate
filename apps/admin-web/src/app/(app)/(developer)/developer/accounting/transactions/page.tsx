@@ -1,11 +1,14 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperAccountingTransactionsPage() {
+  const { t } = useI18n();
+
   return (
     <OperationsPage
-      title="Accounting transactions"
+      title={t("adminSweep.accounting.transactions.09b72e43")}
       description="Manual income and expense tracking. No payment gateway or ledger settlement is included."
       listPath="/accounting/transactions"
       queryKey="accounting-transactions"

@@ -5,12 +5,15 @@ import { ArrowUpRight, Building2, CalendarClock, Home, MessageSquareText, UsersR
 import { DealRoomStatusBadge } from "@/components/deal-rooms/badges";
 import { formatDate } from "@/lib/format";
 import type { DealRoom } from "@/types/deal-rooms";
+import { useI18n } from "@/i18n";
 
 export function DealRoomTable({ rooms, basePath }: { rooms: DealRoom[]; basePath: string }) {
-  if (!rooms.length) return <div className="ui-empty-state"><MessageSquareText className="h-8 w-8" aria-hidden="true" /><h3>No deal rooms yet</h3><p>Approved reservations can move here for negotiation and deal handoff.</p></div>;
+  const { t } = useI18n();
+
+  if (!rooms.length) return <div className="ui-empty-state"><MessageSquareText className="h-8 w-8" aria-hidden="true" /><h3>{t("adminSweep.no.deal.rooms.yet.d05ebd5e")}</h3><p>{t("adminSweep.approved.reservations.can.move.here.for.negotiat.a23db429")}</p></div>;
   return <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">{rooms.map((room) => (
     <article key={room.id} className="ui-card flex min-w-0 flex-col p-5">
-      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">Negotiation workspace</p><h3 className="mt-1 truncate text-base font-semibold text-[var(--color-text)]">{room.project?.name ?? "Deal room"}</h3></div><DealRoomStatusBadge status={room.status} /></div>
+      <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">{t("adminSweep.negotiation.workspace.489ec39b")}</p><h3 className="mt-1 truncate text-base font-semibold text-[var(--color-text)]">{room.project?.name ?? "Deal room"}</h3></div><DealRoomStatusBadge status={room.status} /></div>
       <dl className="mt-5 grid gap-3 text-sm">
         <Fact icon={Home} label="Unit" value={room.unit?.unitNumber ?? "Unit details unavailable"} />
         <Fact icon={Building2} label="Parties" value={`${room.developer?.name ?? "Developer"} - ${room.brokerage?.name ?? "Individual broker"}`} />
@@ -18,7 +21,7 @@ export function DealRoomTable({ rooms, basePath }: { rooms: DealRoom[]; basePath
         <Fact icon={MessageSquareText} label="Messages" value={room._count?.messages !== undefined ? `${room._count.messages} message${room._count.messages === 1 ? "" : "s"}` : "Open workspace for activity"} />
         <Fact icon={CalendarClock} label="Last activity" value={formatDate(room.updatedAt)} />
       </dl>
-      <div className="mt-auto pt-5"><Link className="ui-button ui-button-secondary" href={`${basePath}/${room.id}`}>Open workspace <ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link></div>
+      <div className="mt-auto pt-5"><Link className="ui-button ui-button-secondary" href={`${basePath}/${room.id}`}>{t("adminSweep.open.workspace.8b23311b")}<ArrowUpRight className="h-4 w-4" aria-hidden="true" /></Link></div>
     </article>
   ))}</div>;
 }

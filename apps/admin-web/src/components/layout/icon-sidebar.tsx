@@ -11,8 +11,11 @@ import {
   getPrimaryDesktopNavItems,
 } from "@/lib/navigation-engine";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n";
 
 export function IconSidebar() {
+  const { t } = useI18n();
+
   const pathname = usePathname();
   const { data } = useCurrentUser();
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -28,8 +31,8 @@ export function IconSidebar() {
         <Link
           href={homeHref}
           className="relative flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-primary)] text-sm font-black tracking-tight text-[var(--color-primary-foreground)] shadow-[var(--shadow-md)] transition-transform hover:-translate-y-0.5"
-          title="POPWAM workspace home"
-          aria-label="POPWAM workspace home"
+          title={t("adminSweep.popwam.workspace.home.eb4c5bdf")}
+          aria-label={t("adminSweep.popwam.workspace.home.eb4c5bdf")}
         >
           P
           <span className="absolute -end-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-accent)]" />
@@ -38,7 +41,7 @@ export function IconSidebar() {
 
       <nav
         className="flex min-h-0 flex-1 flex-col items-center gap-2 overflow-y-auto px-3 py-4"
-        aria-label="Primary admin navigation"
+        aria-label={t("adminSweep.primary.admin.navigation.4379cbfa")}
       >
         {primaryItems.map((item) => {
           const Icon = item.icon;

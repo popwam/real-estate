@@ -11,8 +11,11 @@ import { Button } from "@/components/ui/button";
 import { useBrokerAccessRules, useCreateBrokerAccessRule, useDeleteBrokerAccessRule, useProjects, useUpdateBrokerAccessRule } from "@/hooks/use-developer";
 import { formatPlainDate } from "@/lib/format";
 import type { BrokerAccessLevel, BrokerAccessRule } from "@/types/developer";
+import { useI18n } from "@/i18n";
 
 export default function DeveloperBrokerAccessPage() {
+  const { t } = useI18n();
+
   const { data: projects = [] } = useProjects();
   const { data = [], isLoading, error } = useBrokerAccessRules();
   const create = useCreateBrokerAccessRule();
@@ -22,17 +25,17 @@ export default function DeveloperBrokerAccessPage() {
 
   return (
     <>
-      <PageHeader title="Broker Access" description="Grant, update, and revoke project access for brokerages or selected brokers." />
+      <PageHeader title={t("adminSweep.broker.access.d48993dc")} description="Grant, update, and revoke project access for brokerages or selected brokers." />
       <div className="space-y-6">
-        <DetailCard title="Create Access Rule">
+        <DetailCard title={t("adminSweep.create.access.rule.70ac95be")}>
           <BrokerAccessRuleForm projects={projects} isPending={create.isPending} error={create.error} onSubmit={(input) => create.mutateAsync(input)} />
         </DetailCard>
-        <DetailCard title="Access Rules">
+        <DetailCard title={t("adminSweep.access.rules.39158c78")}>
           <div className="mb-4 flex items-center gap-2">
             <select className="h-9 rounded-md border border-zinc-300 px-2 text-sm" value={level} onChange={(e) => setLevel(e.target.value as BrokerAccessLevel)}>
               <option value="VIEW">VIEW</option><option value="VIEW_PRICE">VIEW_PRICE</option><option value="FULL">FULL</option>
             </select>
-            <span className="text-sm text-zinc-500">Selected update level for table actions.</span>
+            <span className="text-sm text-zinc-500">{t("adminSweep.selected.update.level.for.table.actions.66e3198e")}</span>
           </div>
           {isLoading ? <LoadingState label="Loading access rules" /> : null}
           {error ? <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error.message}</p> : null}
@@ -46,8 +49,8 @@ export default function DeveloperBrokerAccessPage() {
                 { key: "expiresAt", header: "Expires", cell: (row) => formatPlainDate(row.expiresAt) },
                 { key: "actions", header: "Actions", cell: (row) => (
                   <div className="flex flex-wrap gap-2">
-                    <Button className="h-8 px-2" onClick={() => update.mutate({ id: row.id, input: { accessLevel: level } })}>Update</Button>
-                    <Button className="h-8 bg-red-600 px-2 hover:bg-red-700" onClick={() => remove.mutate(row.id)}>Revoke</Button>
+                    <Button className="h-8 px-2" onClick={() => update.mutate({ id: row.id, input: { accessLevel: level } })}>{t("adminSweep.update.fb91e24f")}</Button>
+                    <Button className="h-8 bg-red-600 px-2 hover:bg-red-700" onClick={() => remove.mutate(row.id)}>{t("adminSweep.revoke.0be72075")}</Button>
                   </div>
                 ) },
               ]}

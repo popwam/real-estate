@@ -5,13 +5,14 @@ import { DomainStatusBadge } from "@/components/admin-public/badges";
 import { DomainRejectDialog } from "@/components/admin-public/domain-reject-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/i18n";
 import { formatDate } from "@/lib/format";
 import type { OrganizationDomain } from "@/types/admin-public";
 
-function domainNextAction(domain: OrganizationDomain) {
-  if (domain.status === "PENDING") return "Review ownership and approve or reject";
-  if (domain.status === "FAILED") return "Read the failure reason and request correction";
-  return "No review action needed";
+function domainNextActionKey(domain: OrganizationDomain) {
+  if (domain.status === "PENDING") return "domainReview.nextAction.pending";
+  if (domain.status === "FAILED") return "domainReview.nextAction.failed";
+  return "domainReview.nextAction.none";
 }
 
 export function DomainReviewList({
@@ -27,12 +28,14 @@ export function DomainReviewList({
   onApprove: (id: string) => Promise<unknown>;
   onReject: (id: string, reason: string) => Promise<unknown>;
 }) {
+  const { t } = useI18n();
+
   if (!domains.length) {
     return (
       <EmptyState
         icon={<Globe2 className="h-5 w-5" aria-hidden="true" />}
-        title="No organization domains waiting for review"
-        description="Submitted custom domains and subdomains will appear here when an organization requests platform review."
+        title={t("domainReview.emptyTitle")}
+        description={t("domainReview.emptyDescription")}
       />
     );
   }
@@ -54,26 +57,26 @@ export function DomainReviewList({
             </p>
             <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Submitted:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("domainReview.submitted")}:</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatDate(domain.createdAt)}</span>
               </p>
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Updated:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("common.updated")}:</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatDate(domain.updatedAt)}</span>
               </p>
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Last DNS check:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("domainReview.lastDnsCheck")}:</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatDate(domain.lastCheckedAt)}</span>
               </p>
               <p>
-                <span className="font-medium text-[var(--color-foreground)]">Verified:</span>{" "}
+                <span className="font-medium text-[var(--color-foreground)]">{t("domainReview.verified")}:</span>{" "}
                 <span className="text-[var(--color-muted)]">{formatDate(domain.verifiedAt)}</span>
               </p>
             </div>
             {domain.failureReason || domain.statusNote ? (
               <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">
-                {domain.failureReason ? <p><span className="font-medium">Failure:</span> {domain.failureReason}</p> : null}
-                {domain.statusNote ? <p><span className="font-medium">Note:</span> {domain.statusNote}</p> : null}
+                {domain.failureReason ? <p><span className="font-medium">{t("domainReview.failure")}:</span> {domain.failureReason}</p> : null}
+                {domain.statusNote ? <p><span className="font-medium">{t("domainReview.note")}:</span> {domain.statusNote}</p> : null}
               </div>
             ) : null}
           </div>
@@ -81,10 +84,10 @@ export function DomainReviewList({
             <div className="flex items-start gap-2">
               <ShieldCheck className="mt-0.5 h-4 w-4 text-[var(--color-accent)]" aria-hidden="true" />
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">Review guidance</p>
-                <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">{domainNextAction(domain)}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">{t("domainReview.guidance")}</p>
+                <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]">{t(domainNextActionKey(domain))}</p>
                 <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                  Approving records platform approval only. Use the returned DNS fields and notes as the evidence source.
+                  {t("domainReview.guidanceDescription")}
                 </p>
               </div>
             </div>
@@ -95,14 +98,14 @@ export function DomainReviewList({
               disabled={isWorking || domain.status === "VERIFIED"}
               onClick={() => void onApprove(domain.id)}
             >
-              Approve
+              {t("common.approve")}
             </Button>
             <DomainRejectDialog
               error={actionError}
               isPending={isWorking}
               trigger={
                 <Button className="w-full bg-[var(--color-danger)] text-[var(--color-danger-foreground)] hover:opacity-90 lg:w-auto">
-                  Reject
+                  {t("common.reject")}
                 </Button>
               }
               onConfirm={(reason) => onReject(domain.id, reason)}
