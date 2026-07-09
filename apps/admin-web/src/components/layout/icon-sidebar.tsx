@@ -20,7 +20,7 @@ export function IconSidebar() {
   const { data } = useCurrentUser();
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
-  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type);
+  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type, data?.permissions);
   const primaryItems = getPrimaryDesktopNavItems(navItems, 8);
   const overflowItems = getOverflowNavItems(navItems, primaryItems);
   const homeHref = primaryItems[0]?.href ?? "/login";

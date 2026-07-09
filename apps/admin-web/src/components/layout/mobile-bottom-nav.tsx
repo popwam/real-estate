@@ -21,7 +21,7 @@ export function MobileBottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type);
+  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type, data?.permissions);
   const { primaryItems, overflowItems, moreItem } = getMobileBottomNavItems(navItems, 5);
   const MoreIcon = moreItem.icon;
 

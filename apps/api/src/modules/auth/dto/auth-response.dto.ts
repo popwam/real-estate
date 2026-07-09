@@ -21,10 +21,18 @@ export interface AuthResponseDto {
   user: AuthUserSummaryDto;
   organization: AuthOrganizationSummaryDto;
   permissions: string[];
+  hrEmployee?: AuthHrEmployeeSummaryDto | null;
 }
 
 export interface CurrentUserResponseDto {
   user: AuthUserSummaryDto;
   organization: AuthOrganizationSummaryDto;
   permissions: string[];
+  hrEmployee?: AuthHrEmployeeSummaryDto | null;
+}
+
+export interface AuthHrEmployeeSummaryDto {
+  id: string;
+  status: string;
+  attendanceEnabled: boolean;
 }

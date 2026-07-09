@@ -41,7 +41,7 @@ export function LoginForm() {
 
   async function onSubmit(values: LoginFormValues) {
     const session = await login.mutateAsync(values);
-    router.replace(getRoleHome(session.user.role, session.organization?.type));
+    router.replace(getRoleHome(session.user.role, session.organization?.type, session.permissions));
   }
 
   return (
