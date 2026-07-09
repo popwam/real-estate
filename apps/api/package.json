@@ -19,6 +19,7 @@
     "seed:rbac": "ts-node src/modules/permissions/rbac.seed.ts",
     "seed:demo": "ts-node src/demo/seed-demo.ts",
     "staging:validate": "ts-node src/scripts/staging-readiness.ts",
+    "staging:ensure-hr-test-user": "ts-node src/scripts/ensure-hr-test-user.ts",
     "smoke:attendance-staging": "ts-node src/scripts/attendance-staging-smoke.ts",
     "rbac:verify": "ts-node src/scripts/rbac-verify.ts",
     "test": "jest",
