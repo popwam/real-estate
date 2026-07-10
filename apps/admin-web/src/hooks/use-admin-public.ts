@@ -6,6 +6,7 @@ import {
   checkDomainDnsApi,
   convertPublicLeadPlaceholderApi,
   createOrganizationDomainApi,
+  deleteOrganizationDomainApi,
   getPublicLeadApi,
   getWebsiteSettingsApi,
   listOrganizationDomainsApi,
@@ -15,6 +16,8 @@ import {
   markPublicLeadSpamApi,
   rejectPlatformDomainApi,
   requestDomainVerificationApi,
+  setDefaultDomainApi,
+  testDomainApi,
   updatePublicLeadStatusApi,
   updateWebsiteSettingsApi,
 } from "@/lib/admin-public-api";
@@ -119,6 +122,33 @@ export function useCheckDomainDns() {
       void qc.invalidateQueries({ queryKey: organizationDomainsKey });
       void qc.invalidateQueries({ queryKey: platformDomainsKey });
     },
+  });
+}
+
+export function useTestDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => testDomainApi(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: organizationDomainsKey });
+      void qc.invalidateQueries({ queryKey: platformDomainsKey });
+    },
+  });
+}
+
+export function useSetDefaultDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => setDefaultDomainApi(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: organizationDomainsKey }),
+  });
+}
+
+export function useDeleteOrganizationDomain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteOrganizationDomainApi(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: organizationDomainsKey }),
   });
 }
 

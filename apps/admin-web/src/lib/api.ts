@@ -166,6 +166,13 @@ export function getCurrentUserApi() {
   return apiRequest<MeResponse>("/auth/me");
 }
 
+export function changePasswordApi(input: { currentPassword: string; newPassword: string }) {
+  return apiRequest<{ passwordChanged: boolean }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function listOrganizationsApi() {
   return apiRequest<Organization[]>("/organizations");
 }

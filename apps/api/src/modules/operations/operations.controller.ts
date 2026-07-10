@@ -188,6 +188,64 @@ export class OperationsController {
     );
   }
 
+  @Get('hr/branches') listOrganizationBranches(
+    @Query() query: Record<string, unknown>,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.listOrganizationBranches(query, user);
+  }
+
+  @Post('hr/branches') upsertOrganizationBranch(
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-branch-upsert',
+      () => this.operations.upsertOrganizationBranch(body, user),
+    );
+  }
+
+  @Patch('hr/branches/:id/activate') activateOrganizationBranch(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.setOrganizationBranchActive(id, true, user);
+  }
+
+  @Patch('hr/branches/:id/deactivate') deactivateOrganizationBranch(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.setOrganizationBranchActive(id, false, user);
+  }
+
+  @Get('hr/attendance/settings') getAttendanceSettings(
+    @Query() query: Record<string, unknown>,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.getAttendanceSettings(query, user);
+  }
+
+  @Patch('hr/attendance/settings') updateAttendanceSettings(
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-attendance-settings',
+      () => this.operations.updateAttendanceSettings(body, user),
+    );
+  }
+
   @Get('hr/employees') listHrEmployees(
     @Query() query: Record<string, unknown>,
     @CurrentUser() user: AuthenticatedRequestUser,

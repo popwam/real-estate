@@ -68,6 +68,24 @@ export function checkDomainDnsApi(id: string) {
   });
 }
 
+export function testDomainApi(id: string) {
+  return apiRequest<OrganizationDomain>(`/organization-domains/${id}/test`, {
+    method: "POST",
+  });
+}
+
+export function setDefaultDomainApi(id: string) {
+  return apiRequest<OrganizationDomain>(`/organization-domains/${id}/default`, {
+    method: "PATCH",
+  });
+}
+
+export function deleteOrganizationDomainApi(id: string) {
+  return apiRequest<{ deleted: boolean }>(`/organization-domains/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function markDomainVerifiedDevOnlyApi(id: string) {
   return apiRequest<OrganizationDomain>(`/organization-domains/${id}/mark-verified-dev-only`, {
     method: "PATCH",

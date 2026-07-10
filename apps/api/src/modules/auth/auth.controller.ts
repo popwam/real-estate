@@ -118,6 +118,20 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
+  @Post('change-password')
+  @ApiOperation({ summary: 'Change the current user password.' })
+  changePassword(
+    @Body() dto: { currentPassword?: string; newPassword?: string },
+    @Req() request: Request,
+  ) {
+    return this.authService.changePassword(
+      (request as Request & { user: AuthenticatedRequestUser }).user,
+      dto,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user context.' })
   @Get('me')
   me(@Req() request: Request) {

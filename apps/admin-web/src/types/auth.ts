@@ -40,6 +40,7 @@ export type CurrentUser = {
   lastName?: string | null;
   phone?: string | null;
   role: UserRole;
+  mustChangePassword: boolean;
 };
 
 export type CurrentOrganization = {
@@ -48,6 +49,7 @@ export type CurrentOrganization = {
   slug?: string | null;
   type: OrganizationType;
   status: OrganizationStatus;
+  country?: string | null;
 };
 
 export type AuthSession = {

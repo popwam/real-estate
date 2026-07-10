@@ -229,7 +229,7 @@ describe('OperationsService self attendance', () => {
     });
 
     await expect(
-      service.checkInHrAttendance({ wifiSsid: 'Guest' }, user),
+      service.checkInHrAttendance({ wifiSsid: 'Guest', clientPlatform: 'MOBILE' }, user),
     ).rejects.toMatchObject({
       response: expect.objectContaining({
         reasons: expect.arrayContaining(['WIFI_NOT_ALLOWED']),
@@ -509,6 +509,13 @@ describe('OperationsService employee access management', () => {
       role: tx.role,
       permission: tx.permission,
       rolePermission: tx.rolePermission,
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'org_1',
+          type: 'DEVELOPER',
+          country: 'Egypt',
+        }),
+      },
       operationsActivity: {
         create: jest.fn().mockResolvedValue({ id: 'activity_1' }),
       },
@@ -551,6 +558,7 @@ describe('OperationsService employee access management', () => {
           organizationId: 'org_1',
           email: 'employee@example.com',
           passwordHash: 'scrypt:salt:hash',
+          mustChangePassword: true,
         }),
       }),
     );
@@ -564,6 +572,28 @@ describe('OperationsService employee access management', () => {
     );
     expect(auditLogs.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'employee.created' }),
+    );
+  });
+
+  it('defaults blank temporary passwords to 123456 and forces password change', async () => {
+    const { service, tx, hashService } = setupEmployeeAccess();
+
+    await service.createHrEmployee(
+      {
+        firstName: 'Default',
+        email: 'default-password@example.com',
+        role: 'employee_self_service',
+      },
+      companyAdmin,
+    );
+
+    expect(hashService.hash).toHaveBeenCalledWith('123456');
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mustChangePassword: true,
+        }),
+      }),
     );
   });
 
@@ -726,7 +756,10 @@ describe('OperationsService employee access management', () => {
     expect(hashService.hash).toHaveBeenCalledWith('new-temporary-password');
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { passwordHash: 'scrypt:salt:hash' },
+        data: expect.objectContaining({
+          passwordHash: 'scrypt:salt:hash',
+          mustChangePassword: true,
+        }),
       }),
     );
     expect(auditLogs.record).toHaveBeenCalledWith(

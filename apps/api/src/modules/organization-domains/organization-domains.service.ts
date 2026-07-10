@@ -51,6 +51,18 @@ export class OrganizationDomainsService {
 
     const type = this.parseType(dto.type);
     const domain = this.normalizeDomain(dto.domain, type);
+    const duplicate = await this.prisma.organizationDomainVerification.findFirst({
+      where: { domain, organizationId: { not: organizationId } },
+      select: { id: true },
+    });
+    if (duplicate && !isPlatformUser(currentUser)) {
+      throw new BadRequestException('Domain is already registered for another organization.');
+    }
+    const existingDefault =
+      await this.prisma.organizationDomainVerification.findFirst({
+        where: { organizationId, isDefault: true },
+        select: { id: true },
+      });
 
     const record = await this.prisma.organizationDomainVerification.upsert({
       where: {
@@ -68,6 +80,7 @@ export class OrganizationDomainsService {
             ? DomainVerificationStatus.VERIFIED
             : DomainVerificationStatus.PENDING,
         verificationToken: this.verificationToken(),
+        isDefault: !existingDefault,
         verifiedAt:
           type === OrganizationDomainType.SUBDOMAIN ? new Date() : undefined,
         statusNote:
@@ -82,6 +95,7 @@ export class OrganizationDomainsService {
             ? DomainVerificationStatus.VERIFIED
             : DomainVerificationStatus.PENDING,
         verificationToken: this.verificationToken(),
+        isDefault: !existingDefault,
         verifiedAt:
           type === OrganizationDomainType.SUBDOMAIN ? new Date() : null,
         failureReason: null,
@@ -102,6 +116,67 @@ export class OrganizationDomainsService {
     });
 
     return this.toResponse(record);
+  }
+
+  async setDefault(id: string, currentUser: AuthenticatedRequestUser) {
+    const record = await this.findDomainForOrganization(id, currentUser);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.organizationDomainVerification.updateMany({
+        where: { organizationId: record.organizationId },
+        data: { isDefault: false },
+      });
+      const domain = await tx.organizationDomainVerification.update({
+        where: { id: record.id },
+        data: { isDefault: true },
+      });
+      if (domain.type === OrganizationDomainType.CUSTOM_DOMAIN) {
+        await tx.organizationWebsiteSettings.updateMany({
+          where: { organizationId: domain.organizationId },
+          data: { customDomain: domain.domain },
+        });
+      }
+      return domain;
+    });
+
+    await this.auditLogs.record({
+      action: 'organization_domain.default_set',
+      entityType: 'OrganizationDomainVerification',
+      entityId: updated.id,
+      actor: currentUser,
+      organizationId: updated.organizationId,
+      metadata: { domain: updated.domain },
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async remove(id: string, currentUser: AuthenticatedRequestUser) {
+    const record = await this.findDomainForOrganization(id, currentUser);
+    await this.prisma.organizationDomainVerification.delete({
+      where: { id: record.id },
+    });
+    if (record.isDefault) {
+      const replacement = await this.prisma.organizationDomainVerification.findFirst({
+        where: { organizationId: record.organizationId },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (replacement) {
+        await this.prisma.organizationDomainVerification.update({
+          where: { id: replacement.id },
+          data: { isDefault: true },
+        });
+      }
+    }
+    await this.auditLogs.record({
+      action: 'organization_domain.deleted',
+      entityType: 'OrganizationDomainVerification',
+      entityId: record.id,
+      actor: currentUser,
+      organizationId: record.organizationId,
+      metadata: { domain: record.domain },
+    });
+    return { deleted: true };
   }
 
   async requestVerification(
@@ -446,6 +521,7 @@ export class OrganizationDomainsService {
       verifiedAt: domain.verifiedAt,
       failureReason: domain.failureReason,
       statusNote: domain.statusNote,
+      isDefault: domain.isDefault,
       createdAt: domain.createdAt,
       updatedAt: domain.updatedAt,
       organization: domain.organization,

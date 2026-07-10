@@ -4,6 +4,7 @@ export interface JwtPayload {
   organizationType: string | null;
   role: string;
   permissions: string[];
+  mustChangePassword?: boolean;
   tokenKind: 'access' | 'refresh';
   jti?: string;
   iat?: number;
@@ -16,4 +17,5 @@ export interface AuthenticatedRequestUser {
   organizationType: string | null;
   role: string;
   permissions: string[];
+  mustChangePassword?: boolean;
 }

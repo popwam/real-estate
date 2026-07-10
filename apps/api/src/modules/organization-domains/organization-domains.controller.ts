@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -78,6 +78,33 @@ export class OrganizationDomainsController {
     @CurrentUser() currentUser: AuthenticatedRequestUser,
   ) {
     return this.domainsService.checkDns(id, currentUser);
+  }
+
+  @Post(':id/test')
+  @ApiOperation({ summary: 'Test an organization domain DNS verification record.' })
+  testDomain(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.domainsService.checkDns(id, currentUser);
+  }
+
+  @Patch(':id/default')
+  @ApiOperation({ summary: 'Mark an organization domain as default.' })
+  setDefault(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.domainsService.setDefault(id, currentUser);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Remove an organization domain.' })
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.domainsService.remove(id, currentUser);
   }
 
   @Patch(':id/mark-verified-dev-only')

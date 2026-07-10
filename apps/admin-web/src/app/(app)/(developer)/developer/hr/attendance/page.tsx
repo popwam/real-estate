@@ -1,10 +1,20 @@
 "use client";
 
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { LoadingState } from "@/components/loading-state";
+import { SelfAttendancePage } from "@/components/hr/self-attendance-page";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
+import { hasAnyPermission } from "@/lib/permissions";
 
 export default function DeveloperHrAttendancePage() {
   const { t } = useI18n();
+  const session = useCurrentUser();
+
+  if (session.isLoading) return <LoadingState label={t("attendance.self.loadingToday")} />;
+
+  const canManageAttendance = hasAnyPermission(session.data, ["hr.attendance.view", "hr.attendance.manage", "hr.view", "hr.manage"]);
+  if (!canManageAttendance) return <SelfAttendancePage />;
 
   return (
     <OperationsPage
