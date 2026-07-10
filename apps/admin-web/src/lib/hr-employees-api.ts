@@ -9,6 +9,7 @@ export type HrEmployeeUser = {
   firstName?: string | null;
   lastName?: string | null;
   isActive?: boolean;
+  hasPassword?: boolean;
   role?: {
     id: string;
     name: string;
@@ -27,6 +28,16 @@ export type HrEmployee = {
   createdAt?: string;
   updatedAt?: string;
   user?: HrEmployeeUser | null;
+  organization?: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+  } | null;
+  loginReadiness?: {
+    canLogin: boolean;
+    reasons: string[];
+  };
 };
 
 export type HrEmployeeInput = {
@@ -42,10 +53,14 @@ export type HrEmployeeInput = {
   permissions?: string[];
   temporaryPassword?: string;
   status?: "ACTIVE" | "INACTIVE";
+  organizationId?: string;
 };
 
-export function listHrEmployeesApi() {
-  return apiRequest<HrEmployee[]>("/hr/employees");
+export function listHrEmployeesApi(input?: { organizationId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.organizationId) params.set("organizationId", input.organizationId);
+  const query = params.toString();
+  return apiRequest<HrEmployee[]>(`/hr/employees${query ? `?${query}` : ""}`);
 }
 
 export function getHrEmployeeApi(id: string) {

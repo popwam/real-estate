@@ -189,9 +189,10 @@ export class OperationsController {
   }
 
   @Get('hr/employees') listHrEmployees(
+    @Query() query: Record<string, unknown>,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
-    return this.operations.listHrEmployees(user);
+    return this.operations.listHrEmployees(query, user);
   }
   @Get('hr/export/employees') exportHrEmployees(
     @Query() query: Record<string, unknown>,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { Plus, ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -11,14 +12,25 @@ import { PageHeader } from "@/components/layout/page-header";
 import { PagePermissionGuard } from "@/components/page-permission-guard";
 import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
+import { listOrganizationsApi } from "@/lib/api";
 import { employeePermissionKeys, listHrEmployeesApi } from "@/lib/hr-employees-api";
+import { isPlatformRole } from "@/lib/permissions";
 
 export default function DeveloperHrEmployeesPage() {
   const { t } = useI18n();
+  const { data } = useCurrentUser();
+  const isPlatform = isPlatformRole(data?.user.role);
+  const [organizationId, setOrganizationId] = useState("");
+  const organizations = useQuery({
+    queryKey: ["organizations", "hr-employees-filter"],
+    queryFn: listOrganizationsApi,
+    enabled: isPlatform,
+  });
   const employees = useQuery({
-    queryKey: ["hr-employees"],
-    queryFn: listHrEmployeesApi,
+    queryKey: ["hr-employees", organizationId],
+    queryFn: () => listHrEmployeesApi({ organizationId: organizationId || undefined }),
   });
 
   return (
@@ -36,6 +48,23 @@ export default function DeveloperHrEmployeesPage() {
         }
       />
       <div className="space-y-6">
+        {isPlatform ? (
+          <DetailCard title={t("employeeAccess.organizationFilter")}>
+            <label className="grid max-w-md gap-1.5 text-sm">
+              <span className="font-medium text-[var(--color-foreground)]">{t("employeeAccess.organization")}</span>
+              <select className="ui-input" value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                <option value="">{t("employeeAccess.allOrganizations")}</option>
+                {(organizations.data ?? [])
+                  .filter((organization) => organization.type !== "PLATFORM")
+                  .map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </DetailCard>
+        ) : null}
         <FeedbackState
           tone="success"
           title={t("employeeAccess.separateAccountsTitle")}

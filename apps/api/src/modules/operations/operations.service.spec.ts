@@ -500,6 +500,7 @@ describe('OperationsService employee access management', () => {
         update: jest.fn().mockResolvedValue({ id: 'employee_user_1' }),
       },
       hrEmployee: {
+        findMany: jest.fn().mockResolvedValue([employeeRecord]),
         findFirstOrThrow: jest.fn().mockResolvedValue(employeeRecord),
         update: jest.fn().mockResolvedValue(employeeRecord),
         findFirst: jest.fn().mockResolvedValue(employeeRecord),
@@ -563,6 +564,103 @@ describe('OperationsService employee access management', () => {
     );
     expect(auditLogs.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'employee.created' }),
+    );
+  });
+
+  it('allows brokerage admins with HR permissions to create employees in their own organization', async () => {
+    const { service, tx } = setupEmployeeAccess();
+    const brokerageAdmin = {
+      ...companyAdmin,
+      organizationType: 'BROKERAGE',
+      role: 'brokerage_admin',
+    } as AuthenticatedRequestUser;
+
+    await service.createHrEmployee(
+      {
+        firstName: 'Brokerage',
+        email: 'brokerage-employee@example.com',
+        temporaryPassword: 'temporary-password',
+      },
+      brokerageAdmin,
+    );
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org_1' }),
+      }),
+    );
+  });
+
+  it('requires platform users to select an organization when creating an employee', async () => {
+    const { service } = setupEmployeeAccess();
+    const platformOwner = {
+      ...companyAdmin,
+      organizationId: 'platform_org',
+      organizationType: 'PLATFORM',
+      role: 'platform_owner',
+      permissions: ['hr.manage', 'organizations.view_all'],
+    } as AuthenticatedRequestUser;
+
+    await expect(
+      service.createHrEmployee(
+        {
+          firstName: 'Platform',
+          email: 'platform-employee@example.com',
+          temporaryPassword: 'temporary-password',
+        },
+        platformOwner,
+      ),
+    ).rejects.toThrow('organizationId is required for platform users.');
+  });
+
+  it('allows platform owners to create employees for a selected organization', async () => {
+    const { service, tx, prisma } = setupEmployeeAccess();
+    const platformOwner = {
+      ...companyAdmin,
+      organizationId: 'platform_org',
+      organizationType: 'PLATFORM',
+      role: 'platform_owner',
+      permissions: ['hr.manage', 'organizations.view_all'],
+    } as AuthenticatedRequestUser;
+
+    await service.createHrEmployee(
+      {
+        organizationId: 'org_2',
+        firstName: 'Platform',
+        email: 'platform-employee@example.com',
+        temporaryPassword: 'temporary-password',
+      },
+      platformOwner,
+    );
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org_2' }),
+      }),
+    );
+    expect(prisma.operationsActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org_1' }),
+      }),
+    );
+  });
+
+  it('lets platform owners filter employee lists by organization', async () => {
+    const { service, prisma } = setupEmployeeAccess();
+    const platformOwner = {
+      ...companyAdmin,
+      organizationId: 'platform_org',
+      organizationType: 'PLATFORM',
+      role: 'platform_owner',
+      permissions: ['hr.employees.view', 'organizations.view_all'],
+    } as AuthenticatedRequestUser;
+
+    await service.listHrEmployees({ organizationId: 'org_2' }, platformOwner);
+
+    expect(prisma.hrEmployee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org_2' },
+      }),
     );
   });
 

@@ -74,6 +74,7 @@ export default function HrEmployeeDetailPage() {
             <DetailGrid
               items={[
                 { label: t("employeeAccess.employee"), value: employee.data.name },
+                { label: t("employeeAccess.organization"), value: employee.data.organization?.name },
                 { label: t("employeeAccess.email"), value: employee.data.email ?? employee.data.user?.email },
                 { label: t("employeeAccess.phone"), value: employee.data.phone ?? employee.data.user?.phone },
                 { label: t("employeeAccess.role"), value: employee.data.user?.role?.name ? roleLabel(employee.data.user.role.name, t) : t("common.notSet") },
@@ -82,6 +83,13 @@ export default function HrEmployeeDetailPage() {
               ]}
             />
           </DetailCard>
+          {employee.data.loginReadiness && !employee.data.loginReadiness.canLogin ? (
+            <FeedbackState
+              tone="error"
+              title={t("employeeAccess.loginNotReadyTitle")}
+              description={employee.data.loginReadiness.reasons.map((reason) => loginReadinessLabel(reason, t)).join(" ")}
+            />
+          ) : null}
 
           <EmployeeForm
             mode="edit"
@@ -140,4 +148,10 @@ function roleLabel(role: string, t: (key: string) => string) {
   const key = `employeeAccess.role.${role}`;
   const translated = t(key);
   return translated === key ? role.replaceAll("_", " ") : translated;
+}
+
+function loginReadinessLabel(reason: string, t: (key: string) => string) {
+  const key = `employeeAccess.loginReadiness.${reason}`;
+  const translated = t(key);
+  return translated === key ? t("employeeAccess.loginReadiness.UNKNOWN") : translated;
 }

@@ -10,7 +10,7 @@ import { Topbar } from "@/components/layout/topbar";
 export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
+      <div className="flex min-h-screen overflow-x-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
         <IconSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Topbar />

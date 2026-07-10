@@ -12,8 +12,14 @@ export function requireOperationPermission(
   }
 }
 
-export function operationOrganizationWhere(currentUser: AuthenticatedRequestUser) {
+export function operationOrganizationWhere(
+  currentUser: AuthenticatedRequestUser,
+  requestedOrganizationId?: string | null,
+) {
   if (isPlatformUser(currentUser)) {
+    if (requestedOrganizationId?.trim()) {
+      return { organizationId: requestedOrganizationId.trim() };
+    }
     return {};
   }
 
@@ -42,4 +48,11 @@ export function requireDeveloperOrPlatform(currentUser: AuthenticatedRequestUser
   if (currentUser.organizationType !== OrganizationType.DEVELOPER) {
     throw new ForbiddenException('This module is available to developer organizations only.');
   }
+}
+
+export function requireOperationsWorkspace(
+  currentUser: AuthenticatedRequestUser,
+) {
+  if (isPlatformUser(currentUser)) return;
+  requireCurrentOrganizationId(currentUser);
 }

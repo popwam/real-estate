@@ -1,23 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FeedbackState } from "@/components/feedback-state";
 import { EmployeeForm, type EmployeeFormValues } from "@/components/hr/employee-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePermissionGuard } from "@/components/page-permission-guard";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
-import { createHrEmployeeApi } from "@/lib/hr-employees-api";
+import { createHrEmployeeApi, type HrEmployee } from "@/lib/hr-employees-api";
 
 export default function NewHrEmployeePage() {
   const { t } = useI18n();
-  const router = useRouter();
   const queryClient = useQueryClient();
+  const [createdEmployee, setCreatedEmployee] = useState<HrEmployee | null>(null);
+  const [oneTimePassword, setOneTimePassword] = useState("");
   const create = useMutation({
-    mutationFn: (values: EmployeeFormValues) => createHrEmployeeApi(values),
+    mutationFn: async (values: EmployeeFormValues) => {
+      const employee = await createHrEmployeeApi(values);
+      return { employee, temporaryPassword: values.temporaryPassword ?? "" };
+    },
     onSuccess: async (employee) => {
       await queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
-      router.replace(`/developer/hr/employees/${employee.id}`);
+      setCreatedEmployee(employee.employee);
+      setOneTimePassword(employee.temporaryPassword);
     },
   });
 
@@ -37,6 +44,18 @@ export default function NewHrEmployeePage() {
             await create.mutateAsync(values);
           }}
         />
+        {createdEmployee ? (
+          <FeedbackState
+            tone="success"
+            title={t("employeeAccess.createdPasswordTitle")}
+            description={t("employeeAccess.createdPasswordDescription", { password: oneTimePassword })}
+            action={
+              <Link href={`/developer/hr/employees/${createdEmployee.id}`}>
+                <Button className="ui-button-secondary">{t("employeeAccess.viewEmployee")}</Button>
+              </Link>
+            }
+          />
+        ) : null}
         {create.error ? (
           <FeedbackState tone="error" title={t("employeeAccess.createError")} description={create.error.message} />
         ) : null}

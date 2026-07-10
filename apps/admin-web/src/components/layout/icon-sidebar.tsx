@@ -26,7 +26,7 @@ export function IconSidebar() {
   const homeHref = primaryItems[0]?.href ?? "/login";
 
   return (
-    <aside className="sticky top-0 z-[var(--z-sticky)] hidden h-screen w-[var(--sidebar-collapsed-width)] shrink-0 border-e border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[var(--shadow-sm)] lg:flex lg:flex-col">
+    <aside className="sticky top-0 z-[var(--z-sticky)] hidden h-screen w-[var(--sidebar-collapsed-width)] shrink-0 overflow-x-hidden border-e border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[var(--shadow-sm)] lg:flex lg:flex-col">
       <div className="flex h-[var(--topbar-height)] items-center justify-center border-b border-[var(--color-border)]">
         <Link
           href={homeHref}
@@ -52,7 +52,7 @@ export function IconSidebar() {
               key={item.id}
               href={item.href}
               className={cn(
-                "group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors",
+                "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition-colors",
                 "text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
                 active &&
                   "bg-[var(--color-accent-soft)] text-[var(--color-accent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-accent)_20%,transparent)]",
@@ -65,9 +65,6 @@ export function IconSidebar() {
                 <span className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-[var(--color-accent)]" />
               ) : null}
               <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.8} aria-hidden="true" />
-              <span className="pointer-events-none absolute start-full z-[var(--z-tooltip)] ms-3 hidden whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--color-foreground)] shadow-[var(--shadow-md)] group-hover:block group-focus-visible:block">
-                {item.label}
-              </span>
             </Link>
           );
         })}

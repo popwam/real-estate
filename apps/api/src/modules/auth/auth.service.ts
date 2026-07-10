@@ -124,7 +124,22 @@ export class AuthService {
       !this.organizationCanLogin(user.organization) ||
       this.hrEmployeeIsInactive(user.hrEmployeeProfile)
     ) {
-      await this.recordLoginAudit('auth.login_failed', undefined, identifierKind);
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        this.loginFailureReason(user),
+      );
+      throw new UnauthorizedException('Invalid login details.');
+    }
+
+    if (!user.passwordHash) {
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        'missing_password',
+      );
       throw new UnauthorizedException('Invalid login details.');
     }
 
@@ -134,7 +149,12 @@ export class AuthService {
     );
 
     if (!passwordValid) {
-      await this.recordLoginAudit('auth.login_failed', user, identifierKind);
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        'invalid_password',
+      );
       throw new UnauthorizedException('Invalid login details.');
     }
 
@@ -441,14 +461,27 @@ export class AuthService {
     return !organization || !['SUSPENDED', 'REVOKED'].includes(organization.status);
   }
 
-  private async recordLoginAudit(action: string, user: any | undefined, identifierKind: string) {
+  private loginFailureReason(user: any | undefined) {
+    if (!user) return 'unknown_identifier';
+    if (!user.isActive) return 'inactive_user';
+    if (!this.organizationCanLogin(user.organization)) return 'inactive_organization';
+    if (this.hrEmployeeIsInactive(user.hrEmployeeProfile)) return 'inactive_employee';
+    return 'invalid_credentials';
+  }
+
+  private async recordLoginAudit(
+    action: string,
+    user: any | undefined,
+    identifierKind: string,
+    failureReason?: string,
+  ) {
     try {
       await this.auditLogs.record({
         action,
         entityType: 'User',
         entityId: user?.id,
         organizationId: user?.organizationId ?? null,
-        metadata: { identifierKind },
+        metadata: failureReason ? { identifierKind, failureReason } : { identifierKind },
       });
     } catch {
       // Login should not fail because audit persistence is unavailable.

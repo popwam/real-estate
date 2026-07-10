@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { KeyRound, Save, ShieldCheck } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 import { isPlatformRole } from "@/lib/permissions";
+import { listOrganizationsApi } from "@/lib/api";
 import type { HrEmployee, HrEmployeeInput } from "@/lib/hr-employees-api";
 import { employeePermissionKeys } from "@/lib/hr-employees-api";
 import {
@@ -35,6 +37,11 @@ export function EmployeeForm({
   const { t } = useI18n();
   const { data } = useCurrentUser();
   const isPlatform = isPlatformRole(data?.user.role);
+  const organizations = useQuery({
+    queryKey: ["organizations", "employee-form"],
+    queryFn: listOrganizationsApi,
+    enabled: isPlatform && mode === "create",
+  });
   const existingPermissions = useMemo(() => employeePermissionKeys(employee), [employee]);
   const [values, setValues] = useState<EmployeeFormValues>(() => ({
     firstName: employee?.user?.firstName ?? firstNameFromName(employee?.name),
@@ -46,6 +53,7 @@ export function EmployeeForm({
     role: initialRole(employee?.user?.role?.name),
     temporaryPassword: "",
     status: employee?.status ?? "ACTIVE",
+    organizationId: employee?.organization?.id ?? "",
     permissions: existingPermissions,
   }));
 
@@ -77,6 +85,7 @@ export function EmployeeForm({
       roleTitle: values.jobTitle,
       temporaryPassword: values.temporaryPassword || undefined,
       departmentId: values.departmentId || undefined,
+      organizationId: isPlatform ? values.organizationId || undefined : undefined,
     });
   }
 
@@ -84,6 +93,26 @@ export function EmployeeForm({
     <form className="space-y-6" onSubmit={submit}>
       <DetailCard title={t("employeeAccess.accountDetails")}>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {isPlatform && mode === "create" ? (
+            <Field label={t("employeeAccess.organization")} id="organizationId">
+              <select
+                id="organizationId"
+                className="ui-input"
+                value={values.organizationId ?? ""}
+                onChange={(event) => update("organizationId", event.target.value)}
+                required
+              >
+                <option value="">{t("employeeAccess.selectOrganization")}</option>
+                {(organizations.data ?? [])
+                  .filter((organization) => organization.type !== "PLATFORM")
+                  .map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          ) : null}
           <Field label={t("employeeAccess.firstName")} id="firstName">
             <Input id="firstName" value={values.firstName ?? ""} onChange={(event) => update("firstName", event.target.value)} />
           </Field>
@@ -116,14 +145,26 @@ export function EmployeeForm({
             </select>
           </Field>
           <Field label={mode === "create" ? t("employeeAccess.temporaryPassword") : t("employeeAccess.newPasswordOptional")} id="temporaryPassword">
-            <Input
-              id="temporaryPassword"
-              type="password"
-              autoComplete="new-password"
-              value={values.temporaryPassword ?? ""}
-              onChange={(event) => update("temporaryPassword", event.target.value)}
-              required={mode === "create"}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="temporaryPassword"
+                type="password"
+                autoComplete="new-password"
+                value={values.temporaryPassword ?? ""}
+                onChange={(event) => update("temporaryPassword", event.target.value)}
+                required={mode === "create"}
+              />
+              {mode === "create" ? (
+                <Button
+                  type="button"
+                  className="ui-button-secondary shrink-0"
+                  onClick={() => update("temporaryPassword", generateTemporaryPassword())}
+                >
+                  <KeyRound className="h-4 w-4" aria-hidden="true" />
+                  {t("employeeAccess.generatePassword")}
+                </Button>
+              ) : null}
+            </div>
           </Field>
         </div>
       </DetailCard>
@@ -189,4 +230,11 @@ function initialRole(role?: string) {
   return EMPLOYEE_ROLE_OPTIONS.some((option) => option === role)
     ? role
     : "employee_self_service";
+}
+
+function generateTemporaryPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
 }

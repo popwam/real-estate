@@ -111,9 +111,10 @@ export const brokerageNav: NavItem[] = [
   { id: "brokerage-deal-rooms", href: "/brokerage/deal-rooms", label: "Deal Rooms", icon: MessageSquareText, group: "Reservations & deals", desktopPriority: 10, mobilePriority: 10 },
   { id: "brokerage-deals", href: "/brokerage/deals", label: "Deals", icon: Landmark, group: "Reservations & deals", desktopPriority: 11, mobilePriority: 11 },
   { id: "brokerage-commissions", href: "/brokerage/commissions", label: "Commissions", icon: BadgeDollarSign, group: "Reservations & deals", desktopPriority: 12, mobilePriority: 12 },
-  { id: "brokerage-website-settings", href: "/brokerage/website-settings", label: "Website Settings", icon: Settings2, group: "Website & data", desktopPriority: 13, mobilePriority: 13 },
-  { id: "brokerage-domains", href: "/brokerage/domains", label: "Domains", icon: Globe2, group: "Website & data", desktopPriority: 14, mobilePriority: 14 },
-  { id: "brokerage-exports", href: "/brokerage/import-export/export", label: "Exports", icon: FileDown, group: "Website & data", desktopPriority: 15, mobilePriority: 15 },
+  { id: "brokerage-hr", href: "/developer/hr/employees", label: "Employees", icon: BriefcaseBusiness, group: "Operations", permissions: ["hr.employees.view", "hr.view", "hr.manage"], desktopPriority: 13, mobilePriority: 13 },
+  { id: "brokerage-website-settings", href: "/brokerage/website-settings", label: "Website Settings", icon: Settings2, group: "Website & data", desktopPriority: 14, mobilePriority: 14 },
+  { id: "brokerage-domains", href: "/brokerage/domains", label: "Domains", icon: Globe2, group: "Website & data", desktopPriority: 15, mobilePriority: 15 },
+  { id: "brokerage-exports", href: "/brokerage/import-export/export", label: "Exports", icon: FileDown, group: "Website & data", desktopPriority: 16, mobilePriority: 16 },
 ];
 
 export const moreNavItem: NavItem = {
