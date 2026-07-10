@@ -2,27 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { developerNav, brokerageNav, platformNav, type NavItem } from "@/components/layout/nav";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getNavItemsForUser } from "@/lib/navigation-engine";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n";
-
-function getNavItems(role?: string, organizationType?: string | null): NavItem[] {
-  if (role?.startsWith("platform_") || organizationType === "PLATFORM") return platformNav;
-  if (role?.startsWith("developer_") || organizationType === "DEVELOPER") return developerNav;
-  if (
-    role === "brokerage_owner" ||
-    role === "brokerage_admin" ||
-    role === "broker" ||
-    role === "individual_broker" ||
-    organizationType === "BROKERAGE" ||
-    organizationType === "INDIVIDUAL_BROKER"
-  ) {
-    return brokerageNav;
-  }
-
-  return platformNav;
-}
 
 /**
  * @deprecated Use IconSidebar instead for modern icon-first navigation
@@ -33,7 +16,7 @@ export function Sidebar() {
 
   const pathname = usePathname();
   const { data } = useCurrentUser();
-  const navItems = getNavItems(data?.user.role, data?.organization?.type);
+  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type, data?.permissions);
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-background)] lg:block">

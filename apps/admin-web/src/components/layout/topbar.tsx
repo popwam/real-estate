@@ -16,7 +16,7 @@ export function Topbar() {
   const { data } = useCurrentUser();
   const name = [data?.user.firstName, data?.user.lastName].filter(Boolean).join(" ");
   const displayName = name || data?.user.email || t("auth.userFallback");
-  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type);
+  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type, data?.permissions);
   const activeItem = getActiveNavItem(navItems, pathname);
   const initials = initialsFor(displayName);
 

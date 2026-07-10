@@ -12,7 +12,7 @@ describe('OperationsService self attendance', () => {
     userId: 'user_1',
     organizationId: 'org_1',
     role: 'developer_sales_agent',
-    permissions: [],
+    permissions: ['hr.attendance.self'],
   } as unknown as AuthenticatedRequestUser;
   const employee = {
     id: 'employee_1',
@@ -425,5 +425,331 @@ describe('OperationsService self attendance', () => {
         admin,
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('OperationsService employee access management', () => {
+  const companyAdmin = {
+    userId: 'admin_1',
+    organizationId: 'org_1',
+    organizationType: 'DEVELOPER',
+    role: 'company_admin',
+    permissions: [
+      'hr.employees.create',
+      'hr.employees.update',
+      'hr.employees.deactivate',
+      'hr.employees.reset_password',
+      'hr.employees.permissions.manage',
+      'hr.employees.view',
+      'users.manage_own_org',
+      'hr.manage',
+      'company.dashboard.view',
+    ],
+  } as unknown as AuthenticatedRequestUser;
+
+  function setupEmployeeAccess() {
+    const employeeRecord = {
+      id: 'employee_1',
+      organizationId: 'org_1',
+      userId: 'employee_user_1',
+      name: 'New Employee',
+      email: 'employee@example.com',
+      phone: '+201001111111',
+      status: HrEmployeeStatus.ACTIVE,
+      roleTitle: 'Agent',
+      user: {
+        id: 'employee_user_1',
+        role: {
+          id: 'role_1',
+          name: 'employee_self_service',
+          permissions: [
+            { permission: { key: 'company.dashboard.view' } },
+            { permission: { key: 'hr.attendance.self' } },
+          ],
+        },
+      },
+    };
+    const tx: any = {
+      hrEmployee: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'employee_1' }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(employeeRecord),
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'employee_user_1' }),
+        update: jest.fn().mockResolvedValue({ id: 'employee_user_1' }),
+      },
+      role: {
+        upsert: jest.fn().mockResolvedValue({ id: 'role_1', name: 'employee_self_service' }),
+      },
+      permission: {
+        upsert: jest.fn().mockImplementation(({ where }) =>
+          Promise.resolve({ id: `perm_${where.key}`, key: where.key }),
+        ),
+      },
+      rolePermission: {
+        upsert: jest.fn().mockResolvedValue({}),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const prisma: any = {
+      $transaction: jest.fn((callback) => callback(tx)),
+      user: {
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({ id: 'employee_user_1' }),
+      },
+      hrEmployee: {
+        findMany: jest.fn().mockResolvedValue([employeeRecord]),
+        findFirstOrThrow: jest.fn().mockResolvedValue(employeeRecord),
+        update: jest.fn().mockResolvedValue(employeeRecord),
+        findFirst: jest.fn().mockResolvedValue(employeeRecord),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(employeeRecord),
+      },
+      role: tx.role,
+      permission: tx.permission,
+      rolePermission: tx.rolePermission,
+      operationsActivity: {
+        create: jest.fn().mockResolvedValue({ id: 'activity_1' }),
+      },
+    };
+    const hashService = {
+      hash: jest.fn().mockResolvedValue('scrypt:salt:hash'),
+    };
+    const auditLogs = {
+      record: jest.fn().mockResolvedValue(undefined),
+    };
+    return {
+      tx,
+      prisma,
+      hashService,
+      auditLogs,
+      service: new OperationsService(prisma, undefined, hashService as any, auditLogs as any),
+    };
+  }
+
+  it('creates a scoped login user and linked HR employee for the current organization', async () => {
+    const { service, tx, hashService, auditLogs } = setupEmployeeAccess();
+
+    const result = await service.createHrEmployee(
+      {
+        firstName: 'New',
+        lastName: 'Employee',
+        email: 'employee@example.com',
+        phone: '+201001111111',
+        temporaryPassword: 'temporary-password',
+        role: 'employee_self_service',
+      },
+      companyAdmin,
+    );
+
+    expect(result.id).toBe('employee_1');
+    expect(hashService.hash).toHaveBeenCalledWith('temporary-password');
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'org_1',
+          email: 'employee@example.com',
+          passwordHash: 'scrypt:salt:hash',
+        }),
+      }),
+    );
+    expect(tx.hrEmployee.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'org_1',
+          userId: 'employee_user_1',
+        }),
+      }),
+    );
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'employee.created' }),
+    );
+  });
+
+  it('allows brokerage admins with HR permissions to create employees in their own organization', async () => {
+    const { service, tx } = setupEmployeeAccess();
+    const brokerageAdmin = {
+      ...companyAdmin,
+      organizationType: 'BROKERAGE',
+      role: 'brokerage_admin',
+    } as AuthenticatedRequestUser;
+
+    await service.createHrEmployee(
+      {
+        firstName: 'Brokerage',
+        email: 'brokerage-employee@example.com',
+        temporaryPassword: 'temporary-password',
+      },
+      brokerageAdmin,
+    );
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org_1' }),
+      }),
+    );
+  });
+
+  it('requires platform users to select an organization when creating an employee', async () => {
+    const { service } = setupEmployeeAccess();
+    const platformOwner = {
+      ...companyAdmin,
+      organizationId: 'platform_org',
+      organizationType: 'PLATFORM',
+      role: 'platform_owner',
+      permissions: ['hr.manage', 'organizations.view_all'],
+    } as AuthenticatedRequestUser;
+
+    await expect(
+      service.createHrEmployee(
+        {
+          firstName: 'Platform',
+          email: 'platform-employee@example.com',
+          temporaryPassword: 'temporary-password',
+        },
+        platformOwner,
+      ),
+    ).rejects.toThrow('organizationId is required for platform users.');
+  });
+
+  it('allows platform owners to create employees for a selected organization', async () => {
+    const { service, tx, prisma } = setupEmployeeAccess();
+    const platformOwner = {
+      ...companyAdmin,
+      organizationId: 'platform_org',
+      organizationType: 'PLATFORM',
+      role: 'platform_owner',
+      permissions: ['hr.manage', 'organizations.view_all'],
+    } as AuthenticatedRequestUser;
+
+    await service.createHrEmployee(
+      {
+        organizationId: 'org_2',
+        firstName: 'Platform',
+        email: 'platform-employee@example.com',
+        temporaryPassword: 'temporary-password',
+      },
+      platformOwner,
+    );
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org_2' }),
+      }),
+    );
+    expect(prisma.operationsActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ organizationId: 'org_1' }),
+      }),
+    );
+  });
+
+  it('lets platform owners filter employee lists by organization', async () => {
+    const { service, prisma } = setupEmployeeAccess();
+    const platformOwner = {
+      ...companyAdmin,
+      organizationId: 'platform_org',
+      organizationType: 'PLATFORM',
+      role: 'platform_owner',
+      permissions: ['hr.employees.view', 'organizations.view_all'],
+    } as AuthenticatedRequestUser;
+
+    await service.listHrEmployees({ organizationId: 'org_2' }, platformOwner);
+
+    expect(prisma.hrEmployee.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org_2' },
+      }),
+    );
+  });
+
+  it('blocks company admins from creating employees in another organization', async () => {
+    const { service } = setupEmployeeAccess();
+
+    await expect(
+      service.createHrEmployee(
+        {
+          organizationId: 'org_2',
+          firstName: 'Cross',
+          email: 'cross@example.com',
+          temporaryPassword: 'temporary-password',
+        },
+        companyAdmin,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('blocks HR users from assigning platform permissions', async () => {
+    const { service } = setupEmployeeAccess();
+
+    await expect(
+      service.createHrEmployee(
+        {
+          firstName: 'Unsafe',
+          email: 'unsafe@example.com',
+          temporaryPassword: 'temporary-password',
+          permissions: ['platform.organizations.manage'],
+        },
+        { ...companyAdmin, role: 'hr_manager' } as AuthenticatedRequestUser,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('blocks employees from changing their own permissions', async () => {
+    const { service, prisma } = setupEmployeeAccess();
+    prisma.hrEmployee.findFirstOrThrow.mockResolvedValueOnce({
+      id: 'employee_1',
+      organizationId: 'org_1',
+      userId: 'admin_1',
+      name: 'Admin Employee',
+    });
+
+    await expect(
+      service.updateHrEmployeePermissions(
+        'employee_1',
+        { permissions: ['company.dashboard.view'] },
+        companyAdmin,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('hashes reset passwords and writes an audit log without logging the password', async () => {
+    const { service, prisma, hashService, auditLogs } = setupEmployeeAccess();
+
+    await service.resetHrEmployeePassword(
+      'employee_1',
+      { temporaryPassword: 'new-temporary-password' },
+      companyAdmin,
+    );
+
+    expect(hashService.hash).toHaveBeenCalledWith('new-temporary-password');
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { passwordHash: 'scrypt:salt:hash' },
+      }),
+    );
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'employee.password_reset',
+        metadata: undefined,
+      }),
+    );
+  });
+
+  it('deactivates the linked login user when an employee is deactivated', async () => {
+    const { service, prisma, auditLogs } = setupEmployeeAccess();
+
+    await service.setHrEmployeeActive('employee_1', false, companyAdmin);
+
+    expect(prisma.hrEmployee.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: HrEmployeeStatus.INACTIVE } }),
+    );
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { isActive: false } }),
+    );
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'employee.deactivated' }),
+    );
   });
 });

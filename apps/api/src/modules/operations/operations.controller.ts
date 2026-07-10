@@ -189,9 +189,10 @@ export class OperationsController {
   }
 
   @Get('hr/employees') listHrEmployees(
+    @Query() query: Record<string, unknown>,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
-    return this.operations.listHrEmployees(user);
+    return this.operations.listHrEmployees(query, user);
   }
   @Get('hr/export/employees') exportHrEmployees(
     @Query() query: Record<string, unknown>,
@@ -256,6 +257,79 @@ export class OperationsController {
       user,
       'hr-employee-update',
       () => this.operations.updateHrEmployee(id, body, user),
+    );
+  }
+  @Post('hr/employees/:id/reset-password') resetHrEmployeePassword(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-employee-reset-password',
+      () => this.operations.resetHrEmployeePassword(id, body, user),
+    );
+  }
+  @Post('hr/employees/:id/activate') activateHrEmployee(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-employee-activate',
+      () => this.operations.setHrEmployeeActive(id, true, user),
+    );
+  }
+  @Post('hr/employees/:id/deactivate') deactivateHrEmployee(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-employee-deactivate',
+      () => this.operations.setHrEmployeeActive(id, false, user),
+    );
+  }
+  @Patch('hr/employees/:id/role') updateHrEmployeeRole(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-employee-role',
+      () => this.operations.updateHrEmployeeRole(id, body, user),
+    );
+  }
+  @Patch('hr/employees/:id/permissions') updateHrEmployeePermissions(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-employee-permissions',
+      () => this.operations.updateHrEmployeePermissions(id, body, user),
     );
   }
   @Patch('hr/employees/bulk/status') bulkUpdateHrEmployeeStatus(

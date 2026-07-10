@@ -4,7 +4,9 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import {
   AccountingTransactionStatus,
   AccountingTransactionType,
@@ -22,26 +24,110 @@ import {
   LegalDocumentType,
   OperationsModule,
   Prisma,
+  UserRole,
 } from '@prisma/client';
 import {
   operationOrganizationWhere,
   requireDeveloperOrPlatform,
   requireOperationOrganizationId,
   requireOperationPermission,
+  requireOperationsWorkspace,
 } from '../../common/operations-scope';
 import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { HashService } from '../auth/hash.service';
 import { PrismaService } from '../database/prisma.service';
 import { FilesService } from '../files/files.service';
+import { normalizeOptionalPhoneOrThrow, phonesMatch } from '../../common/phone-normalization';
+import { isPlatformUser } from '../../common/organization-scope';
+import { ROLE_PERMISSIONS } from '../permissions/rbac.seed';
+
+const COMPANY_ROLE_TO_USER_ROLE: Record<string, UserRole> = {
+  company_admin: UserRole.DEVELOPER_ADMIN,
+  hr_manager: UserRole.DEVELOPER_ADMIN,
+  hr_employee: UserRole.DEVELOPER_SALES_AGENT,
+  sales_manager: UserRole.DEVELOPER_SALES_MANAGER,
+  sales_agent: UserRole.DEVELOPER_SALES_AGENT,
+  finance_user: UserRole.DEVELOPER_ADMIN,
+  employee_self_service: UserRole.DEVELOPER_SALES_AGENT,
+  developer_owner: UserRole.DEVELOPER_OWNER,
+  developer_admin: UserRole.DEVELOPER_ADMIN,
+  developer_sales_manager: UserRole.DEVELOPER_SALES_MANAGER,
+  developer_sales_agent: UserRole.DEVELOPER_SALES_AGENT,
+  broker: UserRole.BROKER,
+  brokerage_admin: UserRole.BROKERAGE_ADMIN,
+  brokerage_owner: UserRole.BROKERAGE_OWNER,
+};
+
+const PLATFORM_PERMISSION_PREFIXES = ['platform.'];
+const PLATFORM_PERMISSION_KEYS = new Set([
+  'organizations.verify',
+  'organizations.suspend',
+  'organizations.view_all',
+  'organizations.update',
+  'platform.settings',
+  'platform.organizations.view',
+  'platform.organizations.manage',
+  'subscriptions.manage',
+  'disputes.resolve',
+  'audit_logs.view',
+  'reports.platform_wide',
+  'users.impersonate',
+  'exports.platform_data',
+]);
+
+const ROLE_LABELS: Record<string, string> = {
+  company_admin: 'Company admin',
+  hr_manager: 'HR manager',
+  hr_employee: 'HR employee',
+  sales_manager: 'Sales manager',
+  sales_agent: 'Sales agent',
+  finance_user: 'Finance user',
+  employee_self_service: 'Employee self service',
+};
+
+const HR_EMPLOYEE_INCLUDE = {
+  department: true,
+  organization: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      status: true,
+    },
+  },
+  user: {
+    select: {
+      id: true,
+      email: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+      isActive: true,
+      passwordHash: true,
+      role: {
+        include: {
+          permissions: { include: { permission: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.HrEmployeeInclude;
 
 @Injectable()
 export class OperationsService {
   constructor(
     private readonly prisma: PrismaService,
+    @Optional()
     private readonly filesService?: FilesService,
+    @Optional()
+    private readonly hashService?: HashService,
+    @Optional()
+    private readonly auditLogs?: AuditLogsService,
   ) {}
 
   listHrDepartments(user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.manage']);
     return this.prisma.hrDepartment.findMany({
       where: operationOrganizationWhere(user),
@@ -50,7 +136,7 @@ export class OperationsService {
   }
 
   async createHrDepartment(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.manage']);
     const record = await this.prisma.hrDepartment.create({
       data: {
@@ -76,7 +162,7 @@ export class OperationsService {
     input: any,
     user: AuthenticatedRequestUser,
   ) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.manage']);
     await this.assertExists('hrDepartment', id, user);
     const record = await this.prisma.hrDepartment.update({
@@ -99,7 +185,7 @@ export class OperationsService {
     input: any,
     user: AuthenticatedRequestUser,
   ) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.manage']);
     const ids = this.bulkIds(input.ids);
     const isActive = this.booleanStatus(input.status ?? input.isActive);
@@ -128,40 +214,134 @@ export class OperationsService {
   }
 
   getHrDepartment(id: string, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.manage']);
     return this.findScoped('hrDepartment', id, user);
   }
 
-  listHrEmployees(user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
-    requireOperationPermission(user, ['hr.view', 'hr.manage']);
-    return this.prisma.hrEmployee.findMany({
-      where: operationOrganizationWhere(user),
-      include: { department: true },
+  async listHrEmployees(input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    const records = await this.prisma.hrEmployee.findMany({
+      where: this.employeeOrganizationWhere(input, user),
+      include: HR_EMPLOYEE_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
+    return records.map((record) => this.hrEmployeeResponse(record));
   }
 
   async createHrEmployee(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
-    requireOperationPermission(user, ['hr.manage']);
-    const record = await this.prisma.hrEmployee.create({
-      data: {
-        organizationId: requireOperationOrganizationId(user),
-        userId: this.optional(input.userId),
-        departmentId: this.optional(input.departmentId),
-        name: this.required(input.name, 'name'),
-        email: this.optional(input.email),
-        phone: this.optional(input.phone),
-        roleTitle: this.optional(input.roleTitle),
-        status: this.enumValue(
-          HrEmployeeStatus,
-          input.status,
-          HrEmployeeStatus.ACTIVE,
-        ),
-      },
-      include: { department: true },
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, [
+      'hr.employees.create',
+      'hr.manage',
+      'users.manage_own_org',
+    ]);
+    this.ensureHashService();
+
+    const organizationId = this.resolveEmployeeOrganizationId(input, user);
+    const email = this.requiredEmail(input.email);
+    const phone = normalizeOptionalPhoneOrThrow(input.phone);
+    await this.assertEmployeePhoneAvailable(phone);
+    const roleName = this.employeeRoleName(input.role);
+    const requestedPermissions = this.permissionKeys(input.permissions);
+    await this.assertAssignableEmployeePermissions(requestedPermissions, user);
+    const password = this.optional(input.temporaryPassword ?? input.password);
+    if (!password || password.length < 8) {
+      throw new BadRequestException('temporaryPassword must be at least 8 characters.');
+    }
+    const passwordHash = await this.hashService!.hash(password);
+    const name = this.employeeName(input);
+    const status = this.enumValue(
+      HrEmployeeStatus,
+      input.status ?? (input.isActive === false ? 'INACTIVE' : 'ACTIVE'),
+      HrEmployeeStatus.ACTIVE,
+    );
+
+    const record = await this.prisma.$transaction(async (tx) => {
+      const existingEmployee = await tx.hrEmployee.findFirst({
+        where: {
+          organizationId,
+          OR: [{ email }, ...(phone ? [{ phone }] : [])],
+        },
+      });
+      if (existingEmployee) {
+        throw new ConflictException('Employee already exists in this organization.');
+      }
+
+      const existingUser = await tx.user.findUnique({
+        where: { email },
+        include: { hrEmployeeProfile: true },
+      });
+      if (existingUser && existingUser.organizationId !== organizationId) {
+        throw new ConflictException('Email is already registered for another organization.');
+      }
+      if (existingUser?.hrEmployeeProfile) {
+        throw new ConflictException('User is already linked to an employee profile.');
+      }
+
+      const role = await this.ensureEmployeeRole(tx, organizationId, roleName);
+      const userRecord =
+        existingUser ??
+        (await tx.user.create({
+          data: {
+            organizationId,
+            roleId: role.id,
+            email,
+            passwordHash,
+            firstName: this.optional(input.firstName),
+            lastName: this.optional(input.lastName),
+            phone,
+            userRole: this.userRoleForEmployeeRole(roleName),
+            isActive: status === HrEmployeeStatus.ACTIVE,
+          },
+        }));
+
+      if (existingUser) {
+        await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            roleId: role.id,
+            passwordHash,
+            firstName: this.optional(input.firstName) ?? existingUser.firstName,
+            lastName: this.optional(input.lastName) ?? existingUser.lastName,
+            phone: phone ?? existingUser.phone,
+            userRole: this.userRoleForEmployeeRole(roleName),
+            isActive: status === HrEmployeeStatus.ACTIVE,
+          },
+        });
+      }
+
+      const employee = await tx.hrEmployee.create({
+        data: {
+          organizationId,
+          userId: userRecord.id,
+          departmentId: this.optional(input.departmentId),
+          name,
+          email,
+          phone,
+          roleTitle: this.optional(input.jobTitle ?? input.roleTitle),
+          status,
+        },
+      });
+
+      if (requestedPermissions.length) {
+        const customRole = await this.createCustomEmployeeRole(
+          tx,
+          organizationId,
+          employee.id,
+          requestedPermissions,
+        );
+        await tx.user.update({
+          where: { id: userRecord.id },
+          data: { roleId: customRole.id },
+        });
+      }
+
+      return tx.hrEmployee.findUniqueOrThrow({
+        where: { id: employee.id },
+        include: HR_EMPLOYEE_INCLUDE,
+      });
     });
     await this.recordActivity(
       user,
@@ -171,8 +351,13 @@ export class OperationsService {
       'CREATED',
       'HR employee created',
       record.name,
+      undefined,
+      record.organizationId,
     );
-    return record;
+    await this.recordAudit(user, 'employee.created', 'HrEmployee', record.id, {
+      role: record.user?.role?.name ?? roleName,
+    });
+    return this.hrEmployeeResponse(record);
   }
 
   async updateHrEmployee(
@@ -180,21 +365,34 @@ export class OperationsService {
     input: any,
     user: AuthenticatedRequestUser,
   ) {
-    this.assertDeveloper(user);
-    requireOperationPermission(user, ['hr.manage']);
-    await this.assertExists('hrEmployee', id, user);
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.employees.update', 'hr.manage']);
+    const existing = await this.assertExists('hrEmployee', id, user);
+    const phone = normalizeOptionalPhoneOrThrow(input.phone);
+    await this.assertEmployeePhoneAvailable(phone, existing.userId ?? undefined);
     const record = await this.prisma.hrEmployee.update({
       where: { id },
       data: {
         departmentId: input.departmentId,
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        roleTitle: input.roleTitle,
+        name: input.name ?? this.employeeName(input, existing.name),
+        email: this.optional(input.email),
+        phone,
+        roleTitle: this.optional(input.jobTitle ?? input.roleTitle),
         status: input.status,
       },
-      include: { department: true },
+      include: HR_EMPLOYEE_INCLUDE,
     });
+    if (record.userId) {
+      await this.prisma.user.update({
+        where: { id: record.userId },
+        data: {
+          firstName: this.optional(input.firstName),
+          lastName: this.optional(input.lastName),
+          phone,
+          isActive: record.status === HrEmployeeStatus.ACTIVE,
+        },
+      });
+    }
     await this.recordActivity(
       user,
       OperationsModule.HR,
@@ -203,12 +401,15 @@ export class OperationsService {
       'UPDATED',
       'HR employee updated',
       record.name,
+      undefined,
+      record.organizationId,
     );
-    return record;
+    await this.recordAudit(user, 'employee.updated', 'HrEmployee', record.id);
+    return this.hrEmployeeResponse(record);
   }
 
   async bulkUpdateHrEmployeeStatus(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.manage']);
     const ids = this.bulkIds(input.ids);
     const status = this.enumValue(
@@ -240,21 +441,211 @@ export class OperationsService {
     };
   }
 
-  getHrEmployee(id: string, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
-    requireOperationPermission(user, ['hr.view', 'hr.manage']);
-    return this.prisma.hrEmployee
+  async getHrEmployee(id: string, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    const record = await this.prisma.hrEmployee
       .findFirstOrThrow({
         where: { id, ...operationOrganizationWhere(user) },
-        include: { department: true },
+        include: HR_EMPLOYEE_INCLUDE,
       })
       .catch(() => {
         throw new NotFoundException('Record not found.');
       });
+    return this.hrEmployeeResponse(record);
+  }
+
+  async resetHrEmployeePassword(
+    id: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, [
+      'hr.employees.reset_password',
+      'hr.manage',
+      'users.manage_own_org',
+    ]);
+    this.ensureHashService();
+    const employee = await this.findEmployeeForMutation(id, user);
+    if (!employee.userId) {
+      throw new BadRequestException('Employee is not linked to a login user.');
+    }
+    const generated = !this.optional(input.temporaryPassword ?? input.password);
+    const temporaryPassword = generated
+      ? this.generateTemporaryPassword()
+      : this.required(input.temporaryPassword ?? input.password, 'temporaryPassword');
+    if (temporaryPassword.length < 8) {
+      throw new BadRequestException('temporaryPassword must be at least 8 characters.');
+    }
+    await this.prisma.user.update({
+      where: { id: employee.userId },
+      data: { passwordHash: await this.hashService!.hash(temporaryPassword) },
+    });
+    await this.recordActivity(
+      user,
+      OperationsModule.HR,
+      'HrEmployee',
+      employee.id,
+      'PASSWORD_RESET',
+      'HR employee password reset',
+      employee.name,
+      undefined,
+      employee.organizationId,
+    );
+    await this.recordAudit(user, 'employee.password_reset', 'HrEmployee', employee.id);
+    return {
+      id: employee.id,
+      passwordReset: true,
+      temporaryPassword: generated ? temporaryPassword : undefined,
+    };
+  }
+
+  async setHrEmployeeActive(
+    id: string,
+    active: boolean,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, [
+      'hr.employees.deactivate',
+      'hr.manage',
+      'users.manage_own_org',
+    ]);
+    const employee = await this.findEmployeeForMutation(id, user);
+    const status = active ? HrEmployeeStatus.ACTIVE : HrEmployeeStatus.INACTIVE;
+    const updated = await this.prisma.hrEmployee.update({
+      where: { id: employee.id },
+      data: { status },
+      include: HR_EMPLOYEE_INCLUDE,
+    });
+    if (employee.userId) {
+      await this.prisma.user.update({
+        where: { id: employee.userId },
+        data: { isActive: active },
+      });
+    }
+    await this.recordActivity(
+      user,
+      OperationsModule.HR,
+      'HrEmployee',
+      employee.id,
+      active ? 'ACTIVATED' : 'DEACTIVATED',
+      active ? 'HR employee activated' : 'HR employee deactivated',
+      employee.name,
+      undefined,
+      employee.organizationId,
+    );
+    await this.recordAudit(
+      user,
+      active ? 'employee.activated' : 'employee.deactivated',
+      'HrEmployee',
+      employee.id,
+    );
+    return this.hrEmployeeResponse(updated);
+  }
+
+  async updateHrEmployeeRole(
+    id: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, [
+      'hr.employees.permissions.manage',
+      'hr.manage',
+      'users.manage_own_org',
+    ]);
+    const employee = await this.findEmployeeForMutation(id, user);
+    if (employee.userId === user.userId) {
+      throw new ForbiddenException('You cannot change your own role.');
+    }
+    if (!employee.userId) {
+      throw new BadRequestException('Employee is not linked to a login user.');
+    }
+    const roleName = this.employeeRoleName(input.role);
+    const role = await this.ensureEmployeeRole(
+      this.prisma,
+      employee.organizationId,
+      roleName,
+    );
+    await this.prisma.user.update({
+      where: { id: employee.userId },
+      data: {
+        roleId: role.id,
+        userRole: this.userRoleForEmployeeRole(roleName),
+      },
+    });
+    await this.recordActivity(
+      user,
+      OperationsModule.HR,
+      'HrEmployee',
+      employee.id,
+      'ROLE_CHANGED',
+      'HR employee role changed',
+      employee.name,
+      { role: roleName },
+      employee.organizationId,
+    );
+    await this.recordAudit(user, 'employee.role_changed', 'HrEmployee', employee.id, {
+      role: roleName,
+    });
+    return this.getHrEmployee(id, user);
+  }
+
+  async updateHrEmployeePermissions(
+    id: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, [
+      'hr.employees.permissions.manage',
+      'hr.manage',
+      'users.manage_own_org',
+    ]);
+    const employee = await this.findEmployeeForMutation(id, user);
+    if (employee.userId === user.userId) {
+      throw new ForbiddenException('You cannot change your own permissions.');
+    }
+    if (!employee.userId) {
+      throw new BadRequestException('Employee is not linked to a login user.');
+    }
+    const permissions = this.permissionKeys(input.permissions);
+    await this.assertAssignableEmployeePermissions(permissions, user);
+    const role = await this.createCustomEmployeeRole(
+      this.prisma,
+      employee.organizationId,
+      employee.id,
+      permissions,
+    );
+    await this.prisma.user.update({
+      where: { id: employee.userId },
+      data: { roleId: role.id },
+    });
+    await this.recordActivity(
+      user,
+      OperationsModule.HR,
+      'HrEmployee',
+      employee.id,
+      'PERMISSIONS_CHANGED',
+      'HR employee permissions changed',
+      employee.name,
+      { permissions },
+      employee.organizationId,
+    );
+    await this.recordAudit(
+      user,
+      'employee.permissions_changed',
+      'HrEmployee',
+      employee.id,
+      { permissions },
+    );
+    return this.getHrEmployee(id, user);
   }
 
   listHrAttendance(user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
     return this.prisma.hrAttendanceRecord.findMany({
       where: operationOrganizationWhere(user),
@@ -264,7 +655,7 @@ export class OperationsService {
   }
 
   async createHrAttendance(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.attendance.manage']);
     const record = await this.prisma.hrAttendanceRecord.create({
       data: {
@@ -318,7 +709,7 @@ export class OperationsService {
     input: any,
     user: AuthenticatedRequestUser,
   ) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.attendance.manage']);
     await this.assertExists('hrAttendanceRecord', id, user);
     const record = await this.prisma.hrAttendanceRecord.update({
@@ -355,7 +746,7 @@ export class OperationsService {
   }
 
   getHrAttendance(id: string, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
     return this.prisma.hrAttendanceRecord
       .findFirstOrThrow({
@@ -1069,7 +1460,7 @@ export class OperationsService {
   }
 
   async hrReportWorkforce(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.manage']);
     const where = operationOrganizationWhere(user);
     const [employeesByStatus, departments, attendanceByStatus] =
@@ -1219,7 +1610,7 @@ export class OperationsService {
   }
 
   async hrSummary(user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.manage']);
     const where = operationOrganizationWhere(user);
     const today = new Date();
@@ -1906,14 +2297,14 @@ export class OperationsService {
   }
 
   async exportHrEmployees(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.manage']);
     requireOperationPermission(user, [
       'exports.organization_data',
       'exports.platform_data',
     ]);
     const where: Prisma.HrEmployeeWhereInput = {
-      ...operationOrganizationWhere(user),
+      ...this.employeeOrganizationWhere(input, user),
       status: this.optionalEnum(HrEmployeeStatus, input.status),
       createdAt: this.dateFilter(input),
     };
@@ -1938,14 +2329,14 @@ export class OperationsService {
   }
 
   async exportHrAttendance(input: any, user: AuthenticatedRequestUser) {
-    this.assertDeveloper(user);
+    this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
     requireOperationPermission(user, [
       'exports.organization_data',
       'exports.platform_data',
     ]);
     const where: Prisma.HrAttendanceRecordWhereInput = {
-      ...operationOrganizationWhere(user),
+      ...operationOrganizationWhere(user, this.optional(input.organizationId)),
       status: this.optionalEnum(HrAttendanceStatus, input.status),
       date: this.dateFilter(input),
     };
@@ -2180,7 +2571,289 @@ export class OperationsService {
     requireDeveloperOrPlatform(user);
   }
 
+  private assertHrWorkspace(user: AuthenticatedRequestUser) {
+    requireOperationsWorkspace(user);
+  }
+
+  private resolveEmployeeOrganizationId(
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
+    if (isPlatformUser(user)) {
+      const organizationId = this.optional(input.organizationId);
+      if (!organizationId) {
+        throw new BadRequestException('organizationId is required for platform users.');
+      }
+      return organizationId;
+    }
+
+    if (
+      this.optional(input.organizationId) &&
+      this.optional(input.organizationId) !== user.organizationId
+    ) {
+      throw new ForbiddenException('Cannot create employees in another organization.');
+    }
+
+    return requireOperationOrganizationId(user);
+  }
+
+  private employeeOrganizationWhere(
+    input: any,
+    user: AuthenticatedRequestUser,
+  ): Prisma.HrEmployeeWhereInput {
+    const organizationId = this.optional(input.organizationId);
+    if (isPlatformUser(user)) {
+      return operationOrganizationWhere(user, organizationId);
+    }
+
+    if (organizationId && organizationId !== user.organizationId) {
+      throw new ForbiddenException('Cannot access employees in another organization.');
+    }
+
+    return operationOrganizationWhere(user);
+  }
+
+  private async findEmployeeForMutation(
+    id: string,
+    user: AuthenticatedRequestUser,
+  ) {
+    return this.prisma.hrEmployee
+      .findFirstOrThrow({
+        where: { id, ...operationOrganizationWhere(user) },
+        include: { user: { include: { role: true } } },
+      })
+      .catch(() => {
+        throw new NotFoundException('Record not found.');
+      });
+  }
+
+  private hrEmployeeResponse(employee: any) {
+    const user = employee.user
+      ? {
+          id: employee.user.id,
+          email: employee.user.email,
+          phone: employee.user.phone,
+          firstName: employee.user.firstName,
+          lastName: employee.user.lastName,
+          isActive: employee.user.isActive,
+          hasPassword: Boolean(employee.user.passwordHash),
+          role: employee.user.role,
+        }
+      : null;
+
+    return {
+      ...employee,
+      user,
+      loginReadiness: this.employeeLoginReadiness(employee, user),
+    };
+  }
+
+  private employeeLoginReadiness(employee: any, user: any) {
+    const reasons: string[] = [];
+    if (!user) reasons.push('LOGIN_USER_MISSING');
+    if (user && !user.hasPassword) reasons.push('PASSWORD_MISSING');
+    if (employee.status !== HrEmployeeStatus.ACTIVE) reasons.push('EMPLOYEE_INACTIVE');
+    if (user && !user.isActive) reasons.push('USER_INACTIVE');
+    if (!employee.email && !user?.email) reasons.push('EMAIL_REQUIRED');
+    if (!user?.role?.permissions?.length) reasons.push('NO_ROLE_PERMISSIONS');
+
+    return {
+      canLogin: reasons.length === 0,
+      reasons,
+    };
+  }
+
+  private employeeName(input: any, fallback?: string) {
+    const explicit = this.optional(input.name);
+    if (explicit) return explicit;
+    const name = [this.optional(input.firstName), this.optional(input.lastName)]
+      .filter(Boolean)
+      .join(' ');
+    return name || fallback || this.required(undefined, 'name');
+  }
+
+  private requiredEmail(value: unknown) {
+    const email = this.required(value, 'email').toLowerCase();
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      throw new BadRequestException('email is invalid.');
+    }
+    return email;
+  }
+
+  private employeeRoleName(value: unknown) {
+    const role = this.optional(value) ?? 'employee_self_service';
+    if (!COMPANY_ROLE_TO_USER_ROLE[role]) {
+      throw new BadRequestException(`Unsupported employee role: ${role}`);
+    }
+    return role;
+  }
+
+  private userRoleForEmployeeRole(roleName: string) {
+    return COMPANY_ROLE_TO_USER_ROLE[roleName] ?? UserRole.DEVELOPER_SALES_AGENT;
+  }
+
+  private permissionKeys(value: unknown) {
+    if (!value) return [];
+    if (!Array.isArray(value)) {
+      throw new BadRequestException('permissions must be an array.');
+    }
+    return [
+      ...new Set(
+        value
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .filter(Boolean),
+      ),
+    ];
+  }
+
+  private async assertAssignableEmployeePermissions(
+    permissions: string[],
+    user: AuthenticatedRequestUser,
+  ) {
+    if (!permissions.length) return;
+
+    for (const permission of permissions) {
+      if (this.isPlatformPermission(permission) && !isPlatformUser(user)) {
+        throw new ForbiddenException('Company users cannot assign platform permissions.');
+      }
+    }
+
+    if (isPlatformUser(user) || user.role === 'company_admin') {
+      return;
+    }
+
+    const missing = permissions.filter(
+      (permission) => !user.permissions?.includes(permission),
+    );
+    if (missing.length) {
+      throw new ForbiddenException('Cannot assign permissions you do not have.');
+    }
+  }
+
+  private isPlatformPermission(permission: string) {
+    return (
+      PLATFORM_PERMISSION_KEYS.has(permission) ||
+      PLATFORM_PERMISSION_PREFIXES.some((prefix) => permission.startsWith(prefix))
+    );
+  }
+
+  private async ensureEmployeeRole(
+    prisma: Pick<any, 'role' | 'permission' | 'rolePermission'>,
+    organizationId: string,
+    roleName: string,
+  ) {
+    const role = await prisma.role.upsert({
+      where: { organizationId_name: { organizationId, name: roleName } },
+      create: {
+        organizationId,
+        name: roleName,
+        isSystem: true,
+        description: ROLE_LABELS[roleName] ?? `Employee role: ${roleName}`,
+      },
+      update: {},
+    });
+
+    await this.syncRolePermissions(prisma, role.id, ROLE_PERMISSIONS[roleName] ?? []);
+    return role;
+  }
+
+  private async createCustomEmployeeRole(
+    prisma: Pick<any, 'role' | 'permission' | 'rolePermission'>,
+    organizationId: string,
+    employeeId: string,
+    permissions: string[],
+  ) {
+    const roleName = `employee_${employeeId}_custom`;
+    const role = await prisma.role.upsert({
+      where: { organizationId_name: { organizationId, name: roleName } },
+      create: {
+        organizationId,
+        name: roleName,
+        isSystem: false,
+        description: 'Custom employee permission override.',
+      },
+      update: {},
+    });
+
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    await this.syncRolePermissions(prisma, role.id, permissions);
+    return role;
+  }
+
+  private async syncRolePermissions(
+    prisma: Pick<any, 'permission' | 'rolePermission'>,
+    roleId: string,
+    permissions: readonly string[],
+  ) {
+    for (const permissionKey of permissions) {
+      const permission = await prisma.permission.upsert({
+        where: { key: permissionKey },
+        create: {
+          key: permissionKey,
+          description: `Base permission: ${permissionKey}`,
+        },
+        update: {},
+      });
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId: permission.id,
+          },
+        },
+        create: { roleId, permissionId: permission.id },
+        update: {},
+      });
+    }
+  }
+
+  private async assertEmployeePhoneAvailable(
+    phone: string | undefined,
+    exceptUserId?: string,
+  ) {
+    if (!phone) return;
+    const users = await this.prisma.user.findMany({
+      where: { phone: { not: null } },
+      select: { id: true, phone: true },
+    });
+    const conflict = users.some(
+      (candidate) => candidate.id !== exceptUserId && phonesMatch(candidate.phone, phone),
+    );
+    if (conflict) {
+      throw new ConflictException('Phone number cannot be used for this account.');
+    }
+  }
+
+  private ensureHashService() {
+    if (!this.hashService) {
+      throw new BadRequestException('Password hashing service is not available.');
+    }
+  }
+
+  private generateTemporaryPassword() {
+    return `Pw-${randomBytes(9).toString('base64url')}`;
+  }
+
+  private async recordAudit(
+    user: AuthenticatedRequestUser,
+    action: string,
+    entityType: string,
+    entityId: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    if (!this.auditLogs) return;
+    await this.auditLogs.record({
+      action,
+      entityType,
+      entityId,
+      actor: user,
+      organizationId: user.organizationId,
+      metadata,
+    });
+  }
+
   private async resolveCurrentEmployee(user: AuthenticatedRequestUser) {
+    requireOperationPermission(user, ['hr.attendance.self']);
     const organizationId = requireOperationOrganizationId(user);
     const employee = await this.prisma.hrEmployee.findFirst({
       where: {
@@ -2822,10 +3495,11 @@ export class OperationsService {
     title: string,
     body?: string | null,
     metadata?: Prisma.InputJsonValue,
+    organizationId?: string,
   ) {
     await this.prisma.operationsActivity.create({
       data: {
-        organizationId: requireOperationOrganizationId(user),
+        organizationId: organizationId ?? requireOperationOrganizationId(user),
         module,
         entityType,
         entityId,

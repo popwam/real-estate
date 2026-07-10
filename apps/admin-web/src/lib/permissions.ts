@@ -12,6 +12,13 @@ export const DEVELOPER_ROLES: UserRole[] = [
   "developer_admin",
   "developer_sales_manager",
   "developer_sales_agent",
+  "company_admin",
+  "hr_manager",
+  "hr_employee",
+  "sales_manager",
+  "sales_agent",
+  "finance_user",
+  "employee_self_service",
 ];
 
 export const BROKERAGE_ROLES: UserRole[] = [

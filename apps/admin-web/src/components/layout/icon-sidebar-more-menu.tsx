@@ -70,7 +70,7 @@ export function IconSidebarMoreMenu({
         type="button"
         onClick={() => onOpenChange(!isOpen)}
         className={cn(
-          "group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
+          "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]",
           isOpen && "bg-[var(--color-surface-muted)] text-[var(--color-foreground)]",
         )}
         title={t("navigation.moreNavigation")}
@@ -79,9 +79,6 @@ export function IconSidebarMoreMenu({
         aria-expanded={isOpen}
       >
         <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
-        <span className="pointer-events-none absolute start-full z-[var(--z-tooltip)] ms-3 hidden whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--color-foreground)] shadow-[var(--shadow-md)] group-hover:block group-focus-visible:block">
-          {t("navigation.more")}
-        </span>
       </button>
 
       {isOpen ? (

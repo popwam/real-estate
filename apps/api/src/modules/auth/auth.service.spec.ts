@@ -122,6 +122,25 @@ describe('AuthService', () => {
     ).rejects.toThrow('Invalid login details.');
   });
 
+  it('blocks login for users missing a password and records a safe diagnostic', async () => {
+    const { service, prisma, hashService, auditLogs } = makeService();
+    prisma.user.findUnique.mockResolvedValue({ ...activeUser, passwordHash: null });
+
+    await expect(
+      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+    ).rejects.toThrow('Invalid login details.');
+    expect(hashService.verify).not.toHaveBeenCalled();
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'auth.login_failed',
+        metadata: {
+          identifierKind: 'email',
+          failureReason: 'missing_password',
+        },
+      }),
+    );
+  });
+
   it('blocks suspended organizations', async () => {
     const { service, prisma } = makeService();
     prisma.user.findMany.mockResolvedValue([

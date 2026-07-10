@@ -24,7 +24,14 @@ export type UserRole =
   | "brokerage_admin"
   | "broker"
   | "individual_broker"
-  | "client";
+  | "client"
+  | "company_admin"
+  | "hr_manager"
+  | "hr_employee"
+  | "sales_manager"
+  | "sales_agent"
+  | "finance_user"
+  | "employee_self_service";
 
 export type CurrentUser = {
   id: string;
@@ -49,10 +56,18 @@ export type AuthSession = {
   user: CurrentUser;
   organization: CurrentOrganization | null;
   permissions: string[];
+  hrEmployee?: HrEmployeeSummary | null;
 };
 
 export type MeResponse = {
   user: CurrentUser;
   organization: CurrentOrganization | null;
   permissions: string[];
+  hrEmployee?: HrEmployeeSummary | null;
+};
+
+export type HrEmployeeSummary = {
+  id: string;
+  status: string;
+  attendanceEnabled: boolean;
 };

@@ -94,6 +94,7 @@ export class AuthService {
         },
         include: {
           organization: true,
+          hrEmployeeProfile: true,
           role: {
             include: {
               permissions: {
@@ -117,8 +118,28 @@ export class AuthService {
     const identifierKind = this.isValidEmail(identifier) ? 'email' : 'phone';
     const user = await this.findLoginUser(identifier);
 
-    if (!user || !user.isActive || !this.organizationCanLogin(user.organization)) {
-      await this.recordLoginAudit('auth.login_failed', undefined, identifierKind);
+    if (
+      !user ||
+      !user.isActive ||
+      !this.organizationCanLogin(user.organization) ||
+      this.hrEmployeeIsInactive(user.hrEmployeeProfile)
+    ) {
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        this.loginFailureReason(user),
+      );
+      throw new UnauthorizedException('Invalid login details.');
+    }
+
+    if (!user.passwordHash) {
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        'missing_password',
+      );
       throw new UnauthorizedException('Invalid login details.');
     }
 
@@ -128,7 +149,12 @@ export class AuthService {
     );
 
     if (!passwordValid) {
-      await this.recordLoginAudit('auth.login_failed', user, identifierKind);
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        'invalid_password',
+      );
       throw new UnauthorizedException('Invalid login details.');
     }
 
@@ -163,6 +189,7 @@ export class AuthService {
       where: { id: payload.userId },
       include: {
         organization: true,
+        hrEmployeeProfile: true,
         role: {
           include: {
             permissions: {
@@ -175,7 +202,7 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || this.hrEmployeeIsInactive(user.hrEmployeeProfile)) {
       throw new UnauthorizedException('User is not active.');
     }
 
@@ -216,6 +243,7 @@ export class AuthService {
       where: { id: currentUser.userId },
       include: {
         organization: true,
+        hrEmployeeProfile: true,
         role: {
           include: {
             permissions: {
@@ -228,7 +256,7 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || this.hrEmployeeIsInactive(user.hrEmployeeProfile)) {
       throw new UnauthorizedException('User is not active.');
     }
 
@@ -240,6 +268,13 @@ export class AuthService {
       user: this.toUserSummary(user),
       organization: this.toOrganizationSummary(user.organization),
       permissions: this.toPermissions(user.role),
+      hrEmployee: user.hrEmployeeProfile
+        ? {
+            id: user.hrEmployeeProfile.id,
+            status: user.hrEmployeeProfile.status,
+            attendanceEnabled: user.hrEmployeeProfile.status === 'ACTIVE',
+          }
+        : null,
     };
   }
 
@@ -248,7 +283,7 @@ export class AuthService {
     prisma: Pick<PrismaService, 'refreshToken'> = this.prisma,
   ): Promise<AuthResponseDto> {
     const permissions = this.toPermissions(user.role);
-    const role = ROLE_NAME_BY_USER_ROLE[user.userRole as keyof typeof ROLE_NAME_BY_USER_ROLE];
+    const role = this.roleName(user);
     const payload = {
       userId: user.id,
       organizationId: user.organizationId,
@@ -273,6 +308,13 @@ export class AuthService {
       user: this.toUserSummary(user),
       organization: this.toOrganizationSummary(user.organization),
       permissions,
+      hrEmployee: user.hrEmployeeProfile
+        ? {
+            id: user.hrEmployeeProfile.id,
+            status: user.hrEmployeeProfile.status,
+            attendanceEnabled: user.hrEmployeeProfile.status === 'ACTIVE',
+          }
+        : null,
     };
   }
 
@@ -283,7 +325,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
-      role: ROLE_NAME_BY_USER_ROLE[user.userRole as keyof typeof ROLE_NAME_BY_USER_ROLE],
+      role: this.roleName(user),
     };
   }
 
@@ -302,6 +344,17 @@ export class AuthService {
       role?.permissions?.map((rolePermission: any) => rolePermission.permission.key) ??
       []
     );
+  }
+
+  private roleName(user: any) {
+    return (
+      user.role?.name ??
+      ROLE_NAME_BY_USER_ROLE[user.userRole as keyof typeof ROLE_NAME_BY_USER_ROLE]
+    );
+  }
+
+  private hrEmployeeIsInactive(employee: any) {
+    return Boolean(employee && employee.status !== 'ACTIVE');
   }
 
   private async ensureRolePermissions(
@@ -360,6 +413,7 @@ export class AuthService {
   private async findLoginUser(identifier: string) {
     const include = {
       organization: true,
+      hrEmployeeProfile: true,
       role: {
         include: {
           permissions: {
@@ -407,14 +461,27 @@ export class AuthService {
     return !organization || !['SUSPENDED', 'REVOKED'].includes(organization.status);
   }
 
-  private async recordLoginAudit(action: string, user: any | undefined, identifierKind: string) {
+  private loginFailureReason(user: any | undefined) {
+    if (!user) return 'unknown_identifier';
+    if (!user.isActive) return 'inactive_user';
+    if (!this.organizationCanLogin(user.organization)) return 'inactive_organization';
+    if (this.hrEmployeeIsInactive(user.hrEmployeeProfile)) return 'inactive_employee';
+    return 'invalid_credentials';
+  }
+
+  private async recordLoginAudit(
+    action: string,
+    user: any | undefined,
+    identifierKind: string,
+    failureReason?: string,
+  ) {
     try {
       await this.auditLogs.record({
         action,
         entityType: 'User',
         entityId: user?.id,
         organizationId: user?.organizationId ?? null,
-        metadata: { identifierKind },
+        metadata: failureReason ? { identifierKind, failureReason } : { identifierKind },
       });
     } catch {
       // Login should not fail because audit persistence is unavailable.
