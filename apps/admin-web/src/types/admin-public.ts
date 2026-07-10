@@ -76,6 +76,7 @@ export type OrganizationDomain = {
   domain: string;
   type: OrganizationDomainType;
   status: DomainVerificationStatus;
+  isDefault?: boolean;
   verificationToken: string;
   lastCheckedAt?: string | null;
   verifiedAt?: string | null;

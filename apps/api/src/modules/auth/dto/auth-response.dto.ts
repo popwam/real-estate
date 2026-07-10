@@ -5,6 +5,7 @@ export interface AuthUserSummaryDto {
   lastName: string | null;
   phone: string | null;
   role: string;
+  mustChangePassword: boolean;
 }
 
 export interface AuthOrganizationSummaryDto {
@@ -13,6 +14,7 @@ export interface AuthOrganizationSummaryDto {
   slug: string | null;
   type: string | null;
   status: string | null;
+  country: string | null;
 }
 
 export interface AuthResponseDto {

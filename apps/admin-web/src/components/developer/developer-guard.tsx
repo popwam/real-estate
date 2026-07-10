@@ -14,14 +14,21 @@ export function DeveloperGuard({ children }: { children: ReactNode }) {
 
   const { data, isLoading } = useCurrentUser();
 
-  if (isLoading) return <LoadingState label="Checking developer access" />;
+  if (isLoading) return <LoadingState label={t("developer.access.checking")} />;
 
   const isDeveloperWorkspace =
     data?.organization?.type === "DEVELOPER" && isDeveloperRole(data.user.role);
   const isSharedHrRoute = pathname.startsWith("/developer/hr/");
   const hasSharedHrAccess =
     isSharedHrRoute &&
-    hasAnyPermission(data, ["hr.employees.view", "hr.view", "hr.manage"]) &&
+    hasAnyPermission(data, [
+      "hr.employees.view",
+      "hr.attendance.self",
+      "hr.attendance.view",
+      "hr.attendance.manage",
+      "hr.view",
+      "hr.manage",
+    ]) &&
     (isPlatformRole(data?.user.role) || Boolean(data?.organization?.id));
 
   if (!isDeveloperWorkspace && !hasSharedHrAccess) {

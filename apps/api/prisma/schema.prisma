@@ -398,6 +398,31 @@ enum AttendanceSource {
   MANUAL_ADMIN
 }
 
+enum AttendancePenaltyType {
+  NONE
+  WARNING
+  DEDUCT_MINUTES
+  DEDUCT_AMOUNT
+  MARK_LATE
+  HALF_DAY
+  ABSENT
+  MANUAL_REVIEW
+}
+
+enum AttendanceLateLevel {
+  ON_TIME
+  GRACE
+  FIRST_SLICE
+  SECOND_SLICE
+  BEYOND_SECOND
+}
+
+enum WebWifiPolicy {
+  BLOCK
+  MANUAL_REVIEW
+  IGNORE_FOR_WEB
+}
+
 enum AccountingTransactionType {
   INCOME
   EXPENSE
@@ -567,6 +592,7 @@ model Organization {
   hrEmployees       HrEmployee[]
   hrAttendanceRecords HrAttendanceRecord[]
   attendanceSettings OrganizationAttendanceSettings?
+  branches          OrganizationBranch[]
   accountingAccounts AccountingAccount[]
   accountingCategories AccountingCategory[]
   accountingTransactions AccountingTransaction[]
@@ -657,6 +683,7 @@ model OrganizationDomainVerification {
   type              OrganizationDomainType
   status            DomainVerificationStatus  @default(PENDING)
   verificationToken String
+  isDefault         Boolean                   @default(false)
   lastCheckedAt     DateTime?
   verifiedAt        DateTime?
   failureReason     String?
@@ -676,6 +703,7 @@ model User {
   roleId                          String?
   email                           String                      @unique
   passwordHash                    String?
+  mustChangePassword              Boolean                     @default(false)
   firstName                       String?
   lastName                        String?
   phone                           String?
@@ -1903,6 +1931,29 @@ model HrDepartment {
   @@map("hr_departments")
 }
 
+model OrganizationBranch {
+  id                   String       @id @default(cuid())
+  organizationId       String
+  name                 String
+  code                 String?
+  address              String?
+  city                 String?
+  country              String?
+  latitude             Float?
+  longitude            Float?
+  exactRadiusMeters    Int          @default(30)
+  expandedRadiusMeters Int          @default(1000)
+  isActive             Boolean      @default(true)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attendanceRecords    HrAttendanceRecord[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("organization_branches")
+}
+
 model HrEmployee {
   id             String               @id @default(cuid())
   organizationId String
@@ -1946,18 +1997,26 @@ model HrAttendanceRecord {
   checkOutPhotoFileId String?
   checkInDeviceId String?
   checkOutDeviceId String?
+  branchId String?
   developerOptionsEnabled Boolean?
   usbDebuggingEnabled Boolean?
   verificationStatus AttendanceVerificationStatus @default(PENDING_REVIEW)
   verificationFailureReasons Json?
   dvrVerificationStatus DvrVerificationStatus @default(NOT_REQUIRED)
   dvrReferenceId String?
+  minutesLate Int?
+  lateLevel AttendanceLateLevel?
+  penaltyType AttendancePenaltyType?
+  penaltyValue String?
+  requiresReview Boolean @default(false)
   attendanceSource AttendanceSource @default(MANUAL_ADMIN)
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee       HrEmployee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch         OrganizationBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, date])
   @@index([employeeId, date])
+  @@index([branchId])
   @@index([organizationId, verificationStatus])
   @@map("hr_attendance_records")
 }
@@ -1969,6 +2028,16 @@ model OrganizationAttendanceSettings {
   allowedLatitude     Float?
   allowedLongitude    Float?
   allowedRadiusMeters Int?
+  exactRadiusMeters Int @default(30)
+  expandedRadiusMeters Int @default(1000)
+  gracePeriodMinutes Int @default(10)
+  firstLateSliceMinutes Int @default(15)
+  firstLatePenaltyType AttendancePenaltyType @default(MARK_LATE)
+  firstLatePenaltyValue String?
+  secondLateSliceMinutes Int @default(30)
+  secondLatePenaltyType AttendancePenaltyType @default(MANUAL_REVIEW)
+  secondLatePenaltyValue String?
+  beyondSecondSlicePenaltyType AttendancePenaltyType @default(MANUAL_REVIEW)
   requireWifi         Boolean      @default(false)
   allowedWifiSsids    String[]     @default([])
   allowedWifiBssids   String[]     @default([])
@@ -1976,6 +2045,12 @@ model OrganizationAttendanceSettings {
   blockUsbDebugging   Boolean      @default(true)
   requirePhoto        Boolean      @default(false)
   requireDvrReview    Boolean      @default(false)
+  allowWebCheckIn Boolean @default(true)
+  allowMobileCheckIn Boolean @default(true)
+  allowExpandedRadiusWithReview Boolean @default(true)
+  webWifiPolicy WebWifiPolicy @default(MANUAL_REVIEW)
+  workStartTime String @default("09:00")
+  workEndTime String @default("17:00")
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

@@ -12,6 +12,8 @@ import {
   AccountingTransactionType,
   AdsCampaignProvider,
   AdsCampaignStatus,
+  AttendanceLateLevel,
+  AttendancePenaltyType,
   AttendanceSource,
   AttendanceVerificationStatus,
   CameraDeviceProvider,
@@ -25,6 +27,7 @@ import {
   OperationsModule,
   Prisma,
   UserRole,
+  WebWifiPolicy,
 } from '@prisma/client';
 import {
   operationOrganizationWhere,
@@ -43,6 +46,10 @@ import { isPlatformUser } from '../../common/organization-scope';
 import { ROLE_PERMISSIONS } from '../permissions/rbac.seed';
 
 const COMPANY_ROLE_TO_USER_ROLE: Record<string, UserRole> = {
+  platform_support: UserRole.PLATFORM_SUPPORT,
+  platform_hr: UserRole.PLATFORM_SUPPORT,
+  platform_sales: UserRole.PLATFORM_SUPPORT,
+  platform_admin_limited: UserRole.PLATFORM_ADMIN,
   company_admin: UserRole.DEVELOPER_ADMIN,
   hr_manager: UserRole.DEVELOPER_ADMIN,
   hr_employee: UserRole.DEVELOPER_SALES_AGENT,
@@ -77,6 +84,10 @@ const PLATFORM_PERMISSION_KEYS = new Set([
 ]);
 
 const ROLE_LABELS: Record<string, string> = {
+  platform_support: 'Platform support',
+  platform_hr: 'Platform HR',
+  platform_sales: 'Platform sales',
+  platform_admin_limited: 'Platform admin limited',
   company_admin: 'Company admin',
   hr_manager: 'HR manager',
   hr_employee: 'HR employee',
@@ -219,6 +230,101 @@ export class OperationsService {
     return this.findScoped('hrDepartment', id, user);
   }
 
+  listOrganizationBranches(input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['company.settings.view', 'company.settings.manage', 'hr.manage']);
+    return this.prisma.organizationBranch.findMany({
+      where: this.organizationScopedWhere(input, user),
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async upsertOrganizationBranch(input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['company.settings.manage', 'hr.manage']);
+    const organizationId = this.resolveScopedOrganizationId(input, user);
+    const id = this.optional(input.id);
+    const data = {
+      organizationId,
+      name: this.required(input.name, 'name'),
+      code: this.optional(input.code),
+      address: this.optional(input.address),
+      city: this.optional(input.city),
+      country: this.optional(input.country),
+      latitude: this.optionalNumber(input.latitude),
+      longitude: this.optionalNumber(input.longitude),
+      exactRadiusMeters: this.positiveInt(input.exactRadiusMeters, 30),
+      expandedRadiusMeters: this.positiveInt(input.expandedRadiusMeters, 1000),
+      isActive: input.isActive === undefined ? true : Boolean(input.isActive),
+    };
+    const record = id
+      ? await this.prisma.organizationBranch.update({
+          where: { id },
+          data,
+        })
+      : await this.prisma.organizationBranch.create({ data });
+    await this.recordActivity(
+      user,
+      OperationsModule.HR,
+      'OrganizationBranch',
+      record.id,
+      id ? 'UPDATED' : 'CREATED',
+      id ? 'Branch updated' : 'Branch created',
+      record.name,
+      undefined,
+      record.organizationId,
+    );
+    return record;
+  }
+
+  async setOrganizationBranchActive(
+    id: string,
+    active: boolean,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['company.settings.manage', 'hr.manage']);
+    const existing = await this.prisma.organizationBranch.findFirst({
+      where: { id, ...operationOrganizationWhere(user) },
+    });
+    if (!existing) throw new NotFoundException('Branch not found.');
+    return this.prisma.organizationBranch.update({
+      where: { id },
+      data: { isActive: active },
+    });
+  }
+
+  async getAttendanceSettings(input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['company.settings.view', 'company.settings.manage', 'hr.view', 'hr.manage']);
+    const organizationId = this.resolveScopedOrganizationId(input, user);
+    return this.attendancePolicy(organizationId);
+  }
+
+  async updateAttendanceSettings(input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['company.settings.manage', 'hr.manage']);
+    const organizationId = this.resolveScopedOrganizationId(input, user);
+    const data = this.attendanceSettingsData(input);
+    const settings = await this.prisma.organizationAttendanceSettings.upsert({
+      where: { organizationId },
+      create: { organizationId, ...data },
+      update: data,
+    });
+    await this.recordActivity(
+      user,
+      OperationsModule.HR,
+      'OrganizationAttendanceSettings',
+      settings.id,
+      'UPDATED',
+      'Attendance policy updated',
+      organizationId,
+      undefined,
+      organizationId,
+    );
+    return settings;
+  }
+
   async listHrEmployees(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
@@ -240,14 +346,26 @@ export class OperationsService {
     this.ensureHashService();
 
     const organizationId = this.resolveEmployeeOrganizationId(input, user);
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, type: true, country: true },
+    });
+    if (!organization) {
+      throw new BadRequestException('organizationId is invalid.');
+    }
     const email = this.requiredEmail(input.email);
-    const phone = normalizeOptionalPhoneOrThrow(input.phone);
+    const phone = normalizeOptionalPhoneOrThrow(
+      input.phone,
+      'phone',
+      this.optional(input.phoneCountry) ?? organization.country,
+    );
     await this.assertEmployeePhoneAvailable(phone);
     const roleName = this.employeeRoleName(input.role);
+    this.assertEmployeeRoleAssignable(roleName, user);
     const requestedPermissions = this.permissionKeys(input.permissions);
     await this.assertAssignableEmployeePermissions(requestedPermissions, user);
-    const password = this.optional(input.temporaryPassword ?? input.password);
-    if (!password || password.length < 8) {
+    const password = this.optional(input.temporaryPassword ?? input.password) ?? '123456';
+    if (password !== '123456' && password.length < 8) {
       throw new BadRequestException('temporaryPassword must be at least 8 characters.');
     }
     const passwordHash = await this.hashService!.hash(password);
@@ -294,6 +412,7 @@ export class OperationsService {
             phone,
             userRole: this.userRoleForEmployeeRole(roleName),
             isActive: status === HrEmployeeStatus.ACTIVE,
+            mustChangePassword: true,
           },
         }));
 
@@ -308,6 +427,7 @@ export class OperationsService {
             phone: phone ?? existingUser.phone,
             userRole: this.userRoleForEmployeeRole(roleName),
             isActive: status === HrEmployeeStatus.ACTIVE,
+            mustChangePassword: true,
           },
         });
       }
@@ -368,7 +488,15 @@ export class OperationsService {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.employees.update', 'hr.manage']);
     const existing = await this.assertExists('hrEmployee', id, user);
-    const phone = normalizeOptionalPhoneOrThrow(input.phone);
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: existing.organizationId },
+      select: { country: true },
+    });
+    const phone = normalizeOptionalPhoneOrThrow(
+      input.phone,
+      'phone',
+      this.optional(input.phoneCountry) ?? organization?.country,
+    );
     await this.assertEmployeePhoneAvailable(phone, existing.userId ?? undefined);
     const record = await this.prisma.hrEmployee.update({
       where: { id },
@@ -475,12 +603,16 @@ export class OperationsService {
     const temporaryPassword = generated
       ? this.generateTemporaryPassword()
       : this.required(input.temporaryPassword ?? input.password, 'temporaryPassword');
-    if (temporaryPassword.length < 8) {
+    if (temporaryPassword !== '123456' && temporaryPassword.length < 8) {
       throw new BadRequestException('temporaryPassword must be at least 8 characters.');
     }
     await this.prisma.user.update({
       where: { id: employee.userId },
-      data: { passwordHash: await this.hashService!.hash(temporaryPassword) },
+      data: {
+        passwordHash: await this.hashService!.hash(temporaryPassword),
+        mustChangePassword: true,
+        isActive: true,
+      },
     });
     await this.recordActivity(
       user,
@@ -564,6 +696,7 @@ export class OperationsService {
       throw new BadRequestException('Employee is not linked to a login user.');
     }
     const roleName = this.employeeRoleName(input.role);
+    this.assertEmployeeRoleAssignable(roleName, user);
     const role = await this.ensureEmployeeRole(
       this.prisma,
       employee.organizationId,
@@ -790,15 +923,17 @@ export class OperationsService {
     }
 
     const now = new Date();
+    const late = this.calculateLatePenalty(date, now, policy);
     const record = await this.prisma.hrAttendanceRecord.create({
       data: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
         date,
         checkInAt: now,
-        status: HrAttendanceStatus.PRESENT,
+        status: late.minutesLate > 0 ? HrAttendanceStatus.LATE : HrAttendanceStatus.PRESENT,
         note: this.optional(input.note),
         attendanceSource: AttendanceSource.SELF_SERVICE,
+        branchId: this.optional(input.branchId),
         ...this.attendanceEvidenceData(input, 'checkIn'),
         verificationStatus: verification.status,
         verificationFailureReasons: verification.reasons.length
@@ -806,6 +941,13 @@ export class OperationsService {
           : undefined,
         dvrVerificationStatus: verification.dvrStatus,
         dvrReferenceId: this.optional(input.dvrReferenceId),
+        minutesLate: late.minutesLate,
+        lateLevel: late.lateLevel,
+        penaltyType: late.penaltyType,
+        penaltyValue: late.penaltyValue,
+        requiresReview:
+          late.requiresReview ||
+          verification.status === AttendanceVerificationStatus.PENDING_REVIEW,
       },
       include: { employee: true },
     });
@@ -2613,6 +2755,74 @@ export class OperationsService {
     return operationOrganizationWhere(user);
   }
 
+  private organizationScopedWhere(input: any, user: AuthenticatedRequestUser) {
+    return { organizationId: this.resolveScopedOrganizationId(input, user) };
+  }
+
+  private resolveScopedOrganizationId(input: any, user: AuthenticatedRequestUser) {
+    const organizationId = this.optional(input.organizationId);
+    if (isPlatformUser(user)) {
+      const scoped = organizationId ?? user.organizationId;
+      if (!scoped) throw new BadRequestException('organizationId is required.');
+      return scoped;
+    }
+    if (organizationId && organizationId !== user.organizationId) {
+      throw new ForbiddenException('Organization scope violation.');
+    }
+    return requireOperationOrganizationId(user);
+  }
+
+  private attendanceSettingsData(input: any) {
+    return {
+      requireLocation: Boolean(input.requireLocation),
+      allowedLatitude: this.optionalNumber(input.allowedLatitude),
+      allowedLongitude: this.optionalNumber(input.allowedLongitude),
+      allowedRadiusMeters: this.positiveInt(input.allowedRadiusMeters, 30),
+      exactRadiusMeters: this.positiveInt(input.exactRadiusMeters, 30),
+      expandedRadiusMeters: this.positiveInt(input.expandedRadiusMeters, 1000),
+      gracePeriodMinutes: this.nonNegativeInt(input.gracePeriodMinutes, 10),
+      firstLateSliceMinutes: this.positiveInt(input.firstLateSliceMinutes, 15),
+      firstLatePenaltyType: this.enumValue(
+        AttendancePenaltyType,
+        input.firstLatePenaltyType,
+        AttendancePenaltyType.MARK_LATE,
+      ),
+      firstLatePenaltyValue: this.optional(input.firstLatePenaltyValue),
+      secondLateSliceMinutes: this.positiveInt(input.secondLateSliceMinutes, 30),
+      secondLatePenaltyType: this.enumValue(
+        AttendancePenaltyType,
+        input.secondLatePenaltyType,
+        AttendancePenaltyType.MANUAL_REVIEW,
+      ),
+      secondLatePenaltyValue: this.optional(input.secondLatePenaltyValue),
+      beyondSecondSlicePenaltyType: this.enumValue(
+        AttendancePenaltyType,
+        input.beyondSecondSlicePenaltyType,
+        AttendancePenaltyType.MANUAL_REVIEW,
+      ),
+      requireWifi: Boolean(input.requireWifi),
+      allowedWifiSsids: this.stringList(input.allowedWifiSsids),
+      allowedWifiBssids: this.stringList(input.allowedWifiBssids).map((value) => normalizeWifiId(value) ?? value),
+      blockDeveloperOptions: input.blockDeveloperOptions === undefined ? true : Boolean(input.blockDeveloperOptions),
+      blockUsbDebugging: input.blockUsbDebugging === undefined ? true : Boolean(input.blockUsbDebugging),
+      requirePhoto: Boolean(input.requirePhoto),
+      requireDvrReview: Boolean(input.requireDvrReview),
+      allowWebCheckIn: input.allowWebCheckIn === undefined ? true : Boolean(input.allowWebCheckIn),
+      allowMobileCheckIn: input.allowMobileCheckIn === undefined ? true : Boolean(input.allowMobileCheckIn),
+      allowExpandedRadiusWithReview:
+        input.allowExpandedRadiusWithReview === undefined
+          ? true
+          : Boolean(input.allowExpandedRadiusWithReview),
+      webWifiPolicy: this.enumValue(
+        WebWifiPolicy,
+        input.webWifiPolicy,
+        WebWifiPolicy.MANUAL_REVIEW,
+      ),
+      workStartTime: this.timeValue(input.workStartTime, '09:00'),
+      workEndTime: this.timeValue(input.workEndTime, '17:00'),
+    };
+  }
+
   private async findEmployeeForMutation(
     id: string,
     user: AuthenticatedRequestUser,
@@ -2686,6 +2896,15 @@ export class OperationsService {
       throw new BadRequestException(`Unsupported employee role: ${role}`);
     }
     return role;
+  }
+
+  private assertEmployeeRoleAssignable(
+    roleName: string,
+    user: AuthenticatedRequestUser,
+  ) {
+    if (roleName.startsWith('platform_') && !isPlatformUser(user)) {
+      throw new ForbiddenException('Company users cannot assign platform roles.');
+    }
   }
 
   private userRoleForEmployeeRole(roleName: string) {
@@ -2907,6 +3126,12 @@ export class OperationsService {
         record?.dvrVerificationStatus ?? DvrVerificationStatus.NOT_REQUIRED,
       dvrReferenceId: record?.dvrReferenceId ?? null,
       attendanceSource: record?.attendanceSource ?? null,
+      branchId: record?.branchId ?? null,
+      minutesLate: record?.minutesLate ?? null,
+      lateLevel: record?.lateLevel ?? null,
+      penaltyType: record?.penaltyType ?? null,
+      penaltyValue: record?.penaltyValue ?? null,
+      requiresReview: Boolean(record?.requiresReview),
       checkInLatitude: record?.checkInLatitude ?? null,
       checkInLongitude: record?.checkInLongitude ?? null,
       checkOutLatitude: record?.checkOutLatitude ?? null,
@@ -2947,6 +3172,66 @@ export class OperationsService {
     return existing ? `${existing}\n${note}`.slice(0, 2000) : note;
   }
 
+  private calculateLatePenalty(date: Date, checkInAt: Date, policy: any) {
+    const [hours, minutes] = String(policy.workStartTime ?? '09:00')
+      .split(':')
+      .map(Number);
+    const scheduled = new Date(date);
+    scheduled.setHours(hours || 9, minutes || 0, 0, 0);
+    const minutesLate = Math.max(
+      0,
+      Math.round((checkInAt.getTime() - scheduled.getTime()) / 60000),
+    );
+    const grace = Number(policy.gracePeriodMinutes ?? 10);
+    const first = Number(policy.firstLateSliceMinutes ?? 15);
+    const second = Number(policy.secondLateSliceMinutes ?? 30);
+
+    if (minutesLate === 0) {
+      return {
+        minutesLate,
+        lateLevel: AttendanceLateLevel.ON_TIME,
+        penaltyType: AttendancePenaltyType.NONE,
+        penaltyValue: null,
+        requiresReview: false,
+      };
+    }
+    if (minutesLate <= grace) {
+      return {
+        minutesLate,
+        lateLevel: AttendanceLateLevel.GRACE,
+        penaltyType: AttendancePenaltyType.NONE,
+        penaltyValue: null,
+        requiresReview: false,
+      };
+    }
+    if (minutesLate <= grace + first) {
+      return {
+        minutesLate,
+        lateLevel: AttendanceLateLevel.FIRST_SLICE,
+        penaltyType: policy.firstLatePenaltyType ?? AttendancePenaltyType.MARK_LATE,
+        penaltyValue: policy.firstLatePenaltyValue ?? null,
+        requiresReview: policy.firstLatePenaltyType === AttendancePenaltyType.MANUAL_REVIEW,
+      };
+    }
+    if (minutesLate <= grace + first + second) {
+      return {
+        minutesLate,
+        lateLevel: AttendanceLateLevel.SECOND_SLICE,
+        penaltyType: policy.secondLatePenaltyType ?? AttendancePenaltyType.MANUAL_REVIEW,
+        penaltyValue: policy.secondLatePenaltyValue ?? null,
+        requiresReview: true,
+      };
+    }
+    return {
+      minutesLate,
+      lateLevel: AttendanceLateLevel.BEYOND_SECOND,
+      penaltyType:
+        policy.beyondSecondSlicePenaltyType ?? AttendancePenaltyType.MANUAL_REVIEW,
+      penaltyValue: null,
+      requiresReview: true,
+    };
+  }
+
   private async attendancePolicy(organizationId: string) {
     const settings =
       await this.prisma.organizationAttendanceSettings.findUnique({
@@ -2959,6 +3244,16 @@ export class OperationsService {
         allowedLatitude: null,
         allowedLongitude: null,
         allowedRadiusMeters: null,
+        exactRadiusMeters: 30,
+        expandedRadiusMeters: 1000,
+        gracePeriodMinutes: 10,
+        firstLateSliceMinutes: 15,
+        firstLatePenaltyType: AttendancePenaltyType.MARK_LATE,
+        firstLatePenaltyValue: null,
+        secondLateSliceMinutes: 30,
+        secondLatePenaltyType: AttendancePenaltyType.MANUAL_REVIEW,
+        secondLatePenaltyValue: null,
+        beyondSecondSlicePenaltyType: AttendancePenaltyType.MANUAL_REVIEW,
         requireWifi: false,
         allowedWifiSsids: [],
         allowedWifiBssids: [],
@@ -2966,6 +3261,12 @@ export class OperationsService {
         blockUsbDebugging: true,
         requirePhoto: false,
         requireDvrReview: false,
+        allowWebCheckIn: true,
+        allowMobileCheckIn: true,
+        allowExpandedRadiusWithReview: true,
+        webWifiPolicy: WebWifiPolicy.MANUAL_REVIEW,
+        workStartTime: '09:00',
+        workEndTime: '17:00',
       }
     );
   }
@@ -2987,6 +3288,7 @@ export class OperationsService {
           phase === 'checkIn' ? 'checkInPhotoFileId' : 'checkOutPhotoFileId'
         ],
     );
+    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
     const developerOptionsEnabled = input.developerOptionsEnabled === true;
     const usbDebuggingEnabled = input.usbDebuggingEnabled === true;
 
@@ -2996,27 +3298,46 @@ export class OperationsService {
     if (policy.blockUsbDebugging && usbDebuggingEnabled) {
       reasons.push('USB_DEBUGGING_ENABLED');
     }
+    if (policy.allowWebCheckIn === false && isWeb) {
+      reasons.push('WEB_CHECK_IN_NOT_ALLOWED');
+    }
     if (policy.requireLocation) {
       if (latitude === undefined || longitude === undefined) {
         reasons.push('LOCATION_REQUIRED');
       } else if (
         typeof policy.allowedLatitude !== 'number' ||
         typeof policy.allowedLongitude !== 'number' ||
-        !policy.allowedRadiusMeters
+        !(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters)
       ) {
         reasons.push('LOCATION_POLICY_NOT_CONFIGURED');
-      } else if (
-        distanceMeters(
+      } else {
+        const distance = distanceMeters(
           latitude,
           longitude,
           policy.allowedLatitude,
           policy.allowedLongitude,
-        ) > Number(policy.allowedRadiusMeters)
-      ) {
-        reasons.push('OUTSIDE_ALLOWED_LOCATION');
+        );
+        const exactRadius = Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30);
+        const expandedRadius = Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? exactRadius);
+        if (distance > expandedRadius) {
+          reasons.push('OUTSIDE_ALLOWED_LOCATION');
+        } else if (distance > exactRadius) {
+          if (policy.allowExpandedRadiusWithReview) {
+            reasons.push('EXPANDED_LOCATION_REVIEW');
+          } else {
+            reasons.push('OUTSIDE_ALLOWED_LOCATION');
+          }
+        }
       }
     }
     if (policy.requireWifi) {
+      if (isWeb) {
+        if (policy.webWifiPolicy === WebWifiPolicy.BLOCK) {
+          reasons.push('WEB_WIFI_NOT_AVAILABLE');
+        } else if (policy.webWifiPolicy === WebWifiPolicy.MANUAL_REVIEW) {
+          reasons.push('WEB_WIFI_MANUAL_REVIEW');
+        }
+      }
       const allowedSsids = new Set(
         (policy.allowedWifiSsids ?? [])
           .map((value: string) => value.trim())
@@ -3029,7 +3350,9 @@ export class OperationsService {
       );
       const ssidAllowed = Boolean(wifiSsid && allowedSsids.has(wifiSsid));
       const bssidAllowed = Boolean(wifiBssid && allowedBssids.has(wifiBssid));
-      if (!wifiSsid && !wifiBssid) {
+      if (isWeb && policy.webWifiPolicy !== WebWifiPolicy.BLOCK) {
+        // Browsers cannot reliably expose SSID/BSSID; policy above decides review behavior.
+      } else if (!wifiSsid && !wifiBssid) {
         reasons.push('WIFI_REQUIRED');
       } else if (!ssidAllowed && !bssidAllowed) {
         reasons.push('WIFI_NOT_ALLOWED');
@@ -3053,8 +3376,15 @@ export class OperationsService {
     const dvrStatus = policy.requireDvrReview
       ? DvrVerificationStatus.PENDING
       : DvrVerificationStatus.NOT_REQUIRED;
-    const status = reasons.length
+    const reviewReasons = new Set([
+      'EXPANDED_LOCATION_REVIEW',
+      'WEB_WIFI_MANUAL_REVIEW',
+    ]);
+    const hardFailures = reasons.filter((reason) => !reviewReasons.has(reason));
+    const status = hardFailures.length
       ? AttendanceVerificationStatus.REJECTED
+      : reasons.length
+        ? AttendanceVerificationStatus.PENDING_REVIEW
       : policy.requireDvrReview
         ? AttendanceVerificationStatus.PENDING_REVIEW
         : AttendanceVerificationStatus.VERIFIED;
@@ -3063,7 +3393,7 @@ export class OperationsService {
       status,
       dvrStatus,
       reasons,
-      reject: reasons.length > 0,
+      reject: hardFailures.length > 0,
     };
   }
 
@@ -3137,6 +3467,40 @@ export class OperationsService {
       if (Number.isFinite(number)) return number;
     }
     return undefined;
+  }
+
+  private positiveInt(value: unknown, fallback: number) {
+    const number = this.optionalNumber(value);
+    if (number === undefined) return fallback;
+    return Math.max(1, Math.round(number));
+  }
+
+  private nonNegativeInt(value: unknown, fallback: number) {
+    const number = this.optionalNumber(value);
+    if (number === undefined) return fallback;
+    return Math.max(0, Math.round(number));
+  }
+
+  private stringList(value: unknown) {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+
+  private timeValue(value: unknown, fallback: string) {
+    const text = this.optional(value);
+    if (!text) return fallback;
+    if (!text.match(/^\d{2}:\d{2}$/)) {
+      throw new BadRequestException('time must use HH:mm format.');
+    }
+    return text;
   }
 
   private attendanceMetadata(

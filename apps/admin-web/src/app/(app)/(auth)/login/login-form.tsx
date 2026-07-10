@@ -41,6 +41,10 @@ export function LoginForm() {
 
   async function onSubmit(values: LoginFormValues) {
     const session = await login.mutateAsync(values);
+    if (session.user.mustChangePassword) {
+      router.replace("/change-password");
+      return;
+    }
     router.replace(getRoleHome(session.user.role, session.organization?.type, session.permissions));
   }
 

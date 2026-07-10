@@ -54,6 +54,7 @@ export type HrEmployeeInput = {
   temporaryPassword?: string;
   status?: "ACTIVE" | "INACTIVE";
   organizationId?: string;
+  phoneCountry?: string;
 };
 
 export function listHrEmployeesApi(input?: { organizationId?: string }) {

@@ -4,7 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { normalizeOptionalPhoneOrThrow, normalizePhone, phonesMatch } from '../../common/phone-normalization';
+import { normalizeOptionalPhoneOrThrow, normalizePhone, normalizePhoneForCountry, phonesMatch } from '../../common/phone-normalization';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -238,6 +238,52 @@ export class AuthService {
     return { success: true };
   }
 
+  async changePassword(
+    currentUser: AuthenticatedRequestUser,
+    dto: { currentPassword?: string; newPassword?: string },
+  ) {
+    if (!dto.currentPassword || !dto.newPassword) {
+      throw new BadRequestException('currentPassword and newPassword are required.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      include: { organization: true },
+    });
+
+    if (!user?.isActive || !this.organizationCanLogin(user.organization)) {
+      throw new UnauthorizedException('User is not active.');
+    }
+
+    const passwordValid = await this.hashService.verify(
+      dto.currentPassword,
+      user.passwordHash,
+    );
+    if (!passwordValid) {
+      throw new UnauthorizedException('Current password is invalid.');
+    }
+
+    this.assertNewPassword(dto.newPassword, user);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await this.hashService.hash(dto.newPassword),
+        mustChangePassword: false,
+      },
+    });
+
+    await this.auditLogs.record({
+      action: 'auth.password_changed',
+      entityType: 'User',
+      entityId: user.id,
+      actor: currentUser,
+      organizationId: user.organizationId,
+    });
+
+    return { passwordChanged: true };
+  }
+
   async me(currentUser: AuthenticatedRequestUser): Promise<CurrentUserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.userId },
@@ -290,6 +336,7 @@ export class AuthService {
       organizationType: user.organization?.type ?? null,
       role,
       permissions,
+      mustChangePassword: Boolean(user.mustChangePassword),
     };
     const accessToken = this.jwtService.signAccessToken(payload);
     const refreshToken = this.jwtService.signRefreshToken(payload);
@@ -326,6 +373,7 @@ export class AuthService {
       lastName: user.lastName,
       phone: user.phone,
       role: this.roleName(user),
+      mustChangePassword: Boolean(user.mustChangePassword),
     };
   }
 
@@ -336,6 +384,7 @@ export class AuthService {
       slug: organization?.slug ?? null,
       type: organization?.type ?? null,
       status: organization?.status ?? null,
+      country: organization?.country ?? null,
     };
   }
 
@@ -433,15 +482,32 @@ export class AuthService {
     }
 
     const normalizedPhone = normalizePhone(identifier);
-    if (!normalizedPhone) return null;
+    const egyptPhone = normalizePhoneForCountry(identifier, 'Egypt');
+    if (!normalizedPhone && !egyptPhone) return null;
 
     const users = await this.prisma.user.findMany({
       where: { phone: { not: null } },
       include,
     });
-    const matches = users.filter((user) => phonesMatch(user.phone, normalizedPhone));
+    const matches = users.filter(
+      (user) =>
+        phonesMatch(user.phone, normalizedPhone) ||
+        phonesMatch(user.phone, egyptPhone),
+    );
 
     return matches.length === 1 ? matches[0] : null;
+  }
+
+  private assertNewPassword(password: string, user: any) {
+    if (password.length < 8) {
+      throw new BadRequestException('newPassword must be at least 8 characters.');
+    }
+    if (password === '123456') {
+      throw new BadRequestException('newPassword cannot be the temporary password.');
+    }
+    if (password === user.email || password === user.phone) {
+      throw new BadRequestException('newPassword cannot match email or phone.');
+    }
   }
 
   private async assertPhoneAvailable(phone: string | undefined) {

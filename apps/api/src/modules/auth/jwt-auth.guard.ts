@@ -55,6 +55,13 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Employee is not active.');
     }
 
+    if (
+      user.mustChangePassword &&
+      !this.passwordChangeAllowedPath(request.path)
+    ) {
+      throw new UnauthorizedException('Password change is required.');
+    }
+
     const permissions =
       user.role?.permissions.map((rolePermission) => rolePermission.permission.key) ??
       payload.permissions;
@@ -65,8 +72,13 @@ export class JwtAuthGuard implements CanActivate {
       organizationType: user.organization?.type ?? payload.organizationType,
       role: user.role?.name ?? payload.role,
       permissions,
+      mustChangePassword: user.mustChangePassword,
     };
 
     return true;
+  }
+
+  private passwordChangeAllowedPath(path: string) {
+    return ['/auth/me', '/auth/logout', '/auth/change-password'].includes(path);
   }
 }

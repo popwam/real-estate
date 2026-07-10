@@ -94,6 +94,20 @@ describe('AuthService', () => {
     );
   });
 
+  it('includes the must-change-password flag in login responses', async () => {
+    const { service, prisma } = makeService();
+    prisma.user.findUnique.mockResolvedValue({
+      ...activeUser,
+      mustChangePassword: true,
+    });
+
+    await expect(
+      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+    ).resolves.toMatchObject({
+      user: { mustChangePassword: true },
+    });
+  });
+
   it('uses a generic error for wrong passwords', async () => {
     const { service, hashService } = makeService();
     hashService.verify.mockResolvedValue(false);
@@ -153,5 +167,44 @@ describe('AuthService', () => {
     await expect(
       service.login({ identifier: '+201001234567', password: 'secret-password' }),
     ).rejects.toThrow('Invalid login details.');
+  });
+
+  it('changes a temporary password and clears the forced-change flag', async () => {
+    const { service, prisma, hashService, auditLogs } = makeService();
+    hashService.hash.mockResolvedValue('new-hash');
+    prisma.user.findUnique.mockResolvedValue({
+      ...activeUser,
+      mustChangePassword: true,
+    });
+
+    await expect(
+      service.changePassword(
+        { userId: activeUser.id, organizationId: activeUser.organizationId } as any,
+        {
+          currentPassword: 'temporary-password',
+          newPassword: 'private-password-1',
+        },
+      ),
+    ).resolves.toEqual({ passwordChanged: true });
+
+    expect(hashService.verify).toHaveBeenCalledWith(
+      'temporary-password',
+      'hash',
+    );
+    expect(hashService.hash).toHaveBeenCalledWith('private-password-1');
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          passwordHash: 'new-hash',
+          mustChangePassword: false,
+        },
+      }),
+    );
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'auth.password_changed',
+      }),
+    );
+    expect(auditLogs.record.mock.calls[0][0]).not.toHaveProperty('metadata');
   });
 });

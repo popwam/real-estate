@@ -51,11 +51,17 @@ export function EmployeeForm({
     jobTitle: employee?.roleTitle ?? "",
     departmentId: employee?.departmentId ?? "",
     role: initialRole(employee?.user?.role?.name),
-    temporaryPassword: "",
+    temporaryPassword: mode === "create" ? "123456" : "",
     status: employee?.status ?? "ACTIVE",
     organizationId: employee?.organization?.id ?? "",
+    phoneCountry: data?.organization?.country ?? "Egypt",
     permissions: existingPermissions,
   }));
+  const selectedOrganizationCountry =
+    organizations.data?.find((organization) => organization.id === values.organizationId)?.country ??
+    data?.organization?.country ??
+    "Egypt";
+  const roleOptions = EMPLOYEE_ROLE_OPTIONS.filter((role) => isPlatform || !role.startsWith("platform_"));
 
   const visibleGroups = EMPLOYEE_PERMISSION_GROUPS.filter(
     (group) => !("platformOnly" in group) || !group.platformOnly || isPlatform,
@@ -86,6 +92,7 @@ export function EmployeeForm({
       temporaryPassword: values.temporaryPassword || undefined,
       departmentId: values.departmentId || undefined,
       organizationId: isPlatform ? values.organizationId || undefined : undefined,
+      phoneCountry: values.phoneCountry || selectedOrganizationCountry,
     });
   }
 
@@ -99,20 +106,36 @@ export function EmployeeForm({
                 id="organizationId"
                 className="ui-input"
                 value={values.organizationId ?? ""}
-                onChange={(event) => update("organizationId", event.target.value)}
+                onChange={(event) => {
+                  const organization = organizations.data?.find((item) => item.id === event.target.value);
+                  setValues((current) => ({
+                    ...current,
+                    organizationId: event.target.value,
+                    phoneCountry: organization?.country ?? current.phoneCountry,
+                  }));
+                }}
                 required
               >
                 <option value="">{t("employeeAccess.selectOrganization")}</option>
-                {(organizations.data ?? [])
-                  .filter((organization) => organization.type !== "PLATFORM")
-                  .map((organization) => (
-                    <option key={organization.id} value={organization.id}>
-                      {organization.name}
-                    </option>
-                  ))}
+                {(organizations.data ?? []).map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
               </select>
             </Field>
           ) : null}
+          <Field label={t("employeeAccess.country")} id="phoneCountry">
+            <select
+              id="phoneCountry"
+              className="ui-input"
+              value={values.phoneCountry || selectedOrganizationCountry}
+              onChange={(event) => update("phoneCountry", event.target.value)}
+            >
+              <option value="Egypt">{t("employeeAccess.countryEgypt")}</option>
+              <option value="USA">{t("employeeAccess.countryUsa")}</option>
+            </select>
+          </Field>
           <Field label={t("employeeAccess.firstName")} id="firstName">
             <Input id="firstName" value={values.firstName ?? ""} onChange={(event) => update("firstName", event.target.value)} />
           </Field>
@@ -133,7 +156,7 @@ export function EmployeeForm({
           </Field>
           <Field label={t("employeeAccess.role")} id="role">
             <select id="role" className="ui-input" value={values.role} onChange={(event) => update("role", event.target.value)}>
-              {EMPLOYEE_ROLE_OPTIONS.map((role) => (
+              {roleOptions.map((role) => (
                 <option key={role} value={role}>{t(`employeeAccess.role.${role}`)}</option>
               ))}
             </select>
@@ -167,6 +190,9 @@ export function EmployeeForm({
             </div>
           </Field>
         </div>
+        {mode === "create" ? (
+          <p className="mt-4 text-sm text-[var(--color-muted)]">{t("employeeAccess.mustChangePasswordWarning")}</p>
+        ) : null}
       </DetailCard>
 
       <DetailCard title={t("employeeAccess.permissions")}>
