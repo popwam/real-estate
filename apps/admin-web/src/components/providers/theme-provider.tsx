@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useState } from "react";
 
-export type Theme = "light" | "dark" | "comfort";
-export type FontScale = "normal" | "large" | "extra-large";
+export type Theme = "light" | "dark" | "system" | "comfort";
+export type FontScale = "normal" | "large" | "larger";
 export type InterfaceLocale = "en" | "ar" | "fr";
 
 const THEME_STORAGE_KEY = "popwam-theme";
@@ -20,7 +20,7 @@ type Preferences = {
 };
 
 const defaults: Preferences = {
-  theme: "light",
+  theme: "system",
   fontScale: "normal",
   locale: "en",
 };
@@ -33,16 +33,23 @@ function readPreferences(): Preferences {
   const locale = localStorage.getItem(LOCALE_STORAGE_KEY);
 
   return {
-    theme: theme === "dark" || theme === "comfort" ? theme : "light",
+    theme: theme === "light" || theme === "dark" || theme === "comfort" ? theme : "system",
     fontScale:
-      fontScale === "large" || fontScale === "extra-large" ? fontScale : "normal",
+      fontScale === "large" ? "large" : fontScale === "larger" || fontScale === "extra-large" ? "larger" : "normal",
     locale: locale === "ar" || locale === "fr" ? locale : "en",
   };
 }
 
 function applyPreferences(preferences: Preferences) {
   const root = document.documentElement;
-  root.dataset.theme = preferences.theme;
+  const resolvedTheme =
+    preferences.theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : preferences.theme;
+  root.dataset.theme = resolvedTheme;
+  root.dataset.themePreference = preferences.theme;
   root.dataset.fontScale = preferences.fontScale;
   root.lang = preferences.locale;
   root.dir = preferences.locale === "ar" ? "rtl" : "ltr";
@@ -75,8 +82,13 @@ export function useTheme() {
     };
 
     sync();
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
     window.addEventListener(PREFERENCES_EVENT, sync);
-    return () => window.removeEventListener(PREFERENCES_EVENT, sync);
+    media.addEventListener("change", sync);
+    return () => {
+      window.removeEventListener(PREFERENCES_EVENT, sync);
+      media.removeEventListener("change", sync);
+    };
   }, []);
 
   useEffect(() => {

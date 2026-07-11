@@ -377,6 +377,88 @@ enum HrAttendanceStatus {
   OFF
 }
 
+enum HrTodayStatus {
+  PRESENT
+  LATE
+  ABSENT
+  LEAVE
+  HOLIDAY
+  REMOTE
+  PENDING_REVIEW
+}
+
+enum HrFaceVerificationStatus {
+  NOT_CONFIGURED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum EmployeeIdentifierType {
+  NATIONAL_ID
+  PASSPORT
+  RESIDENCE_ID
+  TAX_ID
+  WORK_PERMIT
+  OTHER
+}
+
+enum EmployeeVerificationStatus {
+  NOT_REVIEWED
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_MANUAL_REVIEW
+}
+
+enum HrDocumentStatus {
+  MISSING
+  PENDING
+  VALID
+  EXPIRED
+  REJECTED
+}
+
+enum HrManualReviewStatus {
+  NOT_REVIEWED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum HrEmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+  TRAINEE
+  TEMPORARY
+  INTERN
+}
+
+enum HrWorkScheduleType {
+  FIXED_OFFICE_HOURS
+  SHIFTS
+  FLEXIBLE
+  REMOTE
+  HYBRID
+}
+
+enum HrPaymentFrequency {
+  MONTHLY
+  WEEKLY
+  BIWEEKLY
+  DAILY
+  HOURLY
+}
+
+enum HrPaymentMethod {
+  BANK_TRANSFER
+  CASH
+  WALLET
+  CHEQUE
+  OTHER
+}
+
 enum AttendanceVerificationStatus {
   VERIFIED
   PENDING_REVIEW
@@ -590,6 +672,11 @@ model Organization {
   crmFollowUpTasks  CrmFollowUpTask[]
   hrDepartments     HrDepartment[]
   hrEmployees       HrEmployee[]
+  hrWorkGroups      HrWorkGroup[]
+  hrTeams           HrTeam[]
+  hrEmployeeDocuments HrEmployeeDocument[]
+  hrEmployeeTransferLogs HrEmployeeTransferLog[]
+  hrEmployeeTitleChangeLogs HrEmployeeTitleChangeLog[]
   hrAttendanceRecords HrAttendanceRecord[]
   attendanceSettings OrganizationAttendanceSettings?
   branches          OrganizationBranch[]
@@ -749,6 +836,12 @@ model User {
   assignedCrmTasks                CrmFollowUpTask[]               @relation("CrmTaskAssignee")
   createdCrmTasks                 CrmFollowUpTask[]               @relation("CrmTaskCreator")
   hrEmployeeProfile               HrEmployee?
+  managedHrEmployees              HrEmployee[]                   @relation("HrEmployeeDirectManager")
+  secondaryManagedHrEmployees     HrEmployee[]                   @relation("HrEmployeeSecondaryManager")
+  managedHrWorkGroups             HrWorkGroupManager[]
+  managedHrTeams                  HrTeam[]                       @relation("HrTeamManager")
+  createdHrEmployeeTransferLogs   HrEmployeeTransferLog[]        @relation("HrTransferLogCreatedBy")
+  createdHrEmployeeTitleChanges   HrEmployeeTitleChangeLog[]     @relation("HrTitleChangeCreatedBy")
   createdAccountingTransactions   AccountingTransaction[]          @relation("AccountingTransactionCreatedBy")
   operationsActivities            OperationsActivity[]             @relation("OperationsActivityActorUser")
   approvedAccountingTransactions  AccountingTransaction[]          @relation("AccountingTransactionApprovedBy")
@@ -1947,6 +2040,8 @@ model OrganizationBranch {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  officeEmployees      HrEmployee[] @relation("HrEmployeeOffice")
+  branchEmployees      HrEmployee[] @relation("HrEmployeeBranch")
   attendanceRecords    HrAttendanceRecord[]
 
   @@unique([organizationId, code])
@@ -1959,6 +2054,66 @@ model HrEmployee {
   organizationId String
   userId         String?              @unique
   departmentId   String?
+  officeId       String?
+  branchId       String?
+  positionId     String?
+  jobLevelId     String?
+  directManagerId String?
+  secondaryManagerId String?
+  workGroupId    String?
+  teamId         String?
+  photoFileId    String?
+  faceReferenceFileId String?
+  faceVerificationConsent Boolean     @default(false)
+  faceVerificationStatus HrFaceVerificationStatus @default(NOT_CONFIGURED)
+  employeeCode   String?
+  legalName      String?
+  displayName    String?
+  localizedNames Json?
+  maritalStatus  String?
+  gender         String?
+  dateOfBirth    DateTime?
+  nationalityCountryCode String?
+  residenceCountryCode String?
+  preferredLanguage String?
+  timezone       String?
+  locale         String?
+  currency       String?
+  workStartDate  DateTime?
+  hireDate       DateTime?
+  isUnderProbation Boolean            @default(false)
+  probationEndDate DateTime?
+  hasDisability  Boolean              @default(false)
+  disabilityStatus String?
+  disabilityNotes String?
+  employmentType HrEmploymentType?
+  contractType   String?
+  jobTitle       String?
+  workScheduleType HrWorkScheduleType?
+  workScheduleId String?
+  shiftGroupId   String?
+  attendanceProfileId String?
+  leaveProfileId String?
+  breakProfileId String?
+  allowedAttendanceLocationId String?
+  exactRadiusMeters Int?
+  expandedRadiusMeters Int?
+  webCheckInAllowed Boolean           @default(true)
+  mobileCheckInAllowed Boolean        @default(true)
+  requireLivePhoto Boolean            @default(false)
+  requireFaceVerification Boolean     @default(false)
+  requireDvrReview Boolean            @default(false)
+  webWifiPolicy WebWifiPolicy?
+  remoteWorkAllowed Boolean           @default(false)
+  holidayWorkPolicy String?
+  payrollProfileId String?
+  allowancesProfileId String?
+  deductionsProfileId String?
+  salaryAmount Decimal?               @db.Decimal(14, 2)
+  salaryCurrency String?
+  paymentFrequency HrPaymentFrequency?
+  paymentMethod HrPaymentMethod?
+  loginEnabled   Boolean              @default(true)
   name           String
   email          String?
   phone          String?
@@ -1969,11 +2124,161 @@ model HrEmployee {
   organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   department     HrDepartment?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  office         OrganizationBranch?  @relation("HrEmployeeOffice", fields: [officeId], references: [id], onDelete: SetNull)
+  branch         OrganizationBranch?  @relation("HrEmployeeBranch", fields: [branchId], references: [id], onDelete: SetNull)
+  directManager  User?                @relation("HrEmployeeDirectManager", fields: [directManagerId], references: [id], onDelete: SetNull)
+  secondaryManager User?              @relation("HrEmployeeSecondaryManager", fields: [secondaryManagerId], references: [id], onDelete: SetNull)
+  workGroup      HrWorkGroup?         @relation(fields: [workGroupId], references: [id], onDelete: SetNull)
+  team           HrTeam?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  identifiers    EmployeeIdentifier[]
+  documents      HrEmployeeDocument[]
+  transferLogs   HrEmployeeTransferLog[]
+  titleChangeLogs HrEmployeeTitleChangeLog[]
   attendance     HrAttendanceRecord[]
 
+  @@unique([organizationId, employeeCode])
   @@index([organizationId, status])
   @@index([departmentId, status])
+  @@index([officeId])
+  @@index([branchId])
+  @@index([workGroupId])
+  @@index([teamId])
   @@map("hr_employees")
+}
+
+model EmployeeIdentifier {
+  id                 String                     @id @default(cuid())
+  employeeId         String
+  type               EmployeeIdentifierType
+  countryCode        String?
+  value              String
+  expiresAt          DateTime?
+  isPrimary          Boolean                    @default(false)
+  verificationStatus EmployeeVerificationStatus @default(NOT_REVIEWED)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  employee           HrEmployee                 @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, isPrimary])
+  @@map("employee_identifiers")
+}
+
+model HrWorkGroup {
+  id                          String                 @id @default(cuid())
+  organizationId              String
+  name                        String
+  workScheduleId              String?
+  allowedAttendanceLocationId String?
+  attendanceProfileId         String?
+  isActive                    Boolean                @default(true)
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+  organization                Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  managers                    HrWorkGroupManager[]
+  employees                   HrEmployee[]
+  teams                       HrTeam[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("hr_work_groups")
+}
+
+model HrWorkGroupManager {
+  workGroupId String
+  userId      String
+  createdAt   DateTime    @default(now())
+  workGroup   HrWorkGroup @relation(fields: [workGroupId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workGroupId, userId])
+  @@map("hr_work_group_managers")
+}
+
+model HrTeam {
+  id             String       @id @default(cuid())
+  organizationId String
+  workGroupId    String?
+  managerId      String?
+  name           String
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workGroup      HrWorkGroup? @relation(fields: [workGroupId], references: [id], onDelete: SetNull)
+  manager        User?        @relation("HrTeamManager", fields: [managerId], references: [id], onDelete: SetNull)
+  employees      HrEmployee[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@index([workGroupId])
+  @@map("hr_teams")
+}
+
+model HrEmployeeDocument {
+  id                 String               @id @default(cuid())
+  organizationId     String
+  employeeId         String
+  documentType       String
+  fileId             String?
+  status             HrDocumentStatus     @default(MISSING)
+  expiresAt          DateTime?
+  aiReviewStatus     EmployeeVerificationStatus @default(NOT_REVIEWED)
+  manualReviewStatus HrManualReviewStatus @default(NOT_REVIEWED)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee           HrEmployee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId, expiresAt])
+  @@map("hr_employee_documents")
+}
+
+model HrEmployeeTransferLog {
+  id               String       @id @default(cuid())
+  organizationId   String
+  employeeId       String
+  fromOfficeId     String?
+  fromDepartmentId String?
+  fromPositionId   String?
+  fromManagerId    String?
+  toOfficeId       String?
+  toDepartmentId   String?
+  toPositionId     String?
+  toManagerId      String?
+  reason           String?
+  effectiveDate    DateTime     @default(now())
+  createdById      String?
+  createdAt        DateTime     @default(now())
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee         HrEmployee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdBy        User?        @relation("HrTransferLogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, effectiveDate])
+  @@index([employeeId, effectiveDate])
+  @@map("hr_employee_transfer_logs")
+}
+
+model HrEmployeeTitleChangeLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  employeeId     String
+  fromTitle      String?
+  fromPositionId String?
+  fromJobLevelId String?
+  toTitle        String?
+  toPositionId   String?
+  toJobLevelId   String?
+  effectiveDate  DateTime     @default(now())
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee       HrEmployee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdBy      User?        @relation("HrTitleChangeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, effectiveDate])
+  @@index([employeeId, effectiveDate])
+  @@map("hr_employee_title_change_logs")
 }
 
 model HrAttendanceRecord {

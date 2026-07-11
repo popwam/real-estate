@@ -5,6 +5,9 @@ export const PLATFORM_ROLES: UserRole[] = [
   "platform_admin",
   "platform_support",
   "platform_auditor",
+  "platform_hr",
+  "platform_sales",
+  "platform_admin_limited",
 ];
 
 export const DEVELOPER_ROLES: UserRole[] = [
@@ -29,7 +32,11 @@ export const BROKERAGE_ROLES: UserRole[] = [
 ];
 
 export function hasPermission(session: Pick<MeResponse, "permissions"> | undefined, permission: string) {
-  return Boolean(session?.permissions.includes(permission));
+  if (!session) return false;
+  if (session.permissions.includes(permission)) return true;
+  if (permission.startsWith("hr.") && session.permissions.includes("hr.manage")) return true;
+  if (permission.startsWith("hr.") && permission.endsWith(".view") && session.permissions.includes("hr.view")) return true;
+  return false;
 }
 
 export function hasAnyPermission(session: Pick<MeResponse, "permissions"> | undefined, permissions: string[]) {

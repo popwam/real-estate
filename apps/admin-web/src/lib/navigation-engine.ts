@@ -94,7 +94,12 @@ const defaultPermissionsById: Record<string, string[]> = {
 function itemAllowed(item: NavItem, permissions: string[]) {
   const required = item.permissions ?? defaultPermissionsById[item.id];
   if (!required?.length) return true;
-  return required.some((permission) => permissions.includes(permission));
+  return required.some((permission) => {
+    if (permissions.includes(permission)) return true;
+    if (permission.startsWith("hr.") && permissions.includes("hr.manage")) return true;
+    if (permission.startsWith("hr.") && permission.endsWith(".view") && permissions.includes("hr.view")) return true;
+    return false;
+  });
 }
 
 export function getPrimaryDesktopNavItems(

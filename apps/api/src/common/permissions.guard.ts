@@ -51,7 +51,7 @@ export class PermissionsGuard implements CanActivate {
         ...(await this.loadPermissions(user.userId)),
       ]);
       const hasAllPermissions = requiredPermissions.every((permission) =>
-        permissions.has(permission),
+        this.hasPermission(permissions, permission),
       );
 
       if (!hasAllPermissions) {
@@ -83,5 +83,14 @@ export class PermissionsGuard implements CanActivate {
         (rolePermission) => rolePermission.permission.key,
       ) ?? []
     );
+  }
+
+  private hasPermission(permissions: Set<string>, permission: string) {
+    if (permissions.has(permission)) return true;
+    if (permission.startsWith('hr.') && permissions.has('hr.manage')) return true;
+    if (permission.endsWith('.view') && permissions.has('hr.view')) {
+      return permission.startsWith('hr.');
+    }
+    return false;
   }
 }

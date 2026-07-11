@@ -5,11 +5,13 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { LoadingState } from "@/components/loading-state";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useI18n } from "@/i18n";
 import { getAccessToken } from "@/lib/auth";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
   const isLogin = pathname === "/login";
   const isChangePassword = pathname === "/change-password";
   const hasToken = typeof window !== "undefined" && Boolean(getAccessToken());
@@ -22,6 +24,12 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }, [isLogin, router]);
 
   useEffect(() => {
+    if (!isLogin && currentUser.isError && !getAccessToken()) {
+      router.replace("/login");
+    }
+  }, [currentUser.isError, isLogin, router]);
+
+  useEffect(() => {
     if (!hasToken || isLogin) return;
     if (currentUser.data?.user.mustChangePassword && !isChangePassword) {
       router.replace("/change-password");
@@ -32,11 +40,11 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }, [currentUser.data, hasToken, isChangePassword, isLogin, router]);
 
   if (!isLogin && !hasToken) {
-    return <LoadingState label="Checking session" />;
+    return <LoadingState label={t("auth.checkingSession")} />;
   }
 
   if (hasToken && currentUser.isLoading && !isLogin) {
-    return <LoadingState label="Checking session" />;
+    return <LoadingState label={t("auth.checkingSession")} />;
   }
 
   return <>{children}</>;

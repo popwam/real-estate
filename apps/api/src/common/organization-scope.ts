@@ -9,6 +9,7 @@ const PLATFORM_ROLES = new Set([
   'platform_admin',
   'platform_support',
   'platform_auditor',
+  'platform_hr',
 ]);
 
 export function isPlatformUser(user: AuthenticatedRequestUser | undefined) {

@@ -1,0 +1,19 @@
+## Global HR Foundation / Employee 360
+
+- HR menu structure: added a global Human Resources navigation group with dashboard, employees, work groups, teams, employee actions, employee documents, org chart, transfer log, title changes, requests, attendance, finance, assets, tasks, HR documents, reports, and settings. Existing developer/platform HR URLs remain as aliases where they already existed.
+- HR dashboard: added `GET /hr/summary` and `/hr/dashboard` with real scoped counts for employees, active employees, attendance, missing/expired documents, probation, login access, and face reference photo state. Leave, request, payroll, asset, and report engines are not faked.
+- Employee list filters/cards: added global `/hr/employees` with organization selector for platform roles, advanced filters, 10-per-page pagination, employee cards, attendance status, login state, status, and quick action modals.
+- Employee 360 add/edit/view: upgraded the employee form into a nine-step wizard for personal information, contact/login, country/language, office/job, schedule/attendance, payroll/payment foundation, documents/face verification, permissions/access, and review.
+- Work groups: added Prisma models, API endpoints, and `/hr/work-groups` foundation with managers, schedule/profile fields, employee counts, status, and permission gating.
+- Teams: added Prisma models, API endpoints, and `/hr/teams` foundation with work group, manager, employee count, status, and permission gating.
+- Employee actions: added `/hr/actions` wizard and `POST /hr/employee-actions/apply` for safe supported actions. Unsupported payroll/attendance-schedule engines return coming-soon status without fake state changes.
+- Employee documents: added Prisma model, API endpoints, and `/hr/documents` views for missing/expired documents with manual review and AI-review status fields. No AI approval is claimed.
+- Org chart: added `/hr/org-chart` and `GET /hr/org-chart` as a tree/table foundation using organization, offices, departments, managers, and employees.
+- Transfer log/title changes: added Prisma log models and API pages/endpoints. Employee transfer/title field updates write audit-style HR logs.
+- HR quick actions: added a floating HR quick action menu on HR pages. Implemented add employee; unsupported quick actions are shown as coming soon.
+- Requests/attendance/finance/assets/tasks/settings foundations: added permission-gated foundation pages with sections for the requested engines, without fake payroll, assets, reports, or complex attendance automation.
+- Global employee fields: added flexible global employee fields, localized names, flexible identifiers, country/language settings, office/job links, schedule/attendance policy fields, payroll foundation fields, loginEnabled, face verification consent/status, and document metadata.
+- Privacy/security notes: sensitive identifiers, disability notes, salary/payment fields, face references, and documents are not returned to users without elevated HR permissions. Sensitive updates are audited without logging raw sensitive values. Bank encryption remains a production blocker unless a secure storage/encryption layer is added.
+- i18n: added Admin English, Arabic, and French keys for the new HR pages, fields, filters, actions, statuses, permissions, and foundation sections. `pnpm i18n:audit` reports zero missing Arabic/French keys.
+- Tests: API unit tests pass. Prisma validate/generate, API build, Admin lint/build, Public lint/build, i18n audit, and diff whitespace checks were run.
+- Remaining manual QA: create an employee with login enabled and confirm first login requires password change; create one with login disabled and confirm login is blocked; test platform organization selector; verify role/permission assignment in `/auth/me`; verify transfer/title logs after changing office/department/position/title; review Arabic/French copy in-browser for tone and layout.
