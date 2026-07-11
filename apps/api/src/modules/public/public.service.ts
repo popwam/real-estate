@@ -67,6 +67,80 @@ export class PublicService {
     return this.toPublicOrganization(organization);
   }
 
+  async getCompanyPortal(slug: string) {
+    const normalizedSlug = this.requiredSlug(slug, 'slug');
+    const pathAlias = `/c/${normalizedSlug}`;
+    const organization = await this.prisma.organization.findFirst({
+      where: {
+        OR: [
+          { slug: normalizedSlug },
+          {
+            domainVerifications: {
+              some: {
+                domain: pathAlias,
+                type: 'PATH_ALIAS',
+                status: { in: ['ACTIVE', 'VERIFIED'] as any },
+              },
+            },
+          },
+        ],
+        status: OrganizationStatus.APPROVED,
+      },
+      include: {
+        profile: true,
+        websiteSettings: true,
+        branches: {
+          where: { isActive: true },
+          orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+        },
+        domainVerifications: {
+          where: {
+            OR: [
+              { isDefault: true },
+              { domain: pathAlias },
+              { domain: `${normalizedSlug}.popwam.com` },
+            ],
+          },
+          orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+        },
+      },
+    });
+
+    if (!organization) {
+      throw new NotFoundException('Public company portal not found.');
+    }
+
+    const defaultDomain = organization.domainVerifications[0];
+    return {
+      organization: this.toPublicOrganization(organization as OrganizationWithPublicProfile),
+      offices: organization.branches.map((office) => ({
+        id: office.id,
+        name: office.name,
+        type: office.type,
+        address: office.address,
+        city: office.city,
+        country: office.country,
+        isDefault: office.isDefault,
+      })),
+      domain: defaultDomain
+        ? {
+            id: defaultDomain.id,
+            domain: defaultDomain.domain,
+            type: defaultDomain.type,
+            status: defaultDomain.status,
+            isDefault: defaultDomain.isDefault,
+            redirectMode: defaultDomain.redirectMode,
+            redirectUrl: defaultDomain.redirectUrl,
+            inboundSourceMode: defaultDomain.inboundSourceMode,
+          }
+        : null,
+      portalLinks: {
+        fallbackPath: `/c/${organization.slug}`,
+        systemSubdomain: `${organization.slug}.popwam.com`,
+      },
+    };
+  }
+
   async resolveDomain(host: string) {
     const normalizedHost = this.normalizeHost(host);
     if (!normalizedHost) {

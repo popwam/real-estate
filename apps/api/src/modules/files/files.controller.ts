@@ -5,11 +5,15 @@ import {
   Header,
   Param,
   Post,
+  Query,
   Res,
   StreamableFile,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { CurrentUser } from '../../common/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -35,6 +39,46 @@ export class FilesController {
     @CurrentUser() currentUser: AuthenticatedRequestUser,
   ) {
     return this.filesService.createMetadata(dto, currentUser);
+  }
+
+  @Post('hr-employee-image')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  @ApiOperation({ summary: 'Upload protected HR employee profile or face reference image.' })
+  uploadHrEmployeeImage(
+    @UploadedFile() file: any,
+    @Body('purpose') purpose: string | undefined,
+    @Body('organizationId') organizationId: string | undefined,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.filesService.uploadHrEmployeeImage(
+      file,
+      purpose,
+      organizationId,
+      currentUser,
+    );
+  }
+
+  @Get(':id/hr-preview')
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  @ApiOperation({ summary: 'Preview protected HR employee image.' })
+  async previewHrEmployeeImage(
+    @Param('id') id: string,
+    @Query('purpose') purpose: string | undefined,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.filesService.openHrEmployeeImage(
+      id,
+      purpose,
+      currentUser,
+    );
+    response.type(file.mimeType);
+    if (file.sizeBytes) response.setHeader('Content-Length', file.sizeBytes);
+    response.setHeader('Content-Disposition', 'inline');
+    return new StreamableFile(file.stream);
   }
 
   @Get(':id/preview')

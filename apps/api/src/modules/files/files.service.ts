@@ -135,6 +135,83 @@ export class FilesService {
     };
   }
 
+  async uploadHrEmployeeImage(
+    file: any,
+    purpose: unknown,
+    organizationIdInput: string | undefined,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const organizationId = this.resolveOrganizationId(
+      organizationIdInput,
+      currentUser,
+    );
+    if (!organizationId) {
+      throw new ForbiddenException('Organization is required for HR images.');
+    }
+    const normalizedPurpose = this.hrImagePurpose(purpose);
+    this.assertCanManageHrImage(normalizedPurpose, currentUser);
+
+    if (!file || !file.buffer || !file.size) {
+      throw new BadRequestException('Employee image file is required.');
+    }
+
+    const mimeType = this.hrImageMimeType(file.mimetype);
+    const extension = this.imageExtension(file.originalname, mimeType);
+    const maxSizeBytes = Number(process.env.HR_IMAGE_MAX_BYTES ?? 5 * 1024 * 1024);
+    if (file.size > maxSizeBytes) {
+      throw new BadRequestException('Employee image is too large.');
+    }
+
+    const objectKey = [
+      'hr',
+      'employees',
+      normalizedPurpose,
+      organizationId,
+      currentUser.userId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+    const stored = await this.storage.putObject({
+      objectKey,
+      body: file.buffer,
+      mimeType,
+    });
+
+    const record = await this.prisma.uploadedFile.create({
+      data: {
+        organizationId,
+        uploadedById: currentUser.userId,
+        bucket: 'hr-employee-images',
+        objectKey: stored.objectKey,
+        mimeType,
+        sizeBytes: file.size,
+        checksum: this.optionalString(file.originalname),
+        url: `${stored.provider}:${stored.bucket}`,
+      },
+    });
+
+    await this.auditLogs.record({
+      action: 'hr.employee_image_uploaded',
+      entityType: 'UploadedFile',
+      entityId: record.id,
+      organizationId,
+      actor: currentUser,
+      metadata: {
+        purpose: normalizedPurpose,
+        mimeType,
+        sizeBytes: file.size,
+        storageProvider: stored.provider,
+      },
+    });
+
+    return {
+      fileId: record.id,
+      purpose: normalizedPurpose,
+      mimeType,
+      sizeBytes: file.size,
+      createdAt: record.createdAt,
+    };
+  }
+
   async validateAttendanceEvidencePhoto(
     fileId: string | undefined,
     currentUser: AuthenticatedRequestUser,
@@ -178,6 +255,28 @@ export class FilesService {
       throw new NotFoundException('File not found.');
     }
     this.assertCanAccessAttendanceEvidence(file, currentUser);
+    const object = await this.storage.readObject({
+      bucket: this.storageBucket(file),
+      objectKey: file.objectKey,
+    });
+    return {
+      stream: object.body,
+      mimeType: file.mimeType || 'application/octet-stream',
+      sizeBytes: file.sizeBytes,
+      fileName: this.safeDownloadName(file),
+    };
+  }
+
+  async openHrEmployeeImage(
+    id: string,
+    purpose: unknown,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const file = await this.prisma.uploadedFile.findUnique({ where: { id } });
+    if (!file || (file as any).deletedAt) {
+      throw new NotFoundException('File not found.');
+    }
+    this.assertCanAccessHrImage(file, purpose, currentUser);
     const object = await this.storage.readObject({
       bucket: this.storageBucket(file),
       objectKey: file.objectKey,
@@ -390,6 +489,103 @@ export class FilesService {
       );
     }
     return extension === '.jpeg' ? '.jpg' : extension;
+  }
+
+  private hrImagePurpose(value: unknown) {
+    const purpose = typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (purpose === 'face_reference') return 'face_reference';
+    return 'profile_photo';
+  }
+
+  private hrImageMimeType(value: unknown) {
+    const mimeType =
+      typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (['image/jpeg', 'image/png', 'image/webp'].includes(mimeType))
+      return mimeType;
+    throw new BadRequestException(
+      'Employee image must be a JPEG, PNG, or WebP image.',
+    );
+  }
+
+  private imageExtension(originalName: unknown, mimeType: string) {
+    const extension =
+      typeof originalName === 'string'
+        ? extname(originalName).toLowerCase()
+        : '';
+    const allowed = new Map([
+      ['image/jpeg', new Set(['.jpg', '.jpeg'])],
+      ['image/png', new Set(['.png'])],
+      ['image/webp', new Set(['.webp'])],
+    ]);
+    if (!extension || !allowed.get(mimeType)?.has(extension)) {
+      throw new BadRequestException(
+        'Image extension does not match the image type.',
+      );
+    }
+    return extension === '.jpeg' ? '.jpg' : extension;
+  }
+
+  private assertCanManageHrImage(
+    purpose: 'profile_photo' | 'face_reference',
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const permissions = currentUser.permissions ?? [];
+    const canManage =
+      permissions.includes('hr.employees.update') ||
+      permissions.includes('hr.employees.create') ||
+      permissions.includes('hr.manage');
+    if (!canManage) {
+      throw new ForbiddenException('HR employee update permission is required.');
+    }
+    if (
+      purpose === 'face_reference' &&
+      !(
+        permissions.includes('hr.employees.update') ||
+        permissions.includes('hr.employees.permissions.manage') ||
+        permissions.includes('hr.manage')
+      )
+    ) {
+      throw new ForbiddenException('Face reference photo permission is required.');
+    }
+  }
+
+  private assertCanAccessHrImage(
+    file: {
+      organizationId: string | null;
+      uploadedById: string | null;
+      bucket: string;
+      objectKey: string;
+      mimeType: string | null;
+    },
+    purpose: unknown,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    assertSameOrganizationOrPlatform(currentUser, file.organizationId);
+    const normalizedPurpose = this.hrImagePurpose(purpose);
+    if (
+      file.bucket !== 'hr-employee-images' ||
+      !file.objectKey.startsWith(`hr/employees/${normalizedPurpose}/`)
+    ) {
+      throw new ForbiddenException('File is not an HR employee image.');
+    }
+    if (
+      !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimeType ?? '')
+    ) {
+      throw new ForbiddenException('File type is not previewable.');
+    }
+    const permissions = currentUser.permissions ?? [];
+    const canViewProfile =
+      permissions.includes('hr.employees.view') ||
+      permissions.includes('hr.view') ||
+      permissions.includes('hr.manage');
+    const canViewFace =
+      permissions.includes('hr.employees.update') ||
+      permissions.includes('hr.employees.permissions.manage') ||
+      permissions.includes('hr.manage');
+    if (normalizedPurpose === 'profile_photo' && canViewProfile) return;
+    if (normalizedPurpose === 'face_reference' && canViewFace) return;
+    if (file.uploadedById === currentUser.userId) return;
+    throw new ForbiddenException('You do not have access to this file.');
   }
 
   private assertCanAccessAttendanceEvidence(

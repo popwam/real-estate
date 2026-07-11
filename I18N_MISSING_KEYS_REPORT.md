@@ -20,11 +20,11 @@ Date: 2026-07-11
 
 ### Extra Arabic Keys
 
-- None
+- accessibility.font.reset
 
 ### Extra French Keys
 
-- None
+- accessibility.font.reset
 
 ### DOM Safety-Net Keys Missing In Arabic
 

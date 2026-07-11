@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Check, ChevronLeft, ChevronRight, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
+import { HrEmployeeImage } from "@/components/hr/hr-employee-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 import { listOrganizationsApi } from "@/lib/api";
 import type { HrEmployee, HrEmployeeInput } from "@/lib/hr-employees-api";
-import { employeePermissionKeys } from "@/lib/hr-employees-api";
+import { employeePermissionKeys, uploadHrEmployeeImageApi, type HrEmployeeImagePurpose } from "@/lib/hr-employees-api";
 import { isPlatformRole } from "@/lib/permissions";
 import {
   EMPLOYEE_PERMISSION_GROUPS,
@@ -68,6 +69,7 @@ export function EmployeeForm({
   });
   const existingPermissions = useMemo(() => employeePermissionKeys(employee), [employee]);
   const [stepIndex, setStepIndex] = useState(0);
+  const [permissionSearch, setPermissionSearch] = useState("");
   const [values, setValues] = useState<EmployeeFormValues>(() => ({
     firstName: employee?.user?.firstName ?? firstNameFromName(employee?.name),
     lastName: employee?.user?.lastName ?? lastNameFromName(employee?.name),
@@ -161,6 +163,7 @@ export function EmployeeForm({
     data?.organization?.country ??
     "";
   const roleOptions = EMPLOYEE_ROLE_OPTIONS.filter((role) => isPlatform || !role.startsWith("platform_"));
+  const uploadOrganizationId = isPlatform ? values.organizationId || undefined : undefined;
   const visibleGroups = EMPLOYEE_PERMISSION_GROUPS.filter(
     (group) => !("platformOnly" in group) || !group.platformOnly || isPlatform,
   );
@@ -181,6 +184,33 @@ export function EmployeeForm({
       };
     });
   }
+
+  function selectPermissionGroup(permissions: readonly string[]) {
+    setValues((current) => ({
+      ...current,
+      permissions: [...new Set([...current.permissions, ...permissions])],
+    }));
+  }
+
+  function clearPermissionGroup(permissions: readonly string[]) {
+    setValues((current) => ({
+      ...current,
+      permissions: current.permissions.filter((permission) => !permissions.includes(permission)),
+    }));
+  }
+
+  const filteredGroups = visibleGroups
+    .map((group) => ({
+      ...group,
+      permissions: group.permissions.filter((permission) => {
+        const query = permissionSearch.trim().toLowerCase();
+        if (!query) return true;
+        const label = t(PERMISSION_LABEL_KEYS[permission] ?? permission).toLowerCase();
+        return permission.toLowerCase().includes(query) || label.includes(query);
+      }),
+    }))
+    .filter((group) => group.permissions.length);
+  const accessiblePages = permissionPreview(values.permissions, t);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -235,8 +265,14 @@ export function EmployeeForm({
       <DetailCard title={t(currentStep.labelKey)}>
         {currentStep.id === "personal" ? (
           <FieldGrid>
-            <TextField id="photoFileId" label={t("hr360.photoFileId")} value={values.photoFileId} update={update} />
-            <TextField id="faceReferenceFileId" label={t("hr360.faceReferenceFileId")} value={values.faceReferenceFileId} update={update} />
+            <PhotoUploadField
+              label={t("hr360.uploadEmployeePhoto")}
+              fileId={String(values.photoFileId ?? "")}
+              purpose="profile_photo"
+              organizationId={uploadOrganizationId}
+              alt={String(values.displayName || values.name || t("employeeAccess.employee"))}
+              onChange={(fileId) => update("photoFileId", fileId)}
+            />
             <SelectField id="faceVerificationStatus" label={t("hr360.faceVerificationStatus")} value={values.faceVerificationStatus} update={update} options={["NOT_CONFIGURED", "PENDING_REVIEW", "APPROVED", "REJECTED"]} t={t} />
             <CheckboxField id="faceVerificationConsent" label={t("hr360.faceVerificationConsent")} value={Boolean(values.faceVerificationConsent)} update={update} />
             <TextField id="legalName" label={t("hr360.legalName")} value={values.legalName} update={update} required />
@@ -359,6 +395,14 @@ export function EmployeeForm({
 
         {currentStep.id === "documents" ? (
           <FieldGrid>
+            <PhotoUploadField
+              label={t("hr360.faceReferencePhoto")}
+              fileId={String(values.faceReferenceFileId ?? "")}
+              purpose="face_reference"
+              organizationId={uploadOrganizationId}
+              alt={t("hr360.faceReferencePhoto")}
+              onChange={(fileId) => update("faceReferenceFileId", fileId)}
+            />
             <TextField id="requiredDocumentType" label={t("hr360.documentType")} value={values.requiredDocumentType} update={update} />
             <TextField id="requiredDocumentExpiresAt" label={t("hr360.documentExpiryDate")} type="date" value={values.requiredDocumentExpiresAt} update={update} />
             <SelectField id="documentAiReviewStatus" label={t("hr360.aiReviewStatus")} value={values.documentAiReviewStatus} update={update} options={["NOT_REVIEWED", "PENDING", "APPROVED", "REJECTED", "NEEDS_MANUAL_REVIEW"]} t={t} />
@@ -374,12 +418,37 @@ export function EmployeeForm({
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-foreground)]">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-accent)]" aria-hidden="true" />
-              <p>{t("employeeAccess.doNotShareWarning")}</p>
+              <p>{t("hr360.permissionsExplanation")}</p>
             </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Field label={t("hr360.roleTemplate")} id="permissionRoleTemplate">
+                <select id="permissionRoleTemplate" className="ui-input" value={values.role} onChange={(event) => update("role", event.target.value)}>
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>{t(`employeeAccess.role.${role}`)}</option>
+                  ))}
+                </select>
+              </Field>
+              <TextField id="permissionSearch" label={t("hr360.searchPermissions")} value={permissionSearch} update={(_, value) => setPermissionSearch(String(value ?? ""))} />
+            </div>
+            {!accessiblePages.length ? (
+              <p className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] px-3 py-2 text-sm text-[var(--color-warning)]">
+                {t("hr360.noPagesSelected")}
+              </p>
+            ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
-              {visibleGroups.map((group) => (
+              {filteredGroups.map((group) => (
                 <section key={group.id} className="rounded-md border border-[var(--color-border)] p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-[var(--color-foreground)]">{t(group.labelKey)}</h3>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-[var(--color-foreground)]">{t(group.labelKey)}</h3>
+                    <div className="flex gap-2">
+                      <Button type="button" className="ui-button-secondary text-xs" onClick={() => selectPermissionGroup(group.permissions)}>
+                        {t("hr360.selectAllGroup")}
+                      </Button>
+                      <Button type="button" className="ui-button-secondary text-xs" onClick={() => clearPermissionGroup(group.permissions)}>
+                        {t("hr360.clearGroup")}
+                      </Button>
+                    </div>
+                  </div>
                   <div className="grid gap-2">
                     {group.permissions.map((permission) => (
                       <label key={permission} className="flex items-start gap-3 text-sm text-[var(--color-foreground)]">
@@ -394,6 +463,17 @@ export function EmployeeForm({
                 </section>
               ))}
             </div>
+            <DetailCard title={t("hr360.previewAccess")}>
+              {accessiblePages.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {accessiblePages.map((page) => (
+                    <span key={page} className="rounded-md bg-[var(--color-surface-muted)] px-2 py-1 text-sm text-[var(--color-foreground)]">{page}</span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-muted)]">{t("hr360.noPagesSelected")}</p>
+              )}
+            </DetailCard>
           </div>
         ) : null}
 
@@ -437,6 +517,85 @@ export function EmployeeForm({
 
 function FieldGrid({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>;
+}
+
+function PhotoUploadField({
+  label,
+  fileId,
+  purpose,
+  organizationId,
+  alt,
+  onChange,
+}: {
+  label: string;
+  fileId: string;
+  purpose: HrEmployeeImagePurpose;
+  organizationId?: string;
+  alt: string;
+  onChange: (fileId: string) => void;
+}) {
+  const { t } = useI18n();
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState("");
+  const inputId = `upload-${purpose}`;
+
+  async function upload(file: File | undefined) {
+    setError("");
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError(t("hr360.invalidImageType"));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError(t("hr360.fileTooLarge"));
+      return;
+    }
+    try {
+      setIsUploading(true);
+      const result = await uploadHrEmployeeImageApi({ file, purpose, organizationId });
+      onChange(result.fileId);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadErrorLabel(uploadError.message, t) : t("hr360.uploadFailed"));
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-2 rounded-md border border-[var(--color-border)] p-3">
+      <Label htmlFor={inputId}>{label}</Label>
+      <div className="flex items-center gap-3">
+        <HrEmployeeImage fileId={fileId} purpose={purpose} alt={alt} initials={initials(alt)} className="h-16 w-16" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <input
+            id={inputId}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="block w-full text-sm text-[var(--color-muted)]"
+            disabled={isUploading}
+            onChange={(event) => void upload(event.target.files?.[0])}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              className="ui-button-secondary text-xs"
+              disabled={isUploading}
+              onClick={() => document.getElementById(inputId)?.click()}
+            >
+              {isUploading ? t("hr360.uploadingPhoto") : fileId ? t("hr360.changePhoto") : t("hr360.uploadPhoto")}
+            </Button>
+            {fileId ? (
+              <Button type="button" className="ui-button-secondary text-xs" onClick={() => onChange("")}>
+                {t("hr360.removePhoto")}
+              </Button>
+            ) : null}
+          </div>
+          <p className="text-xs text-[var(--color-muted)]">{t("hr360.imageUploadHint")}</p>
+        </div>
+      </div>
+      {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
+    </div>
+  );
 }
 
 function Field({ label, id, children }: { label: string; id: string; children: ReactNode }) {
@@ -543,4 +702,50 @@ function optionLabel(value: unknown, t: (key: string) => string) {
 
 function displayValue(value: unknown, t: (key: string) => string) {
   return value ? String(value) : t("common.notSet");
+}
+
+function permissionPreview(permissions: string[], t: (key: string) => string) {
+  const pageRules = [
+    ["hr.dashboard.view", "navigation.labels.hr.dashboard"],
+    ["hr.employees.view", "navigation.labels.employees"],
+    ["hr.work_groups.view", "navigation.labels.work.groups"],
+    ["hr.teams.view", "navigation.labels.teams"],
+    ["hr.actions.view", "navigation.labels.employee.actions"],
+    ["hr.documents.view", "navigation.labels.employee.documents"],
+    ["hr.org_chart.view", "navigation.labels.organization.chart"],
+    ["hr.transfer_log.view", "navigation.labels.transfer.log"],
+    ["hr.title_changes.view", "navigation.labels.title.changes"],
+    ["hr.requests.view", "navigation.labels.requests"],
+    ["hr.attendance.self", "navigation.labels.attendance"],
+    ["hr.attendance.view", "navigation.labels.attendance"],
+    ["hr.finance.view", "navigation.labels.finance"],
+    ["hr.assets.view", "navigation.labels.asset.management"],
+    ["hr.tasks.view", "navigation.labels.tasks"],
+    ["hr.hr_documents.view", "navigation.labels.hr.documents"],
+    ["hr.reports.view", "navigation.labels.reports"],
+    ["hr.settings.view", "navigation.labels.hr.settings"],
+    ["platform.organizations.view", "navigation.labels.organizations"],
+  ];
+  return [
+    ...new Set(
+      pageRules
+        .filter(([permission]) => permissions.includes(permission))
+        .map(([, labelKey]) => t(labelKey)),
+    ),
+  ];
+}
+
+function initials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function uploadErrorLabel(message: string, t: (key: string) => string) {
+  if (message === "auth.required") return t("hr360.uploadAuthRequired");
+  if (message === "upload.failed") return t("hr360.uploadFailed");
+  return message || t("hr360.uploadFailed");
 }

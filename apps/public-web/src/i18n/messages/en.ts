@@ -259,6 +259,15 @@ export const messages = {
   "footer.trustTitle": "Built for trust",
   "footer.trustDescription": "Public listings use approved marketplace information while private sales and client records stay protected.",
   "footer.copyright": "© {year} POPWAM. Verified real estate discovery.",
+  "companyPortal.companyPortal": "Company portal",
+  "companyPortal.defaultSummary": "Public company profile, offices, and contact information.",
+  "companyPortal.callCompany": "Call company",
+  "companyPortal.emailCompany": "Email company",
+  "companyPortal.website": "Website",
+  "companyPortal.offices": "Offices",
+  "companyPortal.locationNotSet": "Location not set",
+  "companyPortal.noPublicOffices": "No public offices are listed yet.",
+  "companyPortal.publicLink": "Public link",
 } as const;
 
 export const domTranslations = {} as const;

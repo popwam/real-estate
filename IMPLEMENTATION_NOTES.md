@@ -1,19 +1,24 @@
-## Global HR Foundation / Employee 360
+## Platform Company Provisioning / Subscription / Domains
 
-- HR menu structure: added a global Human Resources navigation group with dashboard, employees, work groups, teams, employee actions, employee documents, org chart, transfer log, title changes, requests, attendance, finance, assets, tasks, HR documents, reports, and settings. Existing developer/platform HR URLs remain as aliases where they already existed.
-- HR dashboard: added `GET /hr/summary` and `/hr/dashboard` with real scoped counts for employees, active employees, attendance, missing/expired documents, probation, login access, and face reference photo state. Leave, request, payroll, asset, and report engines are not faked.
-- Employee list filters/cards: added global `/hr/employees` with organization selector for platform roles, advanced filters, 10-per-page pagination, employee cards, attendance status, login state, status, and quick action modals.
-- Employee 360 add/edit/view: upgraded the employee form into a nine-step wizard for personal information, contact/login, country/language, office/job, schedule/attendance, payroll/payment foundation, documents/face verification, permissions/access, and review.
-- Work groups: added Prisma models, API endpoints, and `/hr/work-groups` foundation with managers, schedule/profile fields, employee counts, status, and permission gating.
-- Teams: added Prisma models, API endpoints, and `/hr/teams` foundation with work group, manager, employee count, status, and permission gating.
-- Employee actions: added `/hr/actions` wizard and `POST /hr/employee-actions/apply` for safe supported actions. Unsupported payroll/attendance-schedule engines return coming-soon status without fake state changes.
-- Employee documents: added Prisma model, API endpoints, and `/hr/documents` views for missing/expired documents with manual review and AI-review status fields. No AI approval is claimed.
-- Org chart: added `/hr/org-chart` and `GET /hr/org-chart` as a tree/table foundation using organization, offices, departments, managers, and employees.
-- Transfer log/title changes: added Prisma log models and API pages/endpoints. Employee transfer/title field updates write audit-style HR logs.
-- HR quick actions: added a floating HR quick action menu on HR pages. Implemented add employee; unsupported quick actions are shown as coming soon.
-- Requests/attendance/finance/assets/tasks/settings foundations: added permission-gated foundation pages with sections for the requested engines, without fake payroll, assets, reports, or complex attendance automation.
-- Global employee fields: added flexible global employee fields, localized names, flexible identifiers, country/language settings, office/job links, schedule/attendance policy fields, payroll foundation fields, loginEnabled, face verification consent/status, and document metadata.
-- Privacy/security notes: sensitive identifiers, disability notes, salary/payment fields, face references, and documents are not returned to users without elevated HR permissions. Sensitive updates are audited without logging raw sensitive values. Bank encryption remains a production blocker unless a secure storage/encryption layer is added.
-- i18n: added Admin English, Arabic, and French keys for the new HR pages, fields, filters, actions, statuses, permissions, and foundation sections. `pnpm i18n:audit` reports zero missing Arabic/French keys.
-- Tests: API unit tests pass. Prisma validate/generate, API build, Admin lint/build, Public lint/build, i18n audit, and diff whitespace checks were run.
-- Remaining manual QA: create an employee with login enabled and confirm first login requires password change; create one with login disabled and confirm login is blocked; test platform organization selector; verify role/permission assignment in `/auth/me`; verify transfer/title logs after changing office/department/position/title; review Arabic/French copy in-browser for tone and layout.
+- Platform add company wizard: `/platform/organizations/new` now creates company profile, subscription, limits, first office, attendance location, Wi-Fi rule, custom domain metadata, and optional first admin user in one guided flow.
+- Company profile: platform owners manage global organization fields through `/platform/organizations/:id`; company admins can update allowed profile fields through `GET/PATCH /company/settings`.
+- Subscription: `OrganizationSubscription` stores plan, status, dates, billing cycle, auto-renew, and notes. Expired, suspended, or cancelled subscriptions block normal company login while platform users can still manage.
+- Limits: `OrganizationLimits` stores employee, office, branch, storage, check-in, module, attendance, domain, DVR, and face verification allowances. HR employee creation and office/branch creation enforce configured limits.
+- Offices/workplaces: `OrganizationBranch` now carries workplace type, timezone, default flag, and active flag. Platform and company-scoped office endpoints are available.
+- Attendance locations: `OrganizationAttendanceLocation` stores exact and expanded radius rules, web/mobile allowances, and manual-review behavior.
+- Wi-Fi rules: `OrganizationWifiRule` stores SSID, BSSID, MAC, target surface, required flag, and active flag. UI states the browser limitation and uses `webWifiPolicy`.
+- Domains/subdomain: provisioning creates a verified system subdomain record and returns a fallback `/c/:slug` path. Custom domains support verification metadata, default selection, redirect mode, redirect URL, and inbound source mode.
+- Redirect mode: public company portal data exposes safe redirect metadata; Public Web validates `http`/`https` before redirecting and otherwise shows the company portal.
+- Public company portal: `/public/companies/:slug` and Public Web `/c/:slug` show public company profile, contact details, offices, default domain, and fallback links.
+- Company editable settings: company-scoped endpoints exist for settings, offices, domains, and Wi-Fi rules. Subscription and limits stay platform-only.
+- First company admin: the wizard can create a first admin user with temporary password `123456`, `mustChangePassword=true`, an organization role template, and an HR employee profile.
+- Security notes: slug/company-code uniqueness, domain uniqueness, safe redirect URL validation, radius/lat/lng validation, MAC/BSSID validation, cross-organization scope checks, and platform-only subscription/limit updates are enforced.
+- i18n: new Admin Web and Public Web visible strings have English, Arabic, and French catalog keys. `pnpm i18n:audit` reports missing Arabic/French keys as zero.
+- Tests: existing API test suite passes after adding limit-enforcement compatibility for legacy mocks.
+- Manual QA:
+  - Sign in as Platform Owner and open `/platform/organizations/new`.
+  - Create a company with subscription dates, limits, office, attendance location, Wi-Fi rule, custom domain, and first admin.
+  - Open `/platform/organizations/:id` and verify overview, subscription, limits, offices, attendance, Wi-Fi, domains, and users tabs.
+  - Try creating employees/offices over the configured limits and confirm localized limit errors.
+  - Open `/c/:slug` and confirm the company portal renders or redirects only for safe `http`/`https` redirect URLs.
+  - Sign in as the first company admin and confirm password change is required before accessing company settings.

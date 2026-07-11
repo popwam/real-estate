@@ -18,6 +18,12 @@ export class PublicController {
     return this.publicService.getOrganization(slug);
   }
 
+  @Get('companies/:slug')
+  @ApiOperation({ summary: 'Get public company portal data by slug or path alias.' })
+  getCompanyPortal(@Param('slug') slug: string) {
+    return this.publicService.getCompanyPortal(slug);
+  }
+
   @Get('domain/:host')
   @ApiOperation({ summary: 'Resolve a public subdomain or custom domain.' })
   resolveDomain(@Param('host') host: string) {

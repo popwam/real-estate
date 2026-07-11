@@ -21,6 +21,30 @@ enum OrganizationStatus {
   REVOKED
 }
 
+enum OrganizationSubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  EXPIRED
+  CANCELLED
+  SUSPENDED
+}
+
+enum OrganizationBillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum OrganizationBranchType {
+  HEAD_OFFICE
+  BRANCH
+  SALES_OFFICE
+  SITE
+  REMOTE_HUB
+}
+
 enum VerificationStatus {
   DRAFT
   PENDING_REVIEW
@@ -275,13 +299,36 @@ enum DisputeStatus {
 
 enum OrganizationDomainType {
   SUBDOMAIN
+  SYSTEM_SUBDOMAIN
   CUSTOM_DOMAIN
+  PATH_ALIAS
 }
 
 enum DomainVerificationStatus {
   PENDING
+  ACTIVE
   VERIFIED
   FAILED
+  DISABLED
+}
+
+enum OrganizationRedirectMode {
+  NONE
+  REDIRECT_TO_EXTERNAL
+  PROXY_OR_SHOW_COMPANY_PROFILE
+}
+
+enum OrganizationInboundSourceMode {
+  NONE
+  TRACK_REFERRER
+  ACCEPT_LEADS
+  WEBHOOK
+}
+
+enum OrganizationWifiRuleAppliesTo {
+  WEB
+  MOBILE
+  BOTH
 }
 
 enum PublicLeadStatus {
@@ -623,9 +670,13 @@ model Organization {
   id                  String                       @id @default(cuid())
   name                String
   slug                String                       @unique
+  companyCode         String?                      @unique
   type                OrganizationType
   country             String?
   city                String?
+  timezone            String?
+  currency            String?
+  defaultLanguage     String?
   status              OrganizationStatus           @default(DRAFT)
   plan                String?
   planExpiresAt       DateTime?
@@ -680,6 +731,10 @@ model Organization {
   hrAttendanceRecords HrAttendanceRecord[]
   attendanceSettings OrganizationAttendanceSettings?
   branches          OrganizationBranch[]
+  subscription      OrganizationSubscription?
+  limits            OrganizationLimits?
+  attendanceLocations OrganizationAttendanceLocation[]
+  wifiRules         OrganizationWifiRule[]
   accountingAccounts AccountingAccount[]
   accountingCategories AccountingCategory[]
   accountingTransactions AccountingTransaction[]
@@ -703,6 +758,7 @@ model OrganizationProfile {
   legalName               String?
   tradeName               String?
   commercialRegNumber     String?
+  registrationNumber      String?
   taxNumber               String?
   website                 String?
   phone                   String?
@@ -775,6 +831,9 @@ model OrganizationDomainVerification {
   verifiedAt        DateTime?
   failureReason     String?
   statusNote        String?
+  redirectMode      OrganizationRedirectMode  @default(NONE)
+  redirectUrl       String?
+  inboundSourceMode OrganizationInboundSourceMode @default(NONE)
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
   organization      Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -782,6 +841,51 @@ model OrganizationDomainVerification {
   @@unique([organizationId, domain])
   @@index([domain, type, status])
   @@map("organization_domain_verifications")
+}
+
+model OrganizationSubscription {
+  id             String                         @id @default(cuid())
+  organizationId String                         @unique
+  planCode       String
+  planName       String
+  status         OrganizationSubscriptionStatus @default(TRIAL)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  trialEndsAt    DateTime?
+  billingCycle   OrganizationBillingCycle       @default(MONTHLY)
+  autoRenew      Boolean                        @default(false)
+  notes          String?
+  createdAt      DateTime                       @default(now())
+  updatedAt      DateTime                       @updatedAt
+  organization   Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([status, endsAt])
+  @@map("organization_subscriptions")
+}
+
+model OrganizationLimits {
+  id                    String       @id @default(cuid())
+  organizationId        String       @unique
+  maxEmployees          Int          @default(25)
+  maxOffices            Int          @default(1)
+  maxBranches           Int          @default(1)
+  maxWorkGroups         Int          @default(5)
+  maxTeams              Int          @default(10)
+  maxStorageMb          Int          @default(1024)
+  maxMonthlyCheckIns    Int          @default(1000)
+  enabledModules        Json         @default("{}")
+  allowWebCheckIn       Boolean      @default(true)
+  allowMobileCheckIn    Boolean      @default(true)
+  allowPublicWebsite    Boolean      @default(true)
+  allowCustomDomain     Boolean      @default(false)
+  allowSubdomain        Boolean      @default(true)
+  allowDvrReview        Boolean      @default(false)
+  allowFaceVerification Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_limits")
 }
 
 model User {
@@ -2029,13 +2133,16 @@ model OrganizationBranch {
   organizationId       String
   name                 String
   code                 String?
+  type                 OrganizationBranchType @default(BRANCH)
   address              String?
   city                 String?
   country              String?
+  timezone             String?
   latitude             Float?
   longitude            Float?
   exactRadiusMeters    Int          @default(30)
   expandedRadiusMeters Int          @default(1000)
+  isDefault            Boolean      @default(false)
   isActive             Boolean      @default(true)
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
@@ -2043,10 +2150,57 @@ model OrganizationBranch {
   officeEmployees      HrEmployee[] @relation("HrEmployeeOffice")
   branchEmployees      HrEmployee[] @relation("HrEmployeeBranch")
   attendanceRecords    HrAttendanceRecord[]
+  attendanceLocations  OrganizationAttendanceLocation[]
+  wifiRules            OrganizationWifiRule[]
 
   @@unique([organizationId, code])
   @@index([organizationId, isActive])
   @@map("organization_branches")
+}
+
+model OrganizationAttendanceLocation {
+  id                               String              @id @default(cuid())
+  organizationId                   String
+  officeId                         String?
+  name                             String
+  latitude                         Float
+  longitude                        Float
+  exactRadiusMeters                Int                 @default(30)
+  expandedRadiusMeters             Int                 @default(1000)
+  allowedForWeb                    Boolean             @default(true)
+  allowedForMobile                 Boolean             @default(true)
+  requiresReviewOutsideExactRadius Boolean             @default(true)
+  isActive                         Boolean             @default(true)
+  createdAt                        DateTime            @default(now())
+  updatedAt                        DateTime            @updatedAt
+  organization                     Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  office                           OrganizationBranch? @relation(fields: [officeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, isActive])
+  @@index([officeId])
+  @@map("organization_attendance_locations")
+}
+
+model OrganizationWifiRule {
+  id             String                        @id @default(cuid())
+  organizationId String
+  officeId       String?
+  name           String
+  ssid           String?
+  bssid          String?
+  macAddress     String?
+  description    String?
+  appliesTo      OrganizationWifiRuleAppliesTo @default(BOTH)
+  isRequired     Boolean                       @default(false)
+  isActive       Boolean                       @default(true)
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
+  organization   Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  office         OrganizationBranch?           @relation(fields: [officeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, isActive])
+  @@index([officeId])
+  @@map("organization_wifi_rules")
 }
 
 model HrEmployee {
