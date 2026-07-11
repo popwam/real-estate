@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building2, Filter } from "lucide-react";
+import Link from "next/link";
+import { Building2, Filter, Plus } from "lucide-react";
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { OrganizationResponsiveList } from "@/components/platform/organization-responsive-list";
 import { useOrganizations } from "@/hooks/use-platform-admin";
-import { CreateOrganizationForm } from "@/components/platform/create-organization-form";
 import { useI18n } from "@/i18n";
 
 export default function PlatformOrganizationsPage() {
@@ -30,8 +30,13 @@ export default function PlatformOrganizationsPage() {
       <PageHeader
         title={t("platformOrganizations.title")}
         description={t("platformOrganizations.description")}
+        actions={
+          <Link className="ui-button ui-button-primary" href="/platform/organizations/new">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("provisioning.addCompany")}
+          </Link>
+        }
       />
-      <CreateOrganizationForm />
       <section className="ui-card mb-5 p-4">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">

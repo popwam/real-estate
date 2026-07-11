@@ -1,6 +1,14 @@
 "use client";
 
 import { apiRequest } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
+
+const API_BASE_URL =
+  (
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:3000"
+  ).replace(/\/$/, "");
 
 export type HrEmployeeUser = {
   id: string;
@@ -10,6 +18,8 @@ export type HrEmployeeUser = {
   lastName?: string | null;
   isActive?: boolean;
   hasPassword?: boolean;
+  mustChangePassword?: boolean;
+  lastLoginAt?: string | null;
   role?: {
     id: string;
     name: string;
@@ -329,6 +339,46 @@ export function getHrOrgChartApi(input?: { organizationId?: string }) {
   if (input?.organizationId) params.set("organizationId", input.organizationId);
   const query = params.toString();
   return apiRequest<Record<string, unknown>>(`/hr/org-chart${query ? `?${query}` : ""}`);
+}
+
+export type HrEmployeeImagePurpose = "profile_photo" | "face_reference";
+
+export async function uploadHrEmployeeImageApi(input: {
+  file: File;
+  purpose: HrEmployeeImagePurpose;
+  organizationId?: string;
+}) {
+  const token = getAccessToken();
+  if (!token) throw new Error("auth.required");
+  const formData = new FormData();
+  formData.set("file", input.file);
+  formData.set("purpose", input.purpose);
+  if (input.organizationId) formData.set("organizationId", input.organizationId);
+  const response = await fetch(`${API_BASE_URL}/files/hr-employee-image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      body && typeof body === "object" && "message" in body
+        ? String((body as { message: unknown }).message)
+        : "upload.failed",
+    );
+  }
+  return body as { fileId: string; purpose: HrEmployeeImagePurpose; mimeType: string; sizeBytes: number; createdAt: string };
+}
+
+export async function fetchHrEmployeeImageBlob(fileId: string, purpose: HrEmployeeImagePurpose) {
+  const token = getAccessToken();
+  if (!token) throw new Error("auth.required");
+  const response = await fetch(
+    `${API_BASE_URL}/files/${encodeURIComponent(fileId)}/hr-preview?purpose=${encodeURIComponent(purpose)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!response.ok) throw new Error("preview.failed");
+  return response.blob();
 }
 
 export function listHrTransferLogApi(input?: { organizationId?: string }) {

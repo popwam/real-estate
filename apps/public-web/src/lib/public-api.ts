@@ -135,6 +135,33 @@ export type ApiDomainResolution = {
   };
 };
 
+export type ApiCompanyPortal = {
+  organization: ApiPublicOrganization;
+  offices: Array<{
+    id: string;
+    name: string;
+    type?: string | null;
+    address?: string | null;
+    city?: string | null;
+    country?: string | null;
+    isDefault?: boolean;
+  }>;
+  domain: {
+    id: string;
+    domain: string;
+    type: string;
+    status: string;
+    isDefault: boolean;
+    redirectMode: "NONE" | "REDIRECT_TO_EXTERNAL" | "PROXY_OR_SHOW_COMPANY_PROFILE";
+    redirectUrl?: string | null;
+    inboundSourceMode: string;
+  } | null;
+  portalLinks: {
+    fallbackPath: string;
+    systemSubdomain: string;
+  };
+};
+
 export type SubmitPublicLeadPayload = {
   organizationSlug?: string;
   projectSlug?: string;
@@ -255,6 +282,12 @@ export async function getPublicProject(slug: string) {
 export async function getPublicOrganization(slug: string) {
   return publicApiFetch<ApiPublicOrganization>(
     `/public/organizations/${encodeURIComponent(slug)}`,
+  );
+}
+
+export async function getPublicCompanyPortal(slug: string) {
+  return publicApiFetch<ApiCompanyPortal>(
+    `/public/companies/${encodeURIComponent(slug)}`,
   );
 }
 

@@ -15,6 +15,99 @@ export type OrganizationProfile = {
   description?: string | null;
 };
 
+export type OrganizationSubscription = {
+  id: string;
+  organizationId: string;
+  planCode: string;
+  planName: string;
+  status: "TRIAL" | "ACTIVE" | "PAST_DUE" | "EXPIRED" | "CANCELLED" | "SUSPENDED";
+  startsAt?: string | null;
+  endsAt?: string | null;
+  trialEndsAt?: string | null;
+  billingCycle: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+  autoRenew: boolean;
+  notes?: string | null;
+};
+
+export type OrganizationLimits = {
+  id: string;
+  organizationId: string;
+  maxEmployees: number;
+  maxOffices: number;
+  maxBranches: number;
+  maxWorkGroups: number;
+  maxTeams: number;
+  maxStorageMb: number;
+  maxMonthlyCheckIns: number;
+  enabledModules?: Record<string, unknown>;
+  allowWebCheckIn: boolean;
+  allowMobileCheckIn: boolean;
+  allowPublicWebsite: boolean;
+  allowCustomDomain: boolean;
+  allowSubdomain: boolean;
+  allowDvrReview: boolean;
+  allowFaceVerification: boolean;
+};
+
+export type OrganizationOffice = {
+  id: string;
+  organizationId: string;
+  name: string;
+  code?: string | null;
+  type?: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  timezone?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  exactRadiusMeters: number;
+  expandedRadiusMeters: number;
+  isDefault: boolean;
+  isActive: boolean;
+};
+
+export type OrganizationAttendanceLocation = {
+  id: string;
+  organizationId: string;
+  officeId?: string | null;
+  name: string;
+  latitude: number;
+  longitude: number;
+  exactRadiusMeters: number;
+  expandedRadiusMeters: number;
+  allowedForWeb: boolean;
+  allowedForMobile: boolean;
+  requiresReviewOutsideExactRadius: boolean;
+  isActive: boolean;
+};
+
+export type OrganizationWifiRule = {
+  id: string;
+  organizationId: string;
+  officeId?: string | null;
+  name: string;
+  ssid?: string | null;
+  bssid?: string | null;
+  macAddress?: string | null;
+  appliesTo: "WEB" | "MOBILE" | "BOTH";
+  isRequired: boolean;
+  isActive: boolean;
+};
+
+export type OrganizationDomainRecord = {
+  id: string;
+  organizationId: string;
+  domain: string;
+  type: "SUBDOMAIN" | "SYSTEM_SUBDOMAIN" | "CUSTOM_DOMAIN" | "PATH_ALIAS";
+  status: "PENDING" | "ACTIVE" | "VERIFIED" | "FAILED" | "DISABLED";
+  isDefault: boolean;
+  verificationToken: string;
+  redirectMode: "NONE" | "REDIRECT_TO_EXTERNAL" | "PROXY_OR_SHOW_COMPANY_PROFILE";
+  redirectUrl?: string | null;
+  inboundSourceMode: "NONE" | "TRACK_REFERRER" | "ACCEPT_LEADS" | "WEBHOOK";
+};
+
 export type UploadedFile = {
   id: string;
   bucket: string;
@@ -59,13 +152,29 @@ export type Verification = {
 };
 
 export type Organization = CurrentOrganization & {
+  companyCode?: string | null;
   country?: string | null;
   city?: string | null;
+  timezone?: string | null;
+  currency?: string | null;
+  defaultLanguage?: string | null;
   plan?: string | null;
   planExpiresAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
   profile?: OrganizationProfile | null;
+  subscription?: OrganizationSubscription | null;
+  limits?: OrganizationLimits | null;
+  branches?: OrganizationOffice[];
+  attendanceLocations?: OrganizationAttendanceLocation[];
+  wifiRules?: OrganizationWifiRule[];
+  domainVerifications?: OrganizationDomainRecord[];
+  portalLinks?: {
+    systemSubdomain: string;
+    fallbackPath: string;
+    defaultDomain?: string | null;
+    wildcardDnsRequired: boolean;
+  };
 };
 
 export type OrganizationReview = Organization & {
@@ -80,9 +189,41 @@ export type ReviewActionInput = {
 
 export type PlatformOrganizationInput = {
   name: string;
-  type: "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  organizationType?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  type?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  displayName?: string;
+  legalName?: string;
+  tradeName?: string;
+  logoUrl?: string;
+  companyCode?: string;
+  slug?: string;
   country?: string;
   city?: string;
+  timezone?: string;
+  currency?: string;
+  defaultLanguage?: string;
+  registrationNumber?: string;
+  taxNumber?: string;
+  businessEmail?: string;
+  businessPhone?: string;
+  address?: string;
+  website?: string;
+  status?: string;
+  subscription?: Partial<OrganizationSubscription>;
+  limits?: Partial<OrganizationLimits>;
+  offices?: Partial<OrganizationOffice>[];
+  attendanceLocations?: Partial<OrganizationAttendanceLocation>[];
+  wifiRules?: Partial<OrganizationWifiRule>[];
+  domains?: Partial<OrganizationDomainRecord>[];
+  webWifiPolicy?: "BLOCK" | "MANUAL_REVIEW" | "IGNORE_FOR_WEB";
+  adminUser?: {
+    name?: string;
+    email?: string;
+    phoneCountry?: string;
+    phone?: string;
+    temporaryPassword?: string;
+    roleTemplate?: "company_owner" | "company_admin" | "hr_manager";
+  };
 };
 
 export type OrganizationInvitation = {

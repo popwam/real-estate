@@ -13,8 +13,8 @@ Date: 2026-07-11
 
 | App | English message keys | Arabic message keys | French message keys | Arabic DOM keys | French DOM keys | Missing Arabic | Missing French |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| admin-web | 1684 | 1684 | 1684 | 101 | 101 | 0 | 0 |
-| public-web | 260 | 260 | 260 | 122 | 122 | 0 | 0 |
+| admin-web | 1857 | 1858 | 1858 | 101 | 101 | 0 | 0 |
+| public-web | 269 | 269 | 269 | 122 | 122 | 0 | 0 |
 | mobile | 356 | 356 | 356 | 0 | 0 | 0 | 0 |
 
 ## Remaining English Literal Candidates

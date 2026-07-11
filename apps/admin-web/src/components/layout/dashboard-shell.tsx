@@ -11,11 +11,11 @@ import { Topbar } from "@/components/layout/topbar";
 export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <AuthGuard>
-      <div className="flex min-h-screen overflow-x-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
+      <div className="flex h-dvh overflow-hidden bg-[var(--color-background)] text-[var(--color-foreground)]">
         <IconSidebar />
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <div className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
           <Topbar />
-          <main data-dashboard-content className="flex-1 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
+          <main data-dashboard-content className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
             <RoutePermissionBoundary>{children}</RoutePermissionBoundary>
           </main>
         </div>

@@ -194,6 +194,7 @@ export class HrService {
     const name = this.string(body.name) || [firstName, lastName].filter(Boolean).join(' ') || this.string(body.displayName);
 
     if (!name) throw new BadRequestException('name is required.');
+    await this.assertEmployeeLimit(organizationId);
 
     const existingEmployeeCode = this.string(body.employeeCode);
     const employeeCode = existingEmployeeCode || (await this.nextEmployeeCode(organizationId));
@@ -297,6 +298,41 @@ export class HrService {
             lastName: this.string(body.lastName) ?? undefined,
             isActive: allowLogin && employee.status === HrEmployeeStatus.ACTIVE,
           },
+        });
+      } else if (allowLogin) {
+        const loginEmail = email ?? existing.email;
+        if (!loginEmail) {
+          throw new BadRequestException('email is required when login is enabled.');
+        }
+        await this.assertEmailAvailable(loginEmail);
+        const roleName = this.string(body.role) ?? 'employee_self_service';
+        const role = await this.ensureOrganizationRole(
+          tx,
+          existing.organizationId,
+          roleName,
+        );
+        const createdUser = await tx.user.create({
+          data: {
+            organizationId: existing.organizationId,
+            email: loginEmail,
+            phone,
+            firstName: this.string(body.firstName),
+            lastName: this.string(body.lastName),
+            passwordHash: await this.hashService.hash(
+              this.string(body.temporaryPassword) || '123456',
+            ),
+            mustChangePassword: true,
+            roleId: role.id,
+            userRole: this.userRoleForOrganization(
+              roleName,
+              user.organizationType,
+            ),
+            isActive: employee.status === HrEmployeeStatus.ACTIVE,
+          },
+        });
+        await tx.hrEmployee.update({
+          where: { id },
+          data: { userId: createdUser.id, loginEnabled: true },
         });
       }
 
@@ -952,6 +988,17 @@ export class HrService {
   private async assertEmailAvailable(email: string, exceptUserId?: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing && existing.id !== exceptUserId) throw new ConflictException('Email is already registered.');
+  }
+
+  private async assertEmployeeLimit(organizationId: string) {
+    if (!this.prisma.organizationLimits) return;
+    const [limits, employees] = await Promise.all([
+      this.prisma.organizationLimits.findUnique({ where: { organizationId } }),
+      this.prisma.hrEmployee.count({ where: { organizationId } }),
+    ]);
+    if (limits && employees >= limits.maxEmployees) {
+      throw new BadRequestException('Limit exceeded: employee limit reached.');
+    }
   }
 
   private containsSensitiveKeys(body: AnyRecord) {

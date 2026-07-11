@@ -259,6 +259,15 @@ export const messages = {
   "footer.trustTitle": "مصمم للثقة",
   "footer.trustDescription": "تستخدم الإعلانات العامة معلومات السوق المعتمدة بينما تبقى سجلات المبيعات والعملاء الخاصة محمية.",
   "footer.copyright": "© {year} POPWAM. اكتشاف عقاري موثوق.",
+  "companyPortal.companyPortal": "بوابة الشركة",
+  "companyPortal.defaultSummary": "ملف الشركة العام والمكاتب ومعلومات التواصل.",
+  "companyPortal.callCompany": "اتصال بالشركة",
+  "companyPortal.emailCompany": "بريد الشركة",
+  "companyPortal.website": "الموقع الإلكتروني",
+  "companyPortal.offices": "المكاتب",
+  "companyPortal.locationNotSet": "الموقع غير محدد",
+  "companyPortal.noPublicOffices": "لا توجد مكاتب عامة بعد.",
+  "companyPortal.publicLink": "الرابط العام",
 } as const;
 
 export const domTranslations = {

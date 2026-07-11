@@ -14,10 +14,38 @@ import {
   requestMoreVerificationApi,
   suspendOrganizationApi,
   createPlatformOrganizationApi,
+  createOrganizationAttendanceLocationApi,
+  createOrganizationOfficeApi,
+  createOrganizationProvisioningDomainApi,
+  createOrganizationWifiRuleApi,
   listOrganizationInvitationsApi,
   createOrganizationInvitationApi,
+  getPlatformOrganizationApi,
+  getPlatformOrganizationLimitsApi,
+  getPlatformOrganizationSubscriptionApi,
+  listOrganizationAttendanceLocationsApi,
+  listOrganizationOfficesApi,
+  listOrganizationProvisioningDomainsApi,
+  listOrganizationWifiRulesApi,
+  setDefaultOrganizationProvisioningDomainApi,
+  updateOrganizationAttendanceLocationApi,
+  updateOrganizationOfficeApi,
+  updateOrganizationProvisioningDomainApi,
+  updateOrganizationWifiRuleApi,
+  updatePlatformOrganizationApi,
+  updatePlatformOrganizationLimitsApi,
+  updatePlatformOrganizationSubscriptionApi,
 } from "@/lib/api";
-import type { PlatformOrganizationInput, ReviewActionInput } from "@/types/platform";
+import type {
+  OrganizationAttendanceLocation,
+  OrganizationDomainRecord,
+  OrganizationLimits,
+  OrganizationOffice,
+  OrganizationSubscription,
+  OrganizationWifiRule,
+  PlatformOrganizationInput,
+  ReviewActionInput,
+} from "@/types/platform";
 
 export function useOrganizations() {
   return useQuery({
@@ -31,6 +59,151 @@ export function useCreatePlatformOrganization() {
   return useMutation({
     mutationFn: (input: PlatformOrganizationInput) => createPlatformOrganizationApi(input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] }),
+  });
+}
+
+export function usePlatformOrganization(id: string) {
+  return useQuery({
+    queryKey: ["platform", "organizations", id, "provisioning"],
+    queryFn: () => getPlatformOrganizationApi(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdatePlatformOrganization(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<PlatformOrganizationInput>) => updatePlatformOrganizationApi(id, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] });
+    },
+  });
+}
+
+export function usePlatformOrganizationSubscription(id: string) {
+  return useQuery({
+    queryKey: ["platform", "organizations", id, "subscription"],
+    queryFn: () => getPlatformOrganizationSubscriptionApi(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdatePlatformOrganizationSubscription(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationSubscription>) => updatePlatformOrganizationSubscriptionApi(id, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "subscription"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "provisioning"] });
+    },
+  });
+}
+
+export function usePlatformOrganizationLimits(id: string) {
+  return useQuery({
+    queryKey: ["platform", "organizations", id, "limits"],
+    queryFn: () => getPlatformOrganizationLimitsApi(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdatePlatformOrganizationLimits(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationLimits>) => updatePlatformOrganizationLimitsApi(id, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "limits"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "provisioning"] });
+    },
+  });
+}
+
+export function useOrganizationOffices(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "offices"], queryFn: () => listOrganizationOfficesApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateOrganizationOffice(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationOffice>) => createOrganizationOfficeApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useUpdateOrganizationOffice(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ officeId, input }: { officeId: string; input: Partial<OrganizationOffice> }) => updateOrganizationOfficeApi(id, officeId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useOrganizationAttendanceLocations(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "attendance-locations"], queryFn: () => listOrganizationAttendanceLocationsApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateOrganizationAttendanceLocation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationAttendanceLocation>) => createOrganizationAttendanceLocationApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useUpdateOrganizationAttendanceLocation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ locationId, input }: { locationId: string; input: Partial<OrganizationAttendanceLocation> }) => updateOrganizationAttendanceLocationApi(id, locationId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useOrganizationWifiRules(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "wifi-rules"], queryFn: () => listOrganizationWifiRulesApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateOrganizationWifiRule(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationWifiRule>) => createOrganizationWifiRuleApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useUpdateOrganizationWifiRule(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ruleId, input }: { ruleId: string; input: Partial<OrganizationWifiRule> }) => updateOrganizationWifiRuleApi(id, ruleId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useOrganizationProvisioningDomains(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "domains"], queryFn: () => listOrganizationProvisioningDomainsApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateOrganizationProvisioningDomain(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationDomainRecord>) => createOrganizationProvisioningDomainApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useUpdateOrganizationProvisioningDomain(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ domainId, input }: { domainId: string; input: Partial<OrganizationDomainRecord> }) => updateOrganizationProvisioningDomainApi(id, domainId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useSetDefaultOrganizationProvisioningDomain(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (domainId: string) => setDefaultOrganizationProvisioningDomainApi(id, domainId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
   });
 }
 

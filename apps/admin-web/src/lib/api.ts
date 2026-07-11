@@ -9,6 +9,12 @@ import type {
   Verification,
   PlatformOrganizationInput,
   OrganizationInvitation,
+  OrganizationSubscription,
+  OrganizationLimits,
+  OrganizationOffice,
+  OrganizationAttendanceLocation,
+  OrganizationWifiRule,
+  OrganizationDomainRecord,
 } from "@/types/platform";
 
 const API_BASE_URL =
@@ -213,14 +219,123 @@ export function changePasswordApi(input: { currentPassword: string; newPassword:
 }
 
 export function listOrganizationsApi() {
-  return apiRequest<Organization[]>("/organizations");
+  return apiRequest<Organization[]>("/platform/organizations");
 }
 
 export function createPlatformOrganizationApi(input: PlatformOrganizationInput) {
-  return apiRequest<Organization>("/platform-admin/organizations", {
+  return apiRequest<Organization>("/platform/organizations", {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function getPlatformOrganizationApi(id: string) {
+  return apiRequest<Organization>(`/platform/organizations/${id}`);
+}
+
+export function updatePlatformOrganizationApi(id: string, input: Partial<PlatformOrganizationInput>) {
+  return apiRequest<Organization>(`/platform/organizations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getPlatformOrganizationSubscriptionApi(id: string) {
+  return apiRequest<OrganizationSubscription | null>(`/platform/organizations/${id}/subscription`);
+}
+
+export function updatePlatformOrganizationSubscriptionApi(id: string, input: Partial<OrganizationSubscription>) {
+  return apiRequest<OrganizationSubscription>(`/platform/organizations/${id}/subscription`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getPlatformOrganizationLimitsApi(id: string) {
+  return apiRequest<OrganizationLimits | null>(`/platform/organizations/${id}/limits`);
+}
+
+export function updatePlatformOrganizationLimitsApi(id: string, input: Partial<OrganizationLimits>) {
+  return apiRequest<OrganizationLimits>(`/platform/organizations/${id}/limits`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationOfficesApi(id: string) {
+  return apiRequest<OrganizationOffice[]>(`/organizations/${id}/offices`);
+}
+
+export function createOrganizationOfficeApi(id: string, input: Partial<OrganizationOffice>) {
+  return apiRequest<OrganizationOffice>(`/organizations/${id}/offices`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOrganizationOfficeApi(id: string, officeId: string, input: Partial<OrganizationOffice>) {
+  return apiRequest<OrganizationOffice>(`/organizations/${id}/offices/${officeId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationAttendanceLocationsApi(id: string) {
+  return apiRequest<OrganizationAttendanceLocation[]>(`/organizations/${id}/attendance-locations`);
+}
+
+export function createOrganizationAttendanceLocationApi(id: string, input: Partial<OrganizationAttendanceLocation>) {
+  return apiRequest<OrganizationAttendanceLocation>(`/organizations/${id}/attendance-locations`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOrganizationAttendanceLocationApi(id: string, locationId: string, input: Partial<OrganizationAttendanceLocation>) {
+  return apiRequest<OrganizationAttendanceLocation>(`/organizations/${id}/attendance-locations/${locationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationWifiRulesApi(id: string) {
+  return apiRequest<OrganizationWifiRule[]>(`/organizations/${id}/wifi-rules`);
+}
+
+export function createOrganizationWifiRuleApi(id: string, input: Partial<OrganizationWifiRule>) {
+  return apiRequest<OrganizationWifiRule>(`/organizations/${id}/wifi-rules`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOrganizationWifiRuleApi(id: string, ruleId: string, input: Partial<OrganizationWifiRule>) {
+  return apiRequest<OrganizationWifiRule>(`/organizations/${id}/wifi-rules/${ruleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationProvisioningDomainsApi(id: string) {
+  return apiRequest<OrganizationDomainRecord[]>(`/organizations/${id}/domains`);
+}
+
+export function createOrganizationProvisioningDomainApi(id: string, input: Partial<OrganizationDomainRecord>) {
+  return apiRequest<OrganizationDomainRecord>(`/organizations/${id}/domains`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOrganizationProvisioningDomainApi(id: string, domainId: string, input: Partial<OrganizationDomainRecord>) {
+  return apiRequest<OrganizationDomainRecord>(`/organizations/${id}/domains/${domainId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function setDefaultOrganizationProvisioningDomainApi(id: string, domainId: string) {
+  return apiRequest<OrganizationDomainRecord>(`/organizations/${id}/domains/${domainId}/set-default`, { method: "POST" });
 }
 
 export function listOrganizationInvitationsApi(id: string) {

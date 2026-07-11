@@ -5,13 +5,13 @@ import { useState, type ReactNode } from "react";
 import {
   KeyRound,
   Plus,
-  UserRound,
   UsersRound,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/empty-state";
 import { FeedbackState } from "@/components/feedback-state";
 import { EmployeeForm, type EmployeeFormValues } from "@/components/hr/employee-form";
+import { HrEmployeeImage } from "@/components/hr/hr-employee-image";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { PagePermissionGuard } from "@/components/page-permission-guard";
@@ -199,9 +199,7 @@ export function HrEmployeesPage() {
           {(query.data?.items ?? []).map((employee) => (
             <article key={employee.id} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
               <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface-muted)] text-[var(--color-muted)]">
-                  <UserRound className="h-6 w-6" aria-hidden="true" />
-                </div>
+                <HrEmployeeImage fileId={employee.photoFileId} alt={employee.displayName || employee.name} initials={employeeInitials(employee)} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-base font-semibold text-[var(--color-foreground)]">{employee.displayName || employee.name}</h2>
@@ -282,7 +280,7 @@ export function NewHrEmployeePage() {
 }
 
 export function HrEmployeeDetailPage({ id }: { id: string }) {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const queryClient = useQueryClient();
   const [generatedPassword, setGeneratedPassword] = useState("");
   const employee = useQuery({ queryKey: ["hr-employee", id], queryFn: () => getHrEmployeeApi(id) });
@@ -306,6 +304,10 @@ export function HrEmployeeDetailPage({ id }: { id: string }) {
     },
   });
   const active = useMutation({ mutationFn: (next: boolean) => setHrEmployeeActiveApi(id, next), onSuccess: refresh });
+  const loginAccess = useMutation({
+    mutationFn: (enabled: boolean) => updateHrEmployeeApi(id, { loginEnabled: enabled, allowLogin: enabled, temporaryPassword: enabled ? "123456" : undefined }),
+    onSuccess: refresh,
+  });
 
   return (
     <PagePermissionGuard permissions={["hr.employees.view", "hr.view"]}>
@@ -337,8 +339,19 @@ export function HrEmployeeDetailPage({ id }: { id: string }) {
                 { label: t("employeeAccess.email"), value: employee.data.email ?? employee.data.user?.email },
                 { label: t("employeeAccess.phone"), value: employee.data.phone ?? employee.data.user?.phone },
                 { label: t("employeeAccess.status"), value: employee.data.status === "ACTIVE" ? t("employeeAccess.active") : t("employeeAccess.inactive") },
+                { label: t("hr360.loginEnabled"), value: employee.data.loginEnabled ? t("hr360.loginEnabled") : t("hr360.loginDisabled") },
+                { label: t("hr360.mustChangePassword"), value: employee.data.user?.mustChangePassword ? t("common.yes") : t("common.no") },
+                { label: t("hr360.lastLogin"), value: employee.data.user?.lastLoginAt ? formatDate(employee.data.user.lastLoginAt, { dateStyle: "medium", timeStyle: "short" }) : t("common.notSet") },
               ]}
             />
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button className="ui-button-secondary" onClick={() => loginAccess.mutate(true)} disabled={loginAccess.isPending || Boolean(employee.data.loginEnabled)}>
+                {t("hr360.enableLogin")}
+              </Button>
+              <Button className="ui-button-secondary" onClick={() => loginAccess.mutate(false)} disabled={loginAccess.isPending || !employee.data.loginEnabled}>
+                {t("hr360.disableLogin")}
+              </Button>
+            </div>
           </DetailCard>
           {generatedPassword ? <FeedbackState tone="success" title={t("employeeAccess.generatedPasswordTitle")} description={t("employeeAccess.generatedPasswordDescription", { password: generatedPassword })} /> : null}
           {employee.data.loginReadiness && !employee.data.loginReadiness.canLogin ? (
@@ -409,7 +422,7 @@ function NamedCollectionPage({ type, titleKey, descriptionKey, permission, manag
                     <Td>{item.workScheduleId || t("common.notSet")}</Td>
                     <Td>{item.attendanceProfileId || t("common.notSet")}</Td>
                     <Td>{item.isActive ? t("employeeAccess.active") : t("employeeAccess.inactive")}</Td>
-                    <Td><Button className="ui-button-secondary text-xs">{t("common.details")}</Button></Td>
+                    <Td><Button className="ui-button-secondary text-xs" disabled title={t("hr.buttonNotAvailableYet")}>{t("hr.comingSoon")}</Button></Td>
                   </tr>
                 ))}
               </tbody>
@@ -547,7 +560,7 @@ function HrQuickActions() {
           {actions.map((action) => (
             action === "addEmployee"
               ? <Link key={action} href="/hr/employees/new" className="rounded px-3 py-2 text-sm hover:bg-[var(--color-surface-muted)]">{t(`hr.quickAction.${action}`)}</Link>
-              : <button key={action} className="rounded px-3 py-2 text-left text-sm text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)]" type="button">{t(`hr.quickAction.${action}`)} - {t("hr.comingSoon")}</button>
+              : <button key={action} className="rounded px-3 py-2 text-left text-sm text-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-70" type="button" disabled title={t("hr.buttonNotAvailableYet")}>{t(`hr.quickAction.${action}`)} - {t("hr.comingSoon")}</button>
           ))}
         </div>
       </details>
@@ -586,8 +599,8 @@ function DocumentSection({ title, docs }: { title: string; docs: HrEmployeeDocum
         {docs.length ? docs.map((doc) => (
           <div key={doc.id} className="rounded-md border border-[var(--color-border)] p-3 text-sm">
             <p className="font-semibold">{doc.employee?.name ?? t("employeeAccess.employee")}</p>
-            <p className="text-[var(--color-muted)]">{doc.documentType} - {doc.aiReviewStatus ?? "NOT_REVIEWED"}</p>
-            <Button className="ui-button-secondary mt-2 text-xs">{t("hr.documents.upload")}</Button>
+            <p className="text-[var(--color-muted)]">{doc.documentType} - {t(`hr360.option.${doc.aiReviewStatus ?? "NOT_REVIEWED"}`)}</p>
+            <Button className="ui-button-secondary mt-2 text-xs" disabled title={t("hr.buttonNotAvailableYet")}>{t("hr.documents.upload")}</Button>
           </div>
         )) : <p className="text-sm text-[var(--color-muted)]">{t("hr.documents.none")}</p>}
       </div>
@@ -630,6 +643,15 @@ function employeeModal(id: string, employee: HrEmployee, t: (key: string, params
 
 function statusLabel(status: string | undefined, t: (key: string) => string) {
   return status ? t(`hr.todayStatus.${status}`) : t("hr.todayStatus.ABSENT");
+}
+
+function employeeInitials(employee: HrEmployee) {
+  return (employee.displayName || employee.name)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }
 
 function Th({ children }: { children: ReactNode }) {

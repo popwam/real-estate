@@ -31,7 +31,7 @@ export class JwtAuthGuard implements CanActivate {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
-        organization: true,
+        organization: { include: { subscription: true } },
         hrEmployeeProfile: true,
         role: {
           include: {
@@ -49,6 +49,16 @@ export class JwtAuthGuard implements CanActivate {
 
     if (user.organization && ['SUSPENDED', 'REVOKED'].includes(user.organization.status)) {
       throw new UnauthorizedException('Organization is not active.');
+    }
+
+    if (user.organization && !this.isPlatformRole(user.role?.name ?? payload.role)) {
+      const subscription = user.organization.subscription;
+      if (subscription?.status && ['EXPIRED', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)) {
+        throw new UnauthorizedException('Subscription expired or suspended.');
+      }
+      if (subscription?.endsAt && subscription.endsAt <= new Date() && !subscription.autoRenew) {
+        throw new UnauthorizedException('Subscription expired or suspended.');
+      }
     }
 
     if (user.hrEmployeeProfile && user.hrEmployeeProfile.status !== 'ACTIVE') {
@@ -80,5 +90,9 @@ export class JwtAuthGuard implements CanActivate {
 
   private passwordChangeAllowedPath(path: string) {
     return ['/auth/me', '/auth/logout', '/auth/change-password'].includes(path);
+  }
+
+  private isPlatformRole(role: string | undefined) {
+    return Boolean(role?.startsWith('platform_'));
   }
 }

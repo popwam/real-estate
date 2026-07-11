@@ -93,7 +93,7 @@ export class AuthService {
           userRole,
         },
         include: {
-          organization: true,
+          organization: { include: { subscription: true } },
           hrEmployeeProfile: true,
           role: {
             include: {
@@ -188,7 +188,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
-        organization: true,
+        organization: { include: { subscription: true } },
         hrEmployeeProfile: true,
         role: {
           include: {
@@ -248,7 +248,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.userId },
-      include: { organization: true },
+      include: { organization: { include: { subscription: true } } },
     });
 
     if (!user?.isActive || !this.organizationCanLogin(user.organization)) {
@@ -288,7 +288,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.userId },
       include: {
-        organization: true,
+        organization: { include: { subscription: true } },
         hrEmployeeProfile: true,
         role: {
           include: {
@@ -461,7 +461,7 @@ export class AuthService {
 
   private async findLoginUser(identifier: string) {
     const include = {
-      organization: true,
+      organization: { include: { subscription: true } },
       hrEmployeeProfile: true,
       role: {
         include: {
@@ -524,7 +524,16 @@ export class AuthService {
   }
 
   private organizationCanLogin(organization: any) {
-    return !organization || !['SUSPENDED', 'REVOKED'].includes(organization.status);
+    if (!organization) return true;
+    if (['SUSPENDED', 'REVOKED'].includes(organization.status)) return false;
+    const subscription = organization.subscription;
+    if (subscription?.status && ['EXPIRED', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)) {
+      return false;
+    }
+    if (subscription?.endsAt && subscription.endsAt <= new Date() && !subscription.autoRenew) {
+      return false;
+    }
+    return true;
   }
 
   private loginFailureReason(user: any | undefined) {

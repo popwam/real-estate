@@ -259,6 +259,15 @@ export const messages = {
   "footer.trustTitle": "Conçu pour la confiance",
   "footer.trustDescription": "Les annonces publiques utilisent les informations approuvées de la marketplace tandis que les ventes privées et les dossiers clients restent protégés.",
   "footer.copyright": "© {year} POPWAM. Découverte immobilière vérifiée.",
+  "companyPortal.companyPortal": "Portail entreprise",
+  "companyPortal.defaultSummary": "Profil public de l entreprise, bureaux et informations de contact.",
+  "companyPortal.callCompany": "Appeler l entreprise",
+  "companyPortal.emailCompany": "Envoyer un e-mail",
+  "companyPortal.website": "Site web",
+  "companyPortal.offices": "Bureaux",
+  "companyPortal.locationNotSet": "Emplacement non defini",
+  "companyPortal.noPublicOffices": "Aucun bureau public n est encore liste.",
+  "companyPortal.publicLink": "Lien public",
 } as const;
 
 export const domTranslations = {

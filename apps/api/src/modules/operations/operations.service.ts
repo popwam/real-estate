@@ -244,6 +244,7 @@ export class OperationsService {
     requireOperationPermission(user, ['company.settings.manage', 'hr.manage']);
     const organizationId = this.resolveScopedOrganizationId(input, user);
     const id = this.optional(input.id);
+    if (!id) await this.assertBranchLimit(organizationId);
     const data = {
       organizationId,
       name: this.required(input.name, 'name'),
@@ -346,6 +347,7 @@ export class OperationsService {
     this.ensureHashService();
 
     const organizationId = this.resolveEmployeeOrganizationId(input, user);
+    await this.assertEmployeeLimit(organizationId);
     const organization = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       select: { id: true, type: true, country: true },
@@ -3040,6 +3042,29 @@ export class OperationsService {
     );
     if (conflict) {
       throw new ConflictException('Phone number cannot be used for this account.');
+    }
+  }
+
+  private async assertEmployeeLimit(organizationId: string) {
+    if (!this.prisma.organizationLimits) return;
+    const [limits, employees] = await Promise.all([
+      this.prisma.organizationLimits.findUnique({ where: { organizationId } }),
+      this.prisma.hrEmployee.count({ where: { organizationId } }),
+    ]);
+    if (limits && employees >= limits.maxEmployees) {
+      throw new BadRequestException('Limit exceeded: employee limit reached.');
+    }
+  }
+
+  private async assertBranchLimit(organizationId: string) {
+    if (!this.prisma.organizationLimits) return;
+    const [limits, branches] = await Promise.all([
+      this.prisma.organizationLimits.findUnique({ where: { organizationId } }),
+      this.prisma.organizationBranch.count({ where: { organizationId } }),
+    ]);
+    const max = limits?.maxOffices ?? limits?.maxBranches;
+    if (max !== undefined && branches >= max) {
+      throw new BadRequestException('Limit exceeded: office limit reached.');
     }
   }
 
