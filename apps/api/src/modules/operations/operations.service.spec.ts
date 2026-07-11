@@ -22,6 +22,43 @@ describe('OperationsService self attendance', () => {
     status: HrEmployeeStatus.ACTIVE,
   };
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  function attendanceSettings(overrides: Record<string, unknown> = {}) {
+    return {
+      requireLocation: false,
+      allowedLatitude: null,
+      allowedLongitude: null,
+      allowedRadiusMeters: null,
+      exactRadiusMeters: 30,
+      expandedRadiusMeters: 1000,
+      gracePeriodMinutes: 10,
+      firstLateSliceMinutes: 15,
+      firstLatePenaltyType: 'MARK_LATE',
+      firstLatePenaltyValue: null,
+      secondLateSliceMinutes: 30,
+      secondLatePenaltyType: 'MANUAL_REVIEW',
+      secondLatePenaltyValue: null,
+      beyondSecondSlicePenaltyType: 'MANUAL_REVIEW',
+      requireWifi: false,
+      allowedWifiSsids: [],
+      allowedWifiBssids: [],
+      blockDeveloperOptions: true,
+      blockUsbDebugging: true,
+      requirePhoto: false,
+      requireDvrReview: false,
+      allowWebCheckIn: true,
+      allowMobileCheckIn: true,
+      allowExpandedRadiusWithReview: true,
+      webWifiPolicy: 'MANUAL_REVIEW',
+      workStartTime: '09:00',
+      workEndTime: '17:00',
+      ...overrides,
+    };
+  }
+
   function setup() {
     const prisma = {
       hrEmployee: {
@@ -73,7 +110,12 @@ describe('OperationsService self attendance', () => {
   }
 
   it('creates check-in for the linked employee and ignores submitted employeeId', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-10T00:00:00.000Z'));
     const { prisma, service } = setup();
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
+      attendanceSettings({ workStartTime: '23:59' }),
+    );
 
     const result = await service.checkInHrAttendance(
       { employeeId: 'employee_2', note: 'Arrived' },
@@ -94,6 +136,27 @@ describe('OperationsService self attendance', () => {
           organizationId: employee.organizationId,
           employeeId: employee.id,
           status: HrAttendanceStatus.PRESENT,
+        }),
+      }),
+    );
+  });
+
+  it('marks self check-in late when the configured schedule has already passed', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-10T23:59:00.000Z'));
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
+      attendanceSettings({ workStartTime: '00:00' }),
+    );
+
+    const result = await service.checkInHrAttendance({}, user);
+
+    expect(result.status).toBe(HrAttendanceStatus.LATE);
+    expect(result.minutesLate).toBeGreaterThan(0);
+    expect(prisma.hrAttendanceRecord.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: HrAttendanceStatus.LATE,
         }),
       }),
     );

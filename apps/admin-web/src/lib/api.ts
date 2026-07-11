@@ -1,6 +1,6 @@
 "use client";
 
-import { getAccessToken } from "@/lib/auth";
+import { clearTokens, getAccessToken, getRefreshToken, isActiveAccountPersisted, storeTokens } from "@/lib/auth";
 import type { AuthSession, MeResponse } from "@/types/auth";
 import type {
   Organization,
@@ -20,6 +20,7 @@ const API_BASE_URL =
 
 type ApiOptions = RequestInit & {
   auth?: boolean;
+  authRetried?: boolean;
 };
 
 export class ApiError extends Error {
@@ -84,6 +85,15 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
       error instanceof Error ? { name: error.name } : undefined,
       requestId,
     );
+  }
+
+  if (response.status === 401 && options.auth !== false && path !== "/auth/refresh" && !options.authRetried) {
+    const refreshed = await refreshActiveSession();
+    if (refreshed) {
+      const retryHeaders = new Headers(options.headers);
+      retryHeaders.set("Authorization", `Bearer ${refreshed.accessToken}`);
+      return apiRequest<T>(path, { ...options, headers: retryHeaders, authRetried: true });
+    }
   }
 
   const responseRequestId = response.headers.get("x-request-id") ?? requestId;
@@ -154,16 +164,45 @@ export function acceptInvitationApi(token: string, input: { password: string; fi
   });
 }
 
-export function loginApi(input: { identifier?: string; email?: string; password: string }) {
+export function loginApi(input: { identifier?: string; email?: string; password: string; keepSignedIn?: boolean }) {
+  const { identifier, email, password } = input;
   return apiRequest<AuthSession>("/auth/login", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ identifier, email, password }),
     auth: false,
   });
 }
 
 export function getCurrentUserApi() {
   return apiRequest<MeResponse>("/auth/me");
+}
+
+async function refreshActiveSession() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "x-request-id": createRequestId("admin-web"),
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+    const body = await parseResponse(response);
+    if (!response.ok || !body || typeof body !== "object") {
+      clearTokens();
+      return null;
+    }
+    const session = body as AuthSession;
+    storeTokens(session, { persist: isActiveAccountPersisted() });
+    return session;
+  } catch {
+    clearTokens();
+    return null;
+  }
 }
 
 export function changePasswordApi(input: { currentPassword: string; newPassword: string }) {

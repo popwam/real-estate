@@ -1,5 +1,7 @@
 import {
+  Accessibility,
   AlertTriangle,
+  BarChart3,
   BadgeDollarSign,
   BriefcaseBusiness,
   Building2,
@@ -8,6 +10,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   FileDown,
+  FileText,
   FileUp,
   FolderKanban,
   Globe2,
@@ -16,9 +19,11 @@ import {
   Home,
   KeyRound,
   Landmark,
+  LifeBuoy,
   Megaphone,
   MessageSquareText,
   MoreHorizontal,
+  Network,
   Package,
   Settings2,
   ShieldCheck,
@@ -26,11 +31,35 @@ import {
   UsersRound,
 } from "lucide-react";
 
+export const safeSidebarIconMap = {
+  dashboard: Home,
+  employees: BriefcaseBusiness,
+  attendance: ClipboardCheck,
+  crm: UsersRound,
+  deals: Landmark,
+  dealRooms: MessageSquareText,
+  files: FileText,
+  reports: BarChart3,
+  settings: Settings2,
+  organizations: Building2,
+  users: UsersRound,
+  support: LifeBuoy,
+  analytics: BarChart3,
+  branches: Network,
+  domains: Globe2,
+  accessibility: Accessibility,
+} as const;
+
+export type SidebarIconKey = keyof typeof safeSidebarIconMap;
+
 export type NavItem = {
   id: string;
+  labelKey: string;
   href: string;
   label: string;
+  iconKey: SidebarIconKey;
   icon: typeof Home;
+  groupKey: string;
   group: string;
   roles?: string[];
   organizationTypes?: string[];
@@ -41,7 +70,29 @@ export type NavItem = {
   isMobilePrimary?: boolean;
 };
 
-export const platformNav: NavItem[] = [
+type RawNavItem = Omit<NavItem, "labelKey" | "iconKey" | "groupKey">;
+
+const globalHrNavItems: RawNavItem[] = [
+  { id: "hr-dashboard", href: "/hr/dashboard", label: "HR Dashboard", icon: BriefcaseBusiness, group: "Human Resources", permissions: ["hr.dashboard.view", "hr.view"], desktopPriority: 100, mobilePriority: 100 },
+  { id: "hr-employees", href: "/hr/employees", label: "Employees", icon: BriefcaseBusiness, group: "Human Resources", permissions: ["hr.employees.view"], desktopPriority: 101, mobilePriority: 101 },
+  { id: "hr-work-groups", href: "/hr/work-groups", label: "Work Groups", icon: Network, group: "Human Resources", permissions: ["hr.work_groups.view"], desktopPriority: 102, mobilePriority: 102 },
+  { id: "hr-teams", href: "/hr/teams", label: "Teams", icon: UsersRound, group: "Human Resources", permissions: ["hr.teams.view"], desktopPriority: 103, mobilePriority: 103 },
+  { id: "hr-actions", href: "/hr/actions", label: "Employee Actions", icon: ClipboardList, group: "Human Resources", permissions: ["hr.actions.view", "hr.actions.apply"], desktopPriority: 104, mobilePriority: 104 },
+  { id: "hr-documents", href: "/hr/documents", label: "Employee Documents", icon: FileText, group: "Human Resources", permissions: ["hr.documents.view"], desktopPriority: 105, mobilePriority: 105 },
+  { id: "hr-org-chart", href: "/hr/org-chart", label: "Organization Chart", icon: Network, group: "Human Resources", permissions: ["hr.org_chart.view"], desktopPriority: 106, mobilePriority: 106 },
+  { id: "hr-transfer-log", href: "/hr/transfer-log", label: "Transfer Log", icon: History, group: "Human Resources", permissions: ["hr.transfer_log.view"], desktopPriority: 107, mobilePriority: 107 },
+  { id: "hr-title-changes", href: "/hr/title-changes", label: "Title Changes", icon: History, group: "Human Resources", permissions: ["hr.title_changes.view"], desktopPriority: 108, mobilePriority: 108 },
+  { id: "hr-requests", href: "/hr/requests", label: "Requests", icon: ClipboardCheck, group: "Human Resources", permissions: ["hr.requests.view"], desktopPriority: 109, mobilePriority: 109 },
+  { id: "hr-attendance", href: "/hr/attendance", label: "Attendance", icon: ClipboardCheck, group: "Human Resources", permissions: ["hr.attendance.view", "hr.attendance.self"], desktopPriority: 110, mobilePriority: 110 },
+  { id: "hr-finance", href: "/hr/finance", label: "Finance", icon: BadgeDollarSign, group: "Human Resources", permissions: ["hr.finance.view"], desktopPriority: 111, mobilePriority: 111 },
+  { id: "hr-assets", href: "/hr/assets", label: "Asset Management", icon: Package, group: "Human Resources", permissions: ["hr.assets.view"], desktopPriority: 112, mobilePriority: 112 },
+  { id: "hr-tasks", href: "/hr/tasks", label: "Tasks", icon: ClipboardList, group: "Human Resources", permissions: ["hr.tasks.view"], desktopPriority: 113, mobilePriority: 113 },
+  { id: "hr-hr-documents", href: "/hr/hr-documents", label: "HR Documents", icon: FileText, group: "Human Resources", permissions: ["hr.hr_documents.view"], desktopPriority: 114, mobilePriority: 114 },
+  { id: "hr-reports", href: "/hr/reports", label: "Reports", icon: BarChart3, group: "Human Resources", permissions: ["hr.reports.view"], desktopPriority: 115, mobilePriority: 115 },
+  { id: "hr-settings", href: "/hr/settings", label: "HR Settings", icon: Settings2, group: "Human Resources", permissions: ["hr.settings.view"], desktopPriority: 116, mobilePriority: 116 },
+];
+
+const platformNavItems: RawNavItem[] = [
   { id: "platform-dashboard", href: "/platform/dashboard", label: "Dashboard", icon: Home, group: "Workspace", desktopPriority: 1, mobilePriority: 1, isPrimary: true, isMobilePrimary: true },
   { id: "platform-organizations", href: "/platform/organizations", label: "Organizations", icon: Building2, group: "Trust & governance", desktopPriority: 2, mobilePriority: 2, isPrimary: true, isMobilePrimary: true },
   { id: "platform-verifications", href: "/platform/verifications", label: "Verifications", icon: ClipboardCheck, group: "Trust & governance", desktopPriority: 3, mobilePriority: 3, isPrimary: true, isMobilePrimary: true },
@@ -56,7 +107,7 @@ export const platformNav: NavItem[] = [
   { id: "platform-commissions", href: "/platform/commissions", label: "Commissions", icon: BadgeDollarSign, group: "Deals & finance", desktopPriority: 12, mobilePriority: 12 },
   { id: "platform-accounting", href: "/platform/accounting/overview", label: "Accounting", icon: Calculator, group: "Deals & finance", desktopPriority: 13, mobilePriority: 13 },
   { id: "platform-operations", href: "/platform/operations/overview", label: "Operations", icon: ClipboardList, group: "Operations", desktopPriority: 14, mobilePriority: 14 },
-  { id: "platform-hr", href: "/platform/hr/overview", label: "HR", icon: BriefcaseBusiness, group: "Operations", desktopPriority: 15, mobilePriority: 15 },
+  ...globalHrNavItems,
   { id: "platform-legal", href: "/platform/legal/overview", label: "Legal", icon: Landmark, group: "Operations", desktopPriority: 16, mobilePriority: 16 },
   { id: "platform-domains", href: "/platform/domains", label: "Domains", icon: Globe2, group: "Website & data", desktopPriority: 17, mobilePriority: 17 },
   { id: "platform-import-jobs", href: "/platform/import-export/jobs", label: "Import Jobs", icon: FileUp, group: "Website & data", desktopPriority: 18, mobilePriority: 18 },
@@ -65,7 +116,7 @@ export const platformNav: NavItem[] = [
   { id: "platform-cameras", href: "/platform/cameras/overview", label: "Cameras", icon: Camera, group: "Foundations", desktopPriority: 21, mobilePriority: 21 },
 ];
 
-export const developerNav: NavItem[] = [
+const developerNavItems: RawNavItem[] = [
   { id: "dev-dashboard", href: "/developer/dashboard", label: "Dashboard", icon: Home, group: "Workspace", desktopPriority: 1, mobilePriority: 1, isPrimary: true, isMobilePrimary: true },
   { id: "dev-projects", href: "/developer/projects", label: "Projects", icon: FolderKanban, group: "Projects & inventory", desktopPriority: 2, mobilePriority: 2, isPrimary: true, isMobilePrimary: true },
   { id: "dev-inventory", href: "/developer/inventory", label: "Inventory", icon: Package, group: "Projects & inventory", desktopPriority: 3, mobilePriority: 4, isPrimary: true, isMobilePrimary: true },
@@ -83,9 +134,7 @@ export const developerNav: NavItem[] = [
   { id: "dev-commission-rules", href: "/developer/commission-rules", label: "Commission Rules", icon: BadgeDollarSign, group: "Reservations & deals", desktopPriority: 15, mobilePriority: 15 },
   { id: "dev-commissions", href: "/developer/commissions", label: "Commissions", icon: BadgeDollarSign, group: "Reservations & deals", desktopPriority: 16, mobilePriority: 16 },
   { id: "dev-operations", href: "/developer/operations/overview", label: "Operations", icon: ClipboardList, group: "Operations", desktopPriority: 17, mobilePriority: 17 },
-  { id: "dev-hr", href: "/developer/hr/employees", label: "HR Employees", icon: BriefcaseBusiness, group: "Operations", desktopPriority: 18, mobilePriority: 18 },
-  { id: "dev-hr-departments", href: "/developer/hr/departments", label: "HR Departments", icon: BriefcaseBusiness, group: "Operations", desktopPriority: 19, mobilePriority: 19 },
-  { id: "dev-hr-attendance", href: "/developer/hr/attendance", label: "HR Attendance", icon: ClipboardCheck, group: "Operations", desktopPriority: 20, mobilePriority: 20 },
+  ...globalHrNavItems,
   { id: "dev-accounting", href: "/developer/accounting/transactions", label: "Accounting", icon: Calculator, group: "Operations", desktopPriority: 21, mobilePriority: 21 },
   { id: "dev-accounting-summary", href: "/developer/accounting/summary", label: "Accounting Summary", icon: Calculator, group: "Operations", desktopPriority: 22, mobilePriority: 22 },
   { id: "dev-accounting-categories", href: "/developer/accounting/categories", label: "Accounting Categories", icon: ClipboardList, group: "Operations", desktopPriority: 23, mobilePriority: 23 },
@@ -98,7 +147,7 @@ export const developerNav: NavItem[] = [
   { id: "dev-cameras", href: "/developer/cameras/devices", label: "Cameras", icon: Camera, group: "Foundations", desktopPriority: 30, mobilePriority: 30 },
 ];
 
-export const brokerageNav: NavItem[] = [
+const brokerageNavItems: RawNavItem[] = [
   { id: "brokerage-dashboard", href: "/brokerage/dashboard", label: "Dashboard", icon: Home, group: "Workspace", desktopPriority: 1, mobilePriority: 1, isPrimary: true, isMobilePrimary: true },
   { id: "brokerage-marketplace-leads", href: "/brokerage/crm/marketplace-leads", label: "Marketplace Leads", icon: ShieldCheck, group: "CRM & leads", desktopPriority: 2, mobilePriority: 2, isPrimary: true, isMobilePrimary: true },
   { id: "brokerage-crm-leads", href: "/brokerage/crm/leads", label: "CRM Leads", icon: UsersRound, group: "CRM & leads", desktopPriority: 3, mobilePriority: 3, isPrimary: true, isMobilePrimary: true },
@@ -111,13 +160,17 @@ export const brokerageNav: NavItem[] = [
   { id: "brokerage-deal-rooms", href: "/brokerage/deal-rooms", label: "Deal Rooms", icon: MessageSquareText, group: "Reservations & deals", desktopPriority: 10, mobilePriority: 10 },
   { id: "brokerage-deals", href: "/brokerage/deals", label: "Deals", icon: Landmark, group: "Reservations & deals", desktopPriority: 11, mobilePriority: 11 },
   { id: "brokerage-commissions", href: "/brokerage/commissions", label: "Commissions", icon: BadgeDollarSign, group: "Reservations & deals", desktopPriority: 12, mobilePriority: 12 },
-  { id: "brokerage-hr", href: "/developer/hr/employees", label: "Employees", icon: BriefcaseBusiness, group: "Operations", permissions: ["hr.employees.view", "hr.view", "hr.manage"], desktopPriority: 13, mobilePriority: 13 },
+  ...globalHrNavItems,
   { id: "brokerage-website-settings", href: "/brokerage/website-settings", label: "Website Settings", icon: Settings2, group: "Website & data", desktopPriority: 14, mobilePriority: 14 },
   { id: "brokerage-domains", href: "/brokerage/domains", label: "Domains", icon: Globe2, group: "Website & data", desktopPriority: 15, mobilePriority: 15 },
   { id: "brokerage-exports", href: "/brokerage/import-export/export", label: "Exports", icon: FileDown, group: "Website & data", desktopPriority: 16, mobilePriority: 16 },
 ];
 
-export const moreNavItem: NavItem = {
+export const platformNav = withNavMetadata(platformNavItems);
+export const developerNav = withNavMetadata(developerNavItems);
+export const brokerageNav = withNavMetadata(brokerageNavItems);
+
+export const moreNavItem: NavItem = withNavMetadata([{
   id: "nav-more",
   href: "#",
   label: "More",
@@ -125,4 +178,40 @@ export const moreNavItem: NavItem = {
   group: "Navigation",
   desktopPriority: 999,
   mobilePriority: 999,
-};
+}])[0];
+
+function withNavMetadata(items: RawNavItem[]): NavItem[] {
+  return items.map((item) => ({
+    ...item,
+    labelKey: `navigation.labels.${messageKey(item.label)}`,
+    groupKey: `navigation.groups.${messageKey(item.group)}`,
+    iconKey: iconKeyFor(item),
+  }));
+}
+
+function messageKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\//g, " ")
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+}
+
+function iconKeyFor(item: RawNavItem): SidebarIconKey {
+  const text = `${item.id} ${item.label}`.toLowerCase();
+  if (text.includes("attendance")) return "attendance";
+  if (text.includes("employee") || text.includes("hr")) return "employees";
+  if (text.includes("deal room")) return "dealRooms";
+  if (text.includes("deal") || text.includes("reservation") || text.includes("commission")) return "deals";
+  if (text.includes("domain")) return "domains";
+  if (text.includes("organization") || text.includes("verification")) return "organizations";
+  if (text.includes("crm") || text.includes("lead") || text.includes("conversation")) return "crm";
+  if (text.includes("import") || text.includes("export")) return "files";
+  if (text.includes("accounting") || text.includes("pipeline") || text.includes("activity")) return "analytics";
+  if (text.includes("setting")) return "settings";
+  if (text.includes("support")) return "support";
+  if (text.includes("project") || text.includes("inventory") || text.includes("branch")) return "branches";
+  if (text.includes("dashboard") || text.includes("overview")) return "dashboard";
+  return "reports";
+}

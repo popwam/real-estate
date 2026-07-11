@@ -14,12 +14,11 @@ import { useLogin } from "@/hooks/use-login";
 import { getRoleHome } from "@/lib/auth";
 import { useI18n } from "@/i18n";
 
-const loginSchema = z.object({
-  identifier: z.string().min(1, "Email or phone is required."),
-  password: z.string().min(1, "Password is required."),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginFormValues = {
+  identifier: string;
+  password: string;
+  keepSignedIn: boolean;
+};
 
 export function LoginForm() {
   const { t } = useI18n();
@@ -27,6 +26,11 @@ export function LoginForm() {
   const router = useRouter();
   const login = useLogin();
   const [showPassword, setShowPassword] = useState(false);
+  const loginSchema = z.object({
+    identifier: z.string().min(1, t("auth.validation.identifierRequired")),
+    password: z.string().min(1, t("auth.validation.passwordRequired")),
+    keepSignedIn: z.boolean(),
+  });
   const {
     register,
     handleSubmit,
@@ -36,6 +40,7 @@ export function LoginForm() {
     defaultValues: {
       identifier: "",
       password: "",
+      keepSignedIn: true,
     },
   });
 
@@ -85,7 +90,8 @@ export function LoginForm() {
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
             className="absolute end-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+            title={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
             aria-pressed={showPassword}
           >
             {showPassword ? (
@@ -101,6 +107,14 @@ export function LoginForm() {
           </p>
         ) : null}
       </div>
+      <label className="flex items-center gap-3 text-sm font-semibold text-[var(--color-foreground)]">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-[var(--color-border)]"
+          {...register("keepSignedIn")}
+        />
+        {t("auth.keepSignedIn")}
+      </label>
       {login.error ? (
         <FeedbackState
           tone="error"
@@ -114,7 +128,7 @@ export function LoginForm() {
         ) : (
           <LogIn className="h-4 w-4" aria-hidden="true" />
         )}
-        {login.isPending ? "Signing in..." : "Sign in securely"}
+        {login.isPending ? t("auth.signingIn") : t("auth.signInSecurely")}
       </Button>
     </form>
   );

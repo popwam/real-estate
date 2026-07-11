@@ -9,9 +9,9 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: loginApi,
-    onSuccess: (session) => {
-      storeTokens(session);
-      queryClient.setQueryData(["auth", "me"], {
+    onSuccess: (session, variables) => {
+      storeTokens(session, { persist: variables.keepSignedIn ?? true });
+      queryClient.setQueryData(["auth", "me", 0], {
         user: session.user,
         organization: session.organization,
         permissions: session.permissions,

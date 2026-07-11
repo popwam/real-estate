@@ -1,16 +1,17 @@
 "use client";
 
-import { Eye, Languages, Moon, Sun, Type } from "lucide-react";
+import { Eye, Languages, Monitor, Moon, Sun, Type } from "lucide-react";
 import { useTheme, type FontScale, type Theme } from "@/components/providers/theme-provider";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
 
-const themeOrder: Theme[] = ["light", "dark", "comfort"];
-const fontScaleOrder: FontScale[] = ["normal", "large", "extra-large"];
+const themeOrder: Theme[] = ["light", "dark", "system", "comfort"];
+const fontScaleOrder: FontScale[] = ["normal", "large", "larger"];
 
 const themeMeta: Record<Theme, { label: string; icon: typeof Sun }> = {
   light: { label: "Light", icon: Sun },
   dark: { label: "Dark", icon: Moon },
+  system: { label: "System", icon: Monitor },
   comfort: { label: "Eye comfort", icon: Eye },
 };
 

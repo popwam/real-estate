@@ -3,12 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
-import { DisplayPreferences } from "@/components/layout/display-preferences";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { useAllowedNavigation } from "@/hooks/use-navigation";
 import { useI18n } from "@/i18n";
 import {
   getMobileBottomNavItems,
-  getNavItemsForUser,
   groupNavItems,
 } from "@/lib/navigation-engine";
 import { cn } from "@/lib/utils";
@@ -17,11 +15,10 @@ import { usePathname } from "next/navigation";
 export function MobileBottomNav() {
   const { t } = useI18n();
   const pathname = usePathname();
-  const { data } = useCurrentUser();
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const navItems = getNavItemsForUser(data?.user.role, data?.organization?.type, data?.permissions);
+  const navItems = useAllowedNavigation();
   const { primaryItems, overflowItems, moreItem } = getMobileBottomNavItems(navItems, 5);
   const MoreIcon = moreItem.icon;
 
@@ -96,11 +93,6 @@ export function MobileBottomNav() {
             </div>
 
             <div className="overflow-y-auto px-4 py-4">
-              <div className="mb-5">
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted)]">{t("navigation.display")}</p>
-                <DisplayPreferences />
-              </div>
-
               {Object.keys(groupedOverflow).length ? (
                 Object.entries(groupedOverflow).map(([group, items]) => (
                   <section key={group} className="mb-6 last:mb-0">

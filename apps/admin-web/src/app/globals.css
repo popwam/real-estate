@@ -54,7 +54,7 @@
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
 
-  --sidebar-collapsed-width: 80px;
+  --sidebar-collapsed-width: 72px;
   --sidebar-expanded-width: 280px;
   --bottom-nav-height: 68px;
   --sticky-banner-height: 80px;
@@ -153,6 +153,7 @@ html[data-font-scale="large"] {
   font-size: 112.5%;
 }
 
+html[data-font-scale="larger"],
 html[data-font-scale="extra-large"] {
   font-size: 125%;
 }

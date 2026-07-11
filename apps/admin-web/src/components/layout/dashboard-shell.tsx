@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { AccessibilityFloatingButton } from "@/components/accessibility/accessibility-floating-button";
 import { AuthGuard } from "@/components/auth-guard";
 import { IconSidebar } from "@/components/layout/icon-sidebar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -14,11 +15,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <IconSidebar />
         <div className="flex min-h-screen min-w-0 flex-1 flex-col">
           <Topbar />
-          <main className="flex-1 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
+          <main data-dashboard-content className="flex-1 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1.5rem)] pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-7">
             <RoutePermissionBoundary>{children}</RoutePermissionBoundary>
           </main>
         </div>
         <MobileBottomNav />
+        <AccessibilityFloatingButton />
       </div>
     </AuthGuard>
   );

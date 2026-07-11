@@ -20,6 +20,7 @@ import { DealsModule } from './modules/deals/deals.module';
 import { DeveloperManagementModule } from './modules/developer-management/developer-management.module';
 import { DeveloperBrokerageAgreementsModule } from './modules/developer-brokerage-agreements/developer-brokerage-agreements.module';
 import { FilesModule } from './modules/files/files.module';
+import { HrModule } from './modules/hr/hr.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ImportExportModule } from './modules/import-export/import-export.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
@@ -61,6 +62,7 @@ import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rul
     PermissionsModule,
     AuditLogsModule,
     FilesModule,
+    HrModule,
     ClientsModule,
     LeadsModule,
     DeveloperManagementModule,
