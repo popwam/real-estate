@@ -2,16 +2,30 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  activateOrganizationApi,
   approveOrganizationApi,
   approveVerificationApi,
+  createCompanyRoleTemplateApi,
+  createPlatformPlanApi,
+  createRequiredDocumentPolicyApi,
   getOrganizationReviewApi,
+  getOrganizationActivationCheckApi,
+  getPlatformDomainSettingsApi,
+  getPlatformModulesApi,
+  getPlatformSettingsApi,
   getVerificationApi,
   getVerificationQueueApi,
+  listCompanyRoleTemplatesApi,
   listOrganizationsApi,
+  listPlatformPlansApi,
+  listPlatformSubscriptionsApi,
+  listRequiredDocumentPoliciesApi,
   reactivateOrganizationApi,
   rejectOrganizationApi,
+  rejectProvisioningOrganizationApi,
   rejectVerificationApi,
   requestMoreVerificationApi,
+  reviewOrganizationDocumentApi,
   suspendOrganizationApi,
   createPlatformOrganizationApi,
   createOrganizationAttendanceLocationApi,
@@ -48,11 +62,15 @@ import {
   updateOrganizationPublicSiteApi,
   updateOrganizationProvisioningDomainApi,
   updateOrganizationWifiRuleApi,
+  updateCompanyRoleTemplateApi,
+  updatePlatformPlanApi,
   updatePlatformOrganizationApi,
   updatePlatformOrganizationLimitsApi,
   updatePlatformOrganizationSubscriptionApi,
+  updateRequiredDocumentPolicyApi,
 } from "@/lib/api";
 import type {
+  CompanyRoleTemplate,
   OrganizationAttendanceLocation,
   OrganizationDomainRecord,
   OrganizationDocument,
@@ -63,7 +81,9 @@ import type {
   OrganizationPublicSiteSettings,
   OrganizationSubscription,
   OrganizationWifiRule,
+  PlatformPlan,
   PlatformOrganizationInput,
+  RequiredDocumentPolicy,
   ReviewActionInput,
 } from "@/types/platform";
 
@@ -87,6 +107,36 @@ export function usePlatformOrganization(id: string) {
     queryKey: ["platform", "organizations", id, "provisioning"],
     queryFn: () => getPlatformOrganizationApi(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useOrganizationActivationCheck(id: string) {
+  return useQuery({
+    queryKey: ["platform", "organizations", id, "activation-check"],
+    queryFn: () => getOrganizationActivationCheckApi(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useActivateOrganization(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => activateOrganizationApi(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] });
+    },
+  });
+}
+
+export function useRejectProvisioningOrganization(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { reason: string; notes?: string }) => rejectProvisioningOrganizationApi(id, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] });
+    },
   });
 }
 
@@ -301,6 +351,94 @@ export function useExtractOrganizationDocument(id: string) {
     mutationFn: (documentId: string) => extractOrganizationDocumentApi(id, documentId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
   });
+}
+
+export function useReviewOrganizationDocument(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, input }: { documentId: string; input: { status?: string; note?: string } }) =>
+      reviewOrganizationDocumentApi(id, documentId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "activation-check"] });
+    },
+  });
+}
+
+export function useCompanyRoleTemplates(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "access-levels"], queryFn: () => listCompanyRoleTemplatesApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateCompanyRoleTemplate(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<CompanyRoleTemplate>) => createCompanyRoleTemplateApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "access-levels"] }),
+  });
+}
+
+export function useUpdateCompanyRoleTemplate(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ templateId, input }: { templateId: string; input: Partial<CompanyRoleTemplate> }) => updateCompanyRoleTemplateApi(id, templateId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "access-levels"] }),
+  });
+}
+
+export function usePlatformSettings() {
+  return useQuery({ queryKey: ["platform", "settings"], queryFn: getPlatformSettingsApi });
+}
+
+export function usePlatformPlans() {
+  return useQuery({ queryKey: ["platform", "settings", "plans"], queryFn: listPlatformPlansApi });
+}
+
+export function useCreatePlatformPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<PlatformPlan>) => createPlatformPlanApi(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "settings", "plans"] }),
+  });
+}
+
+export function useUpdatePlatformPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ planId, input }: { planId: string; input: Partial<PlatformPlan> }) => updatePlatformPlanApi(planId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "settings", "plans"] }),
+  });
+}
+
+export function usePlatformSubscriptions() {
+  return useQuery({ queryKey: ["platform", "settings", "subscriptions"], queryFn: listPlatformSubscriptionsApi });
+}
+
+export function useRequiredDocumentPolicies() {
+  return useQuery({ queryKey: ["platform", "settings", "verification-policies"], queryFn: listRequiredDocumentPoliciesApi });
+}
+
+export function useCreateRequiredDocumentPolicy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<RequiredDocumentPolicy>) => createRequiredDocumentPolicyApi(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "settings", "verification-policies"] }),
+  });
+}
+
+export function useUpdateRequiredDocumentPolicy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ policyId, input }: { policyId: string; input: Partial<RequiredDocumentPolicy> }) => updateRequiredDocumentPolicyApi(policyId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "settings", "verification-policies"] }),
+  });
+}
+
+export function usePlatformModules() {
+  return useQuery({ queryKey: ["platform", "settings", "modules"], queryFn: getPlatformModulesApi });
+}
+
+export function usePlatformDomainSettings() {
+  return useQuery({ queryKey: ["platform", "settings", "domains"], queryFn: getPlatformDomainSettingsApi });
 }
 
 export function useMetadataCountries() {

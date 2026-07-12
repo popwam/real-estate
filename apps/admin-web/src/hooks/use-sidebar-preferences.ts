@@ -11,6 +11,7 @@ import {
   resetSidebarPreferences,
   saveSidebarPreferences,
   setIconOverride,
+  setLabelOverride,
   showItem,
   toggleSidebarMode,
   unpinItem,
@@ -45,8 +46,11 @@ export function useSidebarPreferences(allowedItems: NavItem[] = []) {
       if (aPinned !== undefined) return -1;
       if (bPinned !== undefined) return 1;
       return a.desktopPriority - b.desktopPriority;
-    });
-  }, [allowedIds, allowedItems, preferences.hiddenItemIds, preferences.pinnedItemIds]);
+    }).map((item) => ({
+      ...item,
+      label: preferences.labelOverrides[item.id] ?? item.label,
+    }));
+  }, [allowedIds, allowedItems, preferences.hiddenItemIds, preferences.labelOverrides, preferences.pinnedItemIds]);
 
   return {
     preferences,
@@ -71,10 +75,12 @@ export function useSidebarPreferences(allowedItems: NavItem[] = []) {
     setIconOverride: (id: string, iconKey: SidebarIconKey) => {
       if (allowedIds.has(id)) setPreferences(setIconOverride(id, iconKey));
     },
+    setLabelOverride: (id: string, label: string) => {
+      if (allowedIds.has(id)) setPreferences(setLabelOverride(id, label));
+    },
     reset: () => setPreferences(resetSidebarPreferences()),
     iconFor: (item: NavItem) => safeSidebarIconMap[preferences.iconOverrides[item.id] ?? item.iconKey] ?? item.icon,
     isHidden: (id: string) => preferences.hiddenItemIds.includes(id),
     isPinned: (id: string) => preferences.pinnedItemIds.includes(id),
   };
 }
-

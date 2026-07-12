@@ -5,12 +5,15 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { DetailCard } from "@/components/platform/detail-card";
+import { MapPicker } from "@/components/platform/map-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
 import {
   getAttendanceSettingsApi,
+  createCompanyAccessLevelApi,
+  listCompanyAccessLevelsApi,
   listBranchesApi,
   saveBranchApi,
   setBranchActiveApi,
@@ -24,6 +27,7 @@ export function CompanyHrSettings() {
   const qc = useQueryClient();
   const branches = useQuery({ queryKey: ["hr-branches"], queryFn: listBranchesApi });
   const settings = useQuery({ queryKey: ["hr-attendance-settings"], queryFn: getAttendanceSettingsApi });
+  const accessLevels = useQuery({ queryKey: ["company-access-levels"], queryFn: listCompanyAccessLevelsApi });
   const saveBranch = useMutation({
     mutationFn: saveBranchApi,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hr-branches"] }),
@@ -35,6 +39,10 @@ export function CompanyHrSettings() {
   const saveSettings = useMutation({
     mutationFn: updateAttendanceSettingsApi,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hr-attendance-settings"] }),
+  });
+  const createAccessLevel = useMutation({
+    mutationFn: createCompanyAccessLevelApi,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["company-access-levels"] }),
   });
 
   return (
@@ -69,28 +77,88 @@ export function CompanyHrSettings() {
         ) : null}
         {saveSettings.error ? <FeedbackState className="mt-4" tone="error" title={t("companySettings.attendanceSaveError")} description={saveSettings.error.message} /> : null}
       </DetailCard>
+
+      <DetailCard title={t("accessLevels.title")}>
+        <AccessLevelForm isPending={createAccessLevel.isPending} onSubmit={(input) => createAccessLevel.mutateAsync(input)} />
+        {accessLevels.isLoading ? <LoadingState label={t("common.loading")} /> : null}
+        {accessLevels.data?.length ? (
+          <div className="mt-5 grid gap-3">
+            {accessLevels.data.map((level) => (
+              <div key={level.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 text-sm">
+                <p className="font-semibold text-[var(--color-foreground)]">{level.displayName}</p>
+                <p className="text-[var(--color-muted)]">{level.permissions.length} {t("accessLevels.permissions")}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {createAccessLevel.error ? <FeedbackState className="mt-4" tone="error" title={t("accessLevels.title")} description={createAccessLevel.error.message} /> : null}
+      </DetailCard>
     </div>
+  );
+}
+
+function AccessLevelForm({ isPending, onSubmit }: { isPending: boolean; onSubmit: (input: { code?: string; displayName?: string; description?: string; permissions: string[]; isActive: boolean; sortOrder?: number }) => Promise<unknown> }) {
+  const { t } = useI18n();
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    await onSubmit({
+      code: optional(form, "code"),
+      displayName: optional(form, "displayName"),
+      description: optional(form, "description"),
+      permissions: form.getAll("permissions").map(String),
+      isActive: form.get("isActive") === "on",
+      sortOrder: numberValue(form, "sortOrder"),
+    });
+    event.currentTarget.reset();
+  }
+  return (
+    <form className="grid gap-3 md:grid-cols-3" onSubmit={submit}>
+      <Field id="accessLevelCode" label={t("accessLevels.code")}><Input id="accessLevelCode" name="code" /></Field>
+      <Field id="accessLevelName" label={t("accessLevels.displayName")}><Input id="accessLevelName" name="displayName" required /></Field>
+      <Field id="accessLevelDescription" label={t("accessLevels.description")}><Input id="accessLevelDescription" name="description" /></Field>
+      <Field id="accessLevelSort" label={t("accessLevels.sortOrder")}><Input id="accessLevelSort" name="sortOrder" type="number" defaultValue="100" /></Field>
+      <label className="flex min-h-12 items-center gap-2 text-sm"><input type="checkbox" name="isActive" defaultChecked />{t("common.active")}</label>
+      <fieldset className="space-y-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 md:col-span-3">
+        <legend className="px-1 text-sm font-medium">{t("accessLevels.permissions")}</legend>
+        <div className="grid gap-2 md:grid-cols-3">
+          {["company.dashboard.view", "company.settings.view", "company.profile.manage", "company.offices.manage", "company.wifi_rules.manage", "company.access_levels.view", "hr.view", "hr.employees.view", "hr.recruitment.view", "crm.leads.view_own", "reports.view"].map((permission) => (
+            <label key={permission} className="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="permissions" value={permission} />{permission}</label>
+          ))}
+        </div>
+      </fieldset>
+      <div className="md:col-span-3">
+        <Button type="submit" disabled={isPending}>{isPending ? t("common.saving") : t("common.create")}</Button>
+      </div>
+    </form>
   );
 }
 
 function BranchForm({ isPending, onSubmit }: { isPending: boolean; onSubmit: (input: Partial<OrganizationBranch>) => Promise<unknown> }) {
   const { t } = useI18n();
-  const [branch, setBranch] = useState<Partial<OrganizationBranch>>({ name: "", exactRadiusMeters: 30, expandedRadiusMeters: 1000 });
 
-  async function submit(event: FormEvent) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(branch);
-    setBranch({ name: "", exactRadiusMeters: 30, expandedRadiusMeters: 1000 });
+    const form = new FormData(event.currentTarget);
+    await onSubmit({
+      name: optional(form, "name"),
+      city: optional(form, "city"),
+      country: optional(form, "country"),
+      address: optional(form, "address"),
+      latitude: numberValue(form, "latitude"),
+      longitude: numberValue(form, "longitude"),
+      exactRadiusMeters: numberValue(form, "exactRadiusMeters") ?? 30,
+      expandedRadiusMeters: numberValue(form, "expandedRadiusMeters") ?? 1000,
+    });
+    event.currentTarget.reset();
   }
 
   return (
     <form className="grid gap-3 md:grid-cols-3" onSubmit={submit}>
-      <Field id="branchName" label={t("companySettings.branchName")}><Input id="branchName" value={branch.name ?? ""} onChange={(event) => setBranch((current) => ({ ...current, name: event.target.value }))} required /></Field>
-      <Field id="branchCity" label={t("companySettings.city")}><Input id="branchCity" value={branch.city ?? ""} onChange={(event) => setBranch((current) => ({ ...current, city: event.target.value }))} /></Field>
-      <Field id="branchCountry" label={t("employeeAccess.country")}><Input id="branchCountry" value={branch.country ?? ""} onChange={(event) => setBranch((current) => ({ ...current, country: event.target.value }))} /></Field>
-      <Field id="latitude" label={t("companySettings.latitude")}><Input id="latitude" type="number" step="any" value={branch.latitude ?? ""} onChange={(event) => setBranch((current) => ({ ...current, latitude: Number(event.target.value) }))} /></Field>
-      <Field id="longitude" label={t("companySettings.longitude")}><Input id="longitude" type="number" step="any" value={branch.longitude ?? ""} onChange={(event) => setBranch((current) => ({ ...current, longitude: Number(event.target.value) }))} /></Field>
-      <Field id="exactRadius" label={t("companySettings.exactRadius")}><Input id="exactRadius" type="number" value={branch.exactRadiusMeters ?? 30} onChange={(event) => setBranch((current) => ({ ...current, exactRadiusMeters: Number(event.target.value) }))} /></Field>
+      <Field id="branchName" label={t("companySettings.branchName")}><Input id="branchName" name="name" required /></Field>
+      <Field id="branchCity" label={t("companySettings.city")}><Input id="branchCity" name="city" /></Field>
+      <Field id="branchCountry" label={t("employeeAccess.country")}><Input id="branchCountry" name="country" /></Field>
+      <MapPicker addressName="address" latitudeName="latitude" longitudeName="longitude" exactRadiusName="exactRadiusMeters" expandedRadiusName="expandedRadiusMeters" />
       <div className="md:col-span-3">
         <Button type="submit" disabled={isPending}>{isPending ? t("common.saving") : t("companySettings.addBranch")}</Button>
       </div>
@@ -142,4 +210,14 @@ function Field({ id, label, children }: { id: string; label: string; children: R
       {children}
     </div>
   );
+}
+
+function optional(data: FormData, key: string) {
+  const value = String(data.get(key) ?? "").trim();
+  return value || undefined;
+}
+
+function numberValue(data: FormData, key: string) {
+  const value = optional(data, key);
+  return value === undefined ? undefined : Number(value);
 }

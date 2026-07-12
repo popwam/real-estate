@@ -11,6 +11,11 @@ export function useCurrentUser() {
     queryKey: ["auth", "me", authVersion],
     queryFn: getCurrentUserApi,
     enabled: typeof window !== "undefined" && Boolean(getAccessToken()),
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
+    retry: 1,
   });
 
   useEffect(() => onAuthChange(() => setAuthVersion((version) => version + 1)), []);

@@ -61,6 +61,7 @@ const defaultPermissionsById: Record<string, string[]> = {
   "platform-domains": ["organization_domains.verify", "organization_domains.view_own"],
   "platform-import-jobs": ["exports.platform_data", "imports.project_inventory"],
   "platform-exports": ["exports.platform_data", "reports.export"],
+  "platform-settings": ["platform.settings.view"],
   "dev-projects": ["projects.edit", "projects.create"],
   "dev-inventory": ["inventory.view_private", "inventory.create"],
   "dev-crm-leads": ["crm.leads.view_own", "crm.leads.view", "crm.leads.claim"],

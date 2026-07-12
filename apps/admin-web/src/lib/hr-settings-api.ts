@@ -17,6 +17,16 @@ export type OrganizationBranch = {
   isActive: boolean;
 };
 
+export type CompanyAccessLevel = {
+  id: string;
+  code: string;
+  displayName: string;
+  description?: string | null;
+  permissions: string[];
+  isActive: boolean;
+  sortOrder: number;
+};
+
 export type AttendanceSettings = {
   requireLocation: boolean;
   allowedLatitude?: number | null;
@@ -59,6 +69,17 @@ export function saveBranchApi(input: Partial<OrganizationBranch>) {
 export function setBranchActiveApi(id: string, active: boolean) {
   return apiRequest<OrganizationBranch>(`/hr/branches/${id}/${active ? "activate" : "deactivate"}`, {
     method: "PATCH",
+  });
+}
+
+export function listCompanyAccessLevelsApi() {
+  return apiRequest<CompanyAccessLevel[]>("/company/access-levels");
+}
+
+export function createCompanyAccessLevelApi(input: Partial<CompanyAccessLevel>) {
+  return apiRequest<CompanyAccessLevel>("/company/access-levels", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 

@@ -8,11 +8,15 @@ import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
 import { CompanyProvisioningService } from './company-provisioning.service';
 import {
   AttendanceLocationInputDto,
+  ActivationReviewDto,
+  CompanyRoleTemplateInputDto,
   CreatePlatformCompanyDto,
   DomainInputDto,
   LimitsInputDto,
   OfficeInputDto,
   OrganizationProfileInputDto,
+  PlatformPlanInputDto,
+  RequiredDocumentPolicyInputDto,
   SubscriptionInputDto,
   WifiRuleInputDto,
 } from './dto/company-provisioning.dto';
@@ -57,6 +61,28 @@ export class PlatformOrganizationsController {
   }
 
   @Permissions('platform.organizations.view')
+  @Get(':id/activation-check')
+  activationCheck(@Param('id') id: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.activationCheck(id, user);
+  }
+
+  @Permissions('platform.organizations.activate')
+  @Post(':id/activate')
+  activate(@Param('id') id: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.activateOrganization(id, user);
+  }
+
+  @Permissions('platform.organizations.verify')
+  @Post(':id/reject')
+  reject(
+    @Param('id') id: string,
+    @Body() dto: ActivationReviewDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.rejectOrganization(id, dto, user);
+  }
+
+  @Permissions('platform.organizations.view')
   @Get(':id/subscription')
   getSubscription(@Param('id') id: string, @CurrentUser() user: AuthenticatedRequestUser) {
     return this.service.getSubscription(id, user);
@@ -86,6 +112,82 @@ export class PlatformOrganizationsController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.service.updateLimits(id, dto, user);
+  }
+}
+
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiTags('Platform Settings')
+@ApiBearerAuth()
+@Controller('platform/settings')
+export class PlatformSettingsController {
+  constructor(private readonly service: CompanyProvisioningService) {}
+
+  @Permissions('platform.settings.view')
+  @Get()
+  index(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.getPlatformSettings(user);
+  }
+
+  @Permissions('platform.plans.view')
+  @Get('plans')
+  listPlans(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listPlatformPlans(user);
+  }
+
+  @Permissions('platform.plans.manage')
+  @Post('plans')
+  createPlan(@Body() dto: PlatformPlanInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.createPlatformPlan(dto, user);
+  }
+
+  @Permissions('platform.plans.manage')
+  @Patch('plans/:planId')
+  updatePlan(
+    @Param('planId') planId: string,
+    @Body() dto: PlatformPlanInputDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.updatePlatformPlan(planId, dto, user);
+  }
+
+  @Permissions('platform.subscriptions.view')
+  @Get('subscriptions')
+  listSubscriptions(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listPlatformSubscriptions(user);
+  }
+
+  @Permissions('platform.verification_policies.view')
+  @Get('verification-policies')
+  listPolicies(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listRequiredDocumentPolicies(user);
+  }
+
+  @Permissions('platform.verification_policies.manage')
+  @Post('verification-policies')
+  createPolicy(@Body() dto: RequiredDocumentPolicyInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.createRequiredDocumentPolicy(dto, user);
+  }
+
+  @Permissions('platform.verification_policies.manage')
+  @Patch('verification-policies/:policyId')
+  updatePolicy(
+    @Param('policyId') policyId: string,
+    @Body() dto: RequiredDocumentPolicyInputDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.updateRequiredDocumentPolicy(policyId, dto, user);
+  }
+
+  @Permissions('platform.settings.view')
+  @Get('modules')
+  modules(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.getPlatformModules(user);
+  }
+
+  @Permissions('platform.settings.view')
+  @Get('domains')
+  domains(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.getPlatformDomainSettings(user);
   }
 }
 
@@ -260,5 +362,39 @@ export class OrganizationProvisioningController {
   @Post('company/wifi-rules')
   createCompanyWifiRule(@Body() dto: WifiRuleInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
     return this.service.createWifiRule(user.organizationId!, dto, user);
+  }
+
+  @Get('organizations/:id/access-levels')
+  listAccessLevels(@Param('id') id: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listCompanyRoleTemplates(id, user);
+  }
+
+  @Post('organizations/:id/access-levels')
+  createAccessLevel(
+    @Param('id') id: string,
+    @Body() dto: CompanyRoleTemplateInputDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.createCompanyRoleTemplate(id, dto, user);
+  }
+
+  @Patch('organizations/:id/access-levels/:templateId')
+  updateAccessLevel(
+    @Param('id') id: string,
+    @Param('templateId') templateId: string,
+    @Body() dto: CompanyRoleTemplateInputDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.updateCompanyRoleTemplate(id, templateId, dto, user);
+  }
+
+  @Get('company/access-levels')
+  listCompanyAccessLevels(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listCompanyRoleTemplates(user.organizationId!, user);
+  }
+
+  @Post('company/access-levels')
+  createCompanyAccessLevel(@Body() dto: CompanyRoleTemplateInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.createCompanyRoleTemplate(user.organizationId!, dto, user);
   }
 }

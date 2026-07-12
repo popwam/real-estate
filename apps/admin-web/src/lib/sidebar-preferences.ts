@@ -10,6 +10,7 @@ export type SidebarPreferences = {
   pinnedItemIds: string[];
   hiddenItemIds: string[];
   iconOverrides: Record<string, SidebarIconKey>;
+  labelOverrides: Record<string, string>;
 };
 
 const STORAGE_KEY = "popwam.admin.sidebar.preferences";
@@ -19,6 +20,7 @@ export const defaultSidebarPreferences: SidebarPreferences = {
   pinnedItemIds: [],
   hiddenItemIds: [],
   iconOverrides: {},
+  labelOverrides: {},
 };
 
 function canUseStorage() {
@@ -31,12 +33,18 @@ function normalizePreferences(value: Partial<SidebarPreferences> | null): Sideba
       Object.prototype.hasOwnProperty.call(safeSidebarIconMap, iconKey),
     ),
   ) as Record<string, SidebarIconKey>;
+  const labelOverrides = Object.fromEntries(
+    Object.entries(value?.labelOverrides ?? {})
+      .map(([id, label]) => [id, typeof label === "string" ? label.trim().slice(0, 48) : ""])
+      .filter(([, label]) => label),
+  ) as Record<string, string>;
 
   return {
     mode: value?.mode === "expanded" ? "expanded" : "collapsed",
     pinnedItemIds: Array.isArray(value?.pinnedItemIds) ? [...new Set(value.pinnedItemIds)] : [],
     hiddenItemIds: Array.isArray(value?.hiddenItemIds) ? [...new Set(value.hiddenItemIds)] : [],
     iconOverrides,
+    labelOverrides,
   };
 }
 
@@ -112,9 +120,25 @@ export function setIconOverride(id: string, iconKey: SidebarIconKey) {
   });
 }
 
+export function setLabelOverride(id: string, label: string) {
+  const current = getSidebarPreferences();
+  const trimmed = label.trim().slice(0, 48);
+  const nextLabelOverrides = { ...current.labelOverrides };
+  delete nextLabelOverrides[id];
+
+  return saveSidebarPreferences({
+    ...current,
+    labelOverrides: trimmed
+      ? {
+          ...nextLabelOverrides,
+          [id]: trimmed,
+        }
+      : nextLabelOverrides,
+  });
+}
+
 export function resetSidebarPreferences() {
   if (canUseStorage()) window.localStorage.removeItem(STORAGE_KEY);
   window.dispatchEvent(new Event("popwam-sidebar-preferences-change"));
   return defaultSidebarPreferences;
 }
-

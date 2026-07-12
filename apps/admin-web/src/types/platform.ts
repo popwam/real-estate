@@ -97,7 +97,7 @@ export type OrganizationOwner = {
 export type OrganizationDocument = {
   id: string;
   organizationId: string;
-  documentType: "COMMERCIAL_REGISTER" | "TAX_CARD" | "VAT_CERTIFICATE" | "NATIONAL_ADDRESS" | "LICENSE" | "OWNER_ID" | "CONTRACT" | "OTHER";
+  documentType: "COMMERCIAL_REGISTER" | "TAX_CARD" | "VAT_CERTIFICATE" | "NATIONAL_ADDRESS" | "LICENSE" | "OWNER_ID" | "OWNER_ID_FRONT" | "OWNER_ID_BACK" | "AUTHORIZED_SIGNATORY_ID" | "INCORPORATION_DOCUMENT" | "PROOF_OF_ADDRESS" | "AUTHORIZATION_OR_POWER_OF_ATTORNEY" | "BROKERAGE_LICENSE_OR_REGISTRATION" | "CONTRACT" | "OTHER";
   fileId?: string | null;
   status: "MISSING" | "UPLOADED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "EXPIRED";
   expiresAt?: string | null;
@@ -112,6 +112,77 @@ export type OrganizationDocument = {
 export type OrganizationDocumentsResponse = {
   required: string[];
   documents: OrganizationDocument[];
+};
+
+export type RequiredDocumentPolicy = {
+  id: string;
+  countryCode: string;
+  organizationType: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  legalForm?: string | null;
+  documentType: OrganizationDocument["documentType"];
+  isRequired: boolean;
+  requiresExpiryDate: boolean;
+  ownerDocumentRequired: boolean;
+  appliesToOwnerRoles?: string[] | null;
+  isActive: boolean;
+  notes?: string | null;
+};
+
+export type PlatformPlan = {
+  id: string;
+  code: string;
+  name: string;
+  localizedName?: TranslatedText | null;
+  description?: string | null;
+  priceAmount?: number | string | null;
+  priceCurrency: string;
+  billingCycle: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+  trialDays: number;
+  limits?: Record<string, unknown> | null;
+  enabledModules: string[];
+  isActive: boolean;
+  isArchived: boolean;
+};
+
+export type CompanyRoleTemplate = {
+  id: string;
+  organizationId: string;
+  code: string;
+  displayName: string;
+  localizedName?: TranslatedText | null;
+  description?: string | null;
+  permissions: string[];
+  isSystem: boolean;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export type ActivationCheck = {
+  canActivate: boolean;
+  missingRequirements: string[];
+  blockingDocuments: string[];
+  blockingOwners: string[];
+  blockingSubscriptionReasons: string[];
+  blockingOfficeReasons: string[];
+  blockingAdminReasons: string[];
+  requiredDocuments: Array<{
+    documentType: string;
+    ownerDocumentRequired: boolean;
+    requiresExpiryDate: boolean;
+  }>;
+};
+
+export type PlatformSettingsSummary = {
+  sections: string[];
+  domains: {
+    publicRootDomain: string;
+    publicStagingRootDomain: string;
+    publicWebBaseUrl: string;
+    fallbackPath: string;
+    wildcardEnabled: boolean;
+    defaultDomainPattern?: string | null;
+    stagingDomainPattern?: string | null;
+  };
 };
 
 export type MetadataOption = {
@@ -293,6 +364,7 @@ export type Organization = CurrentOrganization & {
   attendanceLocations?: OrganizationAttendanceLocation[];
   wifiRules?: OrganizationWifiRule[];
   domainVerifications?: OrganizationDomainRecord[];
+  companyRoleTemplates?: CompanyRoleTemplate[];
   portalLinks?: {
     systemSubdomain: string;
     fallbackPath: string;

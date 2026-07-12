@@ -115,6 +115,7 @@ const platformNavItems: RawNavItem[] = [
   { id: "platform-domains", href: "/platform/domains", label: "Domains", icon: Globe2, group: "Website & data", desktopPriority: 17, mobilePriority: 17 },
   { id: "platform-import-jobs", href: "/platform/import-export/jobs", label: "Import Jobs", icon: FileUp, group: "Website & data", desktopPriority: 18, mobilePriority: 18 },
   { id: "platform-exports", href: "/platform/import-export/export", label: "Exports", icon: FileDown, group: "Website & data", desktopPriority: 19, mobilePriority: 19 },
+  { id: "platform-settings", href: "/platform/settings", label: "Platform Settings", icon: Settings2, group: "Foundations", permissions: ["platform.settings.view"], desktopPriority: 20, mobilePriority: 20 },
   { id: "platform-ads", href: "/platform/ads/overview", label: "Ads", icon: Megaphone, group: "Foundations", desktopPriority: 20, mobilePriority: 20 },
   { id: "platform-cameras", href: "/platform/cameras/overview", label: "Cameras", icon: Camera, group: "Foundations", desktopPriority: 21, mobilePriority: 21 },
 ];

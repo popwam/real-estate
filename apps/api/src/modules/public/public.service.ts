@@ -47,7 +47,7 @@ export class PublicService {
     const organization = await this.prisma.organization.findFirst({
       where: {
         slug,
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
         websiteSettings: { isPublished: true },
       },
       include: {
@@ -84,7 +84,7 @@ export class PublicService {
             },
           },
         ],
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
       },
       include: {
         profile: true,
@@ -156,7 +156,7 @@ export class PublicService {
       where: {
         ...where,
         isPublished: true,
-        organization: { status: OrganizationStatus.APPROVED },
+        organization: { status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] } },
       },
       include: {
         organization: {
@@ -216,7 +216,7 @@ export class PublicService {
         visibility: ProjectVisibility.OPEN_MARKETPLACE,
         developer: {
           type: 'DEVELOPER',
-          status: OrganizationStatus.APPROVED,
+          status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
         },
       },
       include: this.projectDetailInclude(),
@@ -468,14 +468,14 @@ export class PublicService {
       visibility: ProjectVisibility.OPEN_MARKETPLACE,
       developer: {
         type: 'DEVELOPER',
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
       },
     };
 
     if (filters.organizationSlug) {
       where.developer = {
         type: 'DEVELOPER',
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
         slug: this.requiredSlug(filters.organizationSlug, 'organizationSlug'),
       };
     }
@@ -527,7 +527,7 @@ export class PublicService {
     const organization = await this.prisma.organization.findFirst({
       where: {
         slug: this.requiredSlug(slug, 'organizationSlug'),
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
         websiteSettings: { isPublished: true },
       },
       select: { id: true },
@@ -544,7 +544,7 @@ export class PublicService {
     const organization = await this.prisma.organization.findFirst({
       where: {
         id,
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
         websiteSettings: { isPublished: true },
       },
       select: { id: true },
@@ -568,7 +568,7 @@ export class PublicService {
         visibility: ProjectVisibility.OPEN_MARKETPLACE,
         developer: {
           type: 'DEVELOPER',
-          status: OrganizationStatus.APPROVED,
+          status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
           slug: organizationSlug
             ? this.requiredSlug(organizationSlug, 'organizationSlug')
             : undefined,
@@ -655,9 +655,9 @@ export class PublicService {
       },
       websiteSettings: this.toWebsiteSettings(organization.websiteSettings),
       verification: {
-        badge: organization.status === OrganizationStatus.APPROVED,
+        badge: organization.status === OrganizationStatus.APPROVED || organization.status === OrganizationStatus.ACTIVE,
         status:
-          organization.status === OrganizationStatus.APPROVED
+          organization.status === OrganizationStatus.APPROVED || organization.status === OrganizationStatus.ACTIVE
             ? 'APPROVED'
             : null,
       },
