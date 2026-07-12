@@ -15,6 +15,130 @@ export type OrganizationProfile = {
   description?: string | null;
 };
 
+export type TranslatedText = {
+  en?: string;
+  ar?: string;
+  fr?: string;
+};
+
+export type OrganizationPublicSiteSettings = {
+  id: string;
+  organizationId: string;
+  mode: "DISABLED" | "PORTAL" | "GALLERY" | "REDIRECT";
+  theme: "MINIMAL" | "MODERN" | "REAL_ESTATE" | "CORPORATE" | "GALLERY" | "DARK_PREMIUM";
+  defaultLanguage: string;
+  supportedLanguages: string[];
+  showLogo: boolean;
+  showContactInfo: boolean;
+  showOffices: boolean;
+  showGallery: boolean;
+  showProjects: boolean;
+  showLeadForm: boolean;
+  redirectUrl?: string | null;
+  seoTitle?: TranslatedText | null;
+  seoDescription?: TranslatedText | null;
+  publicHeadline?: TranslatedText | null;
+  publicDescription?: TranslatedText | null;
+  galleryImages?: Array<{ url?: string; alt?: TranslatedText; caption?: TranslatedText }> | null;
+};
+
+export type OrganizationLegal = {
+  organizationId: string;
+  legalName?: string | null;
+  tradeName?: string | null;
+  displayName?: string | null;
+  registrationNumber?: string | null;
+  commercialRegisterNumber?: string | null;
+  commercialRegisterOffice?: string | null;
+  commercialRegisterIssuedAt?: string | null;
+  commercialRegisterExpiresAt?: string | null;
+  taxNumber?: string | null;
+  vatNumber?: string | null;
+  taxOffice?: string | null;
+  legalForm?: string | null;
+  incorporationDate?: string | null;
+  countryCode?: string | null;
+  regionCode?: string | null;
+  cityCode?: string | null;
+  cityName?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  postalCode?: string | null;
+  preferredLanguage?: string | null;
+  defaultCurrency?: string | null;
+  timezone?: string | null;
+  website?: string | null;
+  publicEmail?: string | null;
+  publicPhone?: string | null;
+};
+
+export type OrganizationOwner = {
+  id: string;
+  organizationId: string;
+  ownerType: "PERSON" | "COMPANY";
+  name: string;
+  localizedName?: TranslatedText | null;
+  nationalityCountryCode?: string | null;
+  identifierType?: string | null;
+  identifierValue?: string | null;
+  identifierCountryCode?: string | null;
+  ownershipPercentage?: number | null;
+  role: "OWNER" | "PARTNER" | "SHAREHOLDER" | "AUTHORIZED_SIGNATORY" | "LEGAL_REPRESENTATIVE";
+  phone?: string | null;
+  email?: string | null;
+  idFrontFileId?: string | null;
+  idBackFileId?: string | null;
+  passportFileId?: string | null;
+  proofFileId?: string | null;
+  missingDocuments: boolean;
+  verificationStatus: "NOT_REVIEWED" | "PENDING" | "APPROVED" | "REJECTED" | "NEEDS_MANUAL_REVIEW";
+};
+
+export type OrganizationDocument = {
+  id: string;
+  organizationId: string;
+  documentType: "COMMERCIAL_REGISTER" | "TAX_CARD" | "VAT_CERTIFICATE" | "NATIONAL_ADDRESS" | "LICENSE" | "OWNER_ID" | "CONTRACT" | "OTHER";
+  fileId?: string | null;
+  status: "MISSING" | "UPLOADED" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "EXPIRED";
+  expiresAt?: string | null;
+  issuedAt?: string | null;
+  issuingAuthority?: string | null;
+  extractedData?: Record<string, unknown> | null;
+  extractionProvider: "NONE" | "MANUAL" | "OCR_PROVIDER" | "AI_PROVIDER";
+  extractionStatus: "NOT_REQUESTED" | "PENDING" | "COMPLETED" | "FAILED" | "NEEDS_MANUAL_REVIEW";
+  extractionMessage?: string | null;
+};
+
+export type OrganizationDocumentsResponse = {
+  required: string[];
+  documents: OrganizationDocument[];
+};
+
+export type MetadataOption = {
+  code?: string;
+  value?: string;
+  callingCode?: string;
+  countryCode?: string;
+  name?: TranslatedText;
+  label?: string;
+  currency?: string;
+  timezones?: string[];
+  dir?: string;
+};
+
+export type DomainDiagnostics = {
+  codes: string[];
+  fallbackLink: string;
+  instructions: {
+    publicRootDomain: string;
+    stagingRootDomain: string;
+    wildcardEnabled: boolean;
+    railway: string;
+    cloudflare: string;
+    resourceNote: string;
+  };
+};
+
 export type OrganizationSubscription = {
   id: string;
   organizationId: string;
@@ -198,12 +322,17 @@ export type PlatformOrganizationInput = {
   companyCode?: string;
   slug?: string;
   country?: string;
+  countryCode?: string;
   city?: string;
   timezone?: string;
   currency?: string;
+  defaultCurrency?: string;
   defaultLanguage?: string;
+  preferredLanguage?: string;
   registrationNumber?: string;
+  commercialRegisterNumber?: string;
   taxNumber?: string;
+  vatNumber?: string;
   businessEmail?: string;
   businessPhone?: string;
   address?: string;

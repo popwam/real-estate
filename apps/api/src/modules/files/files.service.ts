@@ -212,6 +212,79 @@ export class FilesService {
     };
   }
 
+  async uploadOrganizationDocument(
+    file: any,
+    organizationIdInput: string | undefined,
+    currentUser: AuthenticatedRequestUser,
+  ) {
+    const organizationId = this.resolveOrganizationId(
+      organizationIdInput,
+      currentUser,
+    );
+    if (!organizationId) {
+      throw new ForbiddenException('Organization is required for documents.');
+    }
+
+    if (!file || !file.buffer || !file.size) {
+      throw new BadRequestException('Document file is required.');
+    }
+
+    const mimeType = this.organizationDocumentMimeType(file.mimetype);
+    const extension = this.documentExtension(file.originalname, mimeType);
+    const maxSizeBytes = Number(
+      process.env.ORGANIZATION_DOCUMENT_MAX_BYTES ?? 10 * 1024 * 1024,
+    );
+    if (file.size > maxSizeBytes) {
+      throw new BadRequestException('Document file is too large.');
+    }
+
+    const objectKey = [
+      'organizations',
+      organizationId,
+      'documents',
+      currentUser.userId,
+      `${Date.now()}-${randomUUID()}${extension}`,
+    ].join('/');
+    const stored = await this.storage.putObject({
+      objectKey,
+      body: file.buffer,
+      mimeType,
+    });
+
+    const record = await this.prisma.uploadedFile.create({
+      data: {
+        organizationId,
+        uploadedById: currentUser.userId,
+        bucket: 'organization-documents',
+        objectKey: stored.objectKey,
+        mimeType,
+        sizeBytes: file.size,
+        checksum: this.optionalString(file.originalname),
+        url: `${stored.provider}:${stored.bucket}`,
+      },
+    });
+
+    await this.auditLogs.record({
+      action: 'organization.document_file_uploaded',
+      entityType: 'UploadedFile',
+      entityId: record.id,
+      organizationId,
+      actor: currentUser,
+      metadata: {
+        mimeType,
+        sizeBytes: file.size,
+        storageProvider: stored.provider,
+      },
+    });
+
+    return {
+      fileId: record.id,
+      mimeType,
+      sizeBytes: file.size,
+      createdAt: record.createdAt,
+    };
+  }
+
   async validateAttendanceEvidencePhoto(
     fileId: string | undefined,
     currentUser: AuthenticatedRequestUser,
@@ -520,6 +593,40 @@ export class FilesService {
     if (!extension || !allowed.get(mimeType)?.has(extension)) {
       throw new BadRequestException(
         'Image extension does not match the image type.',
+      );
+    }
+    return extension === '.jpeg' ? '.jpg' : extension;
+  }
+
+  private organizationDocumentMimeType(value: unknown) {
+    const mimeType =
+      typeof value === 'string' ? value.trim().toLowerCase() : '';
+    if (
+      ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(
+        mimeType,
+      )
+    ) {
+      return mimeType;
+    }
+    throw new BadRequestException(
+      'Document must be a JPEG, PNG, WebP, or PDF file.',
+    );
+  }
+
+  private documentExtension(originalName: unknown, mimeType: string) {
+    const extension =
+      typeof originalName === 'string'
+        ? extname(originalName).toLowerCase()
+        : '';
+    const allowed = new Map([
+      ['image/jpeg', new Set(['.jpg', '.jpeg'])],
+      ['image/png', new Set(['.png'])],
+      ['image/webp', new Set(['.webp'])],
+      ['application/pdf', new Set(['.pdf'])],
+    ]);
+    if (!extension || !allowed.get(mimeType)?.has(extension)) {
+      throw new BadRequestException(
+        'Document extension does not match the file type.',
       );
     }
     return extension === '.jpeg' ? '.jpg' : extension;

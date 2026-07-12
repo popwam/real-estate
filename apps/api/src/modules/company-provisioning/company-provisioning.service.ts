@@ -11,6 +11,7 @@ import {
   OrganizationBranchType,
   OrganizationDomainType,
   OrganizationInboundSourceMode,
+  OrganizationLegalForm,
   OrganizationRedirectMode,
   OrganizationStatus,
   OrganizationSubscriptionStatus,
@@ -101,11 +102,11 @@ export class CompanyProvisioningService {
           slug,
           companyCode,
           type,
-          country: this.string(profile.country),
-          city: this.string(profile.city),
+          country: this.string(profile.countryCode ?? profile.country),
+          city: this.string(profile.cityName ?? profile.city),
           timezone: this.string(profile.timezone),
-          currency: this.string(profile.currency),
-          defaultLanguage: this.string(profile.defaultLanguage),
+          currency: this.string(profile.defaultCurrency ?? profile.currency),
+          defaultLanguage: this.string(profile.preferredLanguage ?? profile.defaultLanguage),
           status,
           plan: this.string(dto.subscription?.planCode),
           planExpiresAt: this.date(dto.subscription?.endsAt),
@@ -113,12 +114,32 @@ export class CompanyProvisioningService {
             create: {
               legalName: this.string(profile.legalName),
               tradeName: this.string(profile.tradeName ?? profile.displayName),
-              commercialRegNumber: this.string(profile.registrationNumber),
+              displayName: this.string(profile.displayName ?? profile.tradeName ?? name),
+              commercialRegNumber: this.string(profile.commercialRegisterNumber ?? profile.registrationNumber),
+              commercialRegisterNumber: this.string(profile.commercialRegisterNumber ?? profile.registrationNumber),
+              commercialRegisterOffice: this.string(profile.commercialRegisterOffice),
+              commercialRegisterIssuedAt: this.date(profile.commercialRegisterIssuedAt),
+              commercialRegisterExpiresAt: this.date(profile.commercialRegisterExpiresAt),
               registrationNumber: this.string(profile.registrationNumber),
               taxNumber: this.string(profile.taxNumber),
+              vatNumber: this.string(profile.vatNumber),
+              taxOffice: this.string(profile.taxOffice),
+              legalForm: profile.legalForm ? this.enumValue(OrganizationLegalForm, profile.legalForm, 'legalForm') : undefined,
+              incorporationDate: this.date(profile.incorporationDate),
+              countryCode: this.string(profile.countryCode ?? profile.country),
+              regionCode: this.string(profile.regionCode),
+              cityCode: this.string(profile.cityCode),
+              cityName: this.string(profile.cityName ?? profile.city),
+              addressLine1: this.string(profile.addressLine1 ?? profile.address),
+              addressLine2: this.string(profile.addressLine2),
+              postalCode: this.string(profile.postalCode),
+              preferredLanguage: this.string(profile.preferredLanguage ?? profile.defaultLanguage),
+              defaultCurrency: this.string(profile.defaultCurrency ?? profile.currency),
               website: this.string(profile.website),
               phone: this.string(profile.businessPhone),
               email: this.optionalEmail(profile.businessEmail),
+              publicEmail: this.optionalEmail(profile.publicEmail ?? profile.businessEmail),
+              publicPhone: this.string(profile.publicPhone ?? profile.businessPhone),
               address: this.string(profile.address),
               logoUrl: this.string(profile.logoUrl),
             },
@@ -143,6 +164,26 @@ export class CompanyProvisioningService {
               contactPhone: this.string(profile.businessPhone),
               contactEmail: this.optionalEmail(profile.businessEmail),
               isPublished: status === OrganizationStatus.APPROVED,
+            },
+          },
+          publicSiteSettings: {
+            create: {
+              mode: status === OrganizationStatus.APPROVED ? 'PORTAL' : 'DISABLED',
+              theme: 'REAL_ESTATE',
+              defaultLanguage: this.string(profile.defaultLanguage) ?? 'en',
+              supportedLanguages: ['en', 'ar', 'fr'],
+              publicHeadline: {
+                en: name,
+                ar: name,
+                fr: name,
+              },
+              publicDescription: this.string(profile.tradeName ?? profile.legalName)
+                ? {
+                    en: this.string(profile.tradeName ?? profile.legalName),
+                    ar: this.string(profile.tradeName ?? profile.legalName),
+                    fr: this.string(profile.tradeName ?? profile.legalName),
+                  }
+                : undefined,
             },
           },
           domainVerifications: {
@@ -216,11 +257,11 @@ export class CompanyProvisioningService {
         type: dto.organizationType
           ? this.enumValue(OrganizationType, dto.organizationType, 'organizationType')
           : undefined,
-        country: this.string(dto.country),
-        city: this.string(dto.city),
+        country: this.string(dto.countryCode ?? dto.country),
+        city: this.string(dto.cityName ?? dto.city),
         timezone: this.string(dto.timezone),
-        currency: this.string(dto.currency),
-        defaultLanguage: this.string(dto.defaultLanguage),
+        currency: this.string(dto.defaultCurrency ?? dto.currency),
+        defaultLanguage: this.string(dto.preferredLanguage ?? dto.defaultLanguage),
         status: dto.status ? this.organizationStatus(dto.status) : undefined,
         profile: { upsert: this.profileUpsert(dto) },
       },
@@ -511,11 +552,11 @@ export class CompanyProvisioningService {
       where: { id: organizationId },
       data: {
         name: this.string(dto.displayName ?? dto.tradeName ?? dto.name) ?? undefined,
-        country: this.string(dto.country),
-        city: this.string(dto.city),
+        country: this.string(dto.countryCode ?? dto.country),
+        city: this.string(dto.cityName ?? dto.city),
         timezone: this.string(dto.timezone),
-        currency: this.string(dto.currency),
-        defaultLanguage: this.string(dto.defaultLanguage),
+        currency: this.string(dto.defaultCurrency ?? dto.currency),
+        defaultLanguage: this.string(dto.preferredLanguage ?? dto.defaultLanguage),
         profile: { upsert: this.profileUpsert(dto, false) },
       },
       include: this.organizationInclude(),
@@ -840,12 +881,32 @@ export class CompanyProvisioningService {
     const data = {
       legalName: this.string(dto.legalName),
       tradeName: this.string(dto.tradeName ?? dto.displayName),
-      commercialRegNumber: platform ? this.string(dto.registrationNumber) : undefined,
+      displayName: this.string(dto.displayName ?? dto.tradeName ?? dto.name),
+      commercialRegNumber: platform ? this.string(dto.commercialRegisterNumber ?? dto.registrationNumber) : undefined,
+      commercialRegisterNumber: platform ? this.string(dto.commercialRegisterNumber ?? dto.registrationNumber) : undefined,
+      commercialRegisterOffice: platform ? this.string(dto.commercialRegisterOffice) : undefined,
+      commercialRegisterIssuedAt: platform ? this.date(dto.commercialRegisterIssuedAt) : undefined,
+      commercialRegisterExpiresAt: platform ? this.date(dto.commercialRegisterExpiresAt) : undefined,
       registrationNumber: platform ? this.string(dto.registrationNumber) : undefined,
       taxNumber: platform ? this.string(dto.taxNumber) : undefined,
+      vatNumber: platform ? this.string(dto.vatNumber) : undefined,
+      taxOffice: platform ? this.string(dto.taxOffice) : undefined,
+      legalForm: platform && dto.legalForm ? this.enumValue(OrganizationLegalForm, dto.legalForm, 'legalForm') : undefined,
+      incorporationDate: platform ? this.date(dto.incorporationDate) : undefined,
+      countryCode: this.string(dto.countryCode ?? dto.country),
+      regionCode: this.string(dto.regionCode),
+      cityCode: this.string(dto.cityCode),
+      cityName: this.string(dto.cityName ?? dto.city),
+      addressLine1: this.string(dto.addressLine1 ?? dto.address),
+      addressLine2: this.string(dto.addressLine2),
+      postalCode: this.string(dto.postalCode),
+      preferredLanguage: this.string(dto.preferredLanguage ?? dto.defaultLanguage),
+      defaultCurrency: this.string(dto.defaultCurrency ?? dto.currency),
       website: this.string(dto.website),
       phone: this.string(dto.businessPhone),
       email: this.optionalEmail(dto.businessEmail),
+      publicEmail: this.optionalEmail(dto.publicEmail ?? dto.businessEmail),
+      publicPhone: this.string(dto.publicPhone ?? dto.businessPhone),
       address: this.string(dto.address),
       logoUrl: this.string(dto.logoUrl),
     };
@@ -1035,9 +1096,9 @@ export class CompanyProvisioningService {
     const normalized = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
     if (!normalized) throw new BadRequestException('domain is required.');
     if (type === OrganizationDomainType.PATH_ALIAS) {
-      const slug = normalized.replace(/^\/?c\//, '').replace(/[^a-z0-9-]/g, '-').replace(/^-|-$/g, '');
+      const slug = normalized.replace(/^\/?(c|sites)\//, '').replace(/[^a-z0-9-]/g, '-').replace(/^-|-$/g, '');
       if (!slug) throw new BadRequestException('path alias is invalid.');
-      return `/c/${slug}`;
+      return `/sites/${slug}`;
     }
     if (type === OrganizationDomainType.SUBDOMAIN || type === OrganizationDomainType.SYSTEM_SUBDOMAIN) {
       const subdomain = normalized.endsWith('.popwam.com') ? normalized.slice(0, -'.popwam.com'.length) : normalized;
@@ -1096,7 +1157,7 @@ export class CompanyProvisioningService {
       ...organization,
       portalLinks: {
         systemSubdomain: `${organization.slug}.popwam.com`,
-        fallbackPath: `/c/${organization.slug}`,
+        fallbackPath: `/sites/${organization.slug}`,
         defaultDomain: defaultDomain?.domain ?? null,
         wildcardDnsRequired: true,
       },

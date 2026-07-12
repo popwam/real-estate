@@ -69,7 +69,7 @@ export class PublicService {
 
   async getCompanyPortal(slug: string) {
     const normalizedSlug = this.requiredSlug(slug, 'slug');
-    const pathAlias = `/c/${normalizedSlug}`;
+    const pathAlias = `/sites/${normalizedSlug}`;
     const organization = await this.prisma.organization.findFirst({
       where: {
         OR: [
@@ -135,7 +135,7 @@ export class PublicService {
           }
         : null,
       portalLinks: {
-        fallbackPath: `/c/${organization.slug}`,
+        fallbackPath: `/sites/${organization.slug}`,
         systemSubdomain: `${organization.slug}.popwam.com`,
       },
     };

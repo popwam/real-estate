@@ -6,11 +6,15 @@ import { setRateLimitHeaders } from '../../common/rate-limit/rate-limit-headers'
 import { CreatePublicLeadDto } from './dto/create-public-lead.dto';
 import { PublicProjectFiltersDto } from './dto/public-project-filters.dto';
 import { PublicService } from './public.service';
+import { CompanyPublicService } from '../company-public/company-public.service';
 
 @ApiTags('Public APIs')
 @Controller('public')
 export class PublicController {
-  constructor(private readonly publicService: PublicService) {}
+  constructor(
+    private readonly publicService: PublicService,
+    private readonly companyPublicService: CompanyPublicService,
+  ) {}
 
   @Get('organizations/:slug')
   @ApiOperation({ summary: 'Get a safe public organization profile by slug.' })
@@ -21,7 +25,7 @@ export class PublicController {
   @Get('companies/:slug')
   @ApiOperation({ summary: 'Get public company portal data by slug or path alias.' })
   getCompanyPortal(@Param('slug') slug: string) {
-    return this.publicService.getCompanyPortal(slug);
+    return this.companyPublicService.getPublicSite(slug);
   }
 
   @Get('domain/:host')
