@@ -12,11 +12,8 @@ async function bootstrap() {
     'http://localhost:3205',
     'http://127.0.0.1:3205',
   ];
-  const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  const allowedOrigins = new Set([...localDevOrigins, ...configuredOrigins]);
+  const allowedOrigins = new Set([...localDevOrigins, ...env.corsOrigins]);
+  const allowedSuffixes = env.corsAllowedSuffixes;
   const swaggerConfig = new DocumentBuilder()
     .setTitle('POPWAM API')
     .setDescription('Team 1 backend core API for auth, organizations, users, verification, files, and platform review.')
@@ -27,7 +24,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (!origin || allowedOrigins.has(origin) || isAllowedSuffixOrigin(origin, allowedSuffixes)) {
         callback(null, true);
         return;
       }
@@ -42,3 +39,18 @@ async function bootstrap() {
   await app.listen(env.port);
 }
 bootstrap();
+
+function isAllowedSuffixOrigin(origin: string, suffixes: string[]) {
+  let hostname: string;
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'https:') return false;
+    hostname = url.hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return suffixes.some((suffix) => {
+    const normalized = suffix.toLowerCase().replace(/^\./, '');
+    return hostname === normalized || hostname.endsWith(`.${normalized}`);
+  });
+}

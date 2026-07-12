@@ -9,12 +9,16 @@ import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
+import { MapPicker } from "@/components/platform/map-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
 import {
   useCreateOrganizationAttendanceLocation,
+  useActivateOrganization,
+  useCompanyRoleTemplates,
+  useCreateCompanyRoleTemplate,
   useCreateOrganizationDocument,
   useCreateOrganizationOffice,
   useCreateOrganizationOwner,
@@ -34,18 +38,20 @@ import {
   useOrganizationPublicSite,
   useOrganizationProvisioningDomains,
   useOrganizationWifiRules,
+  useOrganizationActivationCheck,
   usePlatformOrganization,
   usePlatformOrganizationLimits,
   usePlatformOrganizationSubscription,
   useUpdateOrganizationLegal,
   useUpdateOrganizationPublicSite,
+  useReviewOrganizationDocument,
   useUpdatePlatformOrganization,
   useUpdatePlatformOrganizationLimits,
   useUpdatePlatformOrganizationSubscription,
 } from "@/hooks/use-platform-admin";
 import type { MetadataOption, TranslatedText } from "@/types/platform";
 
-type Tab = "overview" | "subscription" | "limits" | "offices" | "attendance" | "wifi" | "domains" | "public-site" | "legal-tax" | "owners" | "documents" | "users";
+type Tab = "overview" | "subscription" | "limits" | "offices" | "attendance" | "wifi" | "domains" | "public-site" | "legal-tax" | "owners" | "documents" | "access-levels" | "users";
 
 const tabPaths: Array<{ id: Tab; key: string; href: (id: string) => string }> = [
   { id: "overview", key: "provisioning.tab.overview", href: (id) => `/platform/organizations/${id}` },
@@ -59,7 +65,26 @@ const tabPaths: Array<{ id: Tab; key: string; href: (id: string) => string }> = 
   { id: "legal-tax", key: "provisioning.tab.legalTax", href: (id) => `/platform/organizations/${id}/legal-tax` },
   { id: "owners", key: "provisioning.tab.owners", href: (id) => `/platform/organizations/${id}/owners` },
   { id: "documents", key: "provisioning.tab.documents", href: (id) => `/platform/organizations/${id}/documents` },
+  { id: "access-levels", key: "provisioning.tab.accessLevels", href: (id) => `/platform/organizations/${id}/access-levels` },
   { id: "users", key: "provisioning.tab.users", href: (id) => `/platform/organizations/${id}/users/new` },
+];
+
+const documentTypeOptions = [
+  "COMMERCIAL_REGISTER",
+  "TAX_CARD",
+  "VAT_CERTIFICATE",
+  "NATIONAL_ADDRESS",
+  "LICENSE",
+  "INCORPORATION_DOCUMENT",
+  "PROOF_OF_ADDRESS",
+  "OWNER_ID",
+  "OWNER_ID_FRONT",
+  "OWNER_ID_BACK",
+  "AUTHORIZED_SIGNATORY_ID",
+  "AUTHORIZATION_OR_POWER_OF_ATTORNEY",
+  "BROKERAGE_LICENSE_OR_REGISTRATION",
+  "CONTRACT",
+  "OTHER",
 ];
 
 export function OrganizationProvisioningDetail({ tab = "overview" }: { tab?: Tab }) {
@@ -108,6 +133,7 @@ export function OrganizationProvisioningDetail({ tab = "overview" }: { tab?: Tab
       {tab === "legal-tax" ? <LegalTaxTab id={id} /> : null}
       {tab === "owners" ? <OwnersTab id={id} /> : null}
       {tab === "documents" ? <DocumentsTab id={id} /> : null}
+      {tab === "access-levels" ? <AccessLevelsTab id={id} /> : null}
       {tab === "users" ? <UsersTab id={id} /> : null}
     </>
   );
@@ -116,7 +142,13 @@ export function OrganizationProvisioningDetail({ tab = "overview" }: { tab?: Tab
 function OverviewTab({ id }: { id: string }) {
   const { t } = useI18n();
   const { data } = usePlatformOrganization(id);
+  const activation = useOrganizationActivationCheck(id);
+  const activate = useActivateOrganization(id);
   const update = useUpdatePlatformOrganization(id);
+  const countries = useMetadataCountries();
+  const currencies = useMetadataCurrencies();
+  const languages = useMetadataLanguages();
+  const timezones = useMetadataTimezones();
   if (!data) return null;
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -145,11 +177,11 @@ function OverviewTab({ id }: { id: string }) {
           <TextField label={t("provisioning.displayName")} name="name" defaultValue={data.name} />
           <TextField label={t("provisioning.legalName")} name="legalName" defaultValue={data.profile?.legalName ?? ""} />
           <TextField label={t("provisioning.companyCode")} name="companyCode" defaultValue={data.companyCode ?? ""} />
-          <TextField label={t("provisioning.country")} name="country" defaultValue={data.country ?? ""} />
+          <MetadataSelect label={t("provisioning.country")} name="country" options={countries.data} defaultValue={data.country ?? ""} />
           <TextField label={t("provisioning.city")} name="city" defaultValue={data.city ?? ""} />
-          <TextField label={t("provisioning.timezone")} name="timezone" defaultValue={data.timezone ?? ""} />
-          <TextField label={t("provisioning.currency")} name="currency" defaultValue={data.currency ?? ""} />
-          <TextField label={t("provisioning.defaultLanguage")} name="defaultLanguage" defaultValue={data.defaultLanguage ?? ""} />
+          <MetadataSelect label={t("provisioning.timezone")} name="timezone" options={timezones.data} defaultValue={data.timezone ?? ""} />
+          <MetadataSelect label={t("provisioning.currency")} name="currency" options={currencies.data} defaultValue={data.currency ?? ""} />
+          <MetadataSelect label={t("provisioning.defaultLanguage")} name="defaultLanguage" options={languages.data} defaultValue={data.defaultLanguage ?? ""} />
           <TextField label={t("provisioning.businessEmail")} name="businessEmail" defaultValue={data.profile?.email ?? ""} />
           <TextField label={t("provisioning.businessPhone")} name="businessPhone" defaultValue={data.profile?.phone ?? ""} />
           <TextField label={t("provisioning.website")} name="website" defaultValue={data.profile?.website ?? ""} />
@@ -168,6 +200,45 @@ function OverviewTab({ id }: { id: string }) {
           ]}
         />
       </DetailCard>
+      <DetailCard title={t("verification.activationGate")}>
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+          <div>
+            <p className="text-sm leading-6 text-[var(--color-muted)]">
+              {activation.data?.canActivate ? t("verification.readyToActivate") : t("verification.activationBlocked")}
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <RequirementList title={t("verification.requiredDocuments")} items={activation.data?.blockingDocuments ?? []} empty={t("verification.documentsApproved")} />
+              <RequirementList title={t("verification.subscription")} items={activation.data?.blockingSubscriptionReasons ?? []} empty={t("verification.subscriptionReady")} />
+              <RequirementList title={t("verification.offices")} items={activation.data?.blockingOfficeReasons ?? []} empty={t("verification.officesReady")} />
+              <RequirementList title={t("verification.firstAdmin")} items={activation.data?.blockingAdminReasons ?? []} empty={t("verification.firstAdminReady")} />
+              <RequirementList title={t("verification.owners")} items={activation.data?.blockingOwners ?? []} empty={t("verification.ownersReady")} />
+              <RequirementList title={t("provisioning.missingRequirements")} items={activation.data?.missingRequirements ?? []} empty={t("verification.noMissingRequirements")} />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button type="button" disabled={!activation.data?.canActivate || activate.isPending} onClick={() => activate.mutate()}>
+              {activate.isPending ? t("common.saving") : t("verification.activateCompany")}
+            </Button>
+            {activation.isLoading ? <p className="text-xs text-[var(--color-muted)]">{t("common.loading")}</p> : null}
+          </div>
+        </div>
+        {activate.error ? <ErrorLine message={activate.error.message} /> : null}
+      </DetailCard>
+    </div>
+  );
+}
+
+function RequirementList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+  return (
+    <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-3">
+      <p className="text-sm font-semibold text-[var(--color-foreground)]">{title}</p>
+      {items.length ? (
+        <ul className="mt-2 list-disc space-y-1 ps-5 text-sm text-red-700">
+          {items.map((item) => <li key={item}>{item.replaceAll("_", " ")}</li>)}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-[var(--color-muted)]">{empty}</p>
+      )}
     </div>
   );
 }
@@ -274,7 +345,7 @@ function OfficesTab({ id }: { id: string }) {
     });
     event.currentTarget.reset();
   }
-  return <CollectionTab title={t("provisioning.offices")} rows={data.map((item) => [item.name, item.type ?? "", item.isDefault ? t("provisioning.defaultDomain") : ""])} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><TextField label={t("provisioning.officeName")} name="name" /><TextField label={t("provisioning.officeCode")} name="code" /><SelectField label={t("common.type")} name="type" options={["HEAD_OFFICE", "BRANCH", "SALES_OFFICE", "SITE", "REMOTE_HUB"]} /><TextField label={t("provisioning.address")} name="address" /><TextField label={t("provisioning.latitude")} name="latitude" type="number" step="0.000001" /><TextField label={t("provisioning.longitude")} name="longitude" type="number" step="0.000001" /><TextField label={t("provisioning.exactRadius")} name="exactRadiusMeters" type="number" defaultValue="30" /><TextField label={t("provisioning.expandedRadius")} name="expandedRadiusMeters" type="number" defaultValue="1000" /><CheckBox label={t("provisioning.defaultOffice")} name="isDefault" /></>} />;
+  return <CollectionTab title={t("provisioning.offices")} rows={data.map((item) => [item.name, item.type ?? "", item.isDefault ? t("provisioning.defaultDomain") : ""])} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><TextField label={t("provisioning.officeName")} name="name" /><TextField label={t("provisioning.officeCode")} name="code" /><SelectField label={t("common.type")} name="type" options={["HEAD_OFFICE", "BRANCH", "SALES_OFFICE", "SITE", "REMOTE_HUB"]} /><MapPicker addressName="address" latitudeName="latitude" longitudeName="longitude" exactRadiusName="exactRadiusMeters" expandedRadiusName="expandedRadiusMeters" /><CheckBox label={t("provisioning.defaultOffice")} name="isDefault" /></>} />;
 }
 
 function AttendanceTab({ id }: { id: string }) {
@@ -287,7 +358,7 @@ function AttendanceTab({ id }: { id: string }) {
     create.mutate({ name: optional(form, "name"), latitude: numberValue(form, "latitude"), longitude: numberValue(form, "longitude"), exactRadiusMeters: numberValue(form, "exactRadiusMeters"), expandedRadiusMeters: numberValue(form, "expandedRadiusMeters"), allowedForWeb: checked(form, "allowedForWeb"), allowedForMobile: checked(form, "allowedForMobile"), requiresReviewOutsideExactRadius: checked(form, "requiresReviewOutsideExactRadius") });
     event.currentTarget.reset();
   }
-  return <CollectionTab title={t("provisioning.attendanceLocations")} rows={data.map((item) => [item.name, `${item.latitude}, ${item.longitude}`, `${item.exactRadiusMeters}m / ${item.expandedRadiusMeters}m`])} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><TextField label={t("provisioning.locationName")} name="name" /><TextField label={t("provisioning.latitude")} name="latitude" type="number" step="0.000001" /><TextField label={t("provisioning.longitude")} name="longitude" type="number" step="0.000001" /><TextField label={t("provisioning.exactRadius")} name="exactRadiusMeters" type="number" defaultValue="30" /><TextField label={t("provisioning.expandedRadius")} name="expandedRadiusMeters" type="number" defaultValue="1000" /><CheckBox label={t("provisioning.allowedForWeb")} name="allowedForWeb" defaultChecked /><CheckBox label={t("provisioning.allowedForMobile")} name="allowedForMobile" defaultChecked /><CheckBox label={t("provisioning.reviewOutsideExact")} name="requiresReviewOutsideExactRadius" defaultChecked /></>} />;
+  return <CollectionTab title={t("provisioning.attendanceLocations")} rows={data.map((item) => [item.name, `${item.latitude}, ${item.longitude}`, `${item.exactRadiusMeters}m / ${item.expandedRadiusMeters}m`])} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><TextField label={t("provisioning.locationName")} name="name" /><MapPicker addressName="address" latitudeName="latitude" longitudeName="longitude" exactRadiusName="exactRadiusMeters" expandedRadiusName="expandedRadiusMeters" /><CheckBox label={t("provisioning.allowedForWeb")} name="allowedForWeb" defaultChecked /><CheckBox label={t("provisioning.allowedForMobile")} name="allowedForMobile" defaultChecked /><CheckBox label={t("provisioning.reviewOutsideExact")} name="requiresReviewOutsideExactRadius" defaultChecked /></>} />;
 }
 
 function WifiTab({ id }: { id: string }) {
@@ -491,6 +562,7 @@ function DocumentsTab({ id }: { id: string }) {
   const { data } = useOrganizationDocuments(id);
   const create = useCreateOrganizationDocument(id);
   const extract = useExtractOrganizationDocument(id);
+  const review = useReviewOrganizationDocument(id);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -506,7 +578,7 @@ function DocumentsTab({ id }: { id: string }) {
   const docs = data?.documents ?? [];
   return (
     <div className="space-y-5">
-      <CollectionTab title={t("provisioning.documents")} rows={docs.map((doc) => [doc.documentType, doc.status, doc.extractionStatus])} note={`${t("provisioning.requiredDocuments")}: ${(data?.required ?? []).join(", ")}`} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><SelectField label={t("provisioning.documentType")} name="documentType" options={["COMMERCIAL_REGISTER", "TAX_CARD", "VAT_CERTIFICATE", "NATIONAL_ADDRESS", "LICENSE", "OWNER_ID", "CONTRACT", "OTHER"]} /><TextField label={t("provisioning.fileId")} name="fileId" /><TextField label={t("provisioning.issueDate")} name="issuedAt" type="date" /><TextField label={t("provisioning.expiryDate")} name="expiresAt" type="date" /><TextField label={t("provisioning.issuingAuthority")} name="issuingAuthority" /></>} />
+      <CollectionTab title={t("provisioning.documents")} rows={docs.map((doc) => [doc.documentType, doc.status, doc.extractionStatus])} note={`${t("provisioning.requiredDocuments")}: ${(data?.required ?? []).join(", ")}`} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><SelectField label={t("provisioning.documentType")} name="documentType" options={documentTypeOptions} /><TextField label={t("provisioning.fileId")} name="fileId" /><TextField label={t("provisioning.issueDate")} name="issuedAt" type="date" /><TextField label={t("provisioning.expiryDate")} name="expiresAt" type="date" /><TextField label={t("provisioning.issuingAuthority")} name="issuingAuthority" /></>} />
       <DetailCard title={t("provisioning.extractedData")}>
         <div className="divide-y divide-[var(--color-border)]">
           {docs.length ? docs.map((doc) => (
@@ -516,14 +588,105 @@ function DocumentsTab({ id }: { id: string }) {
                 <p className="text-[var(--color-muted)]">{doc.extractionMessage ?? t("provisioning.ocrProviderNotConfigured")}</p>
                 <pre className="mt-2 overflow-auto rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-3 text-xs">{JSON.stringify(doc.extractedData ?? {}, null, 2)}</pre>
               </div>
-              <Button type="button" className="self-start" onClick={() => extract.mutate(doc.id)} disabled={extract.isPending}>
-                {t("provisioning.extractData")}
-              </Button>
+              <div className="flex flex-wrap gap-2 self-start">
+                <Button type="button" className="ui-button-secondary" onClick={() => extract.mutate(doc.id)} disabled={extract.isPending}>
+                  {t("provisioning.extractData")}
+                </Button>
+                <Button type="button" onClick={() => review.mutate({ documentId: doc.id, input: { status: "APPROVED" } })} disabled={review.isPending}>
+                  {t("verification.approveDocument")}
+                </Button>
+                <Button type="button" className="ui-button-secondary" onClick={() => {
+                  const note = window.prompt(t("verification.rejectionReason"));
+                  if (note) review.mutate({ documentId: doc.id, input: { status: "REJECTED", note } });
+                }} disabled={review.isPending}>
+                  {t("verification.rejectDocument")}
+                </Button>
+              </div>
             </div>
           )) : <p className="text-sm text-[var(--color-muted)]">{t("provisioning.noRecords")}</p>}
         </div>
       </DetailCard>
     </div>
+  );
+}
+
+function AccessLevelsTab({ id }: { id: string }) {
+  const { t } = useI18n();
+  const { data = [] } = useCompanyRoleTemplates(id);
+  const create = useCreateCompanyRoleTemplate(id);
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    create.mutate({
+      code: optional(form, "code"),
+      displayName: optional(form, "displayName"),
+      localizedName: translatedFromForm(form, "roleName"),
+      description: optional(form, "description"),
+      permissions: selectedValues(form, "permissions"),
+      isActive: checked(form, "isActive"),
+      sortOrder: numberValue(form, "sortOrder"),
+    });
+    event.currentTarget.reset();
+  }
+  return (
+    <CollectionTab
+      title={t("accessLevels.title")}
+      rows={data.map((item) => [item.displayName, item.code, `${item.permissions.length} ${t("accessLevels.permissions")}`])}
+      note={t("accessLevels.companyScopedNote")}
+      onSubmit={submit}
+      pending={create.isPending}
+      error={create.error?.message}
+      fields={
+        <>
+          <TextField label={t("accessLevels.code")} name="code" />
+          <TextField label={t("accessLevels.displayName")} name="displayName" />
+          <TranslatedTextInput label={t("accessLevels.localizedName")} name="roleName" />
+          <TextField label={t("accessLevels.description")} name="description" />
+          <TextField label={t("accessLevels.sortOrder")} name="sortOrder" type="number" defaultValue="100" />
+          <CheckBox label={t("common.active")} name="isActive" defaultChecked />
+          <PermissionPicker />
+        </>
+      }
+    />
+  );
+}
+
+function PermissionPicker() {
+  const { t } = useI18n();
+  const permissions = [
+    "company.dashboard.view",
+    "company.settings.view",
+    "company.settings.manage",
+    "company.profile.view",
+    "company.profile.manage",
+    "company.offices.view",
+    "company.offices.manage",
+    "company.attendance_locations.view",
+    "company.attendance_locations.manage",
+    "company.wifi_rules.view",
+    "company.wifi_rules.manage",
+    "company.access_levels.view",
+    "company.access_levels.manage",
+    "hr.view",
+    "hr.manage",
+    "hr.employees.view",
+    "hr.recruitment.view",
+    "crm.leads.view_own",
+    "crm.leads.manage_own",
+    "reports.view",
+  ];
+  return (
+    <fieldset className="space-y-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 sm:col-span-2 lg:col-span-3">
+      <legend className="px-1 text-sm font-medium">{t("accessLevels.permissions")}</legend>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {permissions.map((permission) => (
+          <label key={permission} className="flex items-center gap-2 text-sm text-[var(--color-foreground)]">
+            <input type="checkbox" name="permissions" value={permission} />
+            {permission}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -616,13 +779,14 @@ function MultiLanguageField({ label, name, options, values }: { label: string; n
 }
 
 function TranslatedTextInput({ label, name, value }: { label: string; name: string; value?: TranslatedText | null }) {
+  const { t } = useI18n();
   return (
     <fieldset className="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 sm:col-span-2 lg:col-span-3">
       <legend className="px-1 text-sm font-medium">{label}</legend>
       <div className="grid gap-3 sm:grid-cols-3">
-        <TextField label="EN" name={`${name}En`} defaultValue={value?.en ?? ""} />
-        <TextField label="AR" name={`${name}Ar`} defaultValue={value?.ar ?? ""} dir="rtl" />
-        <TextField label="FR" name={`${name}Fr`} defaultValue={value?.fr ?? ""} />
+        <TextField label="EN" name={`${name}En`} defaultValue={value?.en ?? ""} placeholder={t("translatedText.placeholder.en")} />
+        <TextField label="AR" name={`${name}Ar`} defaultValue={value?.ar ?? ""} placeholder={t("translatedText.placeholder.ar")} dir="rtl" />
+        <TextField label="FR" name={`${name}Fr`} defaultValue={value?.fr ?? ""} placeholder={t("translatedText.placeholder.fr")} />
       </div>
     </fieldset>
   );

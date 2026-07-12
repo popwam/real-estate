@@ -15,9 +15,17 @@ enum OrganizationType {
 
 enum OrganizationStatus {
   DRAFT
+  DOCUMENTS_REQUIRED
+  DOCUMENTS_UPLOADED
+  EXTRACTION_PENDING
+  MANUAL_REVIEW_REQUIRED
+  VERIFIED
+  ACTIVE
+  REJECTED
   PENDING_REVIEW
   APPROVED
   SUSPENDED
+  EXPIRED
   REVOKED
 }
 
@@ -717,9 +725,16 @@ enum OrganizationDocumentType {
   COMMERCIAL_REGISTER
   TAX_CARD
   VAT_CERTIFICATE
+  INCORPORATION_DOCUMENT
+  PROOF_OF_ADDRESS
   NATIONAL_ADDRESS
   LICENSE
   OWNER_ID
+  OWNER_ID_FRONT
+  OWNER_ID_BACK
+  AUTHORIZED_SIGNATORY_ID
+  AUTHORIZATION_OR_POWER_OF_ATTORNEY
+  BROKERAGE_LICENSE_OR_REGISTRATION
   CONTRACT
   OTHER
 }
@@ -746,6 +761,21 @@ enum DocumentExtractionProvider {
   MANUAL
   OCR_PROVIDER
   AI_PROVIDER
+}
+
+enum FilePurpose {
+  PUBLIC_MEDIA
+  PROJECT_MEDIA
+  COMPANY_DOCUMENT
+  CHAT_ATTACHMENT
+  HR_DOCUMENT
+  ATTENDANCE_EVIDENCE
+  QUARANTINE
+}
+
+enum FileVisibility {
+  PUBLIC
+  PRIVATE
 }
 
 enum LegalCaseStatus {
@@ -913,6 +943,7 @@ model Organization {
   branches          OrganizationBranch[]
   subscription      OrganizationSubscription?
   limits            OrganizationLimits?
+  companyRoleTemplates CompanyRoleTemplate[]
   attendanceLocations OrganizationAttendanceLocation[]
   wifiRules         OrganizationWifiRule[]
   accountingAccounts AccountingAccount[]
@@ -930,6 +961,67 @@ model Organization {
 
   @@index([type, status])
   @@map("organizations")
+}
+
+model PlatformPlan {
+  id              String                   @id @default(cuid())
+  code            String                   @unique
+  name            String
+  localizedName   Json?
+  description     String?
+  priceAmount     Decimal?                 @db.Decimal(12, 2)
+  priceCurrency   String                   @default("USD")
+  billingCycle    OrganizationBillingCycle @default(MONTHLY)
+  trialDays       Int                      @default(0)
+  limits          Json                     @default("{}")
+  enabledModules  Json                     @default("{}")
+  isActive        Boolean                  @default(true)
+  isArchived      Boolean                  @default(false)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@index([isActive, isArchived])
+  @@map("platform_plans")
+}
+
+model RequiredDocumentPolicy {
+  id                    String                    @id @default(cuid())
+  countryCode           String
+  organizationType      OrganizationType
+  legalForm             OrganizationLegalForm?
+  documentType          OrganizationDocumentType
+  isRequired            Boolean                   @default(true)
+  requiresExpiryDate    Boolean                   @default(false)
+  ownerDocumentRequired Boolean                   @default(false)
+  appliesToOwnerRoles   Json                      @default("[]")
+  isActive              Boolean                   @default(true)
+  notes                 String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  @@unique([countryCode, organizationType, legalForm, documentType])
+  @@index([countryCode, organizationType, isActive])
+  @@map("required_document_policies")
+}
+
+model CompanyRoleTemplate {
+  id              String       @id @default(cuid())
+  organizationId  String
+  code            String
+  displayName     String
+  localizedName   Json?
+  description     String?
+  permissions     String[]     @default([])
+  isSystem        Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  sortOrder       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive, sortOrder])
+  @@map("company_role_templates")
 }
 
 model OrganizationProfile {
@@ -1324,11 +1416,13 @@ model UploadedFile {
   id                          String                       @id @default(cuid())
   organizationId              String?
   uploadedById                String?
+  filePurpose                 FilePurpose                  @default(QUARANTINE)
   bucket                      String
   objectKey                   String
   url                         String?
   mimeType                    String?
   sizeBytes                   Int?
+  visibility                  FileVisibility               @default(PRIVATE)
   checksum                    String?
   createdAt                   DateTime                     @default(now())
   organization                Organization?                @relation(fields: [organizationId], references: [id], onDelete: SetNull)

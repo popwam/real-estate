@@ -39,7 +39,8 @@ export class CompanyPublicService {
 
   async getPublicSite(slug: string) {
     const normalizedSlug = this.slug(slug);
-    const fallbackPath = `/sites/${normalizedSlug}`;
+    const fallbackPath = `${this.fallbackPath()}/${normalizedSlug}`;
+    const rootDomain = this.rootDomain();
     const organization = await this.prisma.organization.findFirst({
       where: {
         OR: [
@@ -54,7 +55,7 @@ export class CompanyPublicService {
             },
           },
         ],
-        status: OrganizationStatus.APPROVED,
+        status: { in: [OrganizationStatus.APPROVED, OrganizationStatus.ACTIVE] },
       },
       include: {
         profile: true,
@@ -70,7 +71,7 @@ export class CompanyPublicService {
             OR: [
               { isDefault: true },
               { domain: fallbackPath },
-              { domain: `${normalizedSlug}.${this.rootDomain()}` },
+              ...(rootDomain ? [{ domain: `${normalizedSlug}.${rootDomain}` }] : []),
             ],
           },
           orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
@@ -415,6 +416,9 @@ export class CompanyPublicService {
   ) {
     await this.assertCanManageOrganization(organizationId, user, true);
     await this.findDocument(organizationId, documentId);
+    if (dto.status === OrganizationDocumentStatus.REJECTED && !this.string(dto.note)) {
+      throw new BadRequestException('Document rejection requires a reason.');
+    }
     const document = await this.prisma.organizationDocument.update({
       where: { id: documentId },
       data: {
@@ -478,7 +482,7 @@ export class CompanyPublicService {
     if (!domains.length) codes.add('DNS_CHECK_UNAVAILABLE');
     return {
       codes: Array.from(codes),
-      fallbackLink: `${this.fallbackBaseUrl()}/sites/${organization.slug}`,
+      fallbackLink: `${this.fallbackBaseUrl()}${this.fallbackPath()}/${organization.slug}`,
       instructions: {
         publicRootDomain: this.rootDomain(),
         stagingRootDomain: process.env.PUBLIC_STAGING_ROOT_DOMAIN ?? 'staging.popwam.com',
@@ -575,8 +579,8 @@ export class CompanyPublicService {
   private publicLinks(organization: { slug: string; domainVerifications?: any[] }) {
     const defaultDomain = organization.domainVerifications?.find((item) => item.isDefault);
     return {
-      fallbackPath: `/sites/${organization.slug}`,
-      fallbackUrl: `${this.fallbackBaseUrl()}/sites/${organization.slug}`,
+      fallbackPath: `${this.fallbackPath()}/${organization.slug}`,
+      fallbackUrl: `${this.fallbackBaseUrl()}${this.fallbackPath()}/${organization.slug}`,
       systemSubdomain: `${organization.slug}.${this.rootDomain()}`,
       defaultDomain: defaultDomain?.domain ?? null,
     };
@@ -875,8 +879,13 @@ export class CompanyPublicService {
     );
   }
 
+  private fallbackPath() {
+    const path = process.env.COMPANY_PUBLIC_SITE_FALLBACK_PATH?.trim() || '/sites';
+    return path.startsWith('/') ? path.replace(/\/$/, '') : `/${path.replace(/\/$/, '')}`;
+  }
+
   private rootDomain() {
-    return process.env.PUBLIC_ROOT_DOMAIN ?? 'popwam.com';
+    return process.env.PUBLIC_ROOT_DOMAIN ?? '';
   }
 
   private translated(value: any) {

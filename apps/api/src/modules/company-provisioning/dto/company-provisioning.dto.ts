@@ -5,6 +5,8 @@ import {
   OrganizationDomainType,
   OrganizationInboundSourceMode,
   OrganizationRedirectMode,
+  OrganizationDocumentType,
+  OrganizationLegalForm,
   OrganizationSubscriptionStatus,
   OrganizationType,
   OrganizationWifiRuleAppliesTo,
@@ -74,7 +76,7 @@ export class LimitsInputDto {
   maxTeams?: number;
   maxStorageMb?: number;
   maxMonthlyCheckIns?: number;
-  enabledModules?: Record<string, unknown>;
+  enabledModules?: string[];
   allowWebCheckIn?: boolean;
   allowMobileCheckIn?: boolean;
   allowPublicWebsite?: boolean;
@@ -154,4 +156,48 @@ export class CreatePlatformCompanyDto extends OrganizationProfileInputDto {
   domains?: DomainInputDto[];
   adminUser?: FirstAdminInputDto;
   webWifiPolicy?: WebWifiPolicy;
+}
+
+export class ActivationReviewDto {
+  reason?: string;
+  notes?: string;
+}
+
+export class RequiredDocumentPolicyInputDto {
+  countryCode?: string;
+  organizationType?: OrganizationType;
+  legalForm?: OrganizationLegalForm | null;
+  documentType?: OrganizationDocumentType;
+  isRequired?: boolean;
+  requiresExpiryDate?: boolean;
+  ownerDocumentRequired?: boolean;
+  appliesToOwnerRoles?: string[];
+  isActive?: boolean;
+  notes?: string;
+}
+
+export class PlatformPlanInputDto {
+  code?: string;
+  name?: string;
+  localizedName?: Record<string, unknown>;
+  description?: string;
+  priceAmount?: number;
+  priceCurrency?: string;
+  billingCycle?: OrganizationBillingCycle;
+  trialDays?: number;
+  limits?: Record<string, unknown>;
+  enabledModules?: Record<string, unknown>;
+  isActive?: boolean;
+  isArchived?: boolean;
+}
+
+export class CompanyRoleTemplateInputDto {
+  code?: string;
+  displayName?: string;
+  localizedName?: Record<string, unknown>;
+  description?: string;
+  permissions?: string[];
+  isSystem?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
 }

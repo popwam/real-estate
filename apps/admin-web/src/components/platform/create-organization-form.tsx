@@ -1,14 +1,15 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Building2 } from "lucide-react";
 import { FeedbackState } from "@/components/feedback-state";
+import { MapPicker } from "@/components/platform/map-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreatePlatformOrganization, useMetadataCountries, useMetadataCurrencies, useMetadataLanguages, useMetadataTimezones } from "@/hooks/use-platform-admin";
+import { useCreatePlatformOrganization, useMetadataCountries, useMetadataCurrencies, useMetadataLanguages, useMetadataTimezones, usePlatformPlans } from "@/hooks/use-platform-admin";
 import { useI18n } from "@/i18n";
 import type { MetadataOption, PlatformOrganizationInput } from "@/types/platform";
 
@@ -42,25 +43,45 @@ export function CreateOrganizationForm() {
   const { t } = useI18n();
   const router = useRouter();
   const create = useCreatePlatformOrganization();
+  const formRef = useRef<HTMLFormElement>(null);
   const [step, setStep] = useState(0);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [nextBlockers, setNextBlockers] = useState<string[]>([]);
   const activeStep = steps[step];
   const isLast = step === steps.length - 1;
   const progress = useMemo(() => Math.round(((step + 1) / steps.length) * 100), [step]);
 
+  useEffect(() => {
+    setNextBlockers(blockersForForm(activeStep, formRef.current ? new FormData(formRef.current) : undefined));
+  }, [activeStep]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitError(null);
     const form = event.currentTarget;
+    const blockers = blockersForForm(activeStep, new FormData(form));
+    setNextBlockers(blockers);
+    if (!isLast && blockers.length) return;
     if (!isLast) {
       setStep((value) => Math.min(steps.length - 1, value + 1));
       return;
     }
-    const payload = payloadFromForm(new FormData(form));
-    const organization = await create.mutateAsync(payload);
-    router.push(`/platform/organizations/${organization.id}`);
+    try {
+      const payload = payloadFromForm(new FormData(form));
+      const organization = await create.mutateAsync(payload);
+      router.push(`/platform/organizations/${organization.id}`);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : t("organizationCreate.error"));
+    }
   }
 
   return (
-    <form className="space-y-5" onSubmit={submit}>
+    <form
+      ref={formRef}
+      className="space-y-5"
+      onChange={(event) => setNextBlockers(blockersForForm(activeStep, new FormData(event.currentTarget)))}
+      onSubmit={submit}
+    >
       <section className="ui-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
@@ -112,8 +133,17 @@ export function CreateOrganizationForm() {
         {activeStep === "review" ? <ReviewStep /> : null}
       </section>
 
-      {create.error ? (
-        <FeedbackState tone="error" title={t("organizationCreate.error")} description={create.error.message} />
+      {submitError || create.error ? (
+        <FeedbackState tone="error" title={t("organizationCreate.error")} description={submitError ?? create.error?.message} />
+      ) : null}
+
+      {nextBlockers.length ? (
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">
+          <p className="font-semibold text-[var(--color-foreground)]">{t("provisioning.missingRequirements")}</p>
+          <ul className="mt-2 list-disc space-y-1 ps-5">
+            {nextBlockers.map((item) => <li key={item}>{t(item)}</li>)}
+          </ul>
+        </div>
       ) : null}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -121,7 +151,7 @@ export function CreateOrganizationForm() {
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           {t("common.back")}
         </Button>
-        <Button disabled={create.isPending} type="submit">
+        <Button disabled={create.isPending || (!isLast && nextBlockers.length > 0)} type="submit" title={!isLast && nextBlockers.length ? t("provisioning.completeRequiredFields") : undefined}>
           {isLast ? (
             <>
               <Check className="h-4 w-4" aria-hidden="true" />
@@ -147,7 +177,13 @@ function CompanyStep() {
   const timezones = useMetadataTimezones();
   return (
     <StepGrid title={t("provisioning.companyInformation")}>
-      <Field label={t("provisioning.organizationType")} name="organizationType" kind="select" options={["PLATFORM", "DEVELOPER", "BROKERAGE", "INDIVIDUAL_BROKER"]} />
+      <Field
+        label={t("provisioning.organizationType")}
+        name="organizationType"
+        kind="select"
+        options={["PLATFORM", "DEVELOPER", "BROKERAGE", "INDIVIDUAL_BROKER"]}
+        optionLabel={(option) => t(`organizationType.${organizationTypeKey(option)}`)}
+      />
       <Field label={t("provisioning.legalName")} name="legalName" required />
       <Field label={t("provisioning.displayName")} name="name" required />
       <Field label={t("provisioning.companyCode")} name="companyCode" />
@@ -173,9 +209,20 @@ function CompanyStep() {
 
 function SubscriptionStep() {
   const { t } = useI18n();
+  const plans = usePlatformPlans();
+  const planOptions = (plans.data ?? []).filter((plan) => plan.isActive && !plan.isArchived);
   return (
     <StepGrid title={t("provisioning.subscription")}>
-      <Field label={t("provisioning.plan")} name="planCode" defaultValue="starter" />
+      {planOptions.length ? (
+        <label className="space-y-2">
+          <Label htmlFor="provisioning-planCode">{t("provisioning.plan")}</Label>
+          <select id="provisioning-planCode" name="planCode" className="ui-input" defaultValue={planOptions[0]?.code}>
+            {planOptions.map((plan) => <option key={plan.id} value={plan.code}>{plan.name}</option>)}
+          </select>
+        </label>
+      ) : (
+        <Field label={t("provisioning.plan")} name="planCode" defaultValue="starter" />
+      )}
       <Field label={t("provisioning.planName")} name="planName" defaultValue="Starter" />
       <Field label={t("provisioning.subscriptionStart")} name="startsAt" type="date" />
       <Field label={t("provisioning.subscriptionEnd")} name="endsAt" type="date" />
@@ -215,11 +262,13 @@ function OfficeStep() {
       <Field label={t("provisioning.officeName")} name="officeName" />
       <Field label={t("provisioning.officeCode")} name="officeCode" />
       <Field label={t("common.type")} name="officeType" kind="select" options={["HEAD_OFFICE", "BRANCH", "SALES_OFFICE", "SITE", "REMOTE_HUB"]} />
-      <Field label={t("provisioning.address")} name="officeAddress" />
-      <Field label={t("provisioning.latitude")} name="officeLatitude" type="number" step="0.000001" />
-      <Field label={t("provisioning.longitude")} name="officeLongitude" type="number" step="0.000001" />
-      <Field label={t("provisioning.exactRadius")} name="officeExactRadiusMeters" type="number" defaultValue="30" />
-      <Field label={t("provisioning.expandedRadius")} name="officeExpandedRadiusMeters" type="number" defaultValue="1000" />
+      <MapPicker
+        addressName="officeAddress"
+        latitudeName="officeLatitude"
+        longitudeName="officeLongitude"
+        exactRadiusName="officeExactRadiusMeters"
+        expandedRadiusName="officeExpandedRadiusMeters"
+      />
       <CheckField label={t("provisioning.defaultOffice")} name="officeIsDefault" defaultChecked />
     </StepGrid>
   );
@@ -230,10 +279,13 @@ function AttendanceStep() {
   return (
     <StepGrid title={t("provisioning.attendanceLocations")}>
       <Field label={t("provisioning.locationName")} name="attendanceName" />
-      <Field label={t("provisioning.latitude")} name="attendanceLatitude" type="number" step="0.000001" />
-      <Field label={t("provisioning.longitude")} name="attendanceLongitude" type="number" step="0.000001" />
-      <Field label={t("provisioning.exactRadius")} name="attendanceExactRadiusMeters" type="number" defaultValue="30" />
-      <Field label={t("provisioning.expandedRadius")} name="attendanceExpandedRadiusMeters" type="number" defaultValue="1000" />
+      <MapPicker
+        addressName="attendanceAddress"
+        latitudeName="attendanceLatitude"
+        longitudeName="attendanceLongitude"
+        exactRadiusName="attendanceExactRadiusMeters"
+        expandedRadiusName="attendanceExpandedRadiusMeters"
+      />
       <CheckField label={t("provisioning.allowedForWeb")} name="attendanceAllowedForWeb" defaultChecked />
       <CheckField label={t("provisioning.allowedForMobile")} name="attendanceAllowedForMobile" defaultChecked />
       <CheckField label={t("provisioning.reviewOutsideExact")} name="requiresReviewOutsideExactRadius" defaultChecked />
@@ -311,6 +363,7 @@ function Field({
   name,
   kind,
   options,
+  optionLabel,
   required,
   ...inputProps
 }: {
@@ -318,6 +371,7 @@ function Field({
   name: string;
   kind?: "select";
   options?: string[];
+  optionLabel?: (option: string) => string;
   required?: boolean;
 } & InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -327,7 +381,7 @@ function Field({
         <select id={`provisioning-${name}`} name={name} className="ui-input" required={required}>
           {options?.map((option) => (
             <option key={option} value={option}>
-              {option.replaceAll("_", " ")}
+              {optionLabel ? optionLabel(option) : option.replaceAll("_", " ")}
             </option>
           ))}
         </select>
@@ -493,4 +547,18 @@ function numberValue(data: FormData, key: string) {
 
 function checked(data: FormData, key: string) {
   return data.get(key) === "on";
+}
+
+function organizationTypeKey(value: string) {
+  if (value === "INDIVIDUAL_BROKER") return "individualBroker";
+  return value.toLowerCase();
+}
+
+function blockersForForm(step: StepId, data?: FormData) {
+  if (step !== "company") return [];
+  if (!data) return ["provisioning.required.organizationType", "provisioning.required.displayName"];
+  const blockers: string[] = [];
+  if (!required(data, "organizationType")) blockers.push("provisioning.required.organizationType");
+  if (!required(data, "name")) blockers.push("provisioning.required.displayName");
+  return blockers;
 }

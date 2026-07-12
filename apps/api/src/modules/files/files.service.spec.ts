@@ -83,8 +83,10 @@ describe('FilesService attendance evidence photos', () => {
         data: expect.objectContaining({
           organizationId: user.organizationId,
           uploadedById: user.userId,
-          bucket: 'attendance-evidence',
+          filePurpose: 'ATTENDANCE_EVIDENCE',
+          bucket: 'local-private',
           mimeType: 'image/jpeg',
+          visibility: 'PRIVATE',
           sizeBytes: 9,
         }),
       }),
@@ -126,6 +128,37 @@ describe('FilesService attendance evidence photos', () => {
     } else {
       process.env.FILE_STORAGE_BUCKET = previousBucket;
     }
+  });
+
+  it('routes company documents to the company document purpose', async () => {
+    const { prisma, service } = setup();
+
+    await service.uploadOrganizationDocument(
+      {
+        buffer: Buffer.from('pdf'),
+        size: 3,
+        mimetype: 'application/pdf',
+        originalname: 'commercial-register.pdf',
+      },
+      user.organizationId,
+      {
+        ...user,
+        permissions: ['platform.organizations.manage'],
+        role: 'platform_admin',
+        organizationType: 'PLATFORM',
+      } as any,
+    );
+
+    expect(prisma.uploadedFile.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          filePurpose: 'COMPANY_DOCUMENT',
+          bucket: 'local-private',
+          visibility: 'PRIVATE',
+          objectKey: expect.stringContaining('/documents/'),
+        }),
+      }),
+    );
   });
 
   it('rejects non-image attendance uploads', async () => {

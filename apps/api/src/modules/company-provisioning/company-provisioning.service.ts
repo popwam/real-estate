@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import {
   DomainVerificationStatus,
+  OrganizationDocumentStatus,
+  OrganizationDocumentType,
   OrganizationBillingCycle,
   OrganizationBranchType,
   OrganizationDomainType,
@@ -31,12 +33,16 @@ import { PrismaService } from '../database/prisma.service';
 import { ROLE_PERMISSIONS } from '../permissions/rbac.seed';
 import {
   AttendanceLocationInputDto,
+  ActivationReviewDto,
+  CompanyRoleTemplateInputDto,
   CreatePlatformCompanyDto,
   DomainInputDto,
   FirstAdminInputDto,
   LimitsInputDto,
   OfficeInputDto,
   OrganizationProfileInputDto,
+  PlatformPlanInputDto,
+  RequiredDocumentPolicyInputDto,
   SubscriptionInputDto,
   WifiRuleInputDto,
 } from './dto/company-provisioning.dto';
@@ -92,7 +98,12 @@ export class CompanyProvisioningService {
     );
     const slug = await this.uniqueSlug(this.string(profile.slug) ?? name);
     const companyCode = await this.companyCode(profile.companyCode, slug);
-    const status = this.organizationStatus(profile.status);
+    const requestedStatus = this.organizationStatus(profile.status);
+    const status =
+      requestedStatus === OrganizationStatus.ACTIVE ||
+      requestedStatus === OrganizationStatus.APPROVED
+        ? OrganizationStatus.DOCUMENTS_REQUIRED
+        : requestedStatus;
     const defaultDomain = this.systemDomain(slug);
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -163,12 +174,12 @@ export class CompanyProvisioningService {
               logoUrl: this.string(profile.logoUrl),
               contactPhone: this.string(profile.businessPhone),
               contactEmail: this.optionalEmail(profile.businessEmail),
-              isPublished: status === OrganizationStatus.APPROVED,
+              isPublished: false,
             },
           },
           publicSiteSettings: {
             create: {
-              mode: status === OrganizationStatus.APPROVED ? 'PORTAL' : 'DISABLED',
+              mode: 'DISABLED',
               theme: 'REAL_ESTATE',
               defaultLanguage: this.string(profile.defaultLanguage) ?? 'en',
               supportedLanguages: ['en', 'ar', 'fr'],
@@ -186,18 +197,19 @@ export class CompanyProvisioningService {
                 : undefined,
             },
           },
-          domainVerifications: {
-            create: {
-              domain: defaultDomain,
-              type: OrganizationDomainType.SYSTEM_SUBDOMAIN,
-              status: DomainVerificationStatus.VERIFIED,
-              verificationToken: this.verificationToken(),
-              verifiedAt: new Date(),
-              isDefault: true,
-              statusNote: 'system_domain_auto_created',
-              redirectMode: OrganizationRedirectMode.PROXY_OR_SHOW_COMPANY_PROFILE,
-            },
-          },
+          domainVerifications: defaultDomain
+            ? {
+                create: {
+                  domain: defaultDomain,
+                  type: OrganizationDomainType.SYSTEM_SUBDOMAIN,
+                  status: DomainVerificationStatus.PENDING,
+                  verificationToken: this.verificationToken(),
+                  isDefault: true,
+                  statusNote: 'wildcard_subdomain_pending_dns_and_hosting_verification',
+                  redirectMode: OrganizationRedirectMode.PROXY_OR_SHOW_COMPANY_PROFILE,
+                },
+              }
+            : undefined,
         },
       });
 
@@ -565,6 +577,440 @@ export class CompanyProvisioningService {
     return this.withPortalLinks(updated);
   }
 
+  async activationCheck(id: string, user: AuthenticatedRequestUser) {
+    await this.assertPlatformCanReadOrganization(id, user);
+    return this.buildActivationCheck(id);
+  }
+
+  async activateOrganization(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.organizations.activate');
+    const check = await this.buildActivationCheck(id);
+    if (!check.canActivate) return check;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.update({
+        where: { id },
+        data: { status: OrganizationStatus.ACTIVE },
+      });
+      await tx.organizationWebsiteSettings.updateMany({
+        where: { organizationId: id },
+        data: { isPublished: true },
+      });
+      await tx.organizationPublicSiteSettings.upsert({
+        where: { organizationId: id },
+        update: { mode: 'PORTAL' },
+        create: {
+          organizationId: id,
+          mode: 'PORTAL',
+          theme: 'REAL_ESTATE',
+          defaultLanguage: organization.defaultLanguage ?? 'en',
+          supportedLanguages: ['en', 'ar', 'fr'],
+        },
+      });
+      return tx.organization.findUniqueOrThrow({
+        where: { id },
+        include: this.organizationInclude(),
+      });
+    });
+    await this.record(user, 'platform.organization.activated', 'Organization', id, id);
+    return { canActivate: true, organization: this.withPortalLinks(updated) };
+  }
+
+  async rejectOrganization(id: string, dto: ActivationReviewDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.organizations.verify');
+    const reason = this.requiredString(dto.reason, 'reason');
+    const updated = await this.prisma.organization.update({
+      where: { id },
+      data: { status: OrganizationStatus.REJECTED },
+      include: this.organizationInclude(),
+    });
+    await this.auditLogs.record({
+      action: 'platform.organization.rejected',
+      entityType: 'Organization',
+      entityId: id,
+      organizationId: id,
+      actor: user,
+      metadata: { reason, notes: this.string(dto.notes) },
+    });
+    return this.withPortalLinks(updated);
+  }
+
+  async getPlatformSettings(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.settings.view');
+    return {
+      sections: ['plans', 'subscriptions', 'verification-policies', 'modules', 'domains'],
+      domains: this.domainDefaults(),
+    };
+  }
+
+  async listPlatformPlans(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.plans.view');
+    return this.prisma.platformPlan.findMany({ orderBy: [{ isArchived: 'asc' }, { code: 'asc' }] });
+  }
+
+  async createPlatformPlan(dto: PlatformPlanInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.plans.manage');
+    const plan = await this.prisma.platformPlan.create({ data: this.platformPlanData(dto, true) as any });
+    await this.record(user, 'platform.plan.created', 'PlatformPlan', plan.id);
+    return plan;
+  }
+
+  async updatePlatformPlan(id: string, dto: PlatformPlanInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.plans.manage');
+    const plan = await this.prisma.platformPlan.update({ where: { id }, data: this.platformPlanData(dto, false) as any });
+    await this.record(user, 'platform.plan.updated', 'PlatformPlan', plan.id);
+    return plan;
+  }
+
+  async listPlatformSubscriptions(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.subscriptions.view');
+    return this.prisma.organizationSubscription.findMany({
+      include: { organization: { select: { id: true, name: true, slug: true, type: true, status: true } } },
+      orderBy: [{ updatedAt: 'desc' }],
+      take: 200,
+    });
+  }
+
+  async listRequiredDocumentPolicies(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.verification_policies.view');
+    return this.prisma.requiredDocumentPolicy.findMany({
+      orderBy: [{ countryCode: 'asc' }, { organizationType: 'asc' }, { documentType: 'asc' }],
+    });
+  }
+
+  async createRequiredDocumentPolicy(dto: RequiredDocumentPolicyInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.verification_policies.manage');
+    const policy = await this.prisma.requiredDocumentPolicy.create({ data: this.requiredPolicyData(dto, true) as any });
+    await this.record(user, 'platform.verification_policy.created', 'RequiredDocumentPolicy', policy.id);
+    return policy;
+  }
+
+  async updateRequiredDocumentPolicy(id: string, dto: RequiredDocumentPolicyInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.verification_policies.manage');
+    const policy = await this.prisma.requiredDocumentPolicy.update({ where: { id }, data: this.requiredPolicyData(dto, false) as any });
+    await this.record(user, 'platform.verification_policy.updated', 'RequiredDocumentPolicy', policy.id);
+    return policy;
+  }
+
+  getPlatformModules(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.settings.view');
+    return [
+      'HR',
+      'CRM',
+      'ACCOUNTING',
+      'LEGAL',
+      'MARKETING',
+      'TEMPLATES',
+      'REPORTS',
+      'PUBLIC_SITE',
+    ];
+  }
+
+  getPlatformDomainSettings(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.settings.view');
+    return this.domainDefaults();
+  }
+
+  async listCompanyRoleTemplates(organizationId: string, user: AuthenticatedRequestUser) {
+    this.assertCanManageCompanyResource(organizationId, user, [
+      'company.access_levels.view',
+      'company.access_levels.manage',
+      'platform.organizations.view',
+    ]);
+    return this.prisma.companyRoleTemplate.findMany({
+      where: { organizationId },
+      orderBy: [{ sortOrder: 'asc' }, { displayName: 'asc' }],
+    });
+  }
+
+  async createCompanyRoleTemplate(
+    organizationId: string,
+    dto: CompanyRoleTemplateInputDto,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertCanManageCompanyResource(organizationId, user, [
+      'company.access_levels.manage',
+      'platform.organizations.manage',
+    ]);
+    const created = await this.prisma.companyRoleTemplate.create({
+      data: this.companyRoleTemplateData(organizationId, dto, true) as any,
+    });
+    await this.record(user, 'company.access_level.created', 'CompanyRoleTemplate', created.id, organizationId);
+    return created;
+  }
+
+  async updateCompanyRoleTemplate(
+    organizationId: string,
+    templateId: string,
+    dto: CompanyRoleTemplateInputDto,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertCanManageCompanyResource(organizationId, user, [
+      'company.access_levels.manage',
+      'platform.organizations.manage',
+    ]);
+    const current = await this.prisma.companyRoleTemplate.findFirst({ where: { id: templateId, organizationId } });
+    if (!current) throw new NotFoundException('Access level not found.');
+    if (current.isSystem && !isPlatformUser(user)) throw new ForbiddenException('System access levels can only be edited by platform users.');
+    const updated = await this.prisma.companyRoleTemplate.update({
+      where: { id: templateId },
+      data: this.companyRoleTemplateData(organizationId, dto, false) as any,
+    });
+    await this.record(user, 'company.access_level.updated', 'CompanyRoleTemplate', updated.id, organizationId);
+    return updated;
+  }
+
+  private async buildActivationCheck(organizationId: string) {
+    const organization = await this.prisma.organization.findUniqueOrThrow({
+      where: { id: organizationId },
+      include: {
+        profile: true,
+        subscription: true,
+        limits: true,
+        branches: true,
+        users: true,
+        organizationDocuments: true,
+        owners: true,
+      },
+    });
+    const policies = await this.policiesForOrganization(organization);
+    const requiredPolicies = policies.filter((policy) => policy.isRequired);
+    const blockingDocuments: string[] = [];
+    const blockingOwners: string[] = [];
+    const blockingSubscriptionReasons: string[] = [];
+    const blockingOfficeReasons: string[] = [];
+    const blockingAdminReasons: string[] = [];
+    const missingRequirements: string[] = [];
+    const now = new Date();
+
+    for (const policy of requiredPolicies) {
+      const matchingDocuments = organization.organizationDocuments.filter(
+        (document) => document.documentType === policy.documentType,
+      );
+      const approved = matchingDocuments.find((document) => {
+        if (document.status !== OrganizationDocumentStatus.APPROVED) return false;
+        if (policy.requiresExpiryDate && !document.expiresAt) return false;
+        if (document.expiresAt && document.expiresAt <= now) return false;
+        return true;
+      });
+      if (!approved && !policy.ownerDocumentRequired) {
+        blockingDocuments.push(policy.documentType);
+      }
+      for (const document of matchingDocuments) {
+        if (document.status === OrganizationDocumentStatus.REJECTED) {
+          blockingDocuments.push(`${policy.documentType}:REJECTED`);
+        }
+        if (document.expiresAt && document.expiresAt <= now) {
+          blockingDocuments.push(`${policy.documentType}:EXPIRED`);
+        }
+      }
+    }
+
+    const ownerPolicies = requiredPolicies.filter((policy) => policy.ownerDocumentRequired);
+    if (ownerPolicies.length) {
+      for (const owner of organization.owners) {
+        if (!this.ownerRoleApplies(owner.role, ownerPolicies)) continue;
+        const needsFront = ownerPolicies.some((policy) => policy.documentType === OrganizationDocumentType.OWNER_ID_FRONT);
+        const needsBack = ownerPolicies.some((policy) => policy.documentType === OrganizationDocumentType.OWNER_ID_BACK);
+        if ((needsFront && !owner.idFrontFileId) || (needsBack && !owner.idBackFileId)) {
+          blockingOwners.push(`${owner.id}:MISSING_ID_DOCUMENTS`);
+        }
+        if (owner.verificationStatus !== 'APPROVED') {
+          blockingOwners.push(`${owner.id}:NOT_APPROVED`);
+        }
+      }
+    }
+
+    if (!organization.subscription) {
+      blockingSubscriptionReasons.push('SUBSCRIPTION_REQUIRED');
+    } else if (!['TRIAL', 'ACTIVE'].includes(organization.subscription.status)) {
+      blockingSubscriptionReasons.push(`SUBSCRIPTION_${organization.subscription.status}`);
+    }
+    if (!organization.plan && !organization.subscription?.planCode) {
+      blockingSubscriptionReasons.push('PLAN_REQUIRED');
+    }
+    if (!organization.limits) missingRequirements.push('LIMITS_REQUIRED');
+    if (!organization.branches.some((office) => office.isActive)) {
+      blockingOfficeReasons.push('ACTIVE_OFFICE_REQUIRED');
+    }
+    const hasAdmin = organization.users.some((user) =>
+      ['DEVELOPER_OWNER', 'DEVELOPER_ADMIN', 'BROKERAGE_OWNER', 'BROKERAGE_ADMIN', 'INDIVIDUAL_BROKER'].includes(user.userRole),
+    );
+    if (!hasAdmin) blockingAdminReasons.push('FIRST_ADMIN_REQUIRED');
+    if (['REJECTED', 'SUSPENDED', 'EXPIRED', 'REVOKED'].includes(organization.status)) {
+      missingRequirements.push(`STATUS_${organization.status}`);
+    }
+
+    if (blockingDocuments.length) missingRequirements.push('REQUIRED_DOCUMENTS_NOT_APPROVED');
+    if (blockingOwners.length) missingRequirements.push('OWNER_DOCUMENTS_NOT_APPROVED');
+    if (blockingSubscriptionReasons.length) missingRequirements.push('SUBSCRIPTION_NOT_READY');
+    if (blockingOfficeReasons.length) missingRequirements.push('OFFICE_NOT_READY');
+    if (blockingAdminReasons.length) missingRequirements.push('FIRST_ADMIN_NOT_READY');
+
+    return {
+      canActivate:
+        missingRequirements.length === 0 &&
+        blockingDocuments.length === 0 &&
+        blockingOwners.length === 0 &&
+        blockingSubscriptionReasons.length === 0 &&
+        blockingOfficeReasons.length === 0 &&
+        blockingAdminReasons.length === 0,
+      missingRequirements: [...new Set(missingRequirements)],
+      blockingDocuments: [...new Set(blockingDocuments)],
+      blockingOwners: [...new Set(blockingOwners)],
+      blockingSubscriptionReasons: [...new Set(blockingSubscriptionReasons)],
+      blockingOfficeReasons: [...new Set(blockingOfficeReasons)],
+      blockingAdminReasons: [...new Set(blockingAdminReasons)],
+      requiredDocuments: requiredPolicies.map((policy) => ({
+        documentType: policy.documentType,
+        ownerDocumentRequired: policy.ownerDocumentRequired,
+        requiresExpiryDate: policy.requiresExpiryDate,
+      })),
+    };
+  }
+
+  private async policiesForOrganization(organization: {
+    type: OrganizationType;
+    country: string | null;
+    profile: { countryCode: string | null; legalForm: OrganizationLegalForm | null } | null;
+  }) {
+    const countryCode = (organization.profile?.countryCode ?? organization.country ?? 'EG').toUpperCase();
+    const policies = await this.prisma.requiredDocumentPolicy.findMany({
+      where: {
+        countryCode,
+        organizationType: organization.type,
+        isActive: true,
+        OR: [{ legalForm: organization.profile?.legalForm ?? null }, { legalForm: null }],
+      },
+    });
+    return policies.length ? policies : this.defaultPolicies(countryCode, organization.type);
+  }
+
+  private defaultPolicies(countryCode: string, organizationType: OrganizationType) {
+    if (countryCode !== 'EG' || organizationType !== OrganizationType.BROKERAGE) return [];
+    return [
+      this.defaultPolicy(OrganizationDocumentType.COMMERCIAL_REGISTER, true),
+      this.defaultPolicy(OrganizationDocumentType.TAX_CARD, false),
+      this.defaultPolicy(OrganizationDocumentType.PROOF_OF_ADDRESS, false),
+      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_FRONT, false, true),
+      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_BACK, false, true),
+      this.defaultPolicy(OrganizationDocumentType.AUTHORIZED_SIGNATORY_ID, false, true),
+    ];
+  }
+
+  private defaultPolicy(
+    documentType: OrganizationDocumentType,
+    requiresExpiryDate: boolean,
+    ownerDocumentRequired = false,
+  ) {
+    return {
+      documentType,
+      isRequired: true,
+      requiresExpiryDate,
+      ownerDocumentRequired,
+      appliesToOwnerRoles: ['OWNER', 'PARTNER', 'SHAREHOLDER', 'AUTHORIZED_SIGNATORY', 'LEGAL_REPRESENTATIVE'],
+    };
+  }
+
+  private ownerRoleApplies(role: string, policies: Array<{ appliesToOwnerRoles: any }>) {
+    return policies.some((policy) => {
+      const roles = Array.isArray(policy.appliesToOwnerRoles) ? policy.appliesToOwnerRoles : [];
+      return roles.length === 0 || roles.includes(role);
+    });
+  }
+
+  private platformPlanData(dto: PlatformPlanInputDto, creating: boolean) {
+    return {
+      code: creating ? this.requiredString(dto.code, 'code').toLowerCase() : this.string(dto.code)?.toLowerCase(),
+      name: creating ? this.requiredString(dto.name, 'name') : this.string(dto.name),
+      localizedName: dto.localizedName ? (this.jsonObject(dto.localizedName) as Prisma.InputJsonValue) : undefined,
+      description: this.string(dto.description),
+      priceAmount: dto.priceAmount === undefined ? undefined : this.decimal(dto.priceAmount, 'priceAmount'),
+      priceCurrency: this.string(dto.priceCurrency)?.toUpperCase(),
+      billingCycle: dto.billingCycle,
+      trialDays: this.optionalInt(dto.trialDays, 0, 3650),
+      limits: dto.limits ? (this.jsonObject(dto.limits) as Prisma.InputJsonValue) : undefined,
+      enabledModules: Array.isArray(dto.enabledModules) ? dto.enabledModules : undefined,
+      isActive: this.booleanOrUndefined(dto.isActive),
+      isArchived: this.booleanOrUndefined(dto.isArchived),
+    };
+  }
+
+  private requiredPolicyData(dto: RequiredDocumentPolicyInputDto, creating: boolean) {
+    return {
+      countryCode: creating ? this.requiredString(dto.countryCode, 'countryCode').toUpperCase() : this.string(dto.countryCode)?.toUpperCase(),
+      organizationType: creating
+        ? this.enumValue(OrganizationType, dto.organizationType, 'organizationType')
+        : dto.organizationType
+          ? this.enumValue(OrganizationType, dto.organizationType, 'organizationType')
+          : undefined,
+      legalForm: dto.legalForm || null,
+      documentType: creating
+        ? this.enumValue(OrganizationDocumentType, dto.documentType, 'documentType')
+        : dto.documentType
+          ? this.enumValue(OrganizationDocumentType, dto.documentType, 'documentType')
+          : undefined,
+      isRequired: this.booleanOrUndefined(dto.isRequired),
+      requiresExpiryDate: this.booleanOrUndefined(dto.requiresExpiryDate),
+      ownerDocumentRequired: this.booleanOrUndefined(dto.ownerDocumentRequired),
+      appliesToOwnerRoles: dto.appliesToOwnerRoles ? (dto.appliesToOwnerRoles as Prisma.InputJsonValue) : undefined,
+      isActive: this.booleanOrUndefined(dto.isActive),
+      notes: this.string(dto.notes),
+    };
+  }
+
+  private companyRoleTemplateData(
+    organizationId: string,
+    dto: CompanyRoleTemplateInputDto,
+    creating: boolean,
+  ) {
+    const permissions = this.companyPermissions(dto.permissions);
+    const displayName = creating ? this.requiredString(dto.displayName, 'displayName') : this.string(dto.displayName);
+    return {
+      organizationId,
+      code: creating ? this.accessLevelCode(dto.code ?? displayName) : dto.code ? this.accessLevelCode(dto.code) : undefined,
+      displayName,
+      localizedName: dto.localizedName ? (this.jsonObject(dto.localizedName) as Prisma.InputJsonValue) : undefined,
+      description: this.string(dto.description),
+      permissions,
+      isSystem: this.booleanOrUndefined(dto.isSystem),
+      isActive: this.booleanOrUndefined(dto.isActive),
+      sortOrder: this.optionalInt(dto.sortOrder, 0, 100000),
+    };
+  }
+
+  private companyPermissions(value: unknown) {
+    const permissions = Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+    const blocked = permissions.filter((permission) =>
+      permission.startsWith('platform.') ||
+      permission.startsWith('organizations.') ||
+      PLATFORM_PERMISSIONS.includes(permission),
+    );
+    if (blocked.length) {
+      throw new BadRequestException('Company access levels cannot include platform permissions.');
+    }
+    return [...new Set(permissions.map((permission) => permission.trim()).filter(Boolean))];
+  }
+
+  private accessLevelCode(value: string | undefined) {
+    return this.requiredString(value, 'code')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  private domainDefaults() {
+    return {
+      publicRootDomain: process.env.PUBLIC_ROOT_DOMAIN ?? null,
+      stagingRootDomain: process.env.PUBLIC_STAGING_ROOT_DOMAIN ?? null,
+      fallbackPath: process.env.COMPANY_PUBLIC_SITE_FALLBACK_PATH ?? '/sites',
+      wildcardEnabled: process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true',
+      companyDefaultDomainPattern: process.env.COMPANY_DEFAULT_DOMAIN_PATTERN ?? null,
+      companyStagingDomainPattern: process.env.COMPANY_STAGING_DOMAIN_PATTERN ?? null,
+      railway: 'Add wildcard/custom domains in Railway and wait for SSL to become active.',
+      cloudflare: 'Use DNS Only verification records while Railway verifies domains; do not proxy until SSL is active.',
+    };
+  }
+
   private organizationInclude() {
     return {
       profile: true,
@@ -575,6 +1021,7 @@ export class CompanyProvisioningService {
       wifiRules: true,
       domainVerifications: true,
       websiteSettings: true,
+      companyRoleTemplates: true,
       users: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
     } as const;
   }
@@ -1142,24 +1589,29 @@ export class CompanyProvisioningService {
   private organizationStatus(value: string | undefined) {
     if (!value) return OrganizationStatus.DRAFT;
     const normalized = value.toUpperCase();
-    if (normalized === 'ACTIVE') return OrganizationStatus.APPROVED;
-    if (normalized === 'ARCHIVED' || normalized === 'EXPIRED') return OrganizationStatus.REVOKED;
+    if (normalized === 'ARCHIVED') return OrganizationStatus.REVOKED;
     return this.enumValue(OrganizationStatus, normalized, 'status');
   }
 
   private systemDomain(slug: string) {
-    return `${slug}.popwam.com`;
+    if (process.env.ENABLE_WILDCARD_SUBDOMAINS !== 'true') return null;
+    const pattern = process.env.COMPANY_DEFAULT_DOMAIN_PATTERN?.trim();
+    if (pattern?.includes('{slug}')) return pattern.replaceAll('{slug}', slug);
+    const root = process.env.PUBLIC_ROOT_DOMAIN?.trim();
+    return root ? `${slug}.${root}` : null;
   }
 
   private withPortalLinks(organization: any) {
     const defaultDomain = organization.domainVerifications?.find((item: any) => item.isDefault);
+    const wildcardEnabled = process.env.ENABLE_WILDCARD_SUBDOMAINS === 'true';
+    const systemSubdomain = wildcardEnabled ? this.systemDomain(organization.slug) : null;
     return {
       ...organization,
       portalLinks: {
-        systemSubdomain: `${organization.slug}.popwam.com`,
-        fallbackPath: `/sites/${organization.slug}`,
+        systemSubdomain,
+        fallbackPath: `${this.domainDefaults().fallbackPath}/${organization.slug}`,
         defaultDomain: defaultDomain?.domain ?? null,
-        wildcardDnsRequired: true,
+        wildcardDnsRequired: !wildcardEnabled,
       },
     };
   }
@@ -1208,6 +1660,14 @@ export class CompanyProvisioningService {
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
       throw new BadRequestException(`number must be between ${min} and ${max}.`);
+    }
+    return parsed;
+  }
+
+  private decimal(value: unknown, field: string) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new BadRequestException(`${field} must be a positive number.`);
     }
     return parsed;
   }
@@ -1268,7 +1728,9 @@ export class CompanyProvisioningService {
   private enumValue<T extends Record<string, string>>(source: T, value: unknown, field: string) {
     const normalized = this.string(value)?.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
     if (normalized && Object.values(source).includes(normalized)) return normalized as T[keyof T];
-    throw new BadRequestException(`${field} is invalid.`);
+    throw new BadRequestException(
+      `${field} is invalid. Allowed values: ${Object.values(source).join(', ')}.`,
+    );
   }
 
   private slugify(value: string) {

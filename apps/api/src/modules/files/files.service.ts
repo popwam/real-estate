@@ -39,11 +39,13 @@ export class FilesService {
       data: {
         organizationId,
         uploadedById: currentUser.userId,
+        filePurpose: this.filePurpose(dto.filePurpose),
         bucket: dto.bucket?.trim() || 'metadata-placeholder',
         objectKey: dto.objectKey.trim(),
         url: this.optionalString(dto.url),
         mimeType: this.optionalString(dto.mimeType),
         sizeBytes: dto.sizeBytes,
+        visibility: this.fileVisibility(dto.visibility),
         checksum: this.optionalString(dto.checksum),
       },
     });
@@ -60,7 +62,7 @@ export class FilesService {
       },
     });
 
-    return file;
+    return this.safeFile(file);
   }
 
   async uploadAttendanceEvidencePhoto(
@@ -93,6 +95,7 @@ export class FilesService {
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
     const stored = await this.storage.putObject({
+      purpose: 'ATTENDANCE_EVIDENCE',
       objectKey,
       body: file.buffer,
       mimeType,
@@ -102,12 +105,13 @@ export class FilesService {
       data: {
         organizationId: currentUser.organizationId,
         uploadedById: currentUser.userId,
-        bucket: 'attendance-evidence',
+        filePurpose: 'ATTENDANCE_EVIDENCE',
+        bucket: stored.bucket,
         objectKey: stored.objectKey,
         mimeType,
         sizeBytes: file.size,
+        visibility: 'PRIVATE',
         checksum: this.optionalString(file.originalname),
-        url: `${stored.provider}:${stored.bucket}`,
       },
     });
 
@@ -171,6 +175,7 @@ export class FilesService {
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
     const stored = await this.storage.putObject({
+      purpose: 'HR_DOCUMENT',
       objectKey,
       body: file.buffer,
       mimeType,
@@ -180,12 +185,13 @@ export class FilesService {
       data: {
         organizationId,
         uploadedById: currentUser.userId,
-        bucket: 'hr-employee-images',
+        filePurpose: 'HR_DOCUMENT',
+        bucket: stored.bucket,
         objectKey: stored.objectKey,
         mimeType,
         sizeBytes: file.size,
+        visibility: 'PRIVATE',
         checksum: this.optionalString(file.originalname),
-        url: `${stored.provider}:${stored.bucket}`,
       },
     });
 
@@ -246,6 +252,7 @@ export class FilesService {
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
     const stored = await this.storage.putObject({
+      purpose: 'COMPANY_DOCUMENT',
       objectKey,
       body: file.buffer,
       mimeType,
@@ -255,12 +262,13 @@ export class FilesService {
       data: {
         organizationId,
         uploadedById: currentUser.userId,
-        bucket: 'organization-documents',
+        filePurpose: 'COMPANY_DOCUMENT',
+        bucket: stored.bucket,
         objectKey: stored.objectKey,
         mimeType,
         sizeBytes: file.size,
+        visibility: 'PRIVATE',
         checksum: this.optionalString(file.originalname),
-        url: `${stored.provider}:${stored.bucket}`,
       },
     });
 
@@ -300,7 +308,7 @@ export class FilesService {
     if (file.uploadedById !== currentUser.userId)
       return 'PHOTO_FILE_NOT_OWNED_BY_USER';
     if (
-      file.bucket !== 'attendance-evidence' ||
+      !this.hasPurpose(file, 'ATTENDANCE_EVIDENCE', 'attendance-evidence') ||
       !file.objectKey.startsWith('attendance/')
     ) {
       return 'PHOTO_FILE_NOT_ATTENDANCE_EVIDENCE';
@@ -331,6 +339,7 @@ export class FilesService {
     const object = await this.storage.readObject({
       bucket: this.storageBucket(file),
       objectKey: file.objectKey,
+      purpose: 'ATTENDANCE_EVIDENCE',
     });
     return {
       stream: object.body,
@@ -353,6 +362,7 @@ export class FilesService {
     const object = await this.storage.readObject({
       bucket: this.storageBucket(file),
       objectKey: file.objectKey,
+      purpose: 'HR_DOCUMENT',
     });
     return {
       stream: object.body,
@@ -399,7 +409,10 @@ export class FilesService {
     );
     const files = await this.prisma.uploadedFile.findMany({
       where: {
-        bucket: 'attendance-evidence',
+        OR: [
+          { filePurpose: 'ATTENDANCE_EVIDENCE' as any },
+          { bucket: 'attendance-evidence' },
+        ],
         objectKey: { startsWith: 'attendance/' },
         createdAt: { lt: cutoff },
       },
@@ -438,7 +451,7 @@ export class FilesService {
 
     assertSameOrganizationOrPlatform(currentUser, file.organizationId);
 
-    return file;
+    return this.safeFile(file);
   }
 
   async linkToVerification(
@@ -660,6 +673,7 @@ export class FilesService {
     file: {
       organizationId: string | null;
       uploadedById: string | null;
+      filePurpose?: string | null;
       bucket: string;
       objectKey: string;
       mimeType: string | null;
@@ -670,7 +684,7 @@ export class FilesService {
     assertSameOrganizationOrPlatform(currentUser, file.organizationId);
     const normalizedPurpose = this.hrImagePurpose(purpose);
     if (
-      file.bucket !== 'hr-employee-images' ||
+      !this.hasPurpose(file, 'HR_DOCUMENT', 'hr-employee-images') ||
       !file.objectKey.startsWith(`hr/employees/${normalizedPurpose}/`)
     ) {
       throw new ForbiddenException('File is not an HR employee image.');
@@ -699,6 +713,7 @@ export class FilesService {
     file: {
       organizationId: string | null;
       uploadedById: string | null;
+      filePurpose?: string | null;
       bucket: string;
       objectKey: string;
       mimeType: string | null;
@@ -711,7 +726,7 @@ export class FilesService {
       );
     }
     if (
-      file.bucket !== 'attendance-evidence' ||
+      !this.hasPurpose(file, 'ATTENDANCE_EVIDENCE', 'attendance-evidence') ||
       !file.objectKey.startsWith('attendance/')
     ) {
       throw new ForbiddenException('File is not attendance evidence.');
@@ -735,7 +750,15 @@ export class FilesService {
     if (file.url?.includes(':')) {
       return file.url.split(':').slice(1).join(':') || file.bucket;
     }
-    return process.env.FILE_STORAGE_BUCKET?.trim() || 'local-private';
+    return file.bucket || 'local-private';
+  }
+
+  private hasPurpose(
+    file: { filePurpose?: string | null; bucket: string },
+    purpose: string,
+    legacyBucket: string,
+  ) {
+    return file.filePurpose === purpose || file.bucket === legacyBucket;
   }
 
   private safeDownloadName(file: { id: string; mimeType: string | null }) {
@@ -751,5 +774,34 @@ export class FilesService {
   private optionalString(value: string | undefined) {
     const trimmed = value?.trim();
     return trimmed || undefined;
+  }
+
+  private filePurpose(value: unknown) {
+    const purpose = typeof value === 'string' ? value.trim().toUpperCase() : '';
+    if (
+      [
+        'PUBLIC_MEDIA',
+        'PROJECT_MEDIA',
+        'COMPANY_DOCUMENT',
+        'CHAT_ATTACHMENT',
+        'HR_DOCUMENT',
+        'ATTENDANCE_EVIDENCE',
+        'QUARANTINE',
+      ].includes(purpose)
+    ) {
+      return purpose as any;
+    }
+    return 'QUARANTINE' as any;
+  }
+
+  private fileVisibility(value: unknown) {
+    return value === 'PUBLIC' ? ('PUBLIC' as any) : ('PRIVATE' as any);
+  }
+
+  private safeFile<T extends { visibility?: string | null; url?: string | null }>(
+    file: T,
+  ) {
+    if (file.visibility === 'PUBLIC') return file;
+    return { ...file, url: undefined };
   }
 }

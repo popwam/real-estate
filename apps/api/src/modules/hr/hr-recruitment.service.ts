@@ -747,17 +747,23 @@ export class HrRecruitmentService {
       uploadedById ?? 'public',
       `${Date.now()}-${randomUUID()}${extension}`,
     ].join('/');
-    const stored = await this.storage.putObject({ objectKey, body: file.buffer, mimeType });
+    const stored = await this.storage.putObject({
+      purpose: 'HR_DOCUMENT',
+      objectKey,
+      body: file.buffer,
+      mimeType,
+    });
     return this.prisma.uploadedFile.create({
       data: {
         organizationId,
         uploadedById,
-        bucket: 'hr-applicant-documents',
+        filePurpose: 'HR_DOCUMENT',
+        bucket: stored.bucket,
         objectKey: stored.objectKey,
         mimeType,
         sizeBytes: file.size,
+        visibility: 'PRIVATE',
         checksum: this.string(file.originalname),
-        url: `${stored.provider}:${stored.bucket}`,
       },
     });
   }
@@ -783,6 +789,14 @@ export class HrRecruitmentService {
   }
 
   private extractionProvider() {
+    if (
+      process.env.DOCUMENT_EXTRACTION_PROVIDER === 'CLOUDFLARE_WORKERS_AI' &&
+      process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
+      process.env.CLOUDFLARE_API_TOKEN?.trim() &&
+      process.env.CLOUDFLARE_AI_GATEWAY_ID?.trim()
+    ) {
+      return 'AI_PROVIDER';
+    }
     if (process.env.HR_APPLICANT_AI_PROVIDER_KEY || process.env.COMPANY_DOCUMENT_AI_PROVIDER_KEY) return 'AI_PROVIDER';
     if (process.env.HR_APPLICANT_OCR_PROVIDER_KEY || process.env.COMPANY_DOCUMENT_OCR_PROVIDER_KEY) return 'OCR_PROVIDER';
     return 'NONE';

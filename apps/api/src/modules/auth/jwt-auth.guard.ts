@@ -47,11 +47,14 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('User is not active.');
     }
 
-    if (user.organization && ['SUSPENDED', 'REVOKED'].includes(user.organization.status)) {
+    if (user.organization && ['SUSPENDED', 'REVOKED', 'REJECTED', 'EXPIRED'].includes(user.organization.status)) {
       throw new UnauthorizedException('Organization is not active.');
     }
 
     if (user.organization && !this.isPlatformRole(user.role?.name ?? payload.role)) {
+      if (!['ACTIVE', 'APPROVED'].includes(user.organization.status)) {
+        throw new UnauthorizedException('Company is awaiting platform verification.');
+      }
       const subscription = user.organization.subscription;
       if (subscription?.status && ['EXPIRED', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)) {
         throw new UnauthorizedException('Subscription expired or suspended.');

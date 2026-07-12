@@ -22,6 +22,11 @@ import type {
   OrganizationDocument,
   MetadataOption,
   DomainDiagnostics,
+  ActivationCheck,
+  CompanyRoleTemplate,
+  PlatformPlan,
+  PlatformSettingsSummary,
+  RequiredDocumentPolicy,
 } from "@/types/platform";
 
 const API_BASE_URL =
@@ -247,6 +252,75 @@ export function updatePlatformOrganizationApi(id: string, input: Partial<Platfor
   });
 }
 
+export function getOrganizationActivationCheckApi(id: string) {
+  return apiRequest<ActivationCheck>(`/platform/organizations/${id}/activation-check`);
+}
+
+export function activateOrganizationApi(id: string) {
+  return apiRequest<ActivationCheck & { organization?: Organization }>(`/platform/organizations/${id}/activate`, {
+    method: "POST",
+  });
+}
+
+export function rejectProvisioningOrganizationApi(id: string, input: { reason: string; notes?: string }) {
+  return apiRequest<Organization>(`/platform/organizations/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getPlatformSettingsApi() {
+  return apiRequest<PlatformSettingsSummary>("/platform/settings");
+}
+
+export function listPlatformPlansApi() {
+  return apiRequest<PlatformPlan[]>("/platform/settings/plans");
+}
+
+export function createPlatformPlanApi(input: Partial<PlatformPlan>) {
+  return apiRequest<PlatformPlan>("/platform/settings/plans", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updatePlatformPlanApi(id: string, input: Partial<PlatformPlan>) {
+  return apiRequest<PlatformPlan>(`/platform/settings/plans/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listPlatformSubscriptionsApi() {
+  return apiRequest<Array<OrganizationSubscription & { organization?: Pick<Organization, "id" | "name" | "slug" | "type" | "status"> }>>("/platform/settings/subscriptions");
+}
+
+export function listRequiredDocumentPoliciesApi() {
+  return apiRequest<RequiredDocumentPolicy[]>("/platform/settings/verification-policies");
+}
+
+export function createRequiredDocumentPolicyApi(input: Partial<RequiredDocumentPolicy>) {
+  return apiRequest<RequiredDocumentPolicy>("/platform/settings/verification-policies", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRequiredDocumentPolicyApi(id: string, input: Partial<RequiredDocumentPolicy>) {
+  return apiRequest<RequiredDocumentPolicy>(`/platform/settings/verification-policies/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getPlatformModulesApi() {
+  return apiRequest<string[]>("/platform/settings/modules");
+}
+
+export function getPlatformDomainSettingsApi() {
+  return apiRequest<PlatformSettingsSummary["domains"]>("/platform/settings/domains");
+}
+
 export function getPlatformOrganizationSubscriptionApi(id: string) {
   return apiRequest<OrganizationSubscription | null>(`/platform/organizations/${id}/subscription`);
 }
@@ -414,6 +488,24 @@ export function extractOrganizationDocumentApi(id: string, documentId: string) {
 export function reviewOrganizationDocumentApi(id: string, documentId: string, input: { status?: string; note?: string }) {
   return apiRequest<OrganizationDocument>(`/organizations/${id}/documents/${documentId}/review`, {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listCompanyRoleTemplatesApi(id: string) {
+  return apiRequest<CompanyRoleTemplate[]>(`/organizations/${id}/access-levels`);
+}
+
+export function createCompanyRoleTemplateApi(id: string, input: Partial<CompanyRoleTemplate>) {
+  return apiRequest<CompanyRoleTemplate>(`/organizations/${id}/access-levels`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateCompanyRoleTemplateApi(id: string, templateId: string, input: Partial<CompanyRoleTemplate>) {
+  return apiRequest<CompanyRoleTemplate>(`/organizations/${id}/access-levels/${templateId}`, {
+    method: "PATCH",
     body: JSON.stringify(input),
   });
 }

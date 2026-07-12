@@ -13,7 +13,7 @@ Date: 2026-07-12
 
 | App | English message keys | Arabic message keys | French message keys | Arabic DOM keys | French DOM keys | Missing Arabic | Missing French |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| admin-web | 2043 | 2044 | 2044 | 101 | 101 | 0 | 0 |
+| admin-web | 2119 | 2120 | 2120 | 101 | 101 | 0 | 0 |
 | public-web | 337 | 337 | 337 | 122 | 122 | 0 | 0 |
 | mobile | 356 | 356 | 356 | 0 | 0 | 0 | 0 |
 
