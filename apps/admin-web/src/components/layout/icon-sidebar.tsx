@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, RotateCcw, Settings, X } from "lucide-react";
+import { BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, RotateCcw, Search, Settings, X } from "lucide-react";
 import type { NavItem, SidebarIconKey } from "@/components/layout/nav";
 import { useSidebarPreferences } from "@/hooks/use-sidebar-preferences";
 import { useAllowedNavigation } from "@/hooks/use-navigation";
@@ -16,9 +16,19 @@ export function IconSidebar() {
   const allowedItems = useAllowedNavigation();
   const sidebar = useSidebarPreferences(allowedItems);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [hrMenuOpen, setHrMenuOpen] = useState(true);
+  const [hrMenuSearch, setHrMenuSearch] = useState("");
   const expanded = sidebar.mode === "expanded";
   const homeHref = allowedItems[0]?.href ?? "/login";
   const ToggleIcon = expanded === (direction === "ltr") ? ChevronLeft : ChevronRight;
+  const visibleItems = sidebar.visibleItems;
+  const hrItems = useMemo(() => visibleItems.filter((item) => item.group === "Human Resources"), [visibleItems]);
+  const nonHrItems = useMemo(() => visibleItems.filter((item) => item.group !== "Human Resources"), [visibleItems]);
+  const filteredHrItems = useMemo(() => {
+    const query = hrMenuSearch.trim().toLowerCase();
+    if (!query) return hrItems;
+    return hrItems.filter((item) => `${item.label} ${item.href}`.toLowerCase().includes(query));
+  }, [hrItems, hrMenuSearch]);
 
   return (
     <>
@@ -56,7 +66,7 @@ export function IconSidebar() {
           )}
           aria-label={t("adminSweep.primary.admin.navigation.4379cbfa")}
         >
-          {sidebar.visibleItems.map((item) => (
+          {(expanded ? nonHrItems : visibleItems).map((item) => (
             <SidebarNavLink
               key={item.id}
               item={item}
@@ -65,6 +75,44 @@ export function IconSidebar() {
               icon={sidebar.iconFor(item)}
             />
           ))}
+          {expanded && hrItems.length ? (
+            <div className="mt-2 border-t border-[var(--color-border)] pt-2">
+              <button
+                type="button"
+                className="flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)]"
+                onClick={() => setHrMenuOpen((current) => !current)}
+                aria-expanded={hrMenuOpen}
+              >
+                <BriefcaseBusiness className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate text-start">{t("navigation.groups.human.resources")}</span>
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", hrMenuOpen && "rotate-180")} />
+              </button>
+              {hrMenuOpen ? (
+                <div className="mt-2 space-y-1">
+                  <label className="relative block">
+                    <span className="sr-only">{t("navigation.search")}</span>
+                    <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
+                    <input
+                      type="search"
+                      value={hrMenuSearch}
+                      onChange={(event) => setHrMenuSearch(event.target.value)}
+                      placeholder={t("navigation.searchPlaceholder")}
+                      className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] ps-9 pe-3 text-sm text-[var(--color-foreground)] outline-none focus:border-[var(--color-accent)]"
+                    />
+                  </label>
+                  {filteredHrItems.map((item) => (
+                    <SidebarNavLink
+                      key={item.id}
+                      item={item}
+                      active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+                      expanded={expanded}
+                      icon={sidebar.iconFor(item)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </nav>
 
         <div className={cn("shrink-0 space-y-2 overflow-x-hidden border-t border-[var(--color-border)] p-3", !expanded && "flex flex-col items-center")}>

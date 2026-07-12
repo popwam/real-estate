@@ -162,6 +162,90 @@ export type ApiCompanyPortal = {
   };
 };
 
+export type TranslatedText = {
+  en?: string;
+  ar?: string;
+  fr?: string;
+};
+
+export type ApiPublicSite = {
+  mode: "DISABLED" | "PORTAL" | "GALLERY" | "REDIRECT";
+  theme?: "MINIMAL" | "MODERN" | "REAL_ESTATE" | "CORPORATE" | "GALLERY" | "DARK_PREMIUM";
+  disabled?: boolean;
+  defaultLanguage?: string;
+  supportedLanguages?: string[];
+  redirectUrl?: string | null;
+  seoTitle?: TranslatedText | null;
+  seoDescription?: TranslatedText | null;
+  headline?: TranslatedText | null;
+  description?: TranslatedText | null;
+  diagnostics?: string[];
+  organization: {
+    id?: string;
+    name: string;
+    slug: string;
+    type?: string;
+    logoUrl?: string | null;
+    summary?: string | null;
+    website?: string | null;
+    city?: string | null;
+    country?: string | null;
+  };
+  contact?: {
+    email?: string | null;
+    phone?: string | null;
+    website?: string | null;
+  } | null;
+  offices?: Array<{
+    id: string;
+    name: string;
+    type?: string | null;
+    address?: string | null;
+    city?: string | null;
+    country?: string | null;
+    isDefault?: boolean;
+  }>;
+  gallery?: Array<{
+    url?: string;
+    alt?: TranslatedText;
+    caption?: TranslatedText;
+  }>;
+  projects?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    city?: string | null;
+    district?: string | null;
+    coverImageUrl?: string | null;
+    images?: string[];
+  }>;
+  leadFormEnabled?: boolean;
+  links?: {
+    fallbackPath: string;
+    fallbackUrl: string;
+    systemSubdomain: string;
+    defaultDomain?: string | null;
+  };
+};
+
+export type ApiPublicJob = {
+  id: string;
+  title: string;
+  localizedTitle?: TranslatedText | null;
+  description?: TranslatedText | null;
+  requirements?: TranslatedText | null;
+  employmentType?: string | null;
+  workMode?: string | null;
+  createdAt?: string;
+};
+
+export type PublicApplicationResponse = {
+  id: string;
+  status: string;
+  submittedAt?: string | null;
+  message: string;
+};
+
 export type SubmitPublicLeadPayload = {
   organizationSlug?: string;
   projectSlug?: string;
@@ -287,8 +371,45 @@ export async function getPublicOrganization(slug: string) {
 
 export async function getPublicCompanyPortal(slug: string) {
   return publicApiFetch<ApiCompanyPortal>(
-    `/public/companies/${encodeURIComponent(slug)}`,
+    `/public/sites/${encodeURIComponent(slug)}`,
   );
+}
+
+export async function getPublicSite(slug: string) {
+  return publicApiFetch<ApiPublicSite>(
+    `/public/sites/${encodeURIComponent(slug)}`,
+    { cache: "force-cache" },
+  );
+}
+
+export async function getPublicJobs(slug: string) {
+  return publicApiFetch<ApiPublicJob[]>(
+    `/public/sites/${encodeURIComponent(slug)}/jobs`,
+    { cache: "force-cache" },
+  );
+}
+
+export async function getPublicJob(slug: string, jobId: string) {
+  return publicApiFetch<ApiPublicJob>(
+    `/public/sites/${encodeURIComponent(slug)}/jobs/${encodeURIComponent(jobId)}`,
+    { cache: "force-cache" },
+  );
+}
+
+export async function submitPublicApplication(slug: string, formData: FormData) {
+  const response = await fetch(`${getPublicApiBaseUrl()}/public/sites/${encodeURIComponent(slug)}/applications`, {
+    method: "POST",
+    body: formData,
+    cache: "no-store",
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new PublicApiError(
+      response.status,
+      body && typeof body === "object" && "message" in body ? String((body as { message: unknown }).message) : "Application submission failed",
+    );
+  }
+  return body as PublicApplicationResponse;
 }
 
 export async function resolvePublicDomain(host: string) {
@@ -335,6 +456,7 @@ async function publicApiFetch<T>(
     query?: Record<string, string | number | undefined>;
     method?: "GET" | "POST";
     body?: unknown;
+    cache?: RequestCache;
   } = {},
 ) {
   const url = new URL(`${getPublicApiBaseUrl()}${path}`);
@@ -351,7 +473,8 @@ async function publicApiFetch<T>(
     method,
     headers: buildPublicApiHeaders(options.body, requestId),
     body: options.body ? JSON.stringify(options.body) : undefined,
-    cache: "no-store",
+    cache: options.cache ?? "no-store",
+    next: options.cache === "force-cache" ? { revalidate: 120 } : undefined,
   }).catch((error) => {
     logPublicApiErrorDiagnostic({
       status: 0,

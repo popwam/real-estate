@@ -318,6 +318,22 @@ enum OrganizationRedirectMode {
   PROXY_OR_SHOW_COMPANY_PROFILE
 }
 
+enum OrganizationPublicSiteMode {
+  DISABLED
+  PORTAL
+  GALLERY
+  REDIRECT
+}
+
+enum OrganizationPublicSiteTheme {
+  MINIMAL
+  MODERN
+  REAL_ESTATE
+  CORPORATE
+  GALLERY
+  DARK_PREMIUM
+}
+
 enum OrganizationInboundSourceMode {
   NONE
   TRACK_REFERRER
@@ -506,6 +522,87 @@ enum HrPaymentMethod {
   OTHER
 }
 
+enum HrJobOpeningStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+enum HrApplicantSource {
+  PUBLIC_SITE
+  INTERNAL_SECRETARY
+  HR_MANUAL
+  REFERRAL
+  IMPORT
+}
+
+enum HrApplicantStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_REVIEW
+  DOCUMENTS_MISSING
+  AI_REVIEW_NEEDED
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  OFFER_PENDING
+  OFFER_ACCEPTED
+  REJECTED
+  CONVERTED_TO_EMPLOYEE
+}
+
+enum HrApplicantAiReviewStatus {
+  NOT_REQUESTED
+  PENDING
+  COMPLETED
+  FAILED
+  NEEDS_MANUAL_REVIEW
+}
+
+enum HrApplicantDocumentType {
+  CV
+  GRADUATION_CERTIFICATE
+  NATIONAL_ID_FRONT
+  NATIONAL_ID_BACK
+  PASSPORT
+  MILITARY_CERTIFICATE
+  LAST_SALARY_PROOF
+  EXPERIENCE_CERTIFICATE
+  PORTFOLIO
+  OTHER
+}
+
+enum HrApplicantDocumentStatus {
+  MISSING
+  UPLOADED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  NEEDS_MANUAL_REVIEW
+}
+
+enum HrApplicantInterviewType {
+  PHONE
+  ONLINE
+  ONSITE
+}
+
+enum HrApplicantInterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum HrApplicantOfferStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
 enum AttendanceVerificationStatus {
   VERIFIED
   PENDING_REVIEW
@@ -575,6 +672,80 @@ enum LegalDocumentStatus {
   ACTIVE
   EXPIRED
   ARCHIVED
+}
+
+enum OrganizationLegalForm {
+  SOLE_PROPRIETORSHIP
+  LLC
+  JOINT_STOCK
+  PARTNERSHIP
+  BRANCH
+  OTHER
+}
+
+enum OrganizationOwnerType {
+  PERSON
+  COMPANY
+}
+
+enum OrganizationOwnerIdentifierType {
+  NATIONAL_ID
+  PASSPORT
+  RESIDENCE_ID
+  TAX_ID
+  COMMERCIAL_REGISTER
+  OTHER
+}
+
+enum OrganizationOwnerRole {
+  OWNER
+  PARTNER
+  SHAREHOLDER
+  AUTHORIZED_SIGNATORY
+  LEGAL_REPRESENTATIVE
+}
+
+enum OrganizationOwnerVerificationStatus {
+  NOT_REVIEWED
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_MANUAL_REVIEW
+}
+
+enum OrganizationDocumentType {
+  COMMERCIAL_REGISTER
+  TAX_CARD
+  VAT_CERTIFICATE
+  NATIONAL_ADDRESS
+  LICENSE
+  OWNER_ID
+  CONTRACT
+  OTHER
+}
+
+enum OrganizationDocumentStatus {
+  MISSING
+  UPLOADED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum OrganizationDocumentExtractionStatus {
+  NOT_REQUESTED
+  PENDING
+  COMPLETED
+  FAILED
+  NEEDS_MANUAL_REVIEW
+}
+
+enum DocumentExtractionProvider {
+  NONE
+  MANUAL
+  OCR_PROVIDER
+  AI_PROVIDER
 }
 
 enum LegalCaseStatus {
@@ -708,6 +879,9 @@ model Organization {
   brokerageCommissionEntries CommissionEntry[]       @relation("BrokerageCommissionEntries")
   recipientCommissionEntries CommissionEntry[]       @relation("CommissionEntryRecipientOrganization")
   websiteSettings   OrganizationWebsiteSettings?
+  publicSiteSettings OrganizationPublicSiteSettings?
+  owners            OrganizationOwner[]
+  organizationDocuments OrganizationDocument[]
   domainVerifications OrganizationDomainVerification[]
   publicLeads       PublicLead[]
   crmClients        CrmClient[]
@@ -726,6 +900,12 @@ model Organization {
   hrWorkGroups      HrWorkGroup[]
   hrTeams           HrTeam[]
   hrEmployeeDocuments HrEmployeeDocument[]
+  hrJobOpenings     HrJobOpening[]
+  hrApplicants      HrApplicant[]
+  hrApplicantDocuments HrApplicantDocument[]
+  hrApplicantInterviews HrApplicantInterview[]
+  hrApplicantOffers HrApplicantOffer[]
+  hrRecruitmentSettings HrRecruitmentSettings?
   hrEmployeeTransferLogs HrEmployeeTransferLog[]
   hrEmployeeTitleChangeLogs HrEmployeeTitleChangeLog[]
   hrAttendanceRecords HrAttendanceRecord[]
@@ -757,21 +937,126 @@ model OrganizationProfile {
   organizationId          String        @unique
   legalName               String?
   tradeName               String?
+  displayName             String?
   commercialRegNumber     String?
+  commercialRegisterNumber String?
+  commercialRegisterOffice String?
+  commercialRegisterIssuedAt DateTime?
+  commercialRegisterExpiresAt DateTime?
   registrationNumber      String?
   taxNumber               String?
+  vatNumber               String?
+  taxOffice               String?
+  legalForm               OrganizationLegalForm?
+  incorporationDate       DateTime?
+  countryCode             String?
+  regionCode              String?
+  cityCode                String?
+  cityName                String?
+  addressLine1            String?
+  addressLine2            String?
+  postalCode              String?
+  preferredLanguage       String?
+  defaultCurrency         String?
+  publicEmail             String?
+  publicPhone             String?
   website                 String?
   phone                   String?
   email                   String?
   address                 String?
   logoUrl                 String?
   description             String?
+  localizedDisplayName    Json?
   socialLinks             Json?
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
   organization            Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("organization_profiles")
+}
+
+model OrganizationPublicSiteSettings {
+  id                  String                      @id @default(cuid())
+  organizationId      String                      @unique
+  mode                OrganizationPublicSiteMode  @default(PORTAL)
+  theme               OrganizationPublicSiteTheme @default(REAL_ESTATE)
+  defaultLanguage     String                      @default("en")
+  supportedLanguages  String[]                    @default(["en", "ar", "fr"])
+  showLogo            Boolean                     @default(true)
+  showContactInfo     Boolean                     @default(true)
+  showOffices         Boolean                     @default(true)
+  showGallery         Boolean                     @default(true)
+  showProjects        Boolean                     @default(true)
+  showLeadForm        Boolean                     @default(true)
+  redirectUrl         String?
+  seoTitle            Json?
+  seoDescription      Json?
+  publicHeadline      Json?
+  publicDescription   Json?
+  galleryImages       Json?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([mode, theme])
+  @@map("organization_public_site_settings")
+}
+
+model OrganizationOwner {
+  id                     String                              @id @default(cuid())
+  organizationId         String
+  ownerType              OrganizationOwnerType               @default(PERSON)
+  name                   String
+  localizedName          Json?
+  nationalityCountryCode String?
+  identifierType         OrganizationOwnerIdentifierType?
+  identifierValue        String?
+  identifierCountryCode  String?
+  ownershipPercentage    Decimal?                            @db.Decimal(5, 2)
+  role                   OrganizationOwnerRole                @default(OWNER)
+  phone                  String?
+  email                  String?
+  idFrontFileId          String?
+  idBackFileId           String?
+  passportFileId         String?
+  proofFileId            String?
+  verificationStatus     OrganizationOwnerVerificationStatus  @default(NOT_REVIEWED)
+  createdAt              DateTime                            @default(now())
+  updatedAt              DateTime                            @updatedAt
+  organization           Organization                        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  idFrontFile            UploadedFile?                       @relation("OrganizationOwnerIdFrontFile", fields: [idFrontFileId], references: [id], onDelete: SetNull)
+  idBackFile             UploadedFile?                       @relation("OrganizationOwnerIdBackFile", fields: [idBackFileId], references: [id], onDelete: SetNull)
+  passportFile           UploadedFile?                       @relation("OrganizationOwnerPassportFile", fields: [passportFileId], references: [id], onDelete: SetNull)
+  proofFile              UploadedFile?                       @relation("OrganizationOwnerProofFile", fields: [proofFileId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, verificationStatus])
+  @@map("organization_owners")
+}
+
+model OrganizationDocument {
+  id                String                               @id @default(cuid())
+  organizationId    String
+  documentType      OrganizationDocumentType
+  fileId            String?
+  status            OrganizationDocumentStatus           @default(MISSING)
+  expiresAt         DateTime?
+  issuedAt          DateTime?
+  issuingAuthority  String?
+  extractedData     Json?
+  extractionProvider DocumentExtractionProvider          @default(NONE)
+  extractionStatus  OrganizationDocumentExtractionStatus @default(NOT_REQUESTED)
+  extractionMessage String?
+  reviewedById      String?
+  reviewedAt        DateTime?
+  createdAt         DateTime                             @default(now())
+  updatedAt         DateTime                             @updatedAt
+  organization      Organization                         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  file              UploadedFile?                        @relation("OrganizationDocumentFile", fields: [fileId], references: [id], onDelete: SetNull)
+  reviewedBy        User?                                @relation("OrganizationDocumentReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, documentType, status])
+  @@index([organizationId, extractionStatus])
+  @@map("organization_documents")
 }
 
 model OrganizationVerification {
@@ -944,12 +1229,16 @@ model User {
   secondaryManagedHrEmployees     HrEmployee[]                   @relation("HrEmployeeSecondaryManager")
   managedHrWorkGroups             HrWorkGroupManager[]
   managedHrTeams                  HrTeam[]                       @relation("HrTeamManager")
+  createdHrJobOpenings            HrJobOpening[]                 @relation("HrJobOpeningCreatedBy")
+  reviewedHrApplicants            HrApplicant[]                  @relation("HrApplicantReviewedBy")
+  interviewedHrApplicants         HrApplicantInterview[]         @relation("HrApplicantInterviewer")
   createdHrEmployeeTransferLogs   HrEmployeeTransferLog[]        @relation("HrTransferLogCreatedBy")
   createdHrEmployeeTitleChanges   HrEmployeeTitleChangeLog[]     @relation("HrTitleChangeCreatedBy")
   createdAccountingTransactions   AccountingTransaction[]          @relation("AccountingTransactionCreatedBy")
   operationsActivities            OperationsActivity[]             @relation("OperationsActivityActorUser")
   approvedAccountingTransactions  AccountingTransaction[]          @relation("AccountingTransactionApprovedBy")
   reviewedLegalDocuments          LegalDocument[]                  @relation("LegalDocumentReviewedBy")
+  reviewedOrganizationDocuments   OrganizationDocument[]            @relation("OrganizationDocumentReviewedBy")
   createdOrganizationInvitations  OrganizationInvitation[]         @relation("InvitationCreatedBy")
   acceptedOrganizationInvitations OrganizationInvitation[]         @relation("InvitationAcceptedBy")
   createdProjectBrokerAuthorizations ProjectBrokerAuthorization[]  @relation("ProjectBrokerAuthorizationCreatedBy")
@@ -1045,6 +1334,12 @@ model UploadedFile {
   organization                Organization?                @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   uploadedBy                  User?                        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   organizationVerifications   OrganizationVerification[]
+  organizationDocuments       OrganizationDocument[]        @relation("OrganizationDocumentFile")
+  organizationOwnerIdFrontFiles OrganizationOwner[]         @relation("OrganizationOwnerIdFrontFile")
+  organizationOwnerIdBackFiles OrganizationOwner[]          @relation("OrganizationOwnerIdBackFile")
+  organizationOwnerPassportFiles OrganizationOwner[]        @relation("OrganizationOwnerPassportFile")
+  organizationOwnerProofFiles OrganizationOwner[]           @relation("OrganizationOwnerProofFile")
+  hrApplicantDocuments     HrApplicantDocument[]            @relation("HrApplicantDocumentFile")
 
   @@index([organizationId, createdAt])
   @@map("uploaded_files")
@@ -2286,6 +2581,7 @@ model HrEmployee {
   team           HrTeam?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
   identifiers    EmployeeIdentifier[]
   documents      HrEmployeeDocument[]
+  convertedApplicants HrApplicant[] @relation("HrApplicantConvertedEmployee")
   transferLogs   HrEmployeeTransferLog[]
   titleChangeLogs HrEmployeeTitleChangeLog[]
   attendance     HrAttendanceRecord[]
@@ -2386,6 +2682,171 @@ model HrEmployeeDocument {
   @@index([organizationId, status])
   @@index([employeeId, expiresAt])
   @@map("hr_employee_documents")
+}
+
+model HrJobOpening {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  title              String
+  localizedTitle     Json?
+  departmentId       String?
+  positionId         String?
+  branchId           String?
+  employmentType     HrEmploymentType?
+  workMode           HrWorkScheduleType?
+  description        Json?
+  requirements       Json?
+  status             HrJobOpeningStatus @default(DRAFT)
+  publicApplyEnabled Boolean            @default(false)
+  createdById        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy          User?              @relation("HrJobOpeningCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  applicants         HrApplicant[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, publicApplyEnabled])
+  @@map("hr_job_openings")
+}
+
+model HrApplicant {
+  id                      String                    @id @default(cuid())
+  organizationId          String
+  jobOpeningId            String?
+  source                  HrApplicantSource         @default(HR_MANUAL)
+  status                  HrApplicantStatus         @default(PENDING_REVIEW)
+  fullName                String
+  localizedName           Json?
+  email                   String?
+  phoneCountry            String?
+  phone                   String?
+  normalizedPhone         String?
+  countryCode             String?
+  nationalityCountryCode  String?
+  preferredLanguage       String?
+  address                 String?
+  educationLevel          String?
+  university              String?
+  graduationYear          Int?
+  currentJobTitle         String?
+  yearsOfExperience       Decimal?                  @db.Decimal(5, 2)
+  lastSalaryAmount        Decimal?                  @db.Decimal(14, 2)
+  lastSalaryCurrency      String?
+  expectedSalaryAmount    Decimal?                  @db.Decimal(14, 2)
+  expectedSalaryCurrency  String?
+  noticePeriod            String?
+  linkedinUrl             String?
+  portfolioUrl            String?
+  notes                   String?
+  aiReviewStatus          HrApplicantAiReviewStatus @default(NOT_REQUESTED)
+  aiReviewSummary         Json?
+  convertedEmployeeId     String?                   @unique
+  submittedAt             DateTime?
+  reviewedAt              DateTime?
+  reviewedById            String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  organization            Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobOpening              HrJobOpening?             @relation(fields: [jobOpeningId], references: [id], onDelete: SetNull)
+  convertedEmployee       HrEmployee?               @relation("HrApplicantConvertedEmployee", fields: [convertedEmployeeId], references: [id], onDelete: SetNull)
+  reviewedBy              User?                     @relation("HrApplicantReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  documents               HrApplicantDocument[]
+  interviews              HrApplicantInterview[]
+  offers                  HrApplicantOffer[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, jobOpeningId])
+  @@index([organizationId, submittedAt])
+  @@index([organizationId, source])
+  @@map("hr_applicants")
+}
+
+model HrApplicantDocument {
+  id               String                            @id @default(cuid())
+  applicantId      String
+  organizationId   String
+  documentType     HrApplicantDocumentType
+  fileId           String?
+  status           HrApplicantDocumentStatus         @default(UPLOADED)
+  extractionStatus HrApplicantAiReviewStatus         @default(NOT_REQUESTED)
+  extractedData    Json?
+  reviewerNotes    String?
+  expiresAt        DateTime?
+  createdAt        DateTime                          @default(now())
+  updatedAt        DateTime                          @updatedAt
+  applicant        HrApplicant                       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organization     Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  file             UploadedFile?                     @relation("HrApplicantDocumentFile", fields: [fileId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([applicantId, documentType])
+  @@index([fileId])
+  @@map("hr_applicant_documents")
+}
+
+model HrApplicantInterview {
+  id              String                     @id @default(cuid())
+  applicantId     String
+  organizationId  String
+  scheduledAt     DateTime
+  interviewType   HrApplicantInterviewType   @default(PHONE)
+  location        String?
+  interviewerId   String?
+  status          HrApplicantInterviewStatus @default(SCHEDULED)
+  notes           String?
+  score           Int?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  applicant       HrApplicant                @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organization    Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  interviewer     User?                      @relation("HrApplicantInterviewer", fields: [interviewerId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, scheduledAt])
+  @@index([applicantId, status])
+  @@map("hr_applicant_interviews")
+}
+
+model HrApplicantOffer {
+  id              String                 @id @default(cuid())
+  applicantId     String
+  organizationId  String
+  status          HrApplicantOfferStatus @default(DRAFT)
+  salaryAmount    Decimal?               @db.Decimal(14, 2)
+  salaryCurrency  String?
+  officeId        String?
+  departmentId    String?
+  positionId      String?
+  managerId       String?
+  workScheduleId  String?
+  startsAt        DateTime?
+  notes           String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  applicant       HrApplicant            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([applicantId, status])
+  @@map("hr_applicant_offers")
+}
+
+model HrRecruitmentSettings {
+  id                              String       @id @default(cuid())
+  organizationId                  String       @unique
+  requiredCv                      Boolean      @default(true)
+  requiredGraduationCertificate   Boolean      @default(false)
+  requiredNationalId              Boolean      @default(true)
+  requiredMilitaryCertificate     Boolean      @default(false)
+  requiredLastSalaryProof         Boolean      @default(false)
+  requiredExperienceCertificates  Boolean      @default(false)
+  countrySpecificRequirements     Json?
+  jobSpecificOverrides            Json?
+  createdAt                       DateTime     @default(now())
+  updatedAt                       DateTime     @updatedAt
+  organization                    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("hr_recruitment_settings")
 }
 
 model HrEmployeeTransferLog {

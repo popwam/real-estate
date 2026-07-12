@@ -15,11 +15,23 @@ import {
   suspendOrganizationApi,
   createPlatformOrganizationApi,
   createOrganizationAttendanceLocationApi,
+  createOrganizationDocumentApi,
   createOrganizationOfficeApi,
+  createOrganizationOwnerApi,
   createOrganizationProvisioningDomainApi,
   createOrganizationWifiRuleApi,
+  extractOrganizationDocumentApi,
+  getMetadataCountriesApi,
+  getMetadataCurrenciesApi,
+  getMetadataLanguagesApi,
+  getMetadataTimezonesApi,
+  getOrganizationDomainDiagnosticsApi,
+  getOrganizationLegalApi,
+  getOrganizationPublicSiteApi,
   listOrganizationInvitationsApi,
+  listOrganizationDocumentsApi,
   createOrganizationInvitationApi,
+  listOrganizationOwnersApi,
   getPlatformOrganizationApi,
   getPlatformOrganizationLimitsApi,
   getPlatformOrganizationSubscriptionApi,
@@ -29,7 +41,11 @@ import {
   listOrganizationWifiRulesApi,
   setDefaultOrganizationProvisioningDomainApi,
   updateOrganizationAttendanceLocationApi,
+  updateOrganizationDocumentApi,
+  updateOrganizationLegalApi,
   updateOrganizationOfficeApi,
+  updateOrganizationOwnerApi,
+  updateOrganizationPublicSiteApi,
   updateOrganizationProvisioningDomainApi,
   updateOrganizationWifiRuleApi,
   updatePlatformOrganizationApi,
@@ -39,8 +55,12 @@ import {
 import type {
   OrganizationAttendanceLocation,
   OrganizationDomainRecord,
+  OrganizationDocument,
   OrganizationLimits,
+  OrganizationLegal,
   OrganizationOffice,
+  OrganizationOwner,
+  OrganizationPublicSiteSettings,
   OrganizationSubscription,
   OrganizationWifiRule,
   PlatformOrganizationInput,
@@ -205,6 +225,98 @@ export function useSetDefaultOrganizationProvisioningDomain(id: string) {
     mutationFn: (domainId: string) => setDefaultOrganizationProvisioningDomainApi(id, domainId),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
   });
+}
+
+export function useOrganizationPublicSite(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "public-site"], queryFn: () => getOrganizationPublicSiteApi(id), enabled: Boolean(id) });
+}
+
+export function useUpdateOrganizationPublicSite(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationPublicSiteSettings>) => updateOrganizationPublicSiteApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useOrganizationDomainDiagnostics(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "domain-diagnostics"], queryFn: () => getOrganizationDomainDiagnosticsApi(id), enabled: Boolean(id) });
+}
+
+export function useOrganizationLegal(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "legal"], queryFn: () => getOrganizationLegalApi(id), enabled: Boolean(id) });
+}
+
+export function useUpdateOrganizationLegal(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationLegal>) => updateOrganizationLegalApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useOrganizationOwners(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "owners"], queryFn: () => listOrganizationOwnersApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateOrganizationOwner(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationOwner>) => createOrganizationOwnerApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useUpdateOrganizationOwner(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ownerId, input }: { ownerId: string; input: Partial<OrganizationOwner> }) => updateOrganizationOwnerApi(id, ownerId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useOrganizationDocuments(id: string) {
+  return useQuery({ queryKey: ["platform", "organizations", id, "documents"], queryFn: () => listOrganizationDocumentsApi(id), enabled: Boolean(id) });
+}
+
+export function useCreateOrganizationDocument(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Partial<OrganizationDocument>) => createOrganizationDocumentApi(id, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useUpdateOrganizationDocument(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, input }: { documentId: string; input: Partial<OrganizationDocument> }) => updateOrganizationDocumentApi(id, documentId, input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useExtractOrganizationDocument(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => extractOrganizationDocumentApi(id, documentId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] }),
+  });
+}
+
+export function useMetadataCountries() {
+  return useQuery({ queryKey: ["metadata", "countries"], queryFn: getMetadataCountriesApi });
+}
+
+export function useMetadataCurrencies() {
+  return useQuery({ queryKey: ["metadata", "currencies"], queryFn: getMetadataCurrenciesApi });
+}
+
+export function useMetadataLanguages() {
+  return useQuery({ queryKey: ["metadata", "languages"], queryFn: getMetadataLanguagesApi });
+}
+
+export function useMetadataTimezones() {
+  return useQuery({ queryKey: ["metadata", "timezones"], queryFn: getMetadataTimezonesApi });
 }
 
 export function useOrganizationInvitations(id: string) {

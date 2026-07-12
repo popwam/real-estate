@@ -60,6 +60,23 @@ export class FilesController {
     );
   }
 
+  @Post('organization-document')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }),
+  )
+  @ApiOperation({ summary: 'Upload a protected company official document image or PDF.' })
+  uploadOrganizationDocument(
+    @UploadedFile() file: any,
+    @Body('organizationId') organizationId: string | undefined,
+    @CurrentUser() currentUser: AuthenticatedRequestUser,
+  ) {
+    return this.filesService.uploadOrganizationDocument(
+      file,
+      organizationId,
+      currentUser,
+    );
+  }
+
   @Get(':id/hr-preview')
   @Header('Cache-Control', 'private, no-store')
   @Header('X-Content-Type-Options', 'nosniff')

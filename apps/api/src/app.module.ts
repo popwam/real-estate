@@ -11,6 +11,7 @@ import { BrokerAccessModule } from './modules/broker-access/broker-access.module
 import { BrokerageManagementModule } from './modules/brokerage-management/brokerage-management.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { CompanyProvisioningModule } from './modules/company-provisioning/company-provisioning.module';
+import { CompanyPublicModule } from './modules/company-public/company-public.module';
 import { CommissionRulesModule } from './modules/commission-rules/commission-rules.module';
 import { CommissionsModule } from './modules/commissions/commissions.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
@@ -66,6 +67,7 @@ import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rul
     HrModule,
     ClientsModule,
     CompanyProvisioningModule,
+    CompanyPublicModule,
     LeadsModule,
     DeveloperManagementModule,
     BrokerageManagementModule,

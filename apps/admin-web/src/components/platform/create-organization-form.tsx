@@ -8,9 +8,9 @@ import { FeedbackState } from "@/components/feedback-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreatePlatformOrganization } from "@/hooks/use-platform-admin";
+import { useCreatePlatformOrganization, useMetadataCountries, useMetadataCurrencies, useMetadataLanguages, useMetadataTimezones } from "@/hooks/use-platform-admin";
 import { useI18n } from "@/i18n";
-import type { PlatformOrganizationInput } from "@/types/platform";
+import type { MetadataOption, PlatformOrganizationInput } from "@/types/platform";
 
 const steps = [
   "company",
@@ -141,6 +141,10 @@ export function CreateOrganizationForm() {
 
 function CompanyStep() {
   const { t } = useI18n();
+  const countries = useMetadataCountries();
+  const currencies = useMetadataCurrencies();
+  const languages = useMetadataLanguages();
+  const timezones = useMetadataTimezones();
   return (
     <StepGrid title={t("provisioning.companyInformation")}>
       <Field label={t("provisioning.organizationType")} name="organizationType" kind="select" options={["PLATFORM", "DEVELOPER", "BROKERAGE", "INDIVIDUAL_BROKER"]} />
@@ -149,14 +153,16 @@ function CompanyStep() {
       <Field label={t("provisioning.companyCode")} name="companyCode" />
       <Field label={t("provisioning.slug")} name="slug" />
       <Field label={t("provisioning.logo")} name="logoUrl" />
-      <Field label={t("provisioning.country")} name="country" />
+      <MetadataField label={t("provisioning.country")} name="countryCode" options={countries.data} />
       <Field label={t("provisioning.city")} name="city" />
-      <Field label={t("provisioning.timezone")} name="timezone" defaultValue="Africa/Cairo" />
-      <Field label={t("provisioning.currency")} name="currency" defaultValue="EGP" />
-      <Field label={t("provisioning.defaultLanguage")} name="defaultLanguage" kind="select" options={["en", "ar", "fr"]} />
+      <MetadataField label={t("provisioning.timezone")} name="timezone" options={timezones.data} defaultValue="Africa/Cairo" />
+      <MetadataField label={t("provisioning.currency")} name="defaultCurrency" options={currencies.data} defaultValue="EGP" />
+      <MetadataField label={t("provisioning.defaultLanguage")} name="preferredLanguage" options={languages.data} defaultValue="en" />
       <Field label={t("provisioning.status")} name="status" kind="select" options={["DRAFT", "ACTIVE", "SUSPENDED", "EXPIRED", "ARCHIVED"]} />
       <Field label={t("provisioning.registrationNumber")} name="registrationNumber" />
+      <Field label={t("provisioning.commercialRegister")} name="commercialRegisterNumber" />
       <Field label={t("provisioning.taxNumber")} name="taxNumber" />
+      <Field label={t("provisioning.vatNumber")} name="vatNumber" />
       <Field label={t("provisioning.businessEmail")} name="businessEmail" type="email" />
       <Field label={t("provisioning.businessPhone")} name="businessPhone" />
       <Field label={t("provisioning.address")} name="address" />
@@ -332,6 +338,21 @@ function Field({
   );
 }
 
+function MetadataField({ label, name, options, defaultValue }: { label: string; name: string; options?: MetadataOption[]; defaultValue?: string }) {
+  return (
+    <label className="space-y-2">
+      <Label htmlFor={`provisioning-${name}`}>{label}</Label>
+      <select id={`provisioning-${name}`} name={name} className="ui-input" defaultValue={defaultValue}>
+        <option value="">{label}</option>
+        {(options ?? []).map((option) => {
+          const value = option.code ?? option.value ?? option.countryCode ?? "";
+          return <option key={value} value={value}>{option.label ?? option.name?.en ?? value}</option>;
+        })}
+      </select>
+    </label>
+  );
+}
+
 function CheckField({ label, name, defaultChecked }: { label: string; name: string; defaultChecked?: boolean }) {
   return (
     <label className="flex min-h-12 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]">
@@ -355,14 +376,19 @@ function payloadFromForm(data: FormData): PlatformOrganizationInput {
     companyCode: optional(data, "companyCode"),
     slug: optional(data, "slug"),
     logoUrl: optional(data, "logoUrl"),
-    country: optional(data, "country"),
+    country: optional(data, "countryCode"),
+    countryCode: optional(data, "countryCode"),
     city: optional(data, "city"),
     timezone: optional(data, "timezone"),
-    currency: optional(data, "currency"),
-    defaultLanguage: optional(data, "defaultLanguage"),
+    currency: optional(data, "defaultCurrency"),
+    defaultCurrency: optional(data, "defaultCurrency"),
+    defaultLanguage: optional(data, "preferredLanguage"),
+    preferredLanguage: optional(data, "preferredLanguage"),
     status: optional(data, "status"),
     registrationNumber: optional(data, "registrationNumber"),
+    commercialRegisterNumber: optional(data, "commercialRegisterNumber"),
     taxNumber: optional(data, "taxNumber"),
+    vatNumber: optional(data, "vatNumber"),
     businessEmail: optional(data, "businessEmail"),
     businessPhone: optional(data, "businessPhone"),
     address: optional(data, "address"),

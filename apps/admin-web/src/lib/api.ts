@@ -15,6 +15,13 @@ import type {
   OrganizationAttendanceLocation,
   OrganizationWifiRule,
   OrganizationDomainRecord,
+  OrganizationPublicSiteSettings,
+  OrganizationLegal,
+  OrganizationOwner,
+  OrganizationDocumentsResponse,
+  OrganizationDocument,
+  MetadataOption,
+  DomainDiagnostics,
 } from "@/types/platform";
 
 const API_BASE_URL =
@@ -336,6 +343,95 @@ export function updateOrganizationProvisioningDomainApi(id: string, domainId: st
 
 export function setDefaultOrganizationProvisioningDomainApi(id: string, domainId: string) {
   return apiRequest<OrganizationDomainRecord>(`/organizations/${id}/domains/${domainId}/set-default`, { method: "POST" });
+}
+
+export function getOrganizationPublicSiteApi(id: string) {
+  return apiRequest<OrganizationPublicSiteSettings>(`/organizations/${id}/public-site`);
+}
+
+export function updateOrganizationPublicSiteApi(id: string, input: Partial<OrganizationPublicSiteSettings>) {
+  return apiRequest<OrganizationPublicSiteSettings>(`/organizations/${id}/public-site`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getOrganizationDomainDiagnosticsApi(id: string) {
+  return apiRequest<DomainDiagnostics>(`/organizations/${id}/domain-diagnostics`);
+}
+
+export function getOrganizationLegalApi(id: string) {
+  return apiRequest<OrganizationLegal>(`/organizations/${id}/legal`);
+}
+
+export function updateOrganizationLegalApi(id: string, input: Partial<OrganizationLegal>) {
+  return apiRequest<OrganizationLegal>(`/organizations/${id}/legal`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationOwnersApi(id: string) {
+  return apiRequest<OrganizationOwner[]>(`/organizations/${id}/owners`);
+}
+
+export function createOrganizationOwnerApi(id: string, input: Partial<OrganizationOwner>) {
+  return apiRequest<OrganizationOwner>(`/organizations/${id}/owners`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOrganizationOwnerApi(id: string, ownerId: string, input: Partial<OrganizationOwner>) {
+  return apiRequest<OrganizationOwner>(`/organizations/${id}/owners/${ownerId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listOrganizationDocumentsApi(id: string) {
+  return apiRequest<OrganizationDocumentsResponse>(`/organizations/${id}/documents`);
+}
+
+export function createOrganizationDocumentApi(id: string, input: Partial<OrganizationDocument>) {
+  return apiRequest<OrganizationDocument>(`/organizations/${id}/documents`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateOrganizationDocumentApi(id: string, documentId: string, input: Partial<OrganizationDocument>) {
+  return apiRequest<OrganizationDocument>(`/organizations/${id}/documents/${documentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function extractOrganizationDocumentApi(id: string, documentId: string) {
+  return apiRequest<OrganizationDocument>(`/organizations/${id}/documents/${documentId}/extract`, { method: "POST" });
+}
+
+export function reviewOrganizationDocumentApi(id: string, documentId: string, input: { status?: string; note?: string }) {
+  return apiRequest<OrganizationDocument>(`/organizations/${id}/documents/${documentId}/review`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getMetadataCountriesApi() {
+  return apiRequest<MetadataOption[]>("/metadata/countries");
+}
+
+export function getMetadataCurrenciesApi() {
+  return apiRequest<MetadataOption[]>("/metadata/currencies");
+}
+
+export function getMetadataLanguagesApi() {
+  return apiRequest<MetadataOption[]>("/metadata/languages");
+}
+
+export function getMetadataTimezonesApi() {
+  return apiRequest<MetadataOption[]>("/metadata/timezones");
 }
 
 export function listOrganizationInvitationsApi(id: string) {
