@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, RotateCcw, Search, Settings, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, RotateCcw, Search, Settings, X } from "lucide-react";
 import type { NavItem, SidebarIconKey } from "@/components/layout/nav";
 import { useSidebarPreferences } from "@/hooks/use-sidebar-preferences";
 import { useAllowedNavigation } from "@/hooks/use-navigation";
@@ -16,19 +16,13 @@ export function IconSidebar() {
   const allowedItems = useAllowedNavigation();
   const sidebar = useSidebarPreferences(allowedItems);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [hrMenuOpen, setHrMenuOpen] = useState(true);
-  const [hrMenuSearch, setHrMenuSearch] = useState("");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [groupSearch, setGroupSearch] = useState<Record<string, string>>({});
   const expanded = sidebar.mode === "expanded";
   const homeHref = allowedItems[0]?.href ?? "/login";
   const ToggleIcon = expanded === (direction === "ltr") ? ChevronLeft : ChevronRight;
   const visibleItems = sidebar.visibleItems;
-  const hrItems = useMemo(() => visibleItems.filter((item) => item.group === "Human Resources"), [visibleItems]);
-  const nonHrItems = useMemo(() => visibleItems.filter((item) => item.group !== "Human Resources"), [visibleItems]);
-  const filteredHrItems = useMemo(() => {
-    const query = hrMenuSearch.trim().toLowerCase();
-    if (!query) return hrItems;
-    return hrItems.filter((item) => `${item.label} ${item.href}`.toLowerCase().includes(query));
-  }, [hrItems, hrMenuSearch]);
+  const groupedItems = useMemo(() => groupSidebarItems(visibleItems), [visibleItems]);
 
   return (
     <>
@@ -66,7 +60,7 @@ export function IconSidebar() {
           )}
           aria-label={t("adminSweep.primary.admin.navigation.4379cbfa")}
         >
-          {(expanded ? nonHrItems : visibleItems).map((item) => (
+          {!expanded ? visibleItems.map((item) => (
             <SidebarNavLink
               key={item.id}
               item={item}
@@ -74,33 +68,45 @@ export function IconSidebar() {
               expanded={expanded}
               icon={sidebar.iconFor(item)}
             />
-          ))}
-          {expanded && hrItems.length ? (
-            <div className="mt-2 border-t border-[var(--color-border)] pt-2">
-              <button
-                type="button"
-                className="flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-muted)]"
-                onClick={() => setHrMenuOpen((current) => !current)}
-                aria-expanded={hrMenuOpen}
-              >
-                <BriefcaseBusiness className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate text-start">{t("navigation.groups.human.resources")}</span>
-                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", hrMenuOpen && "rotate-180")} />
-              </button>
-              {hrMenuOpen ? (
-                <div className="mt-2 space-y-1">
-                  <label className="relative block">
-                    <span className="sr-only">{t("navigation.search")}</span>
-                    <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
-                    <input
-                      type="search"
-                      value={hrMenuSearch}
-                      onChange={(event) => setHrMenuSearch(event.target.value)}
-                      placeholder={t("navigation.searchPlaceholder")}
-                      className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] ps-9 pe-3 text-sm text-[var(--color-foreground)] outline-none focus:border-[var(--color-accent)]"
-                    />
-                  </label>
-                  {filteredHrItems.map((item) => (
+          )) : groupedItems.map((group) => {
+            const groupOpen = openGroups[group.key] ?? true;
+            const query = (groupSearch[group.key] ?? "").trim().toLowerCase();
+            const filteredItems = query
+              ? group.items.filter((item) => `${item.label} ${item.href}`.toLowerCase().includes(query))
+              : group.items;
+            const GroupIcon = sidebar.iconFor(group.items[0]);
+            const activeInGroup = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+            return (
+              <div key={group.key} className="border-b border-[var(--color-border)] pb-2 last:border-b-0">
+                <button
+                  type="button"
+                  className={cn(
+                    "flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-semibold hover:bg-[var(--color-surface-muted)]",
+                    activeInGroup ? "text-[var(--color-accent)]" : "text-[var(--color-foreground)]",
+                  )}
+                  onClick={() => setOpenGroups((current) => ({ ...current, [group.key]: !groupOpen }))}
+                  aria-expanded={groupOpen}
+                >
+                  <GroupIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-start">{group.label}</span>
+                  <span className="rounded bg-[var(--color-surface-muted)] px-1.5 py-0.5 text-[10px] text-[var(--color-muted)]">{group.items.length}</span>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", groupOpen && "rotate-180")} />
+                </button>
+                {groupOpen ? (
+                  <div className="mt-2 space-y-1">
+                    <label className="relative block">
+                      <span className="sr-only">{t("navigation.search")}</span>
+                      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
+                      <input
+                        type="search"
+                        value={groupSearch[group.key] ?? ""}
+                        onChange={(event) => setGroupSearch((current) => ({ ...current, [group.key]: event.target.value }))}
+                        placeholder={t("navigation.searchPlaceholder")}
+                        className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] ps-9 pe-3 text-sm text-[var(--color-foreground)] outline-none focus:border-[var(--color-accent)]"
+                      />
+                    </label>
+                    {filteredItems.map((item) => (
                     <SidebarNavLink
                       key={item.id}
                       item={item}
@@ -108,11 +114,12 @@ export function IconSidebar() {
                       expanded={expanded}
                       icon={sidebar.iconFor(item)}
                     />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </nav>
 
         <div className={cn("shrink-0 space-y-2 overflow-x-hidden border-t border-[var(--color-border)] p-3", !expanded && "flex flex-col items-center")}>
@@ -312,6 +319,15 @@ function SidebarCustomizeRow({
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">{item.label}</p>
           <p className="truncate text-xs text-[var(--color-muted)]">{item.group}</p>
+          <label className="mt-2 grid gap-1 text-xs">
+            <span className="font-semibold text-[var(--color-muted)]">{t("sidebar.displayName")}</span>
+            <input
+              value={sidebar.preferences.labelOverrides[item.id] ?? ""}
+              onChange={(event) => sidebar.setLabelOverride(item.id, event.target.value)}
+              placeholder={item.label}
+              className="h-8 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-foreground)]"
+            />
+          </label>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
@@ -360,4 +376,29 @@ function modeButtonClass(active: boolean) {
       ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
       : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)]",
   );
+}
+
+function groupSidebarItems(items: NavItem[]) {
+  const groups = new Map<string, { key: string; label: string; items: NavItem[]; priority: number }>();
+  for (const item of items) {
+    const key = item.groupKey || item.group;
+    const current = groups.get(key);
+    if (current) {
+      current.items.push(item);
+      current.priority = Math.min(current.priority, item.desktopPriority);
+    } else {
+      groups.set(key, {
+        key,
+        label: item.group,
+        items: [item],
+        priority: item.desktopPriority,
+      });
+    }
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      items: [...group.items].sort((a, b) => a.desktopPriority - b.desktopPriority),
+    }))
+    .sort((a, b) => a.priority - b.priority);
 }

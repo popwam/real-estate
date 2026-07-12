@@ -40,11 +40,11 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }, [currentUser.data, hasToken, isChangePassword, isLogin, router]);
 
   if (!isLogin && !hasToken) {
-    return <LoadingState label={t("auth.checkingSession")} />;
+    return <LoadingState fullscreen label={t("auth.checkingSession")} />;
   }
 
   if (hasToken && currentUser.isLoading && !isLogin) {
-    return <LoadingState label={t("auth.checkingSession")} />;
+    return <LoadingState fullscreen label={t("auth.checkingSession")} />;
   }
 
   return <>{children}</>;

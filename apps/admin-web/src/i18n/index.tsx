@@ -182,7 +182,8 @@ function translateDomValue(value: string, locale: InterfaceLocale) {
   const english = sourceToEnglish.get(trimmed);
   if (!english) return value;
 
-  const translated = locale === "en" ? english : domCatalogs[locale][english] ?? english;
+  const candidate = locale === "en" ? english : domCatalogs[locale][english] ?? english;
+  const translated = hasBrokenEncoding(candidate) ? value : candidate;
   if (translated === trimmed) return value;
 
   const prefix = value.match(/^\s*/)?.[0] ?? "";
@@ -196,7 +197,7 @@ function buildSourceIndex(catalogsToIndex: DomCatalog[]) {
   for (const catalog of catalogsToIndex) {
     for (const [english, translated] of Object.entries(catalog)) {
       index.set(normalize(english), english);
-      index.set(normalize(translated), english);
+      if (!hasBrokenEncoding(translated)) index.set(normalize(translated), english);
     }
   }
 
@@ -217,6 +218,10 @@ function shouldSkipAttributes(element: Element) {
 
 function normalize(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function hasBrokenEncoding(value: string) {
+  return /(?:Ã|Â|Ø|Ù|�)/.test(value);
 }
 
 function interpolate(template: string, params?: Params) {
