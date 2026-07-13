@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PermissionsGuard } from '../../common/permissions.guard';
+import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
 import {
   CustomersController,
@@ -10,7 +11,7 @@ import {
 import { RealEstateService } from './real-estate.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [AuthModule, DatabaseModule],
   controllers: [
     CustomersController,
     RealEstateController,
