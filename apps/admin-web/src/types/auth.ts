@@ -6,9 +6,17 @@ export type OrganizationType =
 
 export type OrganizationStatus =
   | "DRAFT"
+  | "DOCUMENTS_REQUIRED"
+  | "DOCUMENTS_UPLOADED"
+  | "EXTRACTION_PENDING"
+  | "MANUAL_REVIEW_REQUIRED"
+  | "VERIFIED"
+  | "ACTIVE"
+  | "REJECTED"
   | "PENDING_REVIEW"
   | "APPROVED"
   | "SUSPENDED"
+  | "EXPIRED"
   | "REVOKED";
 
 export type UserRole =

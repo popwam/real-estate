@@ -102,7 +102,7 @@ export default function PlatformOrganizationsPage() {
 function organizationErrorDescription(error: Error, t: (key: string, params?: Record<string, string | number>) => string) {
   if (error instanceof ApiError) {
     return [
-      error.message,
+      error.status >= 500 ? t("statusPage.500.title") : error.message,
       t("platformOrganizations.error.status", { status: error.status }),
       error.requestId ? t("platformOrganizations.error.requestId", { requestId: error.requestId }) : "",
     ].filter(Boolean).join(" ");

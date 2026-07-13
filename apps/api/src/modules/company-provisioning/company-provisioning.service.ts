@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -50,6 +51,11 @@ import {
 
 type Tx = Prisma.TransactionClient;
 
+type OrganizationListRequestContext = {
+  requestId?: string;
+  route?: string;
+};
+
 const PLATFORM_PERMISSIONS = [
   'platform.organizations.manage',
   'organizations.verify',
@@ -76,34 +82,73 @@ export class CompanyProvisioningService {
     private readonly hashService: HashService,
   ) {}
 
-  async listPlatformOrganizations(user: AuthenticatedRequestUser) {
+  async listPlatformOrganizations(
+    user: AuthenticatedRequestUser,
+    rawQuery: Record<string, unknown> = {},
+    context: OrganizationListRequestContext = {},
+  ) {
     this.assertPlatform(user, 'platform.organizations.view');
+    const query = this.organizationListQuery(rawQuery);
     try {
-      return await this.prisma.organization.findMany({
-        include: this.organizationInclude(),
-        orderBy: { createdAt: 'desc' },
-      });
-    } catch (error) {
-      this.logger.error('platform organizations list include failed; returning lightweight organization list', {
-        code: this.prismaErrorCode(error),
-        message: error instanceof Error ? error.message : 'unknown_error',
-      });
       const organizations = await this.prisma.organization.findMany({
-        include: { profile: true },
-        orderBy: { createdAt: 'desc' },
+        where: query.where,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          type: true,
+          status: true,
+          country: true,
+          city: true,
+          plan: true,
+          planExpiresAt: true,
+          createdAt: true,
+          updatedAt: true,
+          subscription: { select: { status: true, planName: true } },
+          verifications: {
+            select: { status: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+          },
+          _count: { select: { users: true, hrEmployees: true, branches: true } },
+        },
+        orderBy: { [query.sort]: query.order },
+        skip: query.offset,
+        take: query.limit,
       });
-      return organizations.map((organization) => this.withPortalLinks({
-        ...organization,
-        subscription: null,
-        limits: null,
-        branches: [],
-        attendanceLocations: [],
-        wifiRules: [],
-        domainVerifications: [],
-        websiteSettings: null,
-        companyRoleTemplates: [],
-        users: [],
+      return organizations.map((organization) => ({
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        organizationType: organization.type,
+        type: organization.type,
+        status: organization.status,
+        verificationStatus: organization.verifications[0]?.status ?? null,
+        subscriptionStatus: organization.subscription?.status ?? null,
+        planName: organization.subscription?.planName ?? organization.plan ?? null,
+        plan: organization.plan ?? null,
+        planExpiresAt: organization.planExpiresAt,
+        country: organization.country,
+        city: organization.city,
+        usersCount: organization._count.users,
+        employeesCount: organization._count.hrEmployees,
+        officesCount: organization._count.branches,
+        createdAt: organization.createdAt,
+        updatedAt: organization.updatedAt,
       }));
+    } catch (error) {
+      this.logger.error({
+        event: 'platform_organizations_list_failed',
+        requestId: context.requestId ?? null,
+        route: context.route ?? '/platform/organizations',
+        userId: user.userId,
+        organizationId: user.organizationId,
+        query: query.safeParams,
+        errorName: this.safeErrorName(error),
+        errorMessage: this.safeErrorMessage(error),
+        prismaCode: this.prismaErrorCode(error) ?? null,
+      });
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 
@@ -1056,6 +1101,76 @@ export class CompanyProvisioningService {
     return typeof error === 'object' && error && 'code' in error
       ? String((error as { code?: unknown }).code)
       : undefined;
+  }
+
+  private safeErrorName(error: unknown) {
+    const name = error instanceof Error ? error.name : 'UnknownError';
+    return /^[A-Za-z0-9_.-]{1,80}$/.test(name) ? name : 'UnknownError';
+  }
+
+  private safeErrorMessage(error: unknown) {
+    if (this.prismaErrorCode(error)) return 'Prisma request failed.';
+    if (!(error instanceof Error)) return 'Unknown error.';
+    return error.message
+      .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, '[REDACTED_DATABASE_URL]')
+      .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+=*/gi, 'Bearer [REDACTED]')
+      .replace(/\b(password|secret|token|api[_-]?key)\s*[:=]\s*[^\s,;]+/gi, '$1=[REDACTED]')
+      .replace(/\s+/g, ' ')
+      .slice(0, 300);
+  }
+
+  private organizationListQuery(rawQuery: Record<string, unknown>) {
+    const allowedKeys = new Set(['type', 'status', 'sort', 'order', 'limit', 'offset']);
+    if (Object.keys(rawQuery).some((key) => !allowedKeys.has(key))) {
+      throw new BadRequestException('Invalid organizations list query.');
+    }
+    const value = (key: string) => {
+      const candidate = rawQuery[key];
+      if (candidate === undefined) return undefined;
+      if (typeof candidate !== 'string' || !candidate.trim()) {
+        throw new BadRequestException(`Query parameter ${key} must be a single value.`);
+      }
+      return candidate.trim();
+    };
+    const typeValue = value('type');
+    const statusValue = value('status');
+    const type = typeValue ? this.enumValue(OrganizationType, typeValue, 'type') : undefined;
+    const status = statusValue ? this.enumValue(OrganizationStatus, statusValue, 'status') : undefined;
+    const sortValue = value('sort') ?? 'createdAt';
+    if (!['createdAt', 'updatedAt', 'name'].includes(sortValue)) {
+      throw new BadRequestException('sort must be createdAt, updatedAt, or name.');
+    }
+    const orderValue = (value('order') ?? 'desc').toLowerCase();
+    if (orderValue !== 'asc' && orderValue !== 'desc') {
+      throw new BadRequestException('order must be asc or desc.');
+    }
+    const limit = this.optionalListInteger(value('limit'), 'limit', 1, 100);
+    const offset = this.optionalListInteger(value('offset'), 'offset', 0, 100_000);
+    return {
+      where: { ...(type ? { type } : {}), ...(status ? { status } : {}) } satisfies Prisma.OrganizationWhereInput,
+      sort: sortValue as 'createdAt' | 'updatedAt' | 'name',
+      order: orderValue as Prisma.SortOrder,
+      limit,
+      offset,
+      safeParams: {
+        type: type ?? null,
+        status: status ?? null,
+        sort: sortValue,
+        order: orderValue,
+        limit: limit ?? null,
+        offset: offset ?? null,
+      },
+    };
+  }
+
+  private optionalListInteger(value: string | undefined, field: string, minimum: number, maximum: number) {
+    if (value === undefined) return undefined;
+    if (!/^\d+$/.test(value)) throw new BadRequestException(`${field} must be an integer.`);
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+      throw new BadRequestException(`${field} must be between ${minimum} and ${maximum}.`);
+    }
+    return parsed;
   }
 
   private async findOrganizationForPlatform(id: string) {

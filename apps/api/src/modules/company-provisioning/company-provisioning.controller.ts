@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { CurrentUser } from '../../common/current-user.decorator';
 import { Permissions } from '../../common/permissions.decorator';
 import { PermissionsGuard } from '../../common/permissions.guard';
@@ -31,8 +32,15 @@ export class PlatformOrganizationsController {
   @Permissions('platform.organizations.view')
   @Get()
   @ApiOperation({ summary: 'List platform-managed companies.' })
-  list(@CurrentUser() user: AuthenticatedRequestUser) {
-    return this.service.listPlatformOrganizations(user);
+  list(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Query() query: Record<string, unknown>,
+    @Req() request: Request & { requestId?: string },
+  ) {
+    return this.service.listPlatformOrganizations(user, query, {
+      requestId: request.requestId,
+      route: '/platform/organizations',
+    });
   }
 
   @Permissions('platform.organizations.manage')
