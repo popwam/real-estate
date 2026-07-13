@@ -1,11 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
+  BriefcaseBusiness,
+  CalendarCheck,
+  FileUp,
   KeyRound,
+  MapPinned,
   Plus,
+  RotateCcw,
+  Settings2,
+  ShieldCheck,
+  UserPlus,
   UsersRound,
+  Wifi,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/empty-state";
@@ -21,6 +31,11 @@ import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 import { listOrganizationsApi } from "@/lib/api";
+import {
+  getQuickActionPreferenceApi,
+  resetQuickActionPreferenceApi,
+  saveQuickActionPreferenceApi,
+} from "@/lib/user-preferences-api";
 import {
   applyHrEmployeeActionApi,
   createHrEmployeeApi,
@@ -547,23 +562,138 @@ export function HrFoundationPage({ pageKey, permission, sections }: { pageKey: s
 }
 
 function HrQuickActions() {
-  const { t } = useI18n();
-  const actions = ["addEmployee", "addWorkSchedule", "newAssignment", "changeShift", "submitRequest", "newLoan", "addDeduction", "addBonus", "manualCheckIn"];
+  const { t, direction } = useI18n();
+  const router = useRouter();
+  const { data } = useCurrentUser();
+  const buttonRef = useRef<HTMLDivElement | null>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const canCustomize = data?.permissions.includes("quick_actions.customize");
+  const actions = [
+    { id: "addEmployee", href: "/hr/employees/new", icon: UserPlus, permissions: ["hr.employees.create"] },
+    { id: "addApplicant", href: "/hr/recruitment/applicants/new", icon: UsersRound, permissions: ["hr.recruitment.applicants.manage"] },
+    { id: "openAttendance", href: "/hr/attendance", icon: CalendarCheck, permissions: ["hr.attendance.view", "hr.attendance.manage"] },
+    { id: "addOffice", href: "/platform/organizations", icon: MapPinned, permissions: ["company.offices.manage", "platform.organizations.manage"] },
+    { id: "addWifiRule", href: "/platform/organizations", icon: Wifi, permissions: ["company.wifi_rules.manage", "platform.organizations.manage"] },
+    { id: "addAccessLevel", href: "/platform/organizations", icon: ShieldCheck, permissions: ["company.access_levels.manage", "platform.organizations.manage"] },
+    { id: "createHrRequest", href: "/hr/requests", icon: BriefcaseBusiness, permissions: ["hr.requests.manage", "hr.actions.apply"] },
+    { id: "uploadHrDocument", href: "/hr/documents", icon: FileUp, permissions: ["hr.documents.manage"] },
+    { id: "openHrSettings", href: "/hr/settings", icon: Settings2, permissions: ["hr.settings.view"] },
+    { id: "openCompanyOffices", href: "/platform/organizations", icon: MapPinned, permissions: ["company.offices.view", "platform.organizations.view"] },
+    { id: "openCompanyAttendanceSettings", href: "/hr/settings", icon: CalendarCheck, permissions: ["company.attendance_settings.view", "hr.settings.view"] },
+  ];
+  const allowedActions = actions.filter((action) => action.permissions.some((permission) => data?.permissions.includes(permission) || (permission.startsWith("hr.") && data?.permissions.includes("hr.manage"))));
+
+  useEffect(() => {
+    getQuickActionPreferenceApi("hr")
+      .then((preference) => {
+        const savedPosition = preference?.position;
+        if (typeof savedPosition?.x === "number" && typeof savedPosition?.y === "number") setPosition({ x: savedPosition.x, y: savedPosition.y });
+        setOpen(!preference?.isCollapsed);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  function persist(nextPosition = position, nextOpen = open) {
+    if (!canCustomize) return;
+    void saveQuickActionPreferenceApi("hr", {
+      position: nextPosition ?? {},
+      isCollapsed: !nextOpen,
+      selectedActions: allowedActions.map((action) => action.id),
+    }).catch(() => undefined);
+  }
+
+  function startDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    dragOffset.current = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const next = {
+      x: Math.max(8, Math.min(window.innerWidth - 220, event.clientX - dragOffset.current.x)),
+      y: Math.max(8, Math.min(window.innerHeight - 80, event.clientY - dragOffset.current.y)),
+    };
+    setPosition(next);
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    persist(position, open);
+  }
+
+  function resetPosition() {
+    setPosition(null);
+    setOpen(false);
+    void resetQuickActionPreferenceApi("hr").catch(() => undefined);
+  }
+
   return (
-    <div className="fixed bottom-[calc(var(--bottom-nav-height)+1rem)] right-4 z-20 lg:bottom-6">
-      <details className="group">
-        <summary className="ui-button ui-button-primary cursor-pointer list-none shadow-lg">
+    <div
+      ref={buttonRef}
+      className="fixed z-20"
+      style={position ? { left: position.x, top: position.y } : { bottom: "calc(var(--bottom-nav-height) + 1rem)", [direction === "rtl" ? "left" : "right"]: "1rem" }}
+      onPointerDown={startDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 24 : 8;
+        if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        const current = position ?? { x: direction === "rtl" ? 16 : window.innerWidth - 220, y: window.innerHeight - 96 };
+        const next = {
+          x: current.x + (event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0),
+          y: current.y + (event.key === "ArrowDown" ? step : event.key === "ArrowUp" ? -step : 0),
+        };
+        setPosition(next);
+        persist(next, open);
+      }}
+    >
+      <div>
+        <button
+          type="button"
+          className="ui-button ui-button-primary cursor-move shadow-lg"
+          onClick={() => {
+            const nextOpen = !open;
+            setOpen(nextOpen);
+            persist(position, nextOpen);
+          }}
+          aria-expanded={open}
+          aria-label={t("hr.quickActions")}
+        >
           <Plus className="h-4 w-4" aria-hidden="true" />
           {t("hr.quickActions")}
-        </summary>
-        <div className="mt-2 grid w-64 gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
-          {actions.map((action) => (
-            action === "addEmployee"
-              ? <Link key={action} href="/hr/employees/new" className="rounded px-3 py-2 text-sm hover:bg-[var(--color-surface-muted)]">{t(`hr.quickAction.${action}`)}</Link>
-              : <button key={action} className="rounded px-3 py-2 text-left text-sm text-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-70" type="button" disabled title={t("hr.buttonNotAvailableYet")}>{t(`hr.quickAction.${action}`)} - {t("hr.comingSoon")}</button>
-          ))}
-        </div>
-      </details>
+        </button>
+        {open ? (
+          <div className="mt-2 grid w-72 gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-lg">
+            {allowedActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => router.push(action.href)}
+                  className="flex items-center gap-2 rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]"
+                >
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {t(`hr.quickAction.${action.id}`)}
+                </button>
+              );
+            })}
+            <button className="flex items-center gap-2 rounded px-3 py-2 text-left text-sm text-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-70" type="button" disabled title={t("hr.buttonNotAvailableYet")}>
+              <KeyRound className="h-4 w-4" aria-hidden="true" />
+              {t("hr.quickAction.futureIntegration")} - {t("hr.comingSoon")}
+            </button>
+            <button type="button" onClick={resetPosition} className="flex items-center gap-2 rounded px-3 py-2 text-left text-sm hover:bg-[var(--color-surface-muted)]">
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              {t("hr.quickAction.resetPosition")}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

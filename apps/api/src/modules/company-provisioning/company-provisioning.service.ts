@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -67,18 +68,43 @@ const COMPANY_ADMIN_ROLES = new Set([
 
 @Injectable()
 export class CompanyProvisioningService {
+  private readonly logger = new Logger(CompanyProvisioningService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogs: AuditLogsService,
     private readonly hashService: HashService,
   ) {}
 
-  listPlatformOrganizations(user: AuthenticatedRequestUser) {
+  async listPlatformOrganizations(user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.organizations.view');
-    return this.prisma.organization.findMany({
-      include: this.organizationInclude(),
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      return await this.prisma.organization.findMany({
+        include: this.organizationInclude(),
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error) {
+      this.logger.error('platform organizations list include failed; returning lightweight organization list', {
+        code: this.prismaErrorCode(error),
+        message: error instanceof Error ? error.message : 'unknown_error',
+      });
+      const organizations = await this.prisma.organization.findMany({
+        include: { profile: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      return organizations.map((organization) => this.withPortalLinks({
+        ...organization,
+        subscription: null,
+        limits: null,
+        branches: [],
+        attendanceLocations: [],
+        wifiRules: [],
+        domainVerifications: [],
+        websiteSettings: null,
+        companyRoleTemplates: [],
+        users: [],
+      }));
+    }
   }
 
   async createPlatformOrganization(
@@ -1024,6 +1050,12 @@ export class CompanyProvisioningService {
       companyRoleTemplates: true,
       users: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
     } as const;
+  }
+
+  private prismaErrorCode(error: unknown) {
+    return typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: unknown }).code)
+      : undefined;
   }
 
   private async findOrganizationForPlatform(id: string) {

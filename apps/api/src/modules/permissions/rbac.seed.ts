@@ -79,6 +79,29 @@ export const HR_RECRUITMENT_PERMISSIONS = [
   'hr.recruitment.convert_to_employee',
 ] as const;
 
+export const RESIDENT_QR_PERMISSIONS = [
+  'customers.view',
+  'customers.manage',
+  'real_estate.projects.view',
+  'real_estate.projects.manage',
+  'real_estate.buildings.view',
+  'real_estate.buildings.manage',
+  'real_estate.units.view',
+  'real_estate.units.manage',
+  'real_estate.unit_assignments.view',
+  'real_estate.unit_assignments.manage',
+  'qr_passes.view',
+  'qr_passes.manage',
+  'qr_passes.scan',
+  'navigation.customize',
+  'quick_actions.customize',
+] as const;
+
+export const SELF_RESIDENT_PERMISSIONS = [
+  'self.units.view',
+  'self.qr_passes.view',
+] as const;
+
 export const BASE_PERMISSIONS = [
   'organizations.verify',
   'organizations.suspend',
@@ -157,6 +180,8 @@ export const BASE_PERMISSIONS = [
   'company.attendance_settings.manage',
   'company.wifi_rules.view',
   'company.wifi_rules.manage',
+  ...RESIDENT_QR_PERMISSIONS,
+  ...SELF_RESIDENT_PERMISSIONS,
   'hr.employees.view',
   'hr.employees.create',
   'hr.employees.update',
@@ -245,6 +270,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'users.impersonate',
     'platform.users.manage',
     'users.manage',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'organization_website.update_own',
     'organization_website.view_own',
     'organization_domains.manage_own',
@@ -322,6 +349,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'reports.platform_wide',
     'users.manage',
     'platform.users.manage',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'organization_website.update_own',
     'organization_website.view_own',
     'organization_domains.manage_own',
@@ -426,6 +455,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   developer_owner: [
     'organizations.update_own',
     'users.manage_own_org',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'organization_website.update_own',
     'organization_website.view_own',
     'organization_domains.manage_own',
@@ -494,6 +525,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   developer_admin: [
     'organizations.update_own',
     'users.manage_own_org',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'organization_website.update_own',
     'organization_website.view_own',
     'organization_domains.manage_own',
@@ -569,6 +602,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   brokerage_owner: [
     'organizations.update_own',
     'users.manage_own_org',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'organization_website.view_own',
     'organization_domains.view_own',
     'organization_domains.manage_own',
@@ -616,6 +651,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   brokerage_admin: [
     'organizations.update_own',
     'users.manage_own_org',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'organization_website.view_own',
     'organization_domains.view_own',
     'organization_domains.manage_own',
@@ -690,7 +727,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'crm.conversations.manage_own',
     'crm.clients.view_own',
   ],
-  client: ['deal_rooms.join'],
+  client: ['deal_rooms.join', ...SELF_RESIDENT_PERMISSIONS],
   company_admin: [
     'company.dashboard.view',
     'company.settings.view',
@@ -711,6 +748,8 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'company.access_levels.manage',
     'users.manage_own_org',
     'organizations.update_own',
+    ...RESIDENT_QR_PERMISSIONS,
+    ...SELF_RESIDENT_PERMISSIONS,
     'hr.view',
     'hr.manage',
     ...HR_RECRUITMENT_PERMISSIONS,

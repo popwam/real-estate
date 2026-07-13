@@ -44,7 +44,9 @@ import { ProjectPhasesModule } from './modules/project-phases/project-phases.mod
 import { ProjectsModule } from './modules/projects/projects.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { ReservationRequestsModule } from './modules/reservation-requests/reservation-requests.module';
+import { RealEstateModule } from './modules/real-estate/real-estate.module';
 import { UnitAvailabilityModule } from './modules/unit-availability/unit-availability.module';
+import { UserPreferencesModule } from './modules/user-preferences/user-preferences.module';
 import { UsersModule } from './modules/users/users.module';
 import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rules.module';
 
@@ -77,6 +79,8 @@ import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rul
     InventoryModule,
     ImportExportModule,
     InvitationsModule,
+    RealEstateModule,
+    UserPreferencesModule,
     UnitAvailabilityModule,
     PaymentPlansModule,
     VisibilityRulesModule,

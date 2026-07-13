@@ -170,6 +170,79 @@ enum UnitFinishing {
   FURNISHED
 }
 
+enum CustomerProfileStatus {
+  LEAD
+  BUYER
+  OWNER
+  TENANT
+  RESIDENT
+  GUEST
+  BLOCKED
+}
+
+enum RealEstateProjectStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum RealEstateUnitType {
+  APARTMENT
+  VILLA
+  OFFICE
+  RETAIL
+  CHALET
+  OTHER
+}
+
+enum RealEstateUnitStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  RENTED
+  OCCUPIED
+  UNDER_MAINTENANCE
+}
+
+enum UnitCustomerRelationType {
+  BUYER
+  OWNER
+  TENANT
+  RESIDENT
+  FAMILY_MEMBER
+  GUEST
+  MAINTENANCE
+}
+
+enum UnitQrPassType {
+  UNIT
+  RESIDENT
+  VISITOR
+  MAINTENANCE
+  DELIVERY
+}
+
+enum UnitQrPassStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+  SUSPENDED
+}
+
+enum AccessIntegrationType {
+  QR_ONLY
+  GATE_VENDOR_API
+  SMART_LOCK
+  NFC
+}
+
+enum AccessIntegrationStatus {
+  NOT_CONFIGURED
+  CONFIGURED
+  DISABLED
+}
+
 enum AvailabilityHoldType {
   LEAD_CLAIM
   RESERVATION
@@ -958,6 +1031,14 @@ model Organization {
   projectBrokerAuthorizations ProjectBrokerAuthorization[]
   assignedPublicLeads PublicLead[]            @relation("PublicLeadAssignedOrganization")
   attributedVisitorSessions PublicVisitorSession[] @relation("VisitorAttributedOrganization")
+  customerProfiles CustomerProfile[]
+  realEstateProjects Compound[]
+  buildings         Building[]
+  floors            Floor[]
+  units             Unit[]
+  unitCustomerAssignments UnitCustomerAssignment[]
+  unitQrPasses      UnitQrPass[]
+  accessIntegrations AccessIntegration[]
 
   @@index([type, status])
   @@map("organizations")
@@ -1337,6 +1418,11 @@ model User {
   brokerProjectAuthorizations     ProjectBrokerAuthorization[]      @relation("ProjectBrokerAuthorizationBroker")
   assignedPublicLeads             PublicLead[]                      @relation("PublicLeadAssignedBroker")
   attributedVisitorSessions       PublicVisitorSession[]            @relation("VisitorAttributedBroker")
+  customerProfiles                CustomerProfile[]
+  unitCustomerAssignments         UnitCustomerAssignment[]
+  unitQrPasses                    UnitQrPass[]
+  navigationPreferences           UserNavigationPreference[]
+  quickActionPreferences          UserQuickActionPreference[]
 
   @@index([organizationId, userRole])
   @@map("users")
@@ -3220,4 +3306,210 @@ model OperationsActivity {
   @@index([module, entityType, entityId, createdAt])
   @@index([actorUserId, createdAt])
   @@map("operations_activities")
+}
+
+model CustomerProfile {
+  id             String                @id @default(cuid())
+  organizationId String
+  userId         String?
+  fullName       String
+  localizedName  Json?
+  phone          String
+  email          String?
+  nationalId     String?
+  preferredLanguage String             @default("en")
+  status         CustomerProfileStatus @default(LEAD)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignments    UnitCustomerAssignment[]
+  qrPasses       UnitQrPass[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, phone])
+  @@index([userId])
+  @@map("customer_profiles")
+}
+
+model Compound {
+  id             String                  @id @default(cuid())
+  organizationId String
+  name           String
+  localizedName  Json?
+  code           String
+  address        String?
+  status         RealEstateProjectStatus @default(ACTIVE)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  buildings      Building[]
+  units          Unit[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+  @@map("real_estate_projects")
+}
+
+model Building {
+  id             String       @id @default(cuid())
+  organizationId String
+  projectId      String
+  name           String
+  code           String
+  floorsCount    Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Compound     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  floors         Floor[]
+  units          Unit[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, projectId])
+  @@map("buildings")
+}
+
+model Floor {
+  id             String       @id @default(cuid())
+  organizationId String
+  buildingId     String
+  number         Int
+  label          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  building       Building     @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  units          Unit[]
+
+  @@unique([buildingId, number])
+  @@index([organizationId, buildingId])
+  @@map("floors")
+}
+
+model Unit {
+  id             String               @id @default(cuid())
+  organizationId String
+  projectId      String
+  buildingId     String
+  floorId        String?
+  unitNumber     String
+  unitCode       String
+  unitType       RealEstateUnitType
+  status         RealEstateUnitStatus @default(AVAILABLE)
+  area           Decimal?             @db.Decimal(12, 2)
+  bedrooms       Int?
+  bathrooms      Int?
+  qrPassEnabled  Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Compound             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  building       Building             @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  floor          Floor?               @relation(fields: [floorId], references: [id], onDelete: SetNull)
+  assignments    UnitCustomerAssignment[]
+  qrPasses       UnitQrPass[]
+
+  @@unique([organizationId, unitCode])
+  @@unique([buildingId, unitNumber])
+  @@index([organizationId, status])
+  @@index([projectId, buildingId])
+  @@map("units")
+}
+
+model UnitCustomerAssignment {
+  id                String                   @id @default(cuid())
+  organizationId    String
+  unitId            String
+  customerProfileId String
+  userId            String?
+  relationType      UnitCustomerRelationType
+  startsAt          DateTime?
+  endsAt            DateTime?
+  isActive          Boolean                  @default(true)
+  permissions       Json                     @default("[]")
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unit              Unit                     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  customerProfile   CustomerProfile          @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  user              User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, isActive])
+  @@index([unitId, isActive])
+  @@index([customerProfileId, isActive])
+  @@index([userId, isActive])
+  @@map("unit_customer_assignments")
+}
+
+model UnitQrPass {
+  id                String            @id @default(cuid())
+  organizationId    String
+  unitId            String
+  customerProfileId String?
+  userId            String?
+  passType          UnitQrPassType
+  tokenHash         String            @unique
+  displayCode       String?
+  status            UnitQrPassStatus  @default(ACTIVE)
+  startsAt          DateTime?
+  expiresAt         DateTime?
+  maxUses           Int?
+  useCount          Int               @default(0)
+  lastUsedAt        DateTime?
+  metadata          Json              @default("{}")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unit              Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  customerProfile   CustomerProfile?  @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
+  user              User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([unitId, status])
+  @@index([customerProfileId, status])
+  @@index([userId, status])
+  @@map("unit_qr_passes")
+}
+
+model AccessIntegration {
+  id             String                  @id @default(cuid())
+  organizationId String
+  provider       String                  @default("QR")
+  type           AccessIntegrationType   @default(QR_ONLY)
+  status         AccessIntegrationStatus @default(NOT_CONFIGURED)
+  metadata       Json                    @default("{}")
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, type, status])
+  @@map("access_integrations")
+}
+
+model UserNavigationPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  layout      Json     @default("{}")
+  hiddenItems Json     @default("[]")
+  pinnedItems Json     @default("[]")
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("user_navigation_preferences")
+}
+
+model UserQuickActionPreference {
+  id              String   @id @default(cuid())
+  userId          String
+  widgetKey       String
+  position        Json     @default("{}")
+  isCollapsed     Boolean  @default(true)
+  selectedActions Json     @default("[]")
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, widgetKey])
+  @@map("user_quick_action_preferences")
 }
