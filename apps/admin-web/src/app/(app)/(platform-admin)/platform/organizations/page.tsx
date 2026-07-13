@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { OrganizationResponsiveList } from "@/components/platform/organization-responsive-list";
 import { useOrganizations } from "@/hooks/use-platform-admin";
 import { useI18n } from "@/i18n";
+import { ApiError } from "@/lib/api";
 
 export default function PlatformOrganizationsPage() {
   const { t } = useI18n();
@@ -89,11 +90,22 @@ export default function PlatformOrganizationsPage() {
       </section>
       {isLoading ? <LoadingState label={t("platformOrganizations.loading")} /> : null}
       {error ? (
-        <FeedbackState tone="error" title={t("platformOrganizations.error")} description={error.message} />
+        <FeedbackState tone="error" title={t("platformOrganizations.error")} description={organizationErrorDescription(error, t)} />
       ) : null}
       {!isLoading && !error ? (
         <OrganizationResponsiveList organizations={rows} totalCount={data.length} />
       ) : null}
     </>
   );
+}
+
+function organizationErrorDescription(error: Error, t: (key: string, params?: Record<string, string | number>) => string) {
+  if (error instanceof ApiError) {
+    return [
+      error.message,
+      t("platformOrganizations.error.status", { status: error.status }),
+      error.requestId ? t("platformOrganizations.error.requestId", { requestId: error.requestId }) : "",
+    ].filter(Boolean).join(" ");
+  }
+  return error.message;
 }

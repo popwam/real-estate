@@ -279,7 +279,7 @@ function SidebarCustomizePanel({
             <h3 className="mb-2 text-sm font-semibold text-[var(--color-foreground)]">{t("sidebar.visibleItems")}</h3>
             <div className="space-y-2">
               {items.map((item) => (
-                <SidebarCustomizeRow key={item.id} item={item} sidebar={sidebar} />
+                <SidebarCustomizeRow key={item.id} item={item} sidebar={sidebar} groups={[...new Set(items.map((navItem) => navItem.group))]} />
               ))}
             </div>
           </section>
@@ -303,9 +303,11 @@ function SidebarCustomizePanel({
 function SidebarCustomizeRow({
   item,
   sidebar,
+  groups,
 }: {
   item: NavItem;
   sidebar: ReturnType<typeof useSidebarPreferences>;
+  groups: string[];
 }) {
   const { t } = useI18n();
   const Icon = item.icon;
@@ -327,6 +329,18 @@ function SidebarCustomizeRow({
               placeholder={item.label}
               className="h-8 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-foreground)]"
             />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs">
+            <span className="font-semibold text-[var(--color-muted)]">{t("sidebar.moveToSection")}</span>
+            <select
+              value={sidebar.preferences.groupOverrides[item.id] ?? item.group}
+              onChange={(event) => sidebar.setGroupOverride(item.id, event.target.value)}
+              className="h-8 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-foreground)]"
+            >
+              {groups.map((group) => (
+                <option key={group} value={group}>{group}</option>
+              ))}
+            </select>
           </label>
         </div>
       </div>

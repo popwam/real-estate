@@ -11,6 +11,7 @@ export type SidebarPreferences = {
   hiddenItemIds: string[];
   iconOverrides: Record<string, SidebarIconKey>;
   labelOverrides: Record<string, string>;
+  groupOverrides: Record<string, string>;
 };
 
 const STORAGE_KEY = "popwam.admin.sidebar.preferences";
@@ -21,6 +22,7 @@ export const defaultSidebarPreferences: SidebarPreferences = {
   hiddenItemIds: [],
   iconOverrides: {},
   labelOverrides: {},
+  groupOverrides: {},
 };
 
 function canUseStorage() {
@@ -38,6 +40,11 @@ function normalizePreferences(value: Partial<SidebarPreferences> | null): Sideba
       .map(([id, label]) => [id, typeof label === "string" ? label.trim().slice(0, 48) : ""])
       .filter(([, label]) => label),
   ) as Record<string, string>;
+  const groupOverrides = Object.fromEntries(
+    Object.entries(value?.groupOverrides ?? {})
+      .map(([id, group]) => [id, typeof group === "string" ? group.trim().slice(0, 64) : ""])
+      .filter(([, group]) => group),
+  ) as Record<string, string>;
 
   return {
     mode: value?.mode === "expanded" ? "expanded" : "collapsed",
@@ -45,6 +52,7 @@ function normalizePreferences(value: Partial<SidebarPreferences> | null): Sideba
     hiddenItemIds: Array.isArray(value?.hiddenItemIds) ? [...new Set(value.hiddenItemIds)] : [],
     iconOverrides,
     labelOverrides,
+    groupOverrides,
   };
 }
 
@@ -134,6 +142,23 @@ export function setLabelOverride(id: string, label: string) {
           [id]: trimmed,
         }
       : nextLabelOverrides,
+  });
+}
+
+export function setGroupOverride(id: string, group: string) {
+  const current = getSidebarPreferences();
+  const trimmed = group.trim().slice(0, 64);
+  const nextGroupOverrides = { ...current.groupOverrides };
+  delete nextGroupOverrides[id];
+
+  return saveSidebarPreferences({
+    ...current,
+    groupOverrides: trimmed
+      ? {
+          ...nextGroupOverrides,
+          [id]: trimmed,
+        }
+      : nextGroupOverrides,
   });
 }
 

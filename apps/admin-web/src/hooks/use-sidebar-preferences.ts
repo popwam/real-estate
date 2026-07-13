@@ -10,6 +10,7 @@ import {
   pinItem,
   resetSidebarPreferences,
   saveSidebarPreferences,
+  setGroupOverride,
   setIconOverride,
   setLabelOverride,
   showItem,
@@ -17,6 +18,11 @@ import {
   unpinItem,
   type SidebarPreferences,
 } from "@/lib/sidebar-preferences";
+import {
+  getNavigationPreferenceApi,
+  resetNavigationPreferenceApi,
+  saveNavigationPreferenceApi,
+} from "@/lib/user-preferences-api";
 
 export function useSidebarPreferences(allowedItems: NavItem[] = []) {
   const [preferences, setPreferences] = useState<SidebarPreferences>(defaultSidebarPreferences);
@@ -24,6 +30,19 @@ export function useSidebarPreferences(allowedItems: NavItem[] = []) {
   useEffect(() => {
     const sync = () => setPreferences(getSidebarPreferences());
     sync();
+    getNavigationPreferenceApi()
+      .then((record) => {
+        if (record?.layout) {
+          const saved = saveSidebarPreferences({
+            ...defaultSidebarPreferences,
+            ...record.layout,
+            hiddenItemIds: record.hiddenItems ?? record.layout.hiddenItemIds ?? [],
+            pinnedItemIds: record.pinnedItems ?? record.layout.pinnedItemIds ?? [],
+          });
+          setPreferences(saved);
+        }
+      })
+      .catch(() => undefined);
     window.addEventListener("popwam-sidebar-preferences-change", sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -49,36 +68,51 @@ export function useSidebarPreferences(allowedItems: NavItem[] = []) {
     }).map((item) => ({
       ...item,
       label: preferences.labelOverrides[item.id] ?? item.label,
+      group: preferences.groupOverrides[item.id] ?? item.group,
+      groupKey: preferences.groupOverrides[item.id] ?? item.groupKey,
     }));
-  }, [allowedIds, allowedItems, preferences.hiddenItemIds, preferences.labelOverrides, preferences.pinnedItemIds]);
+  }, [allowedIds, allowedItems, preferences.groupOverrides, preferences.hiddenItemIds, preferences.labelOverrides, preferences.pinnedItemIds]);
+
+  const persist = (next: SidebarPreferences) => {
+    setPreferences(next);
+    void saveNavigationPreferenceApi(next).catch(() => undefined);
+    return next;
+  };
 
   return {
     preferences,
     visibleItems,
     mode: preferences.mode,
     safeIconMap: safeSidebarIconMap,
-    toggleMode: () => setPreferences(toggleSidebarMode()),
+    toggleMode: () => persist(toggleSidebarMode()),
     setMode: (mode: SidebarPreferences["mode"]) =>
-      setPreferences(saveSidebarPreferences({ ...preferences, mode })),
+      persist(saveSidebarPreferences({ ...preferences, mode })),
     hideItem: (id: string) => {
-      if (allowedIds.has(id)) setPreferences(hideItem(id));
+      if (allowedIds.has(id)) persist(hideItem(id));
     },
     showItem: (id: string) => {
-      if (allowedIds.has(id)) setPreferences(showItem(id));
+      if (allowedIds.has(id)) persist(showItem(id));
     },
     pinItem: (id: string) => {
-      if (allowedIds.has(id)) setPreferences(pinItem(id));
+      if (allowedIds.has(id)) persist(pinItem(id));
     },
     unpinItem: (id: string) => {
-      if (allowedIds.has(id)) setPreferences(unpinItem(id));
+      if (allowedIds.has(id)) persist(unpinItem(id));
     },
     setIconOverride: (id: string, iconKey: SidebarIconKey) => {
-      if (allowedIds.has(id)) setPreferences(setIconOverride(id, iconKey));
+      if (allowedIds.has(id)) persist(setIconOverride(id, iconKey));
     },
     setLabelOverride: (id: string, label: string) => {
-      if (allowedIds.has(id)) setPreferences(setLabelOverride(id, label));
+      if (allowedIds.has(id)) persist(setLabelOverride(id, label));
     },
-    reset: () => setPreferences(resetSidebarPreferences()),
+    setGroupOverride: (id: string, group: string) => {
+      if (allowedIds.has(id)) persist(setGroupOverride(id, group));
+    },
+    reset: () => {
+      const next = resetSidebarPreferences();
+      setPreferences(next);
+      void resetNavigationPreferenceApi().catch(() => undefined);
+    },
     iconFor: (item: NavItem) => safeSidebarIconMap[preferences.iconOverrides[item.id] ?? item.iconKey] ?? item.icon,
     isHidden: (id: string) => preferences.hiddenItemIds.includes(id),
     isPinned: (id: string) => preferences.pinnedItemIds.includes(id),
