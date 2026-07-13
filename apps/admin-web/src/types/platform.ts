@@ -347,6 +347,7 @@ export type Verification = {
 };
 
 export type Organization = CurrentOrganization & {
+  organizationType?: CurrentOrganization["type"];
   companyCode?: string | null;
   country?: string | null;
   city?: string | null;
@@ -354,6 +355,12 @@ export type Organization = CurrentOrganization & {
   currency?: string | null;
   defaultLanguage?: string | null;
   plan?: string | null;
+  planName?: string | null;
+  subscriptionStatus?: OrganizationSubscription["status"] | null;
+  verificationStatus?: string | null;
+  usersCount?: number;
+  employeesCount?: number;
+  officesCount?: number;
   planExpiresAt?: string | null;
   createdAt?: string;
   updatedAt?: string;

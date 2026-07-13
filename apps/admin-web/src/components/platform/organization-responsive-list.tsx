@@ -66,7 +66,7 @@ export function OrganizationResponsiveList({
             <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <p>
                 <span className="font-medium text-[var(--color-foreground)]">{t("adminSweep.plan.335c04da")}</span>{" "}
-                <span className="text-[var(--color-muted)]">{organization.plan ?? "Not set"}</span>
+                <span className="text-[var(--color-muted)]">{organization.planName ?? organization.plan ?? "Not set"}</span>
               </p>
               <p>
                 <span className="font-medium text-[var(--color-foreground)]">{t("adminSweep.plan.expires.90599f88")}</span>{" "}
