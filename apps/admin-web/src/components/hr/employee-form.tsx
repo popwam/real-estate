@@ -151,7 +151,7 @@ export function EmployeeForm({
     requiredDocumentType: "",
     requiredDocumentExpiresAt: "",
     documentAiReviewStatus: "NOT_REVIEWED",
-    temporaryPassword: mode === "create" ? "123456" : "",
+    temporaryPassword: "",
     status: employee?.status ?? "ACTIVE",
     organizationId: employee?.organization?.id ?? "",
     phoneCountry: data?.organization?.country ?? "",

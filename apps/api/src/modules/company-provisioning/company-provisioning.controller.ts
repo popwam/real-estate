@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CurrentUser } from '../../common/current-user.decorator';
@@ -17,10 +17,26 @@ import {
   OfficeInputDto,
   OrganizationProfileInputDto,
   PlatformPlanInputDto,
+  PlatformNavigationInputDto,
+  PlatformMetadataInputDto,
   RequiredDocumentPolicyInputDto,
   SubscriptionInputDto,
   WifiRuleInputDto,
 } from './dto/company-provisioning.dto';
+
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@ApiTags('Platform Dashboard')
+@ApiBearerAuth()
+@Controller('platform')
+export class PlatformDashboardController {
+  constructor(private readonly service: CompanyProvisioningService) {}
+
+  @Permissions('platform.dashboard.view')
+  @Get('dashboard')
+  dashboard(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.getPlatformDashboard(user);
+  }
+}
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiTags('Platform Organizations')
@@ -41,6 +57,36 @@ export class PlatformOrganizationsController {
       requestId: request.requestId,
       route: '/platform/organizations',
     });
+  }
+
+  @Permissions('platform.organizations.archive')
+  @Get(':id/deletion-impact')
+  deletionImpact(@Param('id') id: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.organizationDeletionImpact(id, user);
+  }
+
+  @Permissions('platform.organizations.archive')
+  @Post(':id/archive')
+  archive(@Param('id') id: string, @Body() body: { reason?: string }, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.archiveOrganization(id, body.reason, user);
+  }
+
+  @Permissions('platform.organizations.archive')
+  @Post(':id/restore')
+  restore(@Param('id') id: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.restoreOrganization(id, user);
+  }
+
+  @Permissions('platform.organizations.suspend')
+  @Post(':id/suspend')
+  suspendLifecycle(@Param('id') id: string, @Body() body: { reason?: string }, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.suspendOrganizationLifecycle(id, body.reason, user);
+  }
+
+  @Permissions('platform.organizations.delete_draft')
+  @Delete(':id/draft')
+  deleteDraft(@Param('id') id: string, @Body() body: { confirmationName?: string }, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.deleteDraftOrganization(id, body.confirmationName, user);
   }
 
   @Permissions('platform.organizations.manage')
@@ -134,6 +180,45 @@ export class PlatformSettingsController {
   @Get()
   index(@CurrentUser() user: AuthenticatedRequestUser) {
     return this.service.getPlatformSettings(user);
+  }
+
+  @Get('navigation')
+  navigation(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listNavigationConfiguration(user);
+  }
+
+  @Permissions('platform.settings.manage')
+  @Patch('navigation')
+  updateNavigation(@Body() dto: PlatformNavigationInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.updateNavigationConfiguration(dto, user);
+  }
+
+  @Permissions('platform.settings.manage')
+  @Post('navigation/restore-defaults')
+  restoreNavigation(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.restoreNavigationConfiguration(user);
+  }
+
+  @Permissions('platform.metadata.view')
+  @Get('metadata')
+  metadata(@Query('category') category: string | undefined, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.listPlatformMetadata(category, user);
+  }
+
+  @Permissions('platform.metadata.manage')
+  @Post('metadata')
+  createMetadata(@Body() dto: PlatformMetadataInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.createPlatformMetadata(dto, user);
+  }
+
+  @Permissions('platform.metadata.manage')
+  @Patch('metadata/:metadataId')
+  updateMetadata(
+    @Param('metadataId') metadataId: string,
+    @Body() dto: PlatformMetadataInputDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.updatePlatformMetadata(metadataId, dto, user);
   }
 
   @Permissions('platform.plans.view')

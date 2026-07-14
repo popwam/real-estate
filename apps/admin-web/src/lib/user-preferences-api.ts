@@ -39,6 +39,17 @@ export function resetNavigationPreferenceApi() {
   return apiRequest<{ reset: boolean }>("/user-preferences/navigation", { method: "DELETE" });
 }
 
+export function getPlatformWelcomePreferenceApi() {
+  return apiRequest<{ hasDismissedPlatformWelcome: boolean; dismissedAt: string | null }>("/user-preferences/platform-welcome");
+}
+
+export function savePlatformWelcomePreferenceApi(hasDismissedPlatformWelcome: boolean) {
+  return apiRequest<{ hasDismissedPlatformWelcome: boolean; dismissedAt: string | null }>("/user-preferences/platform-welcome", {
+    method: "PUT",
+    body: JSON.stringify({ hasDismissedPlatformWelcome }),
+  });
+}
+
 export function getQuickActionPreferenceApi(widgetKey: string) {
   return apiRequest<QuickActionPreferenceRecord | null>(`/user-preferences/quick-actions/${widgetKey}`);
 }

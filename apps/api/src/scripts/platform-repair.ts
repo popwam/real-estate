@@ -38,7 +38,7 @@ export async function runPlatformRepair() {
       });
       const changes: { organizationId?: string; roleId?: string; isActive?: boolean } = {};
       if (platformOwner.organizationId !== platformOrganization.id) changes.organizationId = platformOrganization.id;
-      if (!platformOwner.roleId && role) changes.roleId = role.id;
+      if (role && platformOwner.roleId !== role.id) changes.roleId = role.id;
       if (Object.keys(changes).length) {
         await prisma.user.update({ where: { id: platformOwner.id }, data: changes });
         console.log('Platform owner organization/role assignment repaired.');
@@ -49,29 +49,9 @@ export async function runPlatformRepair() {
       console.log('Platform owner link skipped: existing platform organization and owner are both required.');
     }
 
-    let plansCreated = 0;
-    for (const plan of basePlans) {
-      const existing = await prisma.platformPlan.findUnique({ where: { code: plan.code }, select: { id: true } });
-      if (!existing) {
-        await prisma.platformPlan.create({ data: plan });
-        plansCreated += 1;
-      }
-    }
-    console.log(`Base plans ensured: ${plansCreated} created, ${basePlans.length - plansCreated} already present.`);
+    console.log('Plans unchanged: plans are business configuration created by the Platform Owner.');
 
-    let policiesCreated = 0;
-    for (const documentType of ['COMMERCIAL_REGISTER', 'TAX_CARD', 'BROKERAGE_LICENSE_OR_REGISTRATION'] as const) {
-      const existing = await prisma.requiredDocumentPolicy.findFirst({
-        where: { countryCode: 'EG', organizationType: 'BROKERAGE', legalForm: null, documentType },
-      });
-      if (!existing) {
-        await prisma.requiredDocumentPolicy.create({
-          data: { countryCode: 'EG', organizationType: 'BROKERAGE', documentType, isRequired: true },
-        });
-        policiesCreated += 1;
-      }
-    }
-    console.log(`Verification policies ensured: ${policiesCreated} created.`);
+    console.log('Verification policies unchanged: country policies are managed by the Platform Owner; safe built-in document requirements remain available as fallback metadata.');
 
     const organizations = await prisma.organization.findMany({ select: { id: true } });
     let settingsCreated = 0;
@@ -84,27 +64,25 @@ export async function runPlatformRepair() {
     }
     console.log(`Base attendance settings ensured: ${settingsCreated} created.`);
 
-    const users = await prisma.user.findMany({ select: { id: true } });
-    let navigationCreated = 0;
-    let quickActionsCreated = 0;
-    for (const user of users) {
-      const navigation = await prisma.userNavigationPreference.findUnique({ where: { userId: user.id }, select: { id: true } });
-      if (!navigation) {
-        await prisma.userNavigationPreference.create({ data: { userId: user.id } });
-        navigationCreated += 1;
-      }
-      const quickActions = await prisma.userQuickActionPreference.findUnique({
-        where: { userId_widgetKey: { userId: user.id, widgetKey: 'hr_quick_actions' } },
-        select: { id: true },
-      });
-      if (!quickActions) {
-        await prisma.userQuickActionPreference.create({
-          data: { userId: user.id, widgetKey: 'hr_quick_actions' },
-        });
-        quickActionsCreated += 1;
+    let navigationSectionsCreated = 0;
+    for (const [index, section] of defaultNavigationSections.entries()) {
+      const existing = await prisma.platformNavigationConfiguration.findUnique({ where: { sectionKey: section.sectionKey }, select: { id: true } });
+      if (!existing) {
+        await prisma.platformNavigationConfiguration.create({ data: { ...section, sortOrder: index } });
+        navigationSectionsCreated += 1;
       }
     }
-    console.log(`Default preferences ensured: ${navigationCreated} navigation, ${quickActionsCreated} quick-action records created.`);
+    console.log(`Default navigation ensured: ${navigationSectionsCreated} sections created.`);
+
+    let metadataCreated = 0;
+    for (const record of baseMetadata) {
+      const existing = await prisma.platformMetadataRecord.findUnique({ where: { category_code: { category: record.category, code: record.code } }, select: { id: true } });
+      if (!existing) {
+        await prisma.platformMetadataRecord.create({ data: record });
+        metadataCreated += 1;
+      }
+    }
+    console.log(`Base metadata ensured: ${metadataCreated} records created.`);
     console.log('Platform repair complete. No users, organizations, files, passwords, or approved business data were deleted or overwritten.');
     return true;
   } finally {
@@ -112,10 +90,27 @@ export async function runPlatformRepair() {
   }
 }
 
-const basePlans = [
-  { code: 'STARTER', name: 'Starter', priceCurrency: 'USD', trialDays: 14, limits: { maxEmployees: 25, maxOffices: 1 }, enabledModules: { hr: true } },
-  { code: 'BUSINESS', name: 'Business', priceCurrency: 'USD', trialDays: 14, limits: { maxEmployees: 100, maxOffices: 5 }, enabledModules: { hr: true, crm: true } },
-] as const;
+const defaultNavigationSections = [
+  ['platform', 'Platform', 'المنصة', 'Plateforme'],
+  ['organizations', 'Organizations', 'المؤسسات', 'Organisations'],
+  ['real-estate', 'Real Estate', 'العقارات', 'Immobilier'],
+  ['human-resources', 'Human Resources', 'الموارد البشرية', 'Ressources humaines'],
+  ['crm', 'CRM', 'إدارة العملاء', 'CRM'],
+  ['finance', 'Finance', 'المالية', 'Finance'],
+  ['legal', 'Legal', 'الشؤون القانونية', 'Juridique'],
+  ['cameras', 'Cameras', 'الكاميرات', 'Caméras'],
+  ['advertising', 'Advertising', 'الإعلانات', 'Publicité'],
+  ['documents', 'Documents', 'المستندات', 'Documents'],
+  ['reports', 'Reports', 'التقارير', 'Rapports'],
+  ['my-workspace', 'My Workspace', 'مساحة عملي', 'Mon espace'],
+  ['settings', 'Settings', 'الإعدادات', 'Paramètres'],
+].map(([sectionKey, en, ar, fr]) => ({ sectionKey, localizedTitle: { en, ar, fr }, isVisible: true, allowedItemKeys: [] }));
+
+const baseMetadata = [
+  ...['PLATFORM', 'DEVELOPER', 'BROKERAGE', 'INDIVIDUAL_BROKER'].map((code) => ({ category: 'ORGANIZATION_TYPE', code, localizedName: { en: code, ar: code, fr: code } })),
+  ...['HR', 'CRM', 'FINANCE', 'LEGAL', 'CAMERAS', 'ADVERTISING'].map((code) => ({ category: 'MODULE', code, localizedName: { en: code, ar: code, fr: code } })),
+  ...['EMAIL_PASSWORD', 'PHONE_PASSWORD'].map((code) => ({ category: 'AUTHENTICATION_METHOD', code, localizedName: { en: code, ar: code, fr: code } })),
+];
 
 if (require.main === module) {
   runPlatformRepair()

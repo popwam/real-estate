@@ -26,6 +26,8 @@ import {
   WebWifiPolicy,
 } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
+import { existsSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { normalizeOptionalPhoneOrThrow } from '../../common/phone-normalization';
 import { requireCanonicalOrganizationType } from '../../common/organization-types';
 import { isPlatformUser, requireCurrentOrganizationId } from '../../common/organization-scope';
@@ -45,10 +47,33 @@ import {
   OfficeInputDto,
   OrganizationProfileInputDto,
   PlatformPlanInputDto,
+  PlatformNavigationInputDto,
+  PlatformMetadataInputDto,
   RequiredDocumentPolicyInputDto,
   SubscriptionInputDto,
   WifiRuleInputDto,
 } from './dto/company-provisioning.dto';
+
+const DEFAULT_NAVIGATION_SECTIONS = [
+  ['platform', { en: 'Platform', ar: 'المنصة', fr: 'Plateforme' }],
+  ['organizations', { en: 'Organizations', ar: 'المؤسسات', fr: 'Organisations' }],
+  ['real-estate', { en: 'Real Estate', ar: 'العقارات', fr: 'Immobilier' }],
+  ['human-resources', { en: 'Human Resources', ar: 'الموارد البشرية', fr: 'Ressources humaines' }],
+  ['crm', { en: 'CRM', ar: 'إدارة العملاء', fr: 'CRM' }],
+  ['finance', { en: 'Finance', ar: 'المالية', fr: 'Finance' }],
+  ['legal', { en: 'Legal', ar: 'الشؤون القانونية', fr: 'Juridique' }],
+  ['cameras', { en: 'Cameras', ar: 'الكاميرات', fr: 'Caméras' }],
+  ['advertising', { en: 'Advertising', ar: 'الإعلانات', fr: 'Publicité' }],
+  ['documents', { en: 'Documents', ar: 'المستندات', fr: 'Documents' }],
+  ['reports', { en: 'Reports', ar: 'التقارير', fr: 'Rapports' }],
+  ['my-workspace', { en: 'My Workspace', ar: 'مساحة عملي', fr: 'Mon espace' }],
+  ['settings', { en: 'Settings', ar: 'الإعدادات', fr: 'Paramètres' }],
+] as const;
+
+const SUPPORTED_LOGIN_METHODS = new Set([
+  'EMAIL_PASSWORD',
+  'PHONE_PASSWORD',
+]);
 
 type Tx = Prisma.TransactionClient;
 
@@ -158,6 +183,9 @@ export class CompanyProvisioningService {
     user: AuthenticatedRequestUser,
   ) {
     this.assertPlatform(user, 'platform.organizations.manage');
+    if ([dto.offices, dto.attendanceLocations, dto.wifiRules, dto.domains].some((items) => items?.length)) {
+      throw new BadRequestException({ code: 'COMPANY_SETUP_REQUIRED', message: 'Offices, attendance, Wi-Fi, and domains are configured after organization activation.' });
+    }
     const profile = dto.profile ?? dto;
     const type = this.enumValue(
       OrganizationType,
@@ -177,6 +205,9 @@ export class CompanyProvisioningService {
         ? OrganizationStatus.DOCUMENTS_REQUIRED
         : requestedStatus;
     const defaultDomain = this.systemDomain(slug);
+    const subscription = dto.subscription?.planCode
+      ? await this.prepareSubscription(dto.subscription)
+      : undefined;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
@@ -191,13 +222,16 @@ export class CompanyProvisioningService {
           currency: this.string(profile.defaultCurrency ?? profile.currency),
           defaultLanguage: this.string(profile.preferredLanguage ?? profile.defaultLanguage),
           status,
-          plan: this.string(dto.subscription?.planCode),
-          planExpiresAt: this.date(dto.subscription?.endsAt),
+          plan: subscription?.planCode,
+          planExpiresAt: subscription?.endsAt,
           profile: {
             create: {
               legalName: this.string(profile.legalName),
               tradeName: this.string(profile.tradeName ?? profile.displayName),
               displayName: this.string(profile.displayName ?? profile.tradeName ?? name),
+              responsibleSubmitterName: this.string(profile.responsibleSubmitterName),
+              responsibleSubmitterEmail: this.optionalEmail(profile.responsibleSubmitterEmail),
+              responsibleSubmitterPhone: normalizeOptionalPhoneOrThrow(profile.responsibleSubmitterPhone, 'responsible submitter phone'),
               commercialRegNumber: this.string(profile.commercialRegisterNumber ?? profile.registrationNumber),
               commercialRegisterNumber: this.string(profile.commercialRegisterNumber ?? profile.registrationNumber),
               commercialRegisterOffice: this.string(profile.commercialRegisterOffice),
@@ -227,8 +261,8 @@ export class CompanyProvisioningService {
               logoUrl: this.string(profile.logoUrl),
             },
           },
-          subscription: { create: this.subscriptionCreate(dto.subscription) },
-          limits: { create: this.limitsCreate(dto.limits) },
+          subscription: subscription ? { create: subscription } : undefined,
+          limits: dto.limits ? { create: this.limitsCreate(dto.limits) } : undefined,
           attendanceSettings: {
             create: {
               allowWebCheckIn: dto.limits?.allowWebCheckIn ?? true,
@@ -285,15 +319,6 @@ export class CompanyProvisioningService {
         },
       });
 
-      const officeMap = await this.createInitialOffices(tx, organization.id, dto.offices ?? []);
-      await this.createInitialAttendanceLocations(
-        tx,
-        organization.id,
-        dto.attendanceLocations ?? [],
-        officeMap,
-      );
-      await this.createInitialWifiRules(tx, organization.id, dto.wifiRules ?? [], officeMap);
-      await this.createInitialDomains(tx, organization.id, dto.domains ?? []);
       const adminUser = dto.adminUser
         ? await this.createFirstAdmin(tx, organization.id, type, dto.adminUser)
         : null;
@@ -367,17 +392,24 @@ export class CompanyProvisioningService {
   ) {
     this.assertPlatform(user, 'platform.subscriptions.manage');
     await this.findOrganization(id);
-    this.assertSubscriptionDates(dto);
+    const subscription = await this.prepareSubscription(dto);
     const updated = await this.prisma.organizationSubscription.upsert({
       where: { organizationId: id },
-      create: { organizationId: id, ...this.subscriptionCreate(dto) },
-      update: this.subscriptionUpdate(dto),
+      create: { organizationId: id, ...subscription },
+      update: subscription,
     });
     await this.prisma.organization.update({
       where: { id },
       data: { plan: updated.planCode, planExpiresAt: updated.endsAt },
     });
-    await this.record(user, 'platform.organization.subscription_updated', 'OrganizationSubscription', updated.id, id);
+    await this.auditLogs.record({
+      action: 'platform.organization.subscription_updated',
+      entityType: 'OrganizationSubscription',
+      entityId: updated.id,
+      organizationId: id,
+      actor: user,
+      metadata: { endDateOverridden: subscription.endDateOverridden, overrideReason: subscription.endDateOverrideReason },
+    });
     return updated;
   }
 
@@ -420,6 +452,7 @@ export class CompanyProvisioningService {
       'platform.organizations.manage',
     ]);
     await this.assertOfficeLimit(organizationId);
+    await this.assertOfficeParent(organizationId, dto);
     const data = this.officeData(organizationId, dto, true);
     const created = await this.prisma.$transaction(async (tx) => {
       if (data.isDefault) await this.clearDefaultOffice(tx, organizationId);
@@ -440,6 +473,7 @@ export class CompanyProvisioningService {
       'platform.organizations.manage',
     ]);
     await this.findOffice(organizationId, officeId);
+    await this.assertOfficeParent(organizationId, dto, officeId);
     const data = this.officeData(organizationId, dto, false);
     const updated = await this.prisma.$transaction(async (tx) => {
       if (data.isDefault) await this.clearDefaultOffice(tx, organizationId);
@@ -546,6 +580,7 @@ export class CompanyProvisioningService {
   }
 
   async listDomains(organizationId: string, user: AuthenticatedRequestUser) {
+    this.assertDomainManagementEnabled();
     this.assertCanManageCompanyResource(organizationId, user, [
       'company.domains.view',
       'company.domains.manage',
@@ -563,6 +598,7 @@ export class CompanyProvisioningService {
     dto: DomainInputDto,
     user: AuthenticatedRequestUser,
   ) {
+    this.assertDomainManagementEnabled();
     this.assertCanManageCompanyResource(organizationId, user, [
       'company.domains.manage',
       'organization_domains.manage_own',
@@ -584,6 +620,7 @@ export class CompanyProvisioningService {
     dto: DomainInputDto,
     user: AuthenticatedRequestUser,
   ) {
+    this.assertDomainManagementEnabled();
     this.assertCanManageCompanyResource(organizationId, user, [
       'company.domains.manage',
       'organization_domains.manage_own',
@@ -709,8 +746,8 @@ export class CompanyProvisioningService {
   async getPlatformSettings(user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.settings.view');
     return {
-      sections: ['plans', 'subscriptions', 'verification-policies', 'modules', 'domains'],
-      domains: this.domainDefaults(),
+      sections: ['countries', 'currencies', 'languages', 'plans', 'subscriptions', 'verification-policies', 'modules', 'authentication-methods', 'navigation'],
+      domainManagementEnabled: process.env.ENABLE_DOMAIN_MANAGEMENT === 'true',
     };
   }
 
@@ -778,6 +815,7 @@ export class CompanyProvisioningService {
   }
 
   getPlatformDomainSettings(user: AuthenticatedRequestUser) {
+    this.assertDomainManagementEnabled();
     this.assertPlatform(user, 'platform.settings.view');
     return this.domainDefaults();
   }
@@ -864,7 +902,7 @@ export class CompanyProvisioningService {
         if (document.expiresAt && document.expiresAt <= now) return false;
         return true;
       });
-      if (!approved && !policy.ownerDocumentRequired) {
+      if (!approved) {
         blockingDocuments.push(policy.documentType);
       }
       for (const document of matchingDocuments) {
@@ -901,9 +939,6 @@ export class CompanyProvisioningService {
       blockingSubscriptionReasons.push('PLAN_REQUIRED');
     }
     if (!organization.limits) missingRequirements.push('LIMITS_REQUIRED');
-    if (!organization.branches.some((office) => office.isActive)) {
-      blockingOfficeReasons.push('ACTIVE_OFFICE_REQUIRED');
-    }
     const hasAdmin = organization.users.some((user) =>
       ['DEVELOPER_OWNER', 'DEVELOPER_ADMIN', 'BROKERAGE_OWNER', 'BROKERAGE_ADMIN', 'INDIVIDUAL_BROKER'].includes(user.userRole),
     );
@@ -915,7 +950,6 @@ export class CompanyProvisioningService {
     if (blockingDocuments.length) missingRequirements.push('REQUIRED_DOCUMENTS_NOT_APPROVED');
     if (blockingOwners.length) missingRequirements.push('OWNER_DOCUMENTS_NOT_APPROVED');
     if (blockingSubscriptionReasons.length) missingRequirements.push('SUBSCRIPTION_NOT_READY');
-    if (blockingOfficeReasons.length) missingRequirements.push('OFFICE_NOT_READY');
     if (blockingAdminReasons.length) missingRequirements.push('FIRST_ADMIN_NOT_READY');
 
     return {
@@ -945,27 +979,34 @@ export class CompanyProvisioningService {
     country: string | null;
     profile: { countryCode: string | null; legalForm: OrganizationLegalForm | null } | null;
   }) {
-    const countryCode = (organization.profile?.countryCode ?? organization.country ?? 'EG').toUpperCase();
-    const policies = await this.prisma.requiredDocumentPolicy.findMany({
+    const countryCode = (organization.profile?.countryCode ?? organization.country ?? '').toUpperCase();
+    const policies = countryCode ? await this.prisma.requiredDocumentPolicy.findMany({
       where: {
         countryCode,
         organizationType: organization.type,
         isActive: true,
         OR: [{ legalForm: organization.profile?.legalForm ?? null }, { legalForm: null }],
       },
-    });
+    }) : [];
     return policies.length ? policies : this.defaultPolicies(countryCode, organization.type);
   }
 
-  private defaultPolicies(countryCode: string, organizationType: OrganizationType) {
-    if (countryCode !== 'EG' || organizationType !== OrganizationType.BROKERAGE) return [];
+  private defaultPolicies(_countryCode: string, organizationType: OrganizationType) {
+    if (organizationType === OrganizationType.PLATFORM) return [];
+    if (organizationType === OrganizationType.INDIVIDUAL_BROKER) {
+      return [
+        this.defaultPolicy(OrganizationDocumentType.OWNER_ID_FRONT, false),
+        this.defaultPolicy(OrganizationDocumentType.OWNER_ID_BACK, false),
+        this.defaultPolicy(OrganizationDocumentType.BROKERAGE_LICENSE_OR_REGISTRATION, true),
+      ];
+    }
     return [
       this.defaultPolicy(OrganizationDocumentType.COMMERCIAL_REGISTER, true),
       this.defaultPolicy(OrganizationDocumentType.TAX_CARD, false),
-      this.defaultPolicy(OrganizationDocumentType.PROOF_OF_ADDRESS, false),
-      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_FRONT, false, true),
-      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_BACK, false, true),
-      this.defaultPolicy(OrganizationDocumentType.AUTHORIZED_SIGNATORY_ID, false, true),
+      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_FRONT, false),
+      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_BACK, false),
+      this.defaultPolicy(OrganizationDocumentType.AUTHORIZED_SIGNATORY_ID, false),
+      this.defaultPolicy(OrganizationDocumentType.AUTHORIZATION_OR_POWER_OF_ATTORNEY, false),
     ];
   }
 
@@ -991,17 +1032,31 @@ export class CompanyProvisioningService {
   }
 
   private platformPlanData(dto: PlatformPlanInputDto, creating: boolean) {
+    const allowedLoginMethods = dto.allowedLoginMethods === undefined
+      ? undefined
+      : [...new Set(dto.allowedLoginMethods.filter((method) => SUPPORTED_LOGIN_METHODS.has(method)))];
+    if (dto.allowedLoginMethods && allowedLoginMethods?.length !== dto.allowedLoginMethods.length) {
+      throw new BadRequestException('One or more login methods are unsupported.');
+    }
+    if (dto.allowedLoginMethods && !allowedLoginMethods?.length) {
+      throw new BadRequestException('At least one implemented login method is required.');
+    }
     return {
       code: creating ? this.requiredString(dto.code, 'code').toLowerCase() : this.string(dto.code)?.toLowerCase(),
       name: creating ? this.requiredString(dto.name, 'name') : this.string(dto.name),
       localizedName: dto.localizedName ? (this.jsonObject(dto.localizedName) as Prisma.InputJsonValue) : undefined,
       description: this.string(dto.description),
+      planType: dto.planType,
       priceAmount: dto.priceAmount === undefined ? undefined : this.decimal(dto.priceAmount, 'priceAmount'),
       priceCurrency: this.string(dto.priceCurrency)?.toUpperCase(),
       billingCycle: dto.billingCycle,
+      durationValue: this.optionalInt(dto.durationValue, 1, 3650),
+      durationUnit: dto.durationUnit,
+      allowsNoExpiry: this.booleanOrUndefined(dto.allowsNoExpiry),
       trialDays: this.optionalInt(dto.trialDays, 0, 3650),
       limits: dto.limits ? (this.jsonObject(dto.limits) as Prisma.InputJsonValue) : undefined,
       enabledModules: Array.isArray(dto.enabledModules) ? dto.enabledModules : undefined,
+      allowedLoginMethods: allowedLoginMethods as Prisma.InputJsonValue | undefined,
       isActive: this.booleanOrUndefined(dto.isActive),
       isArchived: this.booleanOrUndefined(dto.isArchived),
     };
@@ -1102,6 +1157,248 @@ export class CompanyProvisioningService {
     return typeof error === 'object' && error && 'code' in error
       ? String((error as { code?: unknown }).code)
       : undefined;
+  }
+
+  async organizationDeletionImpact(id: string, user: AuthenticatedRequestUser) {
+    this.assertAnyPermission(user, ['platform.organizations.archive', 'platform.organizations.delete_draft']);
+    const organization = await this.findOrganization(id);
+    if (organization.type === OrganizationType.PLATFORM) {
+      throw new ForbiddenException('The Platform organization is protected.');
+    }
+    const [postedFinancialTransactions, activeEmployees, approvedDocuments, activeSubscriptions, activeContracts, attendanceRecords, linkedUsers, totalDocuments] = await Promise.all([
+      this.prisma.accountingTransaction.count({ where: { organizationId: id, status: 'APPROVED' } }),
+      this.prisma.hrEmployee.count({ where: { organizationId: id, status: 'ACTIVE' } }),
+      this.prisma.organizationDocument.count({ where: { organizationId: id, status: 'APPROVED' } }),
+      this.prisma.organizationSubscription.count({ where: { organizationId: id, status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE'] } } }),
+      this.prisma.legalDocument.count({ where: { organizationId: id, status: 'ACTIVE' } }),
+      this.prisma.hrAttendanceRecord.count({ where: { organizationId: id } }),
+      this.prisma.user.count({ where: { organizationId: id } }),
+      this.prisma.organizationDocument.count({ where: { organizationId: id } }),
+    ]);
+    const blockers = {
+      postedFinancialTransactions,
+      activeEmployees,
+      approvedDocuments,
+      activeSubscriptions,
+      activeContracts,
+      attendanceRecords,
+    };
+    return {
+      organization: { id: organization.id, name: organization.name, type: organization.type, status: organization.status },
+      counts: { ...blockers, linkedUsers, totalDocuments },
+      canPermanentlyDeleteDraft:
+        new Set<OrganizationStatus>([OrganizationStatus.DRAFT, OrganizationStatus.DOCUMENTS_REQUIRED, OrganizationStatus.REJECTED]).has(organization.status) &&
+        Object.values(blockers).every((value) => value === 0),
+      blockers: Object.entries(blockers).filter(([, value]) => value > 0).map(([key, value]) => ({ key, count: value })),
+    };
+  }
+
+  async archiveOrganization(id: string, reason: string | undefined, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.organizations.archive');
+    const existing = await this.findOrganization(id);
+    if (existing.type === OrganizationType.PLATFORM) throw new ForbiddenException('The Platform organization is protected.');
+    if (existing.archivedAt) return this.getPlatformOrganization(id, user);
+    const updated = await this.prisma.organization.update({
+      where: { id },
+      data: { archivedAt: new Date(), archivedPreviousStatus: existing.status, status: OrganizationStatus.REVOKED },
+      include: this.organizationInclude(),
+    });
+    await this.auditLogs.record({ action: 'platform.organization.archived', entityType: 'Organization', entityId: id, organizationId: id, actor: user, metadata: { reason: this.string(reason), previousStatus: existing.status } });
+    return this.withPortalLinks(updated);
+  }
+
+  async restoreOrganization(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.organizations.archive');
+    const existing = await this.findOrganization(id);
+    if (existing.type === OrganizationType.PLATFORM) throw new ForbiddenException('The Platform organization is protected.');
+    if (!existing.archivedAt) throw new BadRequestException('Organization is not archived.');
+    const status = existing.archivedPreviousStatus === OrganizationStatus.ACTIVE
+      ? OrganizationStatus.SUSPENDED
+      : existing.archivedPreviousStatus ?? OrganizationStatus.DRAFT;
+    const updated = await this.prisma.organization.update({ where: { id }, data: { archivedAt: null, archivedPreviousStatus: null, status }, include: this.organizationInclude() });
+    await this.record(user, 'platform.organization.restored', 'Organization', id, id);
+    return this.withPortalLinks(updated);
+  }
+
+  async suspendOrganizationLifecycle(id: string, reason: string | undefined, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.organizations.suspend');
+    const existing = await this.findOrganization(id);
+    if (existing.type === OrganizationType.PLATFORM) throw new ForbiddenException('The Platform organization is protected.');
+    const updated = await this.prisma.organization.update({ where: { id }, data: { status: OrganizationStatus.SUSPENDED }, include: this.organizationInclude() });
+    await this.auditLogs.record({ action: 'platform.organization.suspended', entityType: 'Organization', entityId: id, organizationId: id, actor: user, metadata: { reason: this.string(reason), previousStatus: existing.status } });
+    return this.withPortalLinks(updated);
+  }
+
+  async deleteDraftOrganization(id: string, confirmationName: string | undefined, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.organizations.delete_draft');
+    const impact = await this.organizationDeletionImpact(id, user);
+    if (confirmationName !== impact.organization.name) throw new BadRequestException('Type the exact organization name to confirm permanent deletion.');
+    if (!impact.canPermanentlyDeleteDraft) throw new ConflictException({ code: 'ORGANIZATION_DELETE_BLOCKED', blockers: impact.blockers });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.auditLog.create({ data: { action: 'platform.organization.draft_deleted', entityType: 'Organization', entityId: id, actorUserId: user.userId, organizationId: id, metadata: impact.counts } });
+      await tx.organization.delete({ where: { id } });
+    });
+    return { deleted: true, organizationId: id, removedCounts: impact.counts };
+  }
+
+  async getPlatformDashboard(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.dashboard.view');
+    const now = new Date();
+    const expiringAt = new Date(now);
+    expiringAt.setUTCDate(expiringAt.getUTCDate() + 30);
+    const [
+      organizationsByStatus,
+      organizationsByType,
+      organizationsByCountry,
+      subscriptionsByStatus,
+      expiringSubscriptions,
+      planDistribution,
+      supportedCountries,
+      platformUsers,
+      companyUsers,
+      employees,
+      applicantsAwaitingReview,
+      interviewsScheduled,
+      activeOffices,
+      attendanceIssues,
+      unresolvedAlerts,
+      migrationRows,
+    ] = await Promise.all([
+      this.prisma.organization.groupBy({ by: ['status'], orderBy: { status: 'asc' }, _count: { id: true } }),
+      this.prisma.organization.groupBy({ by: ['type'], orderBy: { type: 'asc' }, _count: { id: true } }),
+      this.prisma.organization.groupBy({ by: ['country'], where: { country: { not: null } }, orderBy: { country: 'asc' }, _count: { id: true } }),
+      this.prisma.organizationSubscription.groupBy({ by: ['status'], orderBy: { status: 'asc' }, _count: { id: true } }),
+      this.prisma.organizationSubscription.count({ where: { status: 'ACTIVE', endsAt: { gte: now, lte: expiringAt } } }),
+      this.prisma.organizationSubscription.groupBy({ by: ['planCode', 'planName'], orderBy: [{ planCode: 'asc' }, { planName: 'asc' }], _count: { id: true } }),
+      this.prisma.platformMetadataRecord.count({ where: { category: 'COUNTRY', isActive: true } }),
+      this.prisma.user.count({ where: { organization: { type: 'PLATFORM' } } }),
+      this.prisma.user.count({ where: { organization: { type: { not: 'PLATFORM' } } } }),
+      this.prisma.hrEmployee.count(),
+      this.prisma.hrApplicant.count({ where: { status: { in: ['PENDING_REVIEW', 'DOCUMENTS_MISSING', 'DOCUMENTS_UNDER_REVIEW'] } } }),
+      this.prisma.hrApplicantInterview.count({ where: { status: 'SCHEDULED', scheduledAt: { gte: now } } }),
+      this.prisma.organizationBranch.count({ where: { isActive: true, type: { in: ['HEAD_OFFICE', 'SALES_OFFICE', 'REMOTE_HUB'] } } }),
+      this.prisma.hrAttendanceRecord.count({ where: { OR: [{ requiresReview: true }, { verificationStatus: 'PENDING_REVIEW' }] } }),
+      this.prisma.leadClaimConflict.count({ where: { resolvedAt: null } }),
+      this.prisma.$queryRaw<Array<{ migration_name: string; finished_at: Date | null; rolled_back_at: Date | null; logs: string | null }>>`
+        SELECT migration_name, finished_at, rolled_back_at, logs FROM "_prisma_migrations"
+      `,
+    ]);
+    const count = (rows: Array<{ _count: { id: number } }>) =>
+      rows.reduce((total, row) => total + row._count.id, 0);
+    const failedMigrations = migrationRows.filter((row) => !row.finished_at && !row.rolled_back_at && Boolean(row.logs)).length;
+    const unfinishedMigrations = migrationRows.filter((row) => !row.finished_at && !row.rolled_back_at && !row.logs).length;
+    const appliedMigrations = new Set(migrationRows.filter((row) => row.finished_at && !row.rolled_back_at).map((row) => row.migration_name));
+    const expectedMigrations = this.localMigrationNames();
+    const pendingMigrations = expectedMigrations ? expectedMigrations.filter((name) => !appliedMigrations.has(name)).length : null;
+    return {
+      generatedAt: now.toISOString(),
+      organizations: {
+        total: count(organizationsByStatus),
+        byStatus: Object.fromEntries(organizationsByStatus.map((row) => [row.status, row._count.id])),
+        byType: Object.fromEntries(organizationsByType.map((row) => [row.type, row._count.id])),
+        byCountry: organizationsByCountry.map((row) => ({ country: row.country, count: row._count.id })),
+      },
+      subscriptions: {
+        byStatus: Object.fromEntries(subscriptionsByStatus.map((row) => [row.status, row._count.id])),
+        expiringWithin30Days: expiringSubscriptions,
+        planDistribution: planDistribution.map((row) => ({ planCode: row.planCode, planName: row.planName, count: row._count.id })),
+      },
+      people: { platformUsers, companyUsers, employees, applicantsAwaitingReview, interviewsScheduled },
+      operations: { supportedCountries, activeOffices, attendanceIssues, unresolvedAlerts },
+      health: {
+        database: { connected: true, migrationsReady: failedMigrations === 0 && unfinishedMigrations === 0 && pendingMigrations === 0, failedMigrations, unfinishedMigrations, pendingMigrations },
+        r2: { configured: this.r2Configured() },
+        cloudflareExtraction: { enabled: process.env.DOCUMENT_EXTRACTION_PROVIDER === 'CLOUDFLARE_WORKERS_AI', configured: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_AI_GATEWAY_ID) },
+        integrations: {
+          cameras: process.env.ENABLE_CAMERA_INTEGRATIONS === 'true' ? 'CONFIGURATION_REQUIRED' : 'DISABLED',
+          googleAds: process.env.ENABLE_AD_PROVIDER_INTEGRATIONS === 'true' ? 'CONFIGURATION_REQUIRED' : 'DISABLED',
+          metaAds: process.env.ENABLE_AD_PROVIDER_INTEGRATIONS === 'true' ? 'CONFIGURATION_REQUIRED' : 'DISABLED',
+          tiktokAds: process.env.ENABLE_AD_PROVIDER_INTEGRATIONS === 'true' ? 'CONFIGURATION_REQUIRED' : 'DISABLED',
+        },
+      },
+    };
+  }
+
+  async listNavigationConfiguration(user: AuthenticatedRequestUser) {
+    if (!user.userId) throw new ForbiddenException('Authentication is required.');
+    await this.ensureDefaultNavigationConfiguration();
+    return this.prisma.platformNavigationConfiguration.findMany({ orderBy: [{ sortOrder: 'asc' }, { sectionKey: 'asc' }] });
+  }
+
+  async updateNavigationConfiguration(dto: PlatformNavigationInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.settings.manage');
+    const sections = Array.isArray(dto.sections) ? dto.sections : [];
+    if (sections.length !== DEFAULT_NAVIGATION_SECTIONS.length) {
+      throw new BadRequestException('All navigation sections are required. Disable a section instead of removing it.');
+    }
+    const allowedKeys = new Set(DEFAULT_NAVIGATION_SECTIONS.map(([key]) => key));
+    const seen = new Set<string>();
+    const assignedItems = new Set<string>();
+    await this.prisma.$transaction(sections.map((section, index) => {
+      const sectionKey = this.requiredString(section.sectionKey, 'sectionKey');
+      if (!allowedKeys.has(sectionKey as any) || seen.has(sectionKey)) throw new BadRequestException('Invalid or duplicate navigation section.');
+      seen.add(sectionKey);
+      const allowedItemKeys = this.stringArray(section.allowedItemKeys);
+      if (allowedItemKeys.some((itemKey) => assignedItems.has(itemKey))) {
+        throw new BadRequestException('A navigation item can only be assigned to one section.');
+      }
+      allowedItemKeys.forEach((itemKey) => assignedItems.add(itemKey));
+      return this.prisma.platformNavigationConfiguration.upsert({
+        where: { sectionKey },
+        create: {
+          sectionKey,
+          localizedTitle: this.localizedTitle(section.localizedTitle),
+          sortOrder: index,
+          isVisible: section.isVisible ?? true,
+          allowedItemKeys,
+        },
+        update: {
+          localizedTitle: this.localizedTitle(section.localizedTitle),
+          sortOrder: index,
+          isVisible: section.isVisible ?? true,
+          allowedItemKeys,
+        },
+      });
+    }));
+    await this.record(user, 'platform.navigation.updated', 'PlatformNavigationConfiguration', 'global');
+    return this.listNavigationConfiguration(user);
+  }
+
+  async restoreNavigationConfiguration(user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.settings.manage');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.platformNavigationConfiguration.deleteMany();
+      await this.createDefaultNavigationConfiguration(tx);
+    });
+    await this.record(user, 'platform.navigation.restored', 'PlatformNavigationConfiguration', 'global');
+    return this.listNavigationConfiguration(user);
+  }
+
+  async listPlatformMetadata(category: string | undefined, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.metadata.view');
+    return this.prisma.platformMetadataRecord.findMany({
+      where: category ? { category: category.trim().toUpperCase() } : undefined,
+      orderBy: [{ category: 'asc' }, { sortOrder: 'asc' }, { code: 'asc' }],
+    });
+  }
+
+  async createPlatformMetadata(dto: PlatformMetadataInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.metadata.manage');
+    const created = await this.prisma.platformMetadataRecord.create({ data: this.platformMetadataData(dto, true) as any });
+    await this.record(user, 'platform.metadata.created', 'PlatformMetadataRecord', created.id);
+    return created;
+  }
+
+  async updatePlatformMetadata(id: string, dto: PlatformMetadataInputDto, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.metadata.manage');
+    const current = await this.prisma.platformMetadataRecord.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Platform metadata record not found.');
+    const updated = await this.prisma.platformMetadataRecord.update({
+      where: { id },
+      data: this.platformMetadataData({ ...dto, category: dto.category ?? current.category, code: dto.code ?? current.code }, false) as any,
+    });
+    await this.record(user, 'platform.metadata.updated', 'PlatformMetadataRecord', updated.id);
+    return updated;
   }
 
   private safeErrorName(error: unknown) {
@@ -1259,6 +1556,10 @@ export class CompanyProvisioningService {
     const roleName = dto.roleTemplate ?? 'company_admin';
     const role = await this.ensureRole(tx, organizationId, roleName);
     const name = this.requiredString(dto.name, 'admin name');
+    const temporaryPassword = this.requiredString(dto.temporaryPassword, 'temporaryPassword');
+    if (temporaryPassword.length < 12 || temporaryPassword === '123456') {
+      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
+    }
     const [firstName, ...rest] = name.split(/\s+/);
     const phone = normalizeOptionalPhoneOrThrow(dto.phone, 'admin phone', dto.phoneCountry);
     const user = await tx.user.create({
@@ -1269,7 +1570,7 @@ export class CompanyProvisioningService {
         phone,
         firstName,
         lastName: rest.join(' ') || undefined,
-        passwordHash: await this.hashService.hash(dto.temporaryPassword || '123456'),
+        passwordHash: await this.hashService.hash(temporaryPassword),
         mustChangePassword: true,
         userRole: this.userRoleForOrganization(organizationType, roleName),
       },
@@ -1291,33 +1592,58 @@ export class CompanyProvisioningService {
     return user;
   }
 
-  private subscriptionCreate(dto?: SubscriptionInputDto) {
-    this.assertSubscriptionDates(dto ?? {});
+  private async prepareSubscription(dto: SubscriptionInputDto) {
+    const planCode = this.requiredString(dto.planCode, 'planCode').toLowerCase();
+    const plan = await this.prisma.platformPlan.findUnique({ where: { code: planCode } });
+    if (!plan || !plan.isActive || plan.isArchived) {
+      throw new BadRequestException({ code: 'PLAN_NOT_AVAILABLE', message: 'Select an active Platform plan.' });
+    }
+    const startsAt = this.date(dto.startsAt) ?? new Date();
+    let endsAt: Date | null = this.addPlanDuration(startsAt, plan.durationValue, plan.durationUnit);
+    if (dto.noExpiry) {
+      if (!plan.allowsNoExpiry) throw new BadRequestException('This plan does not allow a subscription without an end date.');
+      endsAt = null;
+    }
+    let endDateOverridden = false;
+    let endDateOverrideReason: string | null = null;
+    if (dto.overrideEndDate) {
+      endsAt = this.date(dto.endsAt) ?? null;
+      endDateOverrideReason = this.requiredString(dto.overrideReason, 'overrideReason');
+      endDateOverridden = true;
+    }
+    if (endsAt && endsAt <= startsAt) throw new BadRequestException('subscription end must be after subscription start.');
+    const trialEndsAt = plan.trialDays > 0 ? this.addDays(startsAt, plan.trialDays) : null;
     return {
-      planCode: this.string(dto?.planCode) ?? 'starter',
-      planName: this.string(dto?.planName) ?? 'Starter',
-      status: dto?.status ?? OrganizationSubscriptionStatus.TRIAL,
-      startsAt: this.date(dto?.startsAt) ?? new Date(),
-      endsAt: this.date(dto?.endsAt),
-      trialEndsAt: this.date(dto?.trialEndsAt),
-      billingCycle: dto?.billingCycle ?? OrganizationBillingCycle.MONTHLY,
-      autoRenew: Boolean(dto?.autoRenew),
-      notes: this.string(dto?.notes),
+      planCode: plan.code,
+      planName: plan.name,
+      status: dto.status ?? (plan.planType === 'TRIAL' ? OrganizationSubscriptionStatus.TRIAL : OrganizationSubscriptionStatus.ACTIVE),
+      startsAt,
+      endsAt,
+      trialEndsAt,
+      billingCycle: plan.billingCycle,
+      autoRenew: Boolean(dto.autoRenew),
+      notes: this.string(dto.notes),
+      endDateOverridden,
+      endDateOverrideReason,
     };
   }
 
-  private subscriptionUpdate(dto: SubscriptionInputDto) {
-    return {
-      planCode: this.string(dto.planCode),
-      planName: this.string(dto.planName),
-      status: dto.status,
-      startsAt: this.date(dto.startsAt),
-      endsAt: this.date(dto.endsAt),
-      trialEndsAt: this.date(dto.trialEndsAt),
-      billingCycle: dto.billingCycle,
-      autoRenew: typeof dto.autoRenew === 'boolean' ? dto.autoRenew : undefined,
-      notes: this.string(dto.notes),
-    };
+  private addPlanDuration(start: Date, value: number, unit: string) {
+    if (unit === 'DAY') return this.addDays(start, value);
+    const result = new Date(start);
+    const day = result.getUTCDate();
+    result.setUTCDate(1);
+    if (unit === 'YEAR') result.setUTCFullYear(result.getUTCFullYear() + value);
+    else result.setUTCMonth(result.getUTCMonth() + value);
+    const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
+    result.setUTCDate(Math.min(day, lastDay));
+    return result;
+  }
+
+  private addDays(start: Date, days: number) {
+    const result = new Date(start);
+    result.setUTCDate(result.getUTCDate() + days);
+    return result;
   }
 
   private limitsCreate(dto?: LimitsInputDto) {
@@ -1368,6 +1694,7 @@ export class CompanyProvisioningService {
     }
     return {
       organizationId,
+      parentBranchId: this.string(dto.parentBranchId),
       name: creating ? this.requiredString(dto.name, 'name') : this.string(dto.name),
       code: this.string(dto.code),
       type: dto.type ?? (creating ? OrganizationBranchType.BRANCH : undefined),
@@ -1477,6 +1804,9 @@ export class CompanyProvisioningService {
       legalName: this.string(dto.legalName),
       tradeName: this.string(dto.tradeName ?? dto.displayName),
       displayName: this.string(dto.displayName ?? dto.tradeName ?? dto.name),
+      responsibleSubmitterName: this.string(dto.responsibleSubmitterName),
+      responsibleSubmitterEmail: this.optionalEmail(dto.responsibleSubmitterEmail),
+      responsibleSubmitterPhone: normalizeOptionalPhoneOrThrow(dto.responsibleSubmitterPhone, 'responsible submitter phone'),
       commercialRegNumber: platform ? this.string(dto.commercialRegisterNumber ?? dto.registrationNumber) : undefined,
       commercialRegisterNumber: platform ? this.string(dto.commercialRegisterNumber ?? dto.registrationNumber) : undefined,
       commercialRegisterOffice: platform ? this.string(dto.commercialRegisterOffice) : undefined,
@@ -1742,11 +2072,18 @@ export class CompanyProvisioningService {
   }
 
   private systemDomain(slug: string) {
+    if (process.env.ENABLE_DOMAIN_MANAGEMENT !== 'true') return null;
     if (process.env.ENABLE_WILDCARD_SUBDOMAINS !== 'true') return null;
     const pattern = process.env.COMPANY_DEFAULT_DOMAIN_PATTERN?.trim();
     if (pattern?.includes('{slug}')) return pattern.replaceAll('{slug}', slug);
     const root = process.env.PUBLIC_ROOT_DOMAIN?.trim();
     return root ? `${slug}.${root}` : null;
+  }
+
+  private assertDomainManagementEnabled() {
+    if (process.env.ENABLE_DOMAIN_MANAGEMENT !== 'true') {
+      throw new NotFoundException('Domain management is disabled.');
+    }
   }
 
   private withPortalLinks(organization: any) {
@@ -1772,6 +2109,115 @@ export class CompanyProvisioningService {
     organizationId = actor.organizationId,
   ) {
     return this.auditLogs.record({ action, entityType, entityId, organizationId, actor });
+  }
+
+  private async assertOfficeParent(organizationId: string, dto: OfficeInputDto, currentId?: string) {
+    const type = dto.type ?? OrganizationBranchType.BRANCH;
+    const isBranch = type === OrganizationBranchType.BRANCH || type === OrganizationBranchType.HEAD_OFFICE;
+    if (isBranch && dto.parentBranchId) throw new BadRequestException('A branch cannot belong to another branch.');
+    if (isBranch || (!dto.parentBranchId && currentId)) return;
+    if (!dto.parentBranchId) throw new BadRequestException('Every office must belong to a branch.');
+    const parent = await this.prisma.organizationBranch.findFirst({ where: { id: dto.parentBranchId, organizationId } });
+    if (!parent || !new Set<OrganizationBranchType>([OrganizationBranchType.BRANCH, OrganizationBranchType.HEAD_OFFICE]).has(parent.type)) {
+      throw new BadRequestException('Select a valid branch for this office.');
+    }
+  }
+
+  private async ensureDefaultNavigationConfiguration() {
+    const count = await this.prisma.platformNavigationConfiguration.count();
+    if (count) return;
+    await this.prisma.$transaction(async (tx) => this.createDefaultNavigationConfiguration(tx));
+  }
+
+  private async createDefaultNavigationConfiguration(tx: Tx) {
+    for (const [index, [sectionKey, localizedTitle]] of DEFAULT_NAVIGATION_SECTIONS.entries()) {
+      await tx.platformNavigationConfiguration.upsert({
+        where: { sectionKey },
+        create: { sectionKey, localizedTitle, sortOrder: index, isVisible: true, allowedItemKeys: [] },
+        update: {},
+      });
+    }
+  }
+
+  private localizedTitle(value: unknown) {
+    const source = this.jsonObject(value);
+    const normalized: Record<string, string> = {};
+    for (const locale of ['en', 'ar', 'fr']) {
+      const title = this.string(source[locale]);
+      if (title) normalized[locale] = title.slice(0, 80);
+    }
+    if (!normalized.en) throw new BadRequestException('English section title is required.');
+    normalized.ar ??= normalized.en;
+    normalized.fr ??= normalized.en;
+    return normalized as Prisma.InputJsonValue;
+  }
+
+  private stringArray(value: unknown) {
+    return [...new Set((Array.isArray(value) ? value : [])
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean))];
+  }
+
+  private platformMetadataData(dto: PlatformMetadataInputDto, creating: boolean) {
+    const allowedCategories = new Set(['COUNTRY', 'CURRENCY', 'LANGUAGE', 'ORGANIZATION_TYPE', 'MODULE', 'VERIFICATION_RULE', 'SUBSCRIPTION_DEFAULT', 'AUTHENTICATION_METHOD']);
+    const category = this.string(dto.category)?.toUpperCase();
+    if ((creating || category) && (!category || !allowedCategories.has(category))) {
+      throw new BadRequestException('Metadata category is invalid.');
+    }
+    const code = this.string(dto.code)?.toUpperCase();
+    if (code && !/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(code)) {
+      throw new BadRequestException('Metadata code is invalid.');
+    }
+    if (category === 'COUNTRY' && code && !/^[A-Z]{2,3}$/.test(code)) {
+      throw new BadRequestException('Country code must contain 2 or 3 letters.');
+    }
+    if (category === 'CURRENCY' && code && !/^[A-Z]{3}$/.test(code)) {
+      throw new BadRequestException('Currency code must contain 3 letters.');
+    }
+    if (category === 'LANGUAGE' && code && !/^[A-Z]{2,3}(?:-[A-Z0-9]{2,8})?$/.test(code)) {
+      throw new BadRequestException('Language code is invalid.');
+    }
+    if (category === 'AUTHENTICATION_METHOD' && code && !SUPPORTED_LOGIN_METHODS.has(code)) {
+      throw new BadRequestException('Authentication method is not implemented.');
+    }
+    return {
+      category,
+      code: creating ? this.requiredString(code, 'code') : code,
+      localizedName: creating || dto.localizedName ? this.localizedTitle(dto.localizedName) : undefined,
+      configuration: dto.configuration ? this.jsonObject(dto.configuration) as Prisma.InputJsonValue : undefined,
+      sortOrder: this.optionalInt(dto.sortOrder, 0, 100000),
+      isActive: this.booleanOrUndefined(dto.isActive),
+    };
+  }
+
+  private r2Configured() {
+    const prefixes = [
+      'PUBLIC_MEDIA',
+      'PROJECT_MEDIA',
+      'COMPANY_DOCUMENTS',
+      'CHAT_ATTACHMENTS',
+      'HR_DOCUMENTS',
+      'ATTENDANCE_EVIDENCE',
+      'QUARANTINE_UPLOADS',
+    ];
+    return Boolean(process.env.R2_ENDPOINT) && prefixes.every((prefix) =>
+      [`R2_${prefix}_BUCKET`, `R2_${prefix}_ACCESS_KEY_ID`, `R2_${prefix}_SECRET_ACCESS_KEY`]
+        .every((key) => Boolean(process.env[key]?.trim())),
+    );
+  }
+
+  private localMigrationNames() {
+    const candidates = [
+      resolve(process.cwd(), 'prisma', 'migrations'),
+      resolve(process.cwd(), 'apps', 'api', 'prisma', 'migrations'),
+      resolve(__dirname, '..', '..', '..', 'prisma', 'migrations'),
+    ];
+    const directory = candidates.find((candidate) => existsSync(candidate));
+    if (!directory) return null;
+    return readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
   }
 
   private string(value: unknown) {

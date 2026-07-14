@@ -12,6 +12,9 @@ export function DashboardKpiCard({
   icon,
   isLoading = false,
   error,
+  loadingDescription = "Loading a current, organization-scoped summary.",
+  errorDescription = "This summary could not be loaded. Open the workspace to review it directly.",
+  unavailableLabel = "Unavailable",
 }: {
   label: string;
   value?: number;
@@ -22,10 +25,13 @@ export function DashboardKpiCard({
   icon: ReactNode;
   isLoading?: boolean;
   error?: Error | null;
+  loadingDescription?: string;
+  errorDescription?: string;
+  unavailableLabel?: string;
 }) {
   const hasValue = typeof value === "number";
   const displayedDescription = error
-    ? "This summary could not be loaded. Open the workspace to review it directly."
+    ? errorDescription
     : hasValue && value === 0
       ? emptyDescription
       : description;
@@ -49,11 +55,11 @@ export function DashboardKpiCard({
           <p
             className={`text-3xl font-semibold tracking-tight ${error ? "text-[var(--color-danger)]" : "text-[var(--color-foreground)]"}`}
           >
-            {error ? "Unavailable" : (value ?? 0).toLocaleString()}
+            {error ? unavailableLabel : (value ?? 0).toLocaleString()}
           </p>
         )}
         <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-          {isLoading ? "Loading a current, organization-scoped summary." : displayedDescription}
+          {isLoading ? loadingDescription : displayedDescription}
         </p>
       </div>
       <Link

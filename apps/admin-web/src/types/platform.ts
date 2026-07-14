@@ -144,10 +144,15 @@ export type PlatformPlan = {
   description?: string | null;
   priceAmount?: number | string | null;
   priceCurrency: string;
-  billingCycle: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+  planType: "FREE" | "TRIAL" | "PAID" | "CUSTOM";
+  billingCycle: "DAY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+  durationValue: number;
+  durationUnit: "DAY" | "MONTH" | "YEAR";
+  allowsNoExpiry: boolean;
   trialDays: number;
   limits?: Record<string, unknown> | null;
   enabledModules: string[];
+  allowedLoginMethods: string[];
   isActive: boolean;
   isArchived: boolean;
 };
@@ -182,7 +187,8 @@ export type ActivationCheck = {
 
 export type PlatformSettingsSummary = {
   sections: string[];
-  domains: {
+  domainManagementEnabled: boolean;
+  domains?: {
     publicRootDomain: string;
     publicStagingRootDomain: string;
     publicWebBaseUrl: string;
@@ -191,6 +197,61 @@ export type PlatformSettingsSummary = {
     defaultDomainPattern?: string | null;
     stagingDomainPattern?: string | null;
   };
+};
+
+export type PlatformDashboard = {
+  generatedAt: string;
+  organizations: {
+    total: number;
+    byStatus: Record<string, number>;
+    byType: Record<string, number>;
+    byCountry: Array<{ country: string; count: number }>;
+  };
+  subscriptions: {
+    byStatus: Record<string, number>;
+    expiringWithin30Days: number;
+    planDistribution: Array<{ planCode: string; planName: string; count: number }>;
+  };
+  people: {
+    platformUsers: number;
+    companyUsers: number;
+    employees: number;
+    applicantsAwaitingReview: number;
+    interviewsScheduled: number;
+  };
+  operations: {
+    supportedCountries: number;
+    activeOffices: number;
+    attendanceIssues: number;
+    unresolvedAlerts: number;
+  };
+  health: {
+    database: { connected: boolean; migrationsReady: boolean; failedMigrations: number; unfinishedMigrations: number; pendingMigrations: number | null };
+    r2: { configured: boolean };
+    cloudflareExtraction: { enabled: boolean; configured: boolean };
+    integrations: Record<string, string>;
+  };
+};
+
+export type PlatformNavigationSection = {
+  id: string;
+  sectionKey: string;
+  localizedTitle: { en?: string; ar?: string; fr?: string };
+  sortOrder: number;
+  isVisible: boolean;
+  allowedItemKeys: string[];
+};
+
+export type PlatformMetadataRecord = {
+  id: string;
+  category: "COUNTRY" | "CURRENCY" | "LANGUAGE" | string;
+  code: string;
+  localizedName: { en?: string; ar?: string; fr?: string };
+  configuration: Record<string, unknown>;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type MetadataOption = {
@@ -227,9 +288,14 @@ export type OrganizationSubscription = {
   startsAt?: string | null;
   endsAt?: string | null;
   trialEndsAt?: string | null;
-  billingCycle: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+  billingCycle: "DAY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
   autoRenew: boolean;
   notes?: string | null;
+  endDateOverridden?: boolean;
+  endDateOverrideReason?: string | null;
+  overrideEndDate?: boolean;
+  overrideReason?: string;
+  noExpiry?: boolean;
 };
 
 export type OrganizationLimits = {
@@ -372,6 +438,8 @@ export type Organization = CurrentOrganization & {
   planExpiresAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  archivedAt?: string | null;
+  archivedPreviousStatus?: OrganizationStatus | null;
   profile?: OrganizationProfile | null;
   subscription?: OrganizationSubscription | null;
   limits?: OrganizationLimits | null;
@@ -386,6 +454,13 @@ export type Organization = CurrentOrganization & {
     defaultDomain?: string | null;
     wildcardDnsRequired: boolean;
   };
+};
+
+export type OrganizationDeletionImpact = {
+  organization: Pick<Organization, "id" | "name" | "type" | "status">;
+  counts: Record<string, number>;
+  canPermanentlyDeleteDraft: boolean;
+  blockers: Array<{ key: string; count: number }>;
 };
 
 export type OrganizationReview = Organization & {
@@ -405,6 +480,9 @@ export type PlatformOrganizationInput = {
   displayName?: string;
   legalName?: string;
   tradeName?: string;
+  responsibleSubmitterName?: string;
+  responsibleSubmitterEmail?: string;
+  responsibleSubmitterPhone?: string;
   logoUrl?: string;
   companyCode?: string;
   slug?: string;

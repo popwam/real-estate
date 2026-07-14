@@ -426,7 +426,6 @@ export class HrRecruitmentService {
       allowLogin: body.allowLogin === true,
       role: this.string(body.role) ?? 'employee_self_service',
       permissions: Array.isArray(body.permissions) ? body.permissions.map(String) : undefined,
-      temporaryPassword: '123456',
       hireDate: body.startDate ?? body.startsAt ?? new Date().toISOString(),
       status: 'ACTIVE',
     } as AnyRecord);
@@ -471,7 +470,11 @@ export class HrRecruitmentService {
       actor: user,
       metadata: { employeeId: employee.id, allowLogin: body.allowLogin === true },
     });
-    return { applicantId: applicant.id, employee, defaultPassword: body.allowLogin === true ? '123456' : undefined };
+    return {
+      applicantId: applicant.id,
+      employee,
+      defaultPassword: body.allowLogin === true ? employee.temporaryPassword : undefined,
+    };
   }
 
   async getSettings(user: AuthenticatedRequestUser, requestedOrganizationId?: string) {

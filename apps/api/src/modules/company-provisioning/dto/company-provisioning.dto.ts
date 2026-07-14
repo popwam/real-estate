@@ -9,6 +9,8 @@ import {
   OrganizationLegalForm,
   OrganizationSubscriptionStatus,
   OrganizationType,
+  PlatformPlanType,
+  PlanDurationUnit,
   OrganizationWifiRuleAppliesTo,
   WebWifiPolicy,
 } from '@prisma/client';
@@ -19,6 +21,9 @@ export class OrganizationProfileInputDto {
   legalName?: string;
   tradeName?: string;
   displayName?: string;
+  responsibleSubmitterName?: string;
+  responsibleSubmitterEmail?: string;
+  responsibleSubmitterPhone?: string;
   name?: string;
   companyCode?: string;
   slug?: string;
@@ -66,6 +71,9 @@ export class SubscriptionInputDto {
   billingCycle?: OrganizationBillingCycle;
   autoRenew?: boolean;
   notes?: string;
+  overrideEndDate?: boolean;
+  overrideReason?: string;
+  noExpiry?: boolean;
 }
 
 export class LimitsInputDto {
@@ -87,6 +95,7 @@ export class LimitsInputDto {
 }
 
 export class OfficeInputDto {
+  parentBranchId?: string;
   name?: string;
   code?: string;
   type?: OrganizationBranchType;
@@ -181,14 +190,40 @@ export class PlatformPlanInputDto {
   name?: string;
   localizedName?: Record<string, unknown>;
   description?: string;
+  planType?: PlatformPlanType;
   priceAmount?: number;
   priceCurrency?: string;
   billingCycle?: OrganizationBillingCycle;
+  durationValue?: number;
+  durationUnit?: PlanDurationUnit;
+  allowsNoExpiry?: boolean;
   trialDays?: number;
   limits?: Record<string, unknown>;
   enabledModules?: Record<string, unknown>;
+  allowedLoginMethods?: string[];
   isActive?: boolean;
   isArchived?: boolean;
+}
+
+export class PlatformNavigationSectionInputDto {
+  sectionKey?: string;
+  localizedTitle?: Record<string, string>;
+  sortOrder?: number;
+  isVisible?: boolean;
+  allowedItemKeys?: string[];
+}
+
+export class PlatformNavigationInputDto {
+  sections?: PlatformNavigationSectionInputDto[];
+}
+
+export class PlatformMetadataInputDto {
+  category?: string;
+  code?: string;
+  localizedName?: Record<string, string>;
+  configuration?: Record<string, unknown>;
+  sortOrder?: number;
+  isActive?: boolean;
 }
 
 export class CompanyRoleTemplateInputDto {

@@ -113,6 +113,7 @@ export function useSidebarPreferences(allowedItems: NavItem[] = []) {
       setPreferences(next);
       void resetNavigationPreferenceApi().catch(() => undefined);
     },
+    apply: (next: SidebarPreferences) => persist(saveSidebarPreferences(next)),
     iconFor: (item: NavItem) => safeSidebarIconMap[preferences.iconOverrides[item.id] ?? item.iconKey] ?? item.icon,
     isHidden: (id: string) => preferences.hiddenItemIds.includes(id),
     isPinned: (id: string) => preferences.pinnedItemIds.includes(id),

@@ -3,7 +3,8 @@
 import { FormEvent, useState } from "react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, Save } from "lucide-react";
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
+import { archivePlatformOrganizationApi, deleteDraftPlatformOrganizationApi, getOrganizationDeletionImpactApi, restorePlatformOrganizationApi, suspendPlatformOrganizationApi } from "@/lib/api";
 import {
   useCreateOrganizationAttendanceLocation,
   useActivateOrganization,
@@ -42,6 +44,7 @@ import {
   usePlatformOrganization,
   usePlatformOrganizationLimits,
   usePlatformOrganizationSubscription,
+  usePlatformPlans,
   useUpdateOrganizationLegal,
   useUpdateOrganizationPublicSite,
   useReviewOrganizationDocument,
@@ -62,7 +65,7 @@ const tabPaths: Array<{ id: Tab; key: string; href: (id: string) => string }> = 
   { id: "offices", key: "provisioning.tab.offices", href: (id) => `/platform/organizations/${id}/offices` },
   { id: "attendance", key: "provisioning.tab.attendance", href: (id) => `/platform/organizations/${id}/attendance` },
   { id: "wifi", key: "provisioning.tab.wifi", href: (id) => `/platform/organizations/${id}/wifi-rules` },
-  { id: "domains", key: "provisioning.tab.domains", href: (id) => `/platform/organizations/${id}/domains` },
+  ...(process.env.NEXT_PUBLIC_ENABLE_DOMAIN_MANAGEMENT === "true" ? [{ id: "domains" as const, key: "provisioning.tab.domains", href: (id: string) => `/platform/organizations/${id}/domains` }] : []),
   { id: "public-site", key: "provisioning.tab.publicSite", href: (id) => `/platform/organizations/${id}/public-site` },
   { id: "legal-tax", key: "provisioning.tab.legalTax", href: (id) => `/platform/organizations/${id}/legal-tax` },
   { id: "owners", key: "provisioning.tab.owners", href: (id) => `/platform/organizations/${id}/owners` },
@@ -226,8 +229,51 @@ function OverviewTab({ id }: { id: string }) {
         </div>
         {activate.error ? <ErrorLine message={activate.error.message} /> : null}
       </DetailCard>
+      <OrganizationLifecyclePanel id={id} />
     </div>
   );
+}
+
+function OrganizationLifecyclePanel({ id }: { id: string }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const organization = usePlatformOrganization(id);
+  const impact = useQuery({ queryKey: ["platform", "organizations", id, "deletion-impact"], queryFn: () => getOrganizationDeletionImpactApi(id) });
+  const [reason, setReason] = useState("");
+  const [confirmationName, setConfirmationName] = useState("");
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["platform", "organizations"] });
+    await queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] });
+    await queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "deletion-impact"] });
+  };
+  const archive = useMutation({ mutationFn: () => archivePlatformOrganizationApi(id, reason || undefined), onSuccess: refresh });
+  const restore = useMutation({ mutationFn: () => restorePlatformOrganizationApi(id), onSuccess: refresh });
+  const suspend = useMutation({ mutationFn: () => suspendPlatformOrganizationApi(id, reason || undefined), onSuccess: refresh });
+  const remove = useMutation({ mutationFn: () => deleteDraftPlatformOrganizationApi(id, confirmationName), onSuccess: () => router.push("/platform/organizations") });
+  const data = organization.data;
+  if (!data || data.type === "PLATFORM") return null;
+  const actionError = archive.error ?? restore.error ?? suspend.error ?? remove.error ?? impact.error;
+  return <DetailCard title={t("organizationLifecycle.title")}>
+    <p className="text-sm leading-6 text-[var(--color-muted)]">{t("organizationLifecycle.description")}</p>
+    <label className="mt-4 block space-y-2"><Label htmlFor="organization-lifecycle-reason">{t("organizationLifecycle.reason")}</Label><Input id="organization-lifecycle-reason" value={reason} onChange={(event) => setReason(event.target.value)} /></label>
+    <div className="mt-4 flex flex-wrap gap-2">
+      {data.archivedAt ? <Button type="button" onClick={() => restore.mutate()} disabled={restore.isPending}>{t("organizationLifecycle.restore")}</Button> : <Button type="button" className="ui-button-secondary" onClick={() => archive.mutate()} disabled={archive.isPending}>{t("organizationLifecycle.archive")}</Button>}
+      {!data.archivedAt && data.status !== "SUSPENDED" ? <Button type="button" className="ui-button-secondary" onClick={() => suspend.mutate()} disabled={suspend.isPending}>{t("organizationLifecycle.suspend")}</Button> : null}
+    </div>
+    {impact.data ? <div className="mt-5 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+      <h3 className="text-sm font-semibold">{t("organizationLifecycle.impact")}</h3>
+      <ul className="mt-2 grid gap-1 text-sm text-[var(--color-muted)] sm:grid-cols-2">
+        {Object.entries(impact.data.counts).map(([key, count]) => <li key={key}>{key.replaceAll("_", " ")}: {count}</li>)}
+      </ul>
+      {impact.data.canPermanentlyDeleteDraft ? <div className="mt-4 space-y-3 border-t border-[var(--color-border)] pt-4">
+        <p className="text-sm text-[var(--color-danger)]">{t("organizationLifecycle.deleteDraftWarning", { name: data.name })}</p>
+        <Input value={confirmationName} onChange={(event) => setConfirmationName(event.target.value)} aria-label={t("organizationLifecycle.confirmName")} placeholder={data.name} />
+        <Button type="button" className="bg-[var(--color-danger)] text-white" disabled={confirmationName !== data.name || remove.isPending} onClick={() => remove.mutate()}>{t("organizationLifecycle.deleteDraft")}</Button>
+      </div> : <p className="mt-3 text-sm text-[var(--color-muted)]">{t("organizationLifecycle.deleteBlocked")}</p>}
+    </div> : null}
+    {actionError ? <ErrorLine message={actionError.message} /> : null}
+  </DetailCard>;
 }
 
 function RequirementList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
@@ -248,18 +294,26 @@ function RequirementList({ title, items, empty }: { title: string; items: string
 function SubscriptionTab({ id }: { id: string }) {
   const { t } = useI18n();
   const { data } = usePlatformOrganizationSubscription(id);
+  const plans = usePlatformPlans();
   const update = useUpdatePlatformOrganizationSubscription(id);
+  const availablePlans = (plans.data ?? []).filter((plan) => plan.isActive && !plan.isArchived);
+  const [planCode, setPlanCode] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [overrideEndDate, setOverrideEndDate] = useState(false);
+  const selectedPlan = availablePlans.find((plan) => plan.code === (planCode || data?.planCode)) ?? availablePlans[0];
+  const effectiveStart = startsAt || dateOnly(data?.startsAt) || new Date().toISOString().slice(0, 10);
+  const calculatedEnd = selectedPlan?.allowsNoExpiry ? null : calculatePlanEnd(effectiveStart, selectedPlan?.durationValue, selectedPlan?.durationUnit);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     update.mutate({
       planCode: optional(form, "planCode"),
-      planName: optional(form, "planName"),
       status: optional(form, "status") as never,
       startsAt: optional(form, "startsAt"),
-      endsAt: optional(form, "endsAt"),
-      trialEndsAt: optional(form, "trialEndsAt"),
-      billingCycle: optional(form, "billingCycle") as never,
+      overrideEndDate: checked(form, "overrideEndDate"),
+      endsAt: checked(form, "overrideEndDate") ? optional(form, "endsAt") : undefined,
+      overrideReason: checked(form, "overrideEndDate") ? optional(form, "overrideReason") : undefined,
+      noExpiry: checked(form, "noExpiry"),
       autoRenew: checked(form, "autoRenew"),
       notes: optional(form, "notes"),
     });
@@ -267,20 +321,35 @@ function SubscriptionTab({ id }: { id: string }) {
   return (
     <DetailCard title={t("provisioning.subscription")}>
       <form className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={submit}>
-        <TextField label={t("provisioning.plan")} name="planCode" defaultValue={data?.planCode ?? "starter"} />
-        <TextField label={t("provisioning.planName")} name="planName" defaultValue={data?.planName ?? "Starter"} />
+        {availablePlans.length ? <label className="space-y-2"><Label htmlFor="subscription-plan">{t("provisioning.plan")}</Label><select id="subscription-plan" name="planCode" className="ui-input" value={planCode || data?.planCode || availablePlans[0]?.code} onChange={(event) => setPlanCode(event.target.value)}>{availablePlans.map((plan) => <option key={plan.id} value={plan.code}>{plan.name}</option>)}</select></label> : <FeedbackState tone="error" title={t("platformDashboard.zeroPlans")} description={t("platformSettings.createPlanFirst")} />}
         <SelectField label={t("common.status")} name="status" options={["TRIAL", "ACTIVE", "PAST_DUE", "EXPIRED", "CANCELLED", "SUSPENDED"]} defaultValue={data?.status ?? "TRIAL"} />
-        <TextField label={t("provisioning.subscriptionStart")} name="startsAt" type="date" defaultValue={dateOnly(data?.startsAt)} />
-        <TextField label={t("provisioning.subscriptionEnd")} name="endsAt" type="date" defaultValue={dateOnly(data?.endsAt)} />
-        <TextField label={t("provisioning.trialEnd")} name="trialEndsAt" type="date" defaultValue={dateOnly(data?.trialEndsAt)} />
-        <SelectField label={t("provisioning.billingCycle")} name="billingCycle" options={["MONTHLY", "QUARTERLY", "YEARLY", "CUSTOM"]} defaultValue={data?.billingCycle ?? "MONTHLY"} />
+        <label className="space-y-2"><Label htmlFor="subscription-start">{t("provisioning.subscriptionStart")}</Label><Input id="subscription-start" name="startsAt" type="date" value={effectiveStart} onChange={(event) => setStartsAt(event.target.value)} required /></label>
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm"><p className="font-semibold">{t("provisioning.subscriptionEnd")}</p><p className="text-[var(--color-muted)]">{calculatedEnd ?? t("platformSettings.allowsNoExpiry")}</p><p className="mt-1 text-xs text-[var(--color-muted)]">{selectedPlan ? `${selectedPlan.durationValue} ${selectedPlan.durationUnit} · ${selectedPlan.billingCycle}` : ""}</p></div>
+        {selectedPlan?.allowsNoExpiry ? <CheckBox label={t("platformSettings.allowsNoExpiry")} name="noExpiry" /> : null}
+        <label className="flex items-center gap-3"><input type="checkbox" name="overrideEndDate" checked={overrideEndDate} onChange={(event) => setOverrideEndDate(event.target.checked)} />{t("provisioning.overrideEndDate")}</label>
+        {overrideEndDate ? <><TextField label={t("provisioning.subscriptionEnd")} name="endsAt" type="date" required /><TextField label={t("provisioning.overrideReason")} name="overrideReason" required /></> : null}
         <CheckBox label={t("provisioning.autoRenew")} name="autoRenew" defaultChecked={Boolean(data?.autoRenew)} />
         <TextField label={t("provisioning.internalNotes")} name="notes" defaultValue={data?.notes ?? ""} />
-        <SaveButton pending={update.isPending} />
+        <SaveButton pending={update.isPending || !availablePlans.length} />
       </form>
       {update.error ? <ErrorLine message={update.error.message} /> : null}
     </DetailCard>
   );
+}
+
+function calculatePlanEnd(start: string, durationValue?: number, durationUnit?: string) {
+  if (!start || !durationValue || !durationUnit) return "";
+  const date = new Date(`${start}T00:00:00.000Z`);
+  if (durationUnit === "DAY") date.setUTCDate(date.getUTCDate() + durationValue);
+  else {
+    const day = date.getUTCDate();
+    date.setUTCDate(1);
+    if (durationUnit === "YEAR") date.setUTCFullYear(date.getUTCFullYear() + durationValue);
+    else date.setUTCMonth(date.getUTCMonth() + durationValue);
+    const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+    date.setUTCDate(Math.min(day, lastDay));
+  }
+  return date.toISOString().slice(0, 10);
 }
 
 function LimitsTab({ id }: { id: string }) {

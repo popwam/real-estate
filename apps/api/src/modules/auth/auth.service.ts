@@ -134,6 +134,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid login details.');
     }
 
+    const loginMethodAllowed = await this.loginMethodAllowed(user, identifierKind);
+    if (!loginMethodAllowed) {
+      await this.recordLoginAudit('auth.login_failed', user, identifierKind, 'login_method_not_allowed');
+      throw new UnauthorizedException('Invalid login details.');
+    }
+
     if (!user.passwordHash) {
       await this.recordLoginAudit(
         'auth.login_failed',
@@ -540,6 +546,33 @@ export class AuthService {
       return false;
     }
     return true;
+  }
+
+  private async loginMethodAllowed(user: any, identifierKind: 'email' | 'phone') {
+    const organization = user.organization;
+    if (!organization || organization.type === 'PLATFORM') return true;
+
+    const method = identifierKind === 'email' ? 'EMAIL_PASSWORD' : 'PHONE_PASSWORD';
+    const enabledByCompany = this.stringValues(organization.enabledLoginMethods);
+    if (!enabledByCompany.includes(method)) return false;
+
+    const planCode = organization.subscription?.planCode;
+    if (!planCode) return false;
+    const plan = await this.prisma.platformPlan.findUnique({
+      where: { code: planCode },
+      select: { isActive: true, isArchived: true, allowedLoginMethods: true },
+    });
+    return Boolean(
+      plan?.isActive &&
+      !plan.isArchived &&
+      this.stringValues(plan.allowedLoginMethods).includes(method),
+    );
+  }
+
+  private stringValues(value: unknown) {
+    return Array.isArray(value)
+      ? value.filter((entry): entry is string => typeof entry === 'string')
+      : [];
   }
 
   private loginFailureReason(user: any | undefined) {

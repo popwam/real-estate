@@ -61,6 +61,7 @@ export type NavItem = {
   icon: typeof Home;
   groupKey: string;
   group: string;
+  sectionKey: string;
   roles?: string[];
   organizationTypes?: string[];
   permissions?: string[];
@@ -70,7 +71,7 @@ export type NavItem = {
   isMobilePrimary?: boolean;
 };
 
-type RawNavItem = Omit<NavItem, "labelKey" | "iconKey" | "groupKey">;
+type RawNavItem = Omit<NavItem, "labelKey" | "iconKey" | "groupKey" | "sectionKey">;
 
 const globalHrNavItems: RawNavItem[] = [
   { id: "hr-dashboard", href: "/hr/dashboard", label: "HR Dashboard", icon: BriefcaseBusiness, group: "Human Resources", permissions: ["hr.dashboard.view", "hr.view"], desktopPriority: 100, mobilePriority: 100 },
@@ -188,6 +189,17 @@ const brokerageNavItems: RawNavItem[] = [
   { id: "my-qr-passes", href: "/my/qr-passes", label: "My QR Passes", icon: KeyRound, group: "My Workspace", permissions: ["self.qr_passes.view"], desktopPriority: 91, mobilePriority: 91 },
 ];
 
+const unfinishedHrItems = new Set([
+  "hr-recruitment-interviews",
+  "hr-recruitment-offers",
+  "hr-recruitment-documents",
+  "hr-finance",
+  "hr-assets",
+  "hr-tasks",
+  "hr-hr-documents",
+  "hr-reports",
+]);
+
 export const platformNav = withNavMetadata(platformNavItems);
 export const developerNav = withNavMetadata(developerNavItems);
 export const brokerageNav = withNavMetadata(brokerageNavItems);
@@ -203,12 +215,46 @@ export const moreNavItem: NavItem = withNavMetadata([{
 }])[0];
 
 function withNavMetadata(items: RawNavItem[]): NavItem[] {
-  return items.map((item) => ({
-    ...item,
-    labelKey: `navigation.labels.${messageKey(item.label)}`,
-    groupKey: `navigation.groups.${messageKey(item.group)}`,
-    iconKey: iconKeyFor(item),
-  }));
+  return items.filter(isProductionNavigationItem).map((item) => {
+    const group = canonicalSection(item);
+    return {
+      ...item,
+      group,
+      sectionKey: sectionKeyForGroup(group),
+      labelKey: `navigation.labels.${messageKey(item.label)}`,
+      groupKey: `navigation.groups.${messageKey(group)}`,
+      iconKey: iconKeyFor(item),
+    };
+  });
+}
+
+function isProductionNavigationItem(item: RawNavItem) {
+  if (unfinishedHrItems.has(item.id)) return false;
+  if (item.id.includes("domains") && process.env.NEXT_PUBLIC_ENABLE_DOMAIN_MANAGEMENT !== "true") return false;
+  if (item.id.includes("cameras") && process.env.NEXT_PUBLIC_ENABLE_CAMERA_INTEGRATIONS !== "true") return false;
+  if (item.id.includes("ads") && process.env.NEXT_PUBLIC_ENABLE_AD_PROVIDER_INTEGRATIONS !== "true") return false;
+  return true;
+}
+
+function canonicalSection(item: RawNavItem) {
+  const value = `${item.id} ${item.href} ${item.label}`.toLowerCase();
+  if (value.includes("organization") || value.includes("verification")) return "Organizations";
+  if (value.includes("real-estate") || value.includes("unit") || value.includes("project") || value.includes("inventory")) return "Real Estate";
+  if (value.includes("hr-") || value.includes("/hr/") || value.includes("employee") || value.includes("attendance") || value.includes("recruitment")) return "Human Resources";
+  if (value.includes("crm") || value.includes("lead") || value.includes("conversation")) return "CRM";
+  if (value.includes("accounting") || value.includes("finance") || value.includes("deal") || value.includes("commission") || value.includes("reservation")) return "Finance";
+  if (value.includes("legal") || value.includes("agreement")) return "Legal";
+  if (value.includes("camera")) return "Cameras";
+  if (value.includes("ads") || value.includes("advert")) return "Advertising";
+  if (value.includes("document") || value.includes("file") || value.includes("import")) return "Documents";
+  if (value.includes("report") || value.includes("export") || value.includes("conflict") || value.includes("operation")) return "Reports";
+  if (value.includes("my-") || value.includes("/my/") || value.includes("workspace")) return "My Workspace";
+  if (value.includes("setting") || value.includes("domain") || value.includes("website")) return "Settings";
+  return "Platform";
+}
+
+function sectionKeyForGroup(group: string) {
+  return group.toLowerCase().replace(/\s+/g, "-");
 }
 
 function messageKey(value: string) {

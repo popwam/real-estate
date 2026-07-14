@@ -1,160 +1,112 @@
 "use client";
 
-import {
-  AlertTriangle,
-  Building2,
-  ClipboardCheck,
-  Globe2,
-  MessagesSquare,
-  ShieldCheck,
-  UserPlus,
-  UsersRound,
-} from "lucide-react";
-import { DashboardActionCard } from "@/components/dashboard/dashboard-action-card";
+import { useQuery } from "@tanstack/react-query";
+import { Activity, Building2, CalendarClock, CircleAlert, Database, FileCheck2, GitBranch, Globe2, HardDrive, HeartPulse, UsersRound } from "lucide-react";
 import { DashboardKpiCard } from "@/components/dashboard/dashboard-kpi-card";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
-import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
-import { useCrmSummary } from "@/hooks/use-admin-crm";
-import { usePlatformDomains } from "@/hooks/use-admin-public";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import { useLeadClaimConflicts } from "@/hooks/use-lead-reservations";
-import { useOrganizations, useVerificationQueue } from "@/hooks/use-platform-admin";
+import { PlatformWelcomeModal } from "@/components/dashboard/platform-welcome-modal";
+import { FeedbackState } from "@/components/feedback-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n";
+import { ApiError, getPlatformDashboardApi } from "@/lib/api";
 
 export default function PlatformDashboardPage() {
   const { t } = useI18n();
-
-  const currentUser = useCurrentUser();
-  const organizations = useOrganizations();
-  const verifications = useVerificationQueue();
-  const domains = usePlatformDomains();
-  const conflicts = useLeadClaimConflicts();
-  const crm = useCrmSummary();
-
-  const pendingDomains = domains.data?.filter((domain) => domain.status !== "VERIFIED").length;
-  const unresolvedConflicts = conflicts.data?.filter((conflict) => !conflict.resolvedAt).length;
-  const firstName = currentUser.data?.user.firstName?.trim();
-  const organization = currentUser.data?.organization;
+  const dashboard = useQuery({ queryKey: ["platform", "dashboard"], queryFn: getPlatformDashboardApi });
+  const data = dashboard.data;
+  const organizationStatus = data?.organizations.byStatus ?? {};
+  const subscriptionStatus = data?.subscriptions.byStatus ?? {};
+  const metric = (label: string, value: number | undefined, href: string, icon: React.ReactNode, emptyDescription: string) => (
+    <DashboardKpiCard label={label} value={value} description={t("platformDashboard.realDataDescription")} emptyDescription={emptyDescription} href={href} linkLabel={t("platformDashboard.openDetails")} icon={icon} isLoading={dashboard.isLoading} error={dashboard.error} loadingDescription={t("platformDashboard.loading")} errorDescription={t("platformDashboard.loadError")} unavailableLabel={t("platformDashboard.unavailable")} />
+  );
 
   return (
-    <div className="space-y-9">
-      <DashboardWelcome
-        eyebrow="Platform operations"
-        title={firstName ? `Welcome back, ${firstName}` : "Platform control center"}
-        description="Review trust queues, resolve marketplace exceptions, and guide organizations toward a safe public launch."
-        context={`${organization?.name ?? "POPWAM Platform"} · ${formatLabel(organization?.status ?? "APPROVED")}`}
-        primaryAction={{ href: "/platform/verifications", label: "Review verifications" }}
-        secondaryAction={{ href: "/platform/organizations", label: "Open organizations" }}
-        icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+    <div className="space-y-8">
+      <PlatformWelcomeModal />
+      <PageHeader
+        title={t("platformDashboard.title")}
+        description={t("platformDashboard.description")}
+        actions={<Button className="ui-button-secondary" type="button" onClick={() => window.dispatchEvent(new Event("popwam:open-platform-welcome"))}>{t("platformDashboard.about")}</Button>}
       />
+      {dashboard.error ? <FeedbackState tone="error" title={t("platformDashboard.loadError")} description={dashboard.error instanceof ApiError && dashboard.error.requestId ? t("platformDashboard.requestId", { requestId: dashboard.error.requestId }) : t("platformDashboard.loadError")} /> : null}
 
-      <DashboardSection
-        title={t("adminSweep.needs.your.attention.e51f4266")}
-        description="Current counts come from existing platform and CRM endpoints. A clear queue is shown as zero—not as missing data."
-      >
+      <DashboardSection title={t("platformDashboard.organizations")} description={t("platformDashboard.organizationsDescription")}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <DashboardKpiCard
-            label="Organizations"
-            value={organizations.data?.length}
-            description="Organizations currently visible to the platform workspace."
-            emptyDescription="No organizations have been added yet."
-            href="/platform/organizations"
-            linkLabel="Manage organizations"
-            icon={<Building2 className="h-5 w-5" aria-hidden="true" />}
-            isLoading={organizations.isLoading}
-            error={organizations.error}
-          />
-          <DashboardKpiCard
-            label="Verification queue"
-            value={verifications.data?.length}
-            description="Submitted documents are waiting for a platform decision."
-            emptyDescription="The verification review queue is clear."
-            href="/platform/verifications"
-            linkLabel="Review verifications"
-            icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
-            isLoading={verifications.isLoading}
-            error={verifications.error}
-          />
-          <DashboardKpiCard
-            label="Domains to review"
-            value={pendingDomains}
-            description="Domain records still need verification or follow-up."
-            emptyDescription="No domain records currently need attention."
-            href="/platform/domains"
-            linkLabel="Review domains"
-            icon={<Globe2 className="h-5 w-5" aria-hidden="true" />}
-            isLoading={domains.isLoading}
-            error={domains.error}
-          />
-          <DashboardKpiCard
-            label="Claim conflicts"
-            value={unresolvedConflicts}
-            description="Unresolved lead ownership conflicts require a decision."
-            emptyDescription="No unresolved claim conflicts."
-            href="/platform/lead-claim-conflicts"
-            linkLabel="Resolve conflicts"
-            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-            isLoading={conflicts.isLoading}
-            error={conflicts.error}
-          />
-          <DashboardKpiCard
-            label="New CRM leads"
-            value={crm.data?.leads.new}
-            description="New leads are available for routing or support review."
-            emptyDescription="There are no new CRM leads waiting."
-            href="/platform/crm/leads"
-            linkLabel="Open CRM leads"
-            icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
-            isLoading={crm.isLoading}
-            error={crm.error}
-          />
+          {metric(t("platformDashboard.totalOrganizations"), data?.organizations.total, "/platform/organizations", <Building2 className="h-5 w-5" />, t("platformDashboard.emptyOrganizations"))}
+          {metric(t("platformDashboard.activeOrganizations"), organizationStatus.ACTIVE ?? 0, "/platform/organizations", <Activity className="h-5 w-5" />, t("platformDashboard.zeroActive"))}
+          {metric(t("platformDashboard.draftOrganizations"), (organizationStatus.DRAFT ?? 0) + (organizationStatus.DOCUMENTS_REQUIRED ?? 0), "/platform/organizations", <Building2 className="h-5 w-5" />, t("platformDashboard.zeroDraft"))}
+          {metric(t("platformDashboard.awaitingVerification"), (organizationStatus.PENDING_REVIEW ?? 0) + (organizationStatus.MANUAL_REVIEW_REQUIRED ?? 0), "/platform/verifications", <FileCheck2 className="h-5 w-5" />, t("platformDashboard.zeroVerification"))}
+          {metric(t("platformDashboard.registeredCountries"), data?.operations.supportedCountries, "/platform/settings/metadata", <Globe2 className="h-5 w-5" />, t("platformDashboard.zeroCountries"))}
         </div>
       </DashboardSection>
 
-      <DashboardSection
-        title={t("adminSweep.quick.actions.e47e8042")}
-        description="Start the most common platform reviews without searching through every module."
-      >
+      <DashboardSection title={t("platformDashboard.distributions")} description={t("platformDashboard.distributionsDescription")}>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <BreakdownCard title={t("platformDashboard.byStatus")} values={organizationStatus} empty={t("platformDashboard.emptyOrganizations")} />
+          <BreakdownCard title={t("platformDashboard.byType")} values={data?.organizations.byType} empty={t("platformDashboard.emptyOrganizations")} />
+          <BreakdownCard title={t("platformDashboard.byCountry")} values={Object.fromEntries((data?.organizations.byCountry ?? []).map((entry) => [entry.country ?? t("common.notSet"), entry.count]))} empty={t("platformDashboard.zeroCountries")} />
+        </div>
+      </DashboardSection>
+
+      <DashboardSection title={t("platformDashboard.subscriptions")} description={t("platformDashboard.subscriptionsDescription")}>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {metric(t("platformDashboard.activeSubscriptions"), subscriptionStatus.ACTIVE ?? 0, "/platform/settings/subscriptions", <Activity className="h-5 w-5" />, t("platformDashboard.zeroSubscriptions"))}
+          {metric(t("platformDashboard.trialSubscriptions"), subscriptionStatus.TRIAL ?? 0, "/platform/settings/subscriptions", <CalendarClock className="h-5 w-5" />, t("platformDashboard.zeroTrials"))}
+          {metric(t("platformDashboard.expiringSubscriptions"), data?.subscriptions.expiringWithin30Days, "/platform/settings/subscriptions", <CalendarClock className="h-5 w-5" />, t("platformDashboard.zeroExpiring"))}
+          {metric(t("platformDashboard.inactiveSubscriptions"), (subscriptionStatus.EXPIRED ?? 0) + (subscriptionStatus.SUSPENDED ?? 0) + (subscriptionStatus.CANCELLED ?? 0), "/platform/settings/subscriptions", <CircleAlert className="h-5 w-5" />, t("platformDashboard.zeroInactive"))}
+          {metric(t("platformDashboard.plansInUse"), data?.subscriptions.planDistribution.length, "/platform/settings/plans", <FileCheck2 className="h-5 w-5" />, t("platformDashboard.zeroPlans"))}
+        </div>
+      </DashboardSection>
+
+      <DashboardSection title={t("platformDashboard.planDistribution")} description={t("platformDashboard.planDistributionDescription")}>
+        <BreakdownCard
+          title={t("platformDashboard.plansInUse")}
+          values={Object.fromEntries((data?.subscriptions.planDistribution ?? []).map((entry) => [entry.planName || entry.planCode, entry.count]))}
+          empty={t("platformDashboard.zeroPlans")}
+        />
+      </DashboardSection>
+
+      <DashboardSection title={t("platformDashboard.peopleAndOperations")} description={t("platformDashboard.peopleDescription")}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardActionCard
-            title={t("adminSweep.create.an.organization.b7310649")}
-            description="Open the organization workspace to register a developer or brokerage and begin review."
-            href="/platform/organizations"
-            actionLabel="Create organization"
-            icon={<UserPlus className="h-5 w-5" aria-hidden="true" />}
-            emphasis
-          />
-          <DashboardActionCard
-            title={t("adminSweep.review.trust.documents.2de8828c")}
-            description="Work through submitted organization evidence and record a clear decision."
-            href="/platform/verifications"
-            actionLabel="Open verification queue"
-            icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
-          />
-          <DashboardActionCard
-            title={t("adminSweep.resolve.marketplace.exceptions.f24ad15a")}
-            description="Compare claim evidence and settle unresolved lead ownership conflicts."
-            href="/platform/lead-claim-conflicts"
-            actionLabel="Open conflicts"
-            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-          />
-          <DashboardActionCard
-            title={t("adminSweep.support.conversations.9f5c09b8")}
-            description="Review active conversations when a participant needs platform assistance."
-            href="/platform/conversations"
-            actionLabel="Open conversations"
-            icon={<MessagesSquare className="h-5 w-5" aria-hidden="true" />}
-          />
+          {metric(t("platformDashboard.platformUsers"), data?.people.platformUsers, "/platform/organizations", <UsersRound className="h-5 w-5" />, t("platformDashboard.zeroPlatformUsers"))}
+          {metric(t("platformDashboard.companyUsers"), data?.people.companyUsers, "/platform/organizations", <UsersRound className="h-5 w-5" />, t("platformDashboard.zeroCompanyUsers"))}
+          {metric(t("platformDashboard.employees"), data?.people.employees, "/hr/employees", <UsersRound className="h-5 w-5" />, t("platformDashboard.zeroEmployees"))}
+          {metric(t("platformDashboard.applicants"), data?.people.applicantsAwaitingReview, "/hr/recruitment/applicants", <FileCheck2 className="h-5 w-5" />, t("platformDashboard.zeroApplicants"))}
+          {metric(t("platformDashboard.interviews"), data?.people.interviewsScheduled, "/hr/recruitment/applicants", <CalendarClock className="h-5 w-5" />, t("platformDashboard.zeroInterviews"))}
+          {metric(t("platformDashboard.activeOffices"), data?.operations.activeOffices, "/platform/organizations", <Building2 className="h-5 w-5" />, t("platformDashboard.zeroOffices"))}
+          {metric(t("platformDashboard.attendanceIssues"), data?.operations.attendanceIssues, "/hr/attendance", <CircleAlert className="h-5 w-5" />, t("platformDashboard.zeroAttendanceIssues"))}
+          {metric(t("platformDashboard.unresolvedAlerts"), data?.operations.unresolvedAlerts, "/platform/lead-claim-conflicts", <CircleAlert className="h-5 w-5" />, t("platformDashboard.zeroAlerts"))}
+        </div>
+      </DashboardSection>
+
+      <DashboardSection title={t("platformDashboard.health")} description={t("platformDashboard.healthDescription")}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <HealthCard icon={<Database className="h-5 w-5" />} label={t("platformDashboard.database")} ready={data?.health.database.connected} readyLabel={t("platformDashboard.ready")} notReadyLabel={t("platformDashboard.notReady")} loadingLabel={t("platformDashboard.loading")} />
+          <HealthCard icon={<GitBranch className="h-5 w-5" />} label={t("platformDashboard.migrations")} ready={data?.health.database.migrationsReady} readyLabel={t("platformDashboard.ready")} notReadyLabel={t("platformDashboard.migrationAttention")} loadingLabel={t("platformDashboard.loading")} />
+          <HealthCard icon={<HardDrive className="h-5 w-5" />} label={t("platformDashboard.r2")} ready={data?.health.r2.configured} readyLabel={t("platformDashboard.configured")} notReadyLabel={t("platformDashboard.notConfigured")} loadingLabel={t("platformDashboard.loading")} />
+          <HealthCard icon={<HeartPulse className="h-5 w-5" />} label={t("platformDashboard.cloudflare")} ready={data?.health.cloudflareExtraction.configured} readyLabel={t("platformDashboard.configured")} notReadyLabel={data?.health.cloudflareExtraction.enabled ? t("platformDashboard.notConfigured") : t("platformDashboard.disabled")} loadingLabel={t("platformDashboard.loading")} />
+          {data ? Object.entries(data.health.integrations).map(([provider, status]) => <StatusCard key={provider} icon={<Activity className="h-5 w-5" />} label={providerLabel(provider, t)} status={t(`platformDashboard.integrationStatus.${status.toLowerCase()}`)} />) : <HealthCard icon={<Activity className="h-5 w-5" />} label={t("platformDashboard.integrations")} ready={undefined} readyLabel={t("platformDashboard.connected")} notReadyLabel={t("platformDashboard.noneConnected")} loadingLabel={t("platformDashboard.loading")} />}
         </div>
       </DashboardSection>
     </div>
   );
 }
 
-function formatLabel(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+function BreakdownCard({ title, values, empty }: { title: string; values?: Record<string, number>; empty: string }) {
+  const entries = Object.entries(values ?? {}).filter(([, value]) => value > 0);
+  return <div className="ui-card p-4"><h3 className="font-semibold text-[var(--color-foreground)]">{title}</h3>{entries.length ? <dl className="mt-3 space-y-2">{entries.map(([label, value]) => <div key={label} className="flex items-center justify-between gap-3 text-sm"><dt className="truncate text-[var(--color-muted)]">{label.replaceAll("_", " ")}</dt><dd className="font-semibold tabular-nums text-[var(--color-foreground)]">{value}</dd></div>)}</dl> : <p className="mt-3 text-sm text-[var(--color-muted)]">{empty}</p>}</div>;
+}
+
+function providerLabel(provider: string, t: (key: string) => string) {
+  const key = `platformDashboard.integration.${provider}`;
+  return t(key);
+}
+
+function StatusCard({ icon, label, status }: { icon: React.ReactNode; label: string; status: string }) {
+  return <div className="ui-card flex items-center gap-3 p-4"><span className="text-[var(--color-accent)]">{icon}</span><div><p className="font-semibold text-[var(--color-foreground)]">{label}</p><p className="text-sm text-[var(--color-muted)]">{status}</p></div></div>;
+}
+
+function HealthCard({ icon, label, ready, readyLabel, notReadyLabel, loadingLabel }: { icon: React.ReactNode; label: string; ready?: boolean; readyLabel: string; notReadyLabel: string; loadingLabel: string }) {
+  return <div className="ui-card flex items-center gap-3 p-4"><span className="text-[var(--color-accent)]">{icon}</span><div><p className="font-semibold text-[var(--color-foreground)]">{label}</p><p className="text-sm text-[var(--color-muted)]">{ready === undefined ? loadingLabel : ready ? readyLabel : notReadyLabel}</p></div></div>;
 }

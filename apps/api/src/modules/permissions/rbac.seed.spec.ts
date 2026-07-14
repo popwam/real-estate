@@ -21,4 +21,32 @@ describe('RBAC seed definitions', () => {
     expect(ROLE_PERMISSIONS.platform_owner).toContain('deal_rooms.join');
     expect(ROLE_PERMISSIONS.platform_admin).toContain('deal_rooms.join');
   });
+
+  it('assigns the complete permission catalog to the Platform Owner', () => {
+    expect(new Set(ROLE_PERMISSIONS.platform_owner)).toEqual(new Set(BASE_PERMISSIONS));
+    expect(ROLE_PERMISSIONS.platform_owner).toEqual(expect.arrayContaining([
+      'platform.dashboard.view',
+      'platform.verifications.manage',
+      'platform.investigations.manage',
+      'platform.organizations.archive',
+      'platform.organizations.delete_draft',
+      'platform.metadata.manage',
+    ]));
+  });
+
+  it('never assigns platform permissions to company roles', () => {
+    const companyRoles = [
+      'developer_owner',
+      'developer_admin',
+      'brokerage_owner',
+      'brokerage_admin',
+      'company_admin',
+      'hr_manager',
+      'hr_employee',
+      'employee_self_service',
+    ];
+    for (const role of companyRoles) {
+      expect(ROLE_PERMISSIONS[role]?.filter((permission) => permission.startsWith('platform.')) ?? []).toEqual([]);
+    }
+  });
 });

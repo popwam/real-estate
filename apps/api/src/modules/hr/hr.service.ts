@@ -18,6 +18,7 @@ import {
   HrWorkScheduleType,
   WebWifiPolicy,
 } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import { normalizeOptionalPhoneOrThrow } from '../../common/phone-normalization';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { HashService } from '../auth/hash.service';
@@ -188,7 +189,9 @@ export class HrService {
     const phone = normalizeOptionalPhoneOrThrow(this.string(body.phone), 'phone', phoneCountry);
     const allowLogin = body.allowLogin === false || body.loginEnabled === false ? false : Boolean(email || phone);
     const roleName = this.string(body.role) ?? 'employee_self_service';
-    const temporaryPassword = this.string(body.temporaryPassword) || '123456';
+    const temporaryPassword = allowLogin
+      ? this.temporaryPassword(body.temporaryPassword)
+      : undefined;
     const firstName = this.string(body.firstName);
     const lastName = this.string(body.lastName);
     const name = this.string(body.name) || [firstName, lastName].filter(Boolean).join(' ') || this.string(body.displayName);
@@ -213,7 +216,7 @@ export class HrService {
               phone,
               firstName,
               lastName,
-              passwordHash: await this.hashService.hash(temporaryPassword),
+              passwordHash: await this.hashService.hash(temporaryPassword as string),
               mustChangePassword: true,
               roleId: (await this.ensureOrganizationRole(tx, organizationId, roleName)).id,
               userRole: this.userRoleForOrganization(roleName, user.organizationType),
@@ -256,7 +259,10 @@ export class HrService {
     });
 
     const saved = await this.findEmployeeOrThrow(result.id);
-    return this.serializeEmployee(saved, user);
+    return {
+      ...this.serializeEmployee(saved, user),
+      temporaryPassword,
+    };
   }
 
   async updateEmployee(user: AuthenticatedRequestUser, id: string, body: AnyRecord) {
@@ -319,7 +325,7 @@ export class HrService {
             firstName: this.string(body.firstName),
             lastName: this.string(body.lastName),
             passwordHash: await this.hashService.hash(
-              this.string(body.temporaryPassword) || '123456',
+              this.temporaryPassword(body.temporaryPassword),
             ),
             mustChangePassword: true,
             roleId: role.id,
@@ -358,7 +364,7 @@ export class HrService {
     const employee = await this.findEmployeeOrThrow(id);
     this.assertCanAccessOrganization(user, employee.organizationId);
     if (!employee.userId) throw new BadRequestException('Employee login is not enabled.');
-    const temporaryPassword = this.string(body.temporaryPassword) || '123456';
+    const temporaryPassword = this.temporaryPassword(body.temporaryPassword);
     await this.prisma.user.update({
       where: { id: employee.userId },
       data: {
@@ -376,6 +382,17 @@ export class HrService {
       actor: user,
     });
     return { id, passwordReset: true, temporaryPassword };
+  }
+
+  private temporaryPassword(value: unknown) {
+    const supplied = this.string(value);
+    if (supplied) {
+      if (supplied.length < 12 || supplied === '123456') {
+        throw new BadRequestException('Temporary password must contain at least 12 characters.');
+      }
+      return supplied;
+    }
+    return `Pw!${randomBytes(12).toString('base64url')}`;
   }
 
   async setEmployeeActive(user: AuthenticatedRequestUser, id: string, active: boolean) {
