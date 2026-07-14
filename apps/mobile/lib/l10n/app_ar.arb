@@ -17,6 +17,7 @@
   "noAttendanceHistory": "لا يوجد سجل حضور",
   "attendanceHistoryAppearsHere": "تظهر هنا سجلات تسجيل الدخول والخروج الأخيرة الخاصة بك.",
   "noEmployeeProfileLinked": "لا يوجد ملف موظف مرتبط بهذا الحساب.",
+  "companyAwaitingVerification": "المؤسسة في انتظار مراجعة وتفعيل المنصة.",
   "alreadyCheckedIn": "لقد سجّلت الدخول بالفعل.",
   "checkInBeforeCheckOut": "يجب تسجيل الدخول قبل تسجيل الخروج.",
   "attendanceVerificationStatus": "التحقق",

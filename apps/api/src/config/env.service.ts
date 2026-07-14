@@ -86,12 +86,14 @@ export class EnvService {
   }
 
   private parseDatabaseUrl(value: string | undefined): string {
-    const databaseUrl =
-      value ??
-      'postgresql://postgres:postgres@localhost:5432/popwam?schema=public';
+    const databaseUrl = value?.trim();
 
-    if (!databaseUrl.startsWith('postgresql://')) {
-      throw new Error('Invalid DATABASE_URL. Expected a PostgreSQL URL.');
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is required.');
+    }
+
+    if (!/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
+      throw new Error('Invalid DATABASE_URL. Expected postgres:// or postgresql://.');
     }
 
     return databaseUrl;

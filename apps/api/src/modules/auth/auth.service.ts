@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { normalizeOptionalPhoneOrThrow, normalizePhone, normalizePhoneForCountry, phonesMatch } from '../../common/phone-normalization';
+import { requireCanonicalOrganizationType } from '../../common/organization-types';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -403,7 +404,9 @@ export class AuthService {
   }
 
   private hrEmployeeIsInactive(employee: any) {
-    return Boolean(employee && employee.status !== 'ACTIVE');
+    return Boolean(
+      employee && (employee.status !== 'ACTIVE' || employee.loginEnabled === false),
+    );
   }
 
   private async ensureRolePermissions(
@@ -526,6 +529,9 @@ export class AuthService {
   private organizationCanLogin(organization: any) {
     if (!organization) return true;
     if (['SUSPENDED', 'REVOKED'].includes(organization.status)) return false;
+    if (organization.type !== 'PLATFORM' && !['ACTIVE', 'APPROVED'].includes(organization.status)) {
+      return false;
+    }
     const subscription = organization.subscription;
     if (subscription?.status && ['EXPIRED', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)) {
       return false;
@@ -573,20 +579,11 @@ export class AuthService {
   }
 
   private assertRegisterDto(dto: RegisterOrganizationDto) {
-    const validTypes = [
-      'PLATFORM',
-      'DEVELOPER',
-      'BROKERAGE',
-      'INDIVIDUAL_BROKER',
-    ];
-
     if (!dto.organizationName?.trim()) {
       throw new BadRequestException('organizationName is required.');
     }
 
-    if (!validTypes.includes(dto.organizationType)) {
-      throw new BadRequestException('organizationType is invalid.');
-    }
+    requireCanonicalOrganizationType(dto.organizationType);
 
     if (!this.isValidEmail(dto.email)) {
       throw new BadRequestException('email is invalid.');

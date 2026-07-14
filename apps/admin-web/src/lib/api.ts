@@ -28,6 +28,7 @@ import type {
   PlatformSettingsSummary,
   RequiredDocumentPolicy,
 } from "@/types/platform";
+import type { OrganizationTypeOption } from "@/lib/organization-types";
 
 const API_BASE_URL =
   (
@@ -492,6 +493,38 @@ export function reviewOrganizationDocumentApi(id: string, documentId: string, in
   });
 }
 
+export async function uploadOrganizationDocumentApi(id: string, file: File) {
+  const token = getAccessToken();
+  if (!token) throw new ApiError(401, "Authentication is required.");
+  const formData = new FormData();
+  formData.set("organizationId", id);
+  formData.set("file", file);
+  const response = await fetch(`${API_BASE_URL}/files/organization-document`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const body = await parseResponse(response);
+  if (!response.ok) {
+    const message = typeof body === "object" && body && "message" in body
+      ? String((body as { message: unknown }).message)
+      : "Document upload failed.";
+    throw new ApiError(response.status, message, body, response.headers.get("x-request-id") ?? undefined);
+  }
+  return body as { fileId: string; mimeType: string; sizeBytes: number; createdAt: string };
+}
+
+export function reviewOrganizationDocumentFieldsApi(
+  id: string,
+  documentId: string,
+  input: { fields: string[]; action: "APPLY" | "REJECT"; confirmSensitive?: boolean },
+) {
+  return apiRequest<{ action: string; appliedFields: string[]; rejectedFields: string[]; documentStatus: string }>(
+    `/organizations/${id}/documents/${documentId}/fields/review`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
 export function listCompanyRoleTemplatesApi(id: string) {
   return apiRequest<CompanyRoleTemplate[]>(`/organizations/${id}/access-levels`);
 }
@@ -524,6 +557,10 @@ export function getMetadataLanguagesApi() {
 
 export function getMetadataTimezonesApi() {
   return apiRequest<MetadataOption[]>("/metadata/timezones");
+}
+
+export function getMetadataOrganizationTypesApi() {
+  return apiRequest<OrganizationTypeOption[]>("/metadata/organization-types");
 }
 
 export function listOrganizationInvitationsApi(id: string) {

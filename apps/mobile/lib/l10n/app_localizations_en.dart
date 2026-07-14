@@ -548,6 +548,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'No employee profile is linked to this account.';
 
   @override
+  String get companyAwaitingVerification =>
+      'The organization is awaiting platform review and activation.';
+
+  @override
   String get alreadyCheckedIn => 'You are already checked in.';
 
   @override

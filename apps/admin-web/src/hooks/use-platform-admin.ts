@@ -26,6 +26,7 @@ import {
   rejectVerificationApi,
   requestMoreVerificationApi,
   reviewOrganizationDocumentApi,
+  reviewOrganizationDocumentFieldsApi,
   suspendOrganizationApi,
   createPlatformOrganizationApi,
   createOrganizationAttendanceLocationApi,
@@ -38,6 +39,7 @@ import {
   getMetadataCountriesApi,
   getMetadataCurrenciesApi,
   getMetadataLanguagesApi,
+  getMetadataOrganizationTypesApi,
   getMetadataTimezonesApi,
   getOrganizationDomainDiagnosticsApi,
   getOrganizationLegalApi,
@@ -68,6 +70,7 @@ import {
   updatePlatformOrganizationLimitsApi,
   updatePlatformOrganizationSubscriptionApi,
   updateRequiredDocumentPolicyApi,
+  uploadOrganizationDocumentApi,
 } from "@/lib/api";
 import type {
   CompanyRoleTemplate,
@@ -365,6 +368,22 @@ export function useReviewOrganizationDocument(id: string) {
   });
 }
 
+export function useUploadOrganizationDocument(id: string) {
+  return useMutation({ mutationFn: (file: File) => uploadOrganizationDocumentApi(id, file) });
+}
+
+export function useReviewOrganizationDocumentFields(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, input }: { documentId: string; input: { fields: string[]; action: "APPLY" | "REJECT"; confirmSensitive?: boolean } }) =>
+      reviewOrganizationDocumentFieldsApi(id, documentId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id] });
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "documents"] });
+    },
+  });
+}
+
 export function useCompanyRoleTemplates(id: string) {
   return useQuery({ queryKey: ["platform", "organizations", id, "access-levels"], queryFn: () => listCompanyRoleTemplatesApi(id), enabled: Boolean(id) });
 }
@@ -455,6 +474,10 @@ export function useMetadataLanguages() {
 
 export function useMetadataTimezones() {
   return useQuery({ queryKey: ["metadata", "timezones"], queryFn: getMetadataTimezonesApi });
+}
+
+export function useMetadataOrganizationTypes() {
+  return useQuery({ queryKey: ["metadata", "organization-types"], queryFn: getMetadataOrganizationTypesApi });
 }
 
 export function useOrganizationInvitations(id: string) {

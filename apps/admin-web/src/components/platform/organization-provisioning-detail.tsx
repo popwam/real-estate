@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -45,11 +45,13 @@ import {
   useUpdateOrganizationLegal,
   useUpdateOrganizationPublicSite,
   useReviewOrganizationDocument,
+  useReviewOrganizationDocumentFields,
+  useUploadOrganizationDocument,
   useUpdatePlatformOrganization,
   useUpdatePlatformOrganizationLimits,
   useUpdatePlatformOrganizationSubscription,
 } from "@/hooks/use-platform-admin";
-import type { MetadataOption, TranslatedText } from "@/types/platform";
+import type { MetadataOption, OrganizationDocument, OrganizationProfile, TranslatedText } from "@/types/platform";
 
 type Tab = "overview" | "subscription" | "limits" | "offices" | "attendance" | "wifi" | "domains" | "public-site" | "legal-tax" | "owners" | "documents" | "access-levels" | "users";
 
@@ -560,25 +562,40 @@ function OwnersTab({ id }: { id: string }) {
 function DocumentsTab({ id }: { id: string }) {
   const { t } = useI18n();
   const { data } = useOrganizationDocuments(id);
+  const organization = usePlatformOrganization(id);
   const create = useCreateOrganizationDocument(id);
+  const upload = useUploadOrganizationDocument(id);
   const extract = useExtractOrganizationDocument(id);
   const review = useReviewOrganizationDocument(id);
-  function submit(event: FormEvent<HTMLFormElement>) {
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    create.mutate({
-      documentType: optional(form, "documentType") as never,
-      fileId: optional(form, "fileId"),
-      expiresAt: optional(form, "expiresAt"),
-      issuedAt: optional(form, "issuedAt"),
-      issuingAuthority: optional(form, "issuingAuthority"),
-    });
-    event.currentTarget.reset();
+    setUploadError(null);
+    const element = event.currentTarget;
+    const form = new FormData(element);
+    const file = form.get("documentFile");
+    if (!(file instanceof File) || file.size === 0) {
+      setUploadError(t("provisioning.documentFileRequired"));
+      return;
+    }
+    try {
+      const uploaded = await upload.mutateAsync(file);
+      await create.mutateAsync({
+        documentType: optional(form, "documentType") as never,
+        fileId: uploaded.fileId,
+        expiresAt: optional(form, "expiresAt"),
+        issuedAt: optional(form, "issuedAt"),
+        issuingAuthority: optional(form, "issuingAuthority"),
+      });
+      element.reset();
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : t("provisioning.documentUploadFailed"));
+    }
   }
   const docs = data?.documents ?? [];
   return (
     <div className="space-y-5">
-      <CollectionTab title={t("provisioning.documents")} rows={docs.map((doc) => [doc.documentType, doc.status, doc.extractionStatus])} note={`${t("provisioning.requiredDocuments")}: ${(data?.required ?? []).join(", ")}`} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><SelectField label={t("provisioning.documentType")} name="documentType" options={documentTypeOptions} /><TextField label={t("provisioning.fileId")} name="fileId" /><TextField label={t("provisioning.issueDate")} name="issuedAt" type="date" /><TextField label={t("provisioning.expiryDate")} name="expiresAt" type="date" /><TextField label={t("provisioning.issuingAuthority")} name="issuingAuthority" /></>} />
+      <CollectionTab title={t("provisioning.documents")} rows={docs.map((doc) => [doc.documentType, doc.status, doc.extractionStatus])} note={`${t("provisioning.requiredDocuments")}: ${(data?.required ?? []).join(", ")}`} onSubmit={submit} pending={create.isPending || upload.isPending} error={uploadError ?? create.error?.message ?? upload.error?.message} fields={<><SelectField label={t("provisioning.documentType")} name="documentType" options={documentTypeOptions} /><label className="space-y-2"><Label htmlFor="organization-document-file">{t("provisioning.documentFile")}</Label><Input id="organization-document-file" name="documentFile" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required /></label><TextField label={t("provisioning.issueDate")} name="issuedAt" type="date" /><TextField label={t("provisioning.expiryDate")} name="expiresAt" type="date" /><TextField label={t("provisioning.issuingAuthority")} name="issuingAuthority" /></>} />
       <DetailCard title={t("provisioning.extractedData")}>
         <div className="divide-y divide-[var(--color-border)]">
           {docs.length ? docs.map((doc) => (
@@ -586,7 +603,7 @@ function DocumentsTab({ id }: { id: string }) {
               <div>
                 <p className="font-semibold">{doc.documentType}</p>
                 <p className="text-[var(--color-muted)]">{doc.extractionMessage ?? t("provisioning.ocrProviderNotConfigured")}</p>
-                <pre className="mt-2 overflow-auto rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-3 text-xs">{JSON.stringify(doc.extractedData ?? {}, null, 2)}</pre>
+                <ExtractedFieldsReview id={id} document={doc} profile={organization.data?.profile} />
               </div>
               <div className="flex flex-wrap gap-2 self-start">
                 <Button type="button" className="ui-button-secondary" onClick={() => extract.mutate(doc.id)} disabled={extract.isPending}>
@@ -608,6 +625,74 @@ function DocumentsTab({ id }: { id: string }) {
       </DetailCard>
     </div>
   );
+}
+
+const extractedFieldOptions = [
+  "legalName", "tradeName", "commercialRegisterNumber", "registrationNumber",
+  "issueDate", "expiryDate", "taxNumber", "vatNumber", "registeredAddress",
+] as const;
+
+function ExtractedFieldsReview({ id, document, profile }: { id: string; document: OrganizationDocument; profile?: OrganizationProfile | null }) {
+  const { t } = useI18n();
+  const mutation = useReviewOrganizationDocumentFields(id);
+  const available = extractedFieldOptions
+    .map((field) => ({ field, value: findExtractedValue(document.extractedData, field) }))
+    .filter((item) => item.value !== undefined);
+  const [selected, setSelected] = useState<string[]>([]);
+  if (!available.length) {
+    return <p className="mt-3 rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-3 text-xs text-[var(--color-muted)]">{t("provisioning.noExtractedFields")}</p>;
+  }
+  const submit = (action: "APPLY" | "REJECT") => {
+    if (!selected.length) return;
+    const sensitive = selected.some((field) => ["commercialRegisterNumber", "registrationNumber", "taxNumber", "vatNumber"].includes(field));
+    if (action === "APPLY" && sensitive && !window.confirm(t("provisioning.confirmSensitiveFields"))) return;
+    mutation.mutate({ documentId: document.id, input: { fields: selected, action, confirmSensitive: action === "APPLY" && sensitive } });
+  };
+  return (
+    <div className="mt-3 space-y-2 rounded-[var(--radius-sm)] bg-[var(--color-surface-muted)] p-3">
+      {available.map(({ field, value }) => (
+        <label key={field} className="grid cursor-pointer gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 sm:grid-cols-[auto_1fr_1fr]">
+          <input type="checkbox" checked={selected.includes(field)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, field] : current.filter((item) => item !== field))} />
+          <span><strong>{t(`extractedFields.${field}`)}</strong><br /><small>{t("provisioning.currentValue")}: {currentProfileValue(profile, field) ?? t("common.notSet")}</small></span>
+          <span><small>{t("provisioning.extractedValue")}</small><br />{String(value)}</span>
+        </label>
+      ))}
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" onClick={() => submit("APPLY")} disabled={!selected.length || mutation.isPending}>{t("provisioning.applySelected")}</Button>
+        <Button type="button" className="ui-button-secondary" onClick={() => submit("REJECT")} disabled={!selected.length || mutation.isPending}>{t("provisioning.rejectSelected")}</Button>
+      </div>
+      {mutation.error ? <p className="text-xs text-[var(--color-danger)]">{mutation.error.message}</p> : null}
+    </div>
+  );
+}
+
+function findExtractedValue(source: unknown, field: string, depth = 0): unknown {
+  if (depth > 6 || source === null || source === undefined) return undefined;
+  if (typeof source === "string") {
+    const text = source.trim();
+    if (!(text.startsWith("{") || text.startsWith("["))) return undefined;
+    try { return findExtractedValue(JSON.parse(text), field, depth + 1); } catch { return undefined; }
+  }
+  if (Array.isArray(source)) {
+    for (const value of source) { const found = findExtractedValue(value, field, depth + 1); if (found !== undefined) return found; }
+    return undefined;
+  }
+  if (typeof source !== "object") return undefined;
+  const record = source as Record<string, unknown>;
+  const key = Object.keys(record).find((item) => item.toLowerCase() === field.toLowerCase());
+  if (key && ["string", "number"].includes(typeof record[key])) return record[key];
+  for (const value of Object.values(record)) { const found = findExtractedValue(value, field, depth + 1); if (found !== undefined) return found; }
+  return undefined;
+}
+
+function currentProfileValue(profile: OrganizationProfile | null | undefined, field: string) {
+  const target: Record<string, keyof OrganizationProfile> = {
+    legalName: "legalName", tradeName: "tradeName", commercialRegisterNumber: "commercialRegisterNumber",
+    registrationNumber: "registrationNumber", issueDate: "commercialRegisterIssuedAt", expiryDate: "commercialRegisterExpiresAt",
+    taxNumber: "taxNumber", vatNumber: "vatNumber", registeredAddress: "addressLine1",
+  };
+  const value = profile?.[target[field]];
+  return value === null || value === undefined ? undefined : String(value);
 }
 
 function AccessLevelsTab({ id }: { id: string }) {

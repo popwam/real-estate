@@ -95,6 +95,18 @@ describe('CompanyProvisioningService organization list', () => {
     ).resolves.toEqual([]);
   });
 
+  it('rejects translated organization type labels before any database write', async () => {
+    const { service } = makeService();
+    await expect(
+      service.createPlatformOrganization(
+        { name: 'Example', organizationType: 'شركة وساطة عقارية' as never },
+        { ...platformOwner, permissions: ['platform.organizations.manage'] },
+      ),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'ORGANIZATION_TYPE_INVALID' }),
+    });
+  });
+
   it('does not crash when subscription, plan, and verification documents are absent', async () => {
     const { service } = makeService([organization()]);
 

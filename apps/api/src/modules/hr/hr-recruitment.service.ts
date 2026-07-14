@@ -235,10 +235,14 @@ export class HrRecruitmentService {
   async updateApplicant(user: AuthenticatedRequestUser, id: string, body: AnyRecord) {
     const existing = await this.findApplicantOrThrow(id);
     this.assertCanAccessOrganization(user, existing.organizationId);
+    const requestedStatus = this.optionalEnum(HrApplicantStatus, body.status);
+    if (requestedStatus === HrApplicantStatus.READY_FOR_INTERVIEW) {
+      await this.assertApplicantReadyForInterview(existing);
+    }
     const applicant = await this.prisma.hrApplicant.update({
       where: { id },
       data: this.applicantData(body, {
-        status: this.optionalEnum(HrApplicantStatus, body.status),
+        status: requestedStatus,
         reviewedAt: body.status ? new Date() : undefined,
         reviewedById: body.status ? user.userId : undefined,
       }),
@@ -320,6 +324,12 @@ export class HrRecruitmentService {
   async createInterview(user: AuthenticatedRequestUser, applicantId: string, body: AnyRecord) {
     const applicant = await this.findApplicantOrThrow(applicantId);
     this.assertCanAccessOrganization(user, applicant.organizationId);
+    if (applicant.status !== HrApplicantStatus.READY_FOR_INTERVIEW) {
+      throw new BadRequestException({
+        code: 'APPLICANT_NOT_READY_FOR_INTERVIEW',
+        message: 'Applicant must be marked ready for interview before scheduling.',
+      });
+    }
     const scheduledAt = this.date(body.scheduledAt);
     if (!scheduledAt) throw new BadRequestException('scheduledAt is required.');
     const interview = await this.prisma.hrApplicantInterview.create({
@@ -711,6 +721,34 @@ export class HrRecruitmentService {
     });
     if (!applicant) throw new NotFoundException('Applicant not found.');
     return applicant;
+  }
+
+  private async assertApplicantReadyForInterview(applicant: any) {
+    const settings = await this.prisma.hrRecruitmentSettings.findUnique({
+      where: { organizationId: applicant.organizationId },
+    });
+    const requiredTypes: HrApplicantDocumentType[] = [];
+    if (settings?.requiredCv ?? true) requiredTypes.push(HrApplicantDocumentType.CV);
+    if (settings?.requiredGraduationCertificate) requiredTypes.push(HrApplicantDocumentType.GRADUATION_CERTIFICATE);
+    if (settings?.requiredNationalId ?? true) {
+      requiredTypes.push(HrApplicantDocumentType.NATIONAL_ID_FRONT, HrApplicantDocumentType.NATIONAL_ID_BACK);
+    }
+    if (settings?.requiredMilitaryCertificate) requiredTypes.push(HrApplicantDocumentType.MILITARY_CERTIFICATE);
+    if (settings?.requiredLastSalaryProof) requiredTypes.push(HrApplicantDocumentType.LAST_SALARY_PROOF);
+    if (settings?.requiredExperienceCertificates) requiredTypes.push(HrApplicantDocumentType.EXPERIENCE_CERTIFICATE);
+    const approved = new Set(
+      (applicant.documents ?? [])
+        .filter((document: any) => document.status === HrApplicantDocumentStatus.APPROVED)
+        .map((document: any) => document.documentType),
+    );
+    const missing = requiredTypes.filter((type) => !approved.has(type));
+    if (missing.length) {
+      throw new BadRequestException({
+        code: 'APPLICANT_DOCUMENTS_MISSING',
+        message: 'Required applicant documents are missing or not approved.',
+        documentTypes: missing,
+      });
+    }
   }
 
   private async findApplicantDocumentOrThrow(applicantId: string, documentId: string) {

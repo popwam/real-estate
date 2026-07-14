@@ -169,6 +169,28 @@ describe('AuthService', () => {
     ).rejects.toThrow('Invalid login details.');
   });
 
+  it('blocks company login while the organization is awaiting verification', async () => {
+    const { service, prisma } = makeService();
+    prisma.user.findUnique.mockResolvedValue({
+      ...activeUser,
+      organization: { ...activeUser.organization, status: 'DOCUMENTS_REQUIRED' },
+    });
+    await expect(
+      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+    ).rejects.toThrow('Invalid login details.');
+  });
+
+  it('blocks a login-disabled employee account', async () => {
+    const { service, prisma } = makeService();
+    prisma.user.findUnique.mockResolvedValue({
+      ...activeUser,
+      hrEmployeeProfile: { status: 'ACTIVE', loginEnabled: false },
+    });
+    await expect(
+      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+    ).rejects.toThrow('Invalid login details.');
+  });
+
   it('changes a temporary password and clears the forced-change flag', async () => {
     const { service, prisma, hashService, auditLogs } = makeService();
     hashService.hash.mockResolvedValue('new-hash');

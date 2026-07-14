@@ -63,6 +63,15 @@ extension L10nBuildContext on BuildContext {
     final raw = apiErrorMessage(error);
 
     if (error is DioException) {
+      final responseData = error.response?.data;
+      final responseCode = responseData is Map ? responseData['code'] : null;
+      if (responseCode == 'EMPLOYEE_PROFILE_NOT_LINKED') {
+        return l10n.noEmployeeProfileLinked;
+      }
+      if (responseCode == 'COMPANY_AWAITING_VERIFICATION') {
+        return l10n.companyAwaitingVerification;
+      }
+
       switch (error.type) {
         case DioExceptionType.connectionTimeout:
         case DioExceptionType.sendTimeout:

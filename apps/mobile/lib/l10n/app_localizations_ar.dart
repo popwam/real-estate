@@ -547,6 +547,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noEmployeeProfileLinked => 'لا يوجد ملف موظف مرتبط بهذا الحساب.';
 
   @override
+  String get companyAwaitingVerification =>
+      'المؤسسة في انتظار مراجعة وتفعيل المنصة.';
+
+  @override
   String get alreadyCheckedIn => 'لقد سجّلت الدخول بالفعل.';
 
   @override

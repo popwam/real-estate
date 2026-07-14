@@ -37,12 +37,17 @@ import {
 const applicantStatuses = [
   "PENDING_REVIEW",
   "DOCUMENTS_MISSING",
+  "DOCUMENTS_UNDER_REVIEW",
+  "READY_FOR_INTERVIEW",
   "AI_REVIEW_NEEDED",
   "SHORTLISTED",
   "INTERVIEW_SCHEDULED",
+  "INTERVIEWED",
   "OFFER_PENDING",
   "OFFER_ACCEPTED",
+  "HIRED",
   "REJECTED",
+  "WITHDRAWN",
   "CONVERTED_TO_EMPLOYEE",
 ];
 
@@ -331,7 +336,7 @@ function ApplicantOverview({ applicant, onStatus }: { applicant: HrApplicant; on
         <Info label={t("hr.recruitment.applicantNotEmployee")} value={t("common.enabled")} />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {["DOCUMENTS_MISSING", "SHORTLISTED", "INTERVIEW_SCHEDULED", "OFFER_PENDING", "REJECTED"].map((status) => (
+        {["DOCUMENTS_MISSING", "DOCUMENTS_UNDER_REVIEW", "READY_FOR_INTERVIEW", "OFFER_PENDING", "REJECTED", "WITHDRAWN"].map((status) => (
           <Button key={status} className="ui-button-secondary text-xs" onClick={() => onStatus(status)}>{statusText(status, t)}</Button>
         ))}
       </div>

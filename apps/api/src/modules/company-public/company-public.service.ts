@@ -22,12 +22,35 @@ import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
 import { PrismaService } from '../database/prisma.service';
 import { DocumentExtractionService } from './document-extraction.service';
 import {
+  ApplyOrganizationDocumentFieldsDto,
   ReviewOrganizationDocumentDto,
   UpdateOrganizationLegalDto,
   UpdatePublicSiteDto,
   UpsertOrganizationDocumentDto,
   UpsertOrganizationOwnerDto,
 } from './company-public.dto';
+
+const EXTRACTED_PROFILE_FIELDS: Record<string, string> = {
+  legalName: 'legalName',
+  tradeName: 'tradeName',
+  commercialRegisterNumber: 'commercialRegisterNumber',
+  registrationNumber: 'registrationNumber',
+  commercialRegisterIssuedAt: 'commercialRegisterIssuedAt',
+  commercialRegisterExpiresAt: 'commercialRegisterExpiresAt',
+  issueDate: 'commercialRegisterIssuedAt',
+  expiryDate: 'commercialRegisterExpiresAt',
+  taxNumber: 'taxNumber',
+  vatNumber: 'vatNumber',
+  registeredAddress: 'addressLine1',
+  address: 'addressLine1',
+};
+
+const SENSITIVE_EXTRACTED_FIELDS = new Set([
+  'commercialRegisterNumber',
+  'registrationNumber',
+  'taxNumber',
+  'vatNumber',
+]);
 
 @Injectable()
 export class CompanyPublicService {
@@ -438,6 +461,91 @@ export class CompanyPublicService {
     return this.toDocumentResponse(document);
   }
 
+  async reviewExtractedFields(
+    organizationId: string,
+    documentId: string,
+    dto: ApplyOrganizationDocumentFieldsDto,
+    user: AuthenticatedRequestUser,
+  ) {
+    await this.assertCanManageOrganization(organizationId, user, true);
+    const document = await this.findDocument(organizationId, documentId);
+    const fields = [...new Set((dto.fields ?? []).map((field) => String(field).trim()).filter(Boolean))];
+    if (!fields.length) throw new BadRequestException('Select at least one extracted field.');
+    const unsupported = fields.filter((field) => !Object.hasOwn(EXTRACTED_PROFILE_FIELDS, field));
+    if (unsupported.length) throw new BadRequestException('One or more extracted fields are unsupported.');
+    if (dto.action !== 'APPLY' && dto.action !== 'REJECT') {
+      throw new BadRequestException('Extracted-field review action must be APPLY or REJECT.');
+    }
+    const action = dto.action;
+    const sensitive = fields.filter((field) => SENSITIVE_EXTRACTED_FIELDS.has(field));
+    if (action === 'APPLY' && sensitive.length && dto.confirmSensitive !== true) {
+      throw new BadRequestException({
+        code: 'SENSITIVE_EXTRACTED_FIELDS_CONFIRMATION_REQUIRED',
+        message: 'Sensitive extracted fields require explicit confirmation.',
+        fields: sensitive,
+      });
+    }
+
+    const extracted = this.extractedFieldValues(document.extractedData, fields);
+    const missing = fields.filter((field) => extracted[field] === undefined);
+    if (missing.length) {
+      throw new BadRequestException({
+        code: 'EXTRACTED_FIELDS_MISSING',
+        message: 'One or more selected fields are not present in extracted data.',
+        fields: missing,
+      });
+    }
+
+    let profile: unknown = null;
+    if (action === 'APPLY') {
+      const data: Record<string, unknown> = {};
+      for (const field of fields) {
+        const target = EXTRACTED_PROFILE_FIELDS[field];
+        const raw = extracted[field];
+        data[target] = target.endsWith('At') ? this.date(raw) : this.string(raw);
+      }
+      profile = await this.prisma.organizationProfile.upsert({
+        where: { organizationId },
+        create: { organizationId, ...data },
+        update: data,
+      });
+    } else {
+      const source = document.extractedData && typeof document.extractedData === 'object'
+        ? document.extractedData as Record<string, unknown>
+        : {};
+      await this.prisma.organizationDocument.update({
+        where: { id: document.id },
+        data: {
+          extractedData: {
+            ...source,
+            manualReview: {
+              rejectedFields: fields,
+              reviewedAt: new Date().toISOString(),
+            },
+          },
+        },
+      });
+    }
+
+    await this.auditLogs.record({
+      action: action === 'APPLY'
+        ? 'organization.document.extracted_fields_applied'
+        : 'organization.document.extracted_fields_rejected',
+      entityType: 'OrganizationDocument',
+      entityId: document.id,
+      organizationId,
+      actor: user,
+      metadata: { fields, documentStatusUnchanged: true },
+    });
+    return {
+      action,
+      appliedFields: action === 'APPLY' ? fields : [],
+      rejectedFields: action === 'REJECT' ? fields : [],
+      documentStatus: document.status,
+      profile,
+    };
+  }
+
   async domainDiagnostics(
     organizationId: string,
     user: AuthenticatedRequestUser,
@@ -845,6 +953,39 @@ export class CompanyPublicService {
     });
     if (!document) throw new NotFoundException('Document not found.');
     return document;
+  }
+
+  private extractedFieldValues(source: unknown, fields: string[]) {
+    const values: Record<string, unknown> = {};
+    for (const field of fields) {
+      values[field] = this.findExtractedValue(source, field, 0);
+    }
+    return values;
+  }
+
+  private findExtractedValue(source: unknown, field: string, depth: number): unknown {
+    if (depth > 6 || source === null || source === undefined) return undefined;
+    if (typeof source === 'string') {
+      const text = source.trim();
+      if (!(text.startsWith('{') || text.startsWith('['))) return undefined;
+      try { return this.findExtractedValue(JSON.parse(text), field, depth + 1); } catch { return undefined; }
+    }
+    if (Array.isArray(source)) {
+      for (const value of source) {
+        const found = this.findExtractedValue(value, field, depth + 1);
+        if (found !== undefined) return found;
+      }
+      return undefined;
+    }
+    if (typeof source !== 'object') return undefined;
+    const record = source as Record<string, unknown>;
+    const directKey = Object.keys(record).find((key) => key.toLowerCase() === field.toLowerCase());
+    if (directKey && ['string', 'number'].includes(typeof record[directKey])) return record[directKey];
+    for (const value of Object.values(record)) {
+      const found = this.findExtractedValue(value, field, depth + 1);
+      if (found !== undefined) return found;
+    }
+    return undefined;
   }
 
   private slug(value: string) {

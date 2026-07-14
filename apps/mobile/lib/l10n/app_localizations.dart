@@ -1090,6 +1090,12 @@ abstract class AppLocalizations {
   /// **'No employee profile is linked to this account.'**
   String get noEmployeeProfileLinked;
 
+  /// No description provided for @companyAwaitingVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'The organization is awaiting platform review and activation.'**
+  String get companyAwaitingVerification;
+
   /// No description provided for @alreadyCheckedIn.
   ///
   /// In en, this message translates to:
