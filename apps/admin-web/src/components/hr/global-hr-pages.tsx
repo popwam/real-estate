@@ -570,17 +570,23 @@ function HrQuickActions() {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const canCustomize = data?.permissions.includes("quick_actions.customize");
+  const organizationPath = data?.organization?.id
+    ? `/platform/organizations/${data.organization.id}`
+    : "/platform/organizations";
+  const organizationActionPath = isPlatformRole(data?.user.role) ? "/platform/organizations" : organizationPath;
   const actions = [
     { id: "addEmployee", href: "/hr/employees/new", icon: UserPlus, permissions: ["hr.employees.create"] },
-    { id: "addApplicant", href: "/hr/recruitment/applicants/new", icon: UsersRound, permissions: ["hr.recruitment.applicants.manage"] },
+    { id: "addApplicant", href: "/hr/recruitment/applicants/new", icon: UsersRound, permissions: ["hr.applicants.create", "hr.recruitment.applicants.manage"] },
+    { id: "openApplicants", href: "/hr/recruitment/applicants", icon: UsersRound, permissions: ["hr.applicants.review", "hr.recruitment.view"] },
+    { id: "scheduleInterview", href: "/hr/recruitment/interviews", icon: CalendarCheck, permissions: ["hr.interviews.manage", "hr.recruitment.manage"] },
     { id: "openAttendance", href: "/hr/attendance", icon: CalendarCheck, permissions: ["hr.attendance.view", "hr.attendance.manage"] },
-    { id: "addOffice", href: "/platform/organizations", icon: MapPinned, permissions: ["company.offices.manage", "platform.organizations.manage"] },
-    { id: "addWifiRule", href: "/platform/organizations", icon: Wifi, permissions: ["company.wifi_rules.manage", "platform.organizations.manage"] },
-    { id: "addAccessLevel", href: "/platform/organizations", icon: ShieldCheck, permissions: ["company.access_levels.manage", "platform.organizations.manage"] },
+    { id: "addOffice", href: isPlatformRole(data?.user.role) ? organizationActionPath : `${organizationActionPath}/offices`, icon: MapPinned, permissions: ["company.offices.manage", "platform.organizations.manage"] },
+    { id: "addWifiRule", href: isPlatformRole(data?.user.role) ? organizationActionPath : `${organizationActionPath}/wifi-rules`, icon: Wifi, permissions: ["company.wifi_rules.manage", "platform.organizations.manage"] },
+    { id: "addAccessLevel", href: isPlatformRole(data?.user.role) ? organizationActionPath : `${organizationActionPath}/access-levels`, icon: ShieldCheck, permissions: ["company.access_levels.manage", "platform.organizations.manage"] },
     { id: "createHrRequest", href: "/hr/requests", icon: BriefcaseBusiness, permissions: ["hr.requests.manage", "hr.actions.apply"] },
     { id: "uploadHrDocument", href: "/hr/documents", icon: FileUp, permissions: ["hr.documents.manage"] },
     { id: "openHrSettings", href: "/hr/settings", icon: Settings2, permissions: ["hr.settings.view"] },
-    { id: "openCompanyOffices", href: "/platform/organizations", icon: MapPinned, permissions: ["company.offices.view", "platform.organizations.view"] },
+    { id: "openCompanyOffices", href: isPlatformRole(data?.user.role) ? organizationActionPath : `${organizationActionPath}/offices`, icon: MapPinned, permissions: ["company.offices.view", "platform.organizations.view"] },
     { id: "openCompanyAttendanceSettings", href: "/hr/settings", icon: CalendarCheck, permissions: ["company.attendance_settings.view", "hr.settings.view"] },
   ];
   const allowedActions = actions.filter((action) => action.permissions.some((permission) => data?.permissions.includes(permission) || (permission.startsWith("hr.") && data?.permissions.includes("hr.manage"))));
@@ -761,7 +767,7 @@ function employeeModal(id: string, employee: HrEmployee, t: (key: string, params
       <DetailGrid
         items={[
           { label: t("employeeAccess.employee"), value: employee.name },
-          { label: t("employeeAccess.email"), value: employee.email || employee.user?.email || t("common.notSet") },
+          { label: t("employeeAccess.email"), value: employee.email || visibleLoginEmail(employee.user?.email) || t("common.notSet") },
           { label: t("employeeAccess.phone"), value: employee.phone || employee.user?.phone || t("common.notSet") },
           { label: t("employeeAccess.status"), value: employee.status },
           { label: t("common.note"), value: protectedText },
@@ -782,6 +788,10 @@ function employeeInitials(employee: HrEmployee) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+function visibleLoginEmail(email?: string | null) {
+  return email?.endsWith("@login.invalid") ? undefined : email;
 }
 
 function Th({ children }: { children: ReactNode }) {

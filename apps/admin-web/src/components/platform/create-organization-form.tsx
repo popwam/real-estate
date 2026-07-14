@@ -9,8 +9,10 @@ import { MapPicker } from "@/components/platform/map-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCreatePlatformOrganization, useMetadataCountries, useMetadataCurrencies, useMetadataLanguages, useMetadataTimezones, usePlatformPlans } from "@/hooks/use-platform-admin";
+import { useCreatePlatformOrganization, useMetadataCountries, useMetadataCurrencies, useMetadataLanguages, useMetadataOrganizationTypes, useMetadataTimezones, usePlatformPlans } from "@/hooks/use-platform-admin";
 import { useI18n } from "@/i18n";
+import { ApiError } from "@/lib/api";
+import { isOrganizationTypeCode, ORGANIZATION_TYPE_CODES } from "@/lib/organization-types";
 import type { MetadataOption, PlatformOrganizationInput } from "@/types/platform";
 
 const steps = [
@@ -71,7 +73,7 @@ export function CreateOrganizationForm() {
       const organization = await create.mutateAsync(payload);
       router.push(`/platform/organizations/${organization.id}`);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : t("organizationCreate.error"));
+      setSubmitError(organizationCreateError(error, t));
     }
   }
 
@@ -175,14 +177,21 @@ function CompanyStep() {
   const currencies = useMetadataCurrencies();
   const languages = useMetadataLanguages();
   const timezones = useMetadataTimezones();
+  const organizationTypes = useMetadataOrganizationTypes();
+  const organizationTypeOptions = (organizationTypes.data ?? []).filter((option) =>
+    isOrganizationTypeCode(option.code),
+  );
   return (
     <StepGrid title={t("provisioning.companyInformation")}>
       <Field
         label={t("provisioning.organizationType")}
         name="organizationType"
         kind="select"
-        options={["PLATFORM", "DEVELOPER", "BROKERAGE", "INDIVIDUAL_BROKER"]}
-        optionLabel={(option) => t(`organizationType.${organizationTypeKey(option)}`)}
+        options={organizationTypeOptions.length ? organizationTypeOptions.map((option) => option.code) : [...ORGANIZATION_TYPE_CODES]}
+        optionLabel={(option) => {
+          const metadata = organizationTypeOptions.find((item) => item.code === option);
+          return metadata ? t(metadata.labelKey) : t(`organizationType.${organizationTypeKey(option)}`);
+        }}
       />
       <Field label={t("provisioning.legalName")} name="legalName" required />
       <Field label={t("provisioning.displayName")} name="name" required />
@@ -194,7 +203,7 @@ function CompanyStep() {
       <MetadataField label={t("provisioning.timezone")} name="timezone" options={timezones.data} defaultValue="Africa/Cairo" />
       <MetadataField label={t("provisioning.currency")} name="defaultCurrency" options={currencies.data} defaultValue="EGP" />
       <MetadataField label={t("provisioning.defaultLanguage")} name="preferredLanguage" options={languages.data} defaultValue="en" />
-      <Field label={t("provisioning.status")} name="status" kind="select" options={["DRAFT", "ACTIVE", "SUSPENDED", "EXPIRED", "ARCHIVED"]} />
+      <Field label={t("provisioning.status")} name="status" kind="select" options={["DRAFT", "DOCUMENTS_REQUIRED"]} />
       <Field label={t("provisioning.registrationNumber")} name="registrationNumber" />
       <Field label={t("provisioning.commercialRegister")} name="commercialRegisterNumber" />
       <Field label={t("provisioning.taxNumber")} name="taxNumber" />
@@ -422,9 +431,13 @@ function payloadFromForm(data: FormData): PlatformOrganizationInput {
   const wifiName = optional(data, "wifiName");
   const customDomain = optional(data, "customDomain");
   const adminEmail = optional(data, "adminEmail");
+  const organizationTypeValue = required(data, "organizationType");
+  if (!isOrganizationTypeCode(organizationTypeValue)) {
+    throw new Error("ORGANIZATION_TYPE_INVALID");
+  }
   return {
     name: required(data, "name"),
-    organizationType: required(data, "organizationType") as PlatformOrganizationInput["organizationType"],
+    organizationType: organizationTypeValue,
     legalName: optional(data, "legalName"),
     tradeName: optional(data, "name"),
     companyCode: optional(data, "companyCode"),
@@ -529,6 +542,17 @@ function payloadFromForm(data: FormData): PlatformOrganizationInput {
         }
       : undefined,
   };
+}
+
+function organizationCreateError(error: unknown, t: (key: string) => string) {
+  if (error instanceof ApiError && typeof error.details === "object" && error.details) {
+    const details = error.details as { code?: unknown };
+    if (details.code === "ORGANIZATION_TYPE_INVALID") return t("errors.organizationTypeInvalid");
+  }
+  if (error instanceof Error && error.message === "ORGANIZATION_TYPE_INVALID") {
+    return t("errors.organizationTypeInvalid");
+  }
+  return error instanceof Error ? error.message : t("organizationCreate.error");
 }
 
 function optional(data: FormData, key: string) {

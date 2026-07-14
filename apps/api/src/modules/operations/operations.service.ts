@@ -826,6 +826,11 @@ export class OperationsService {
         dvrReferenceId: this.optional(input.dvrReferenceId),
       },
       include: { employee: true },
+    }).catch((error: unknown) => {
+      if ((error as { code?: string })?.code === 'P2002') {
+        throw new ConflictException('You are already checked in.');
+      }
+      throw error;
     });
     await this.recordActivity(
       user,
@@ -3104,13 +3109,25 @@ export class OperationsService {
         userId: user.userId,
         organizationId,
         status: HrEmployeeStatus.ACTIVE,
+        loginEnabled: true,
       },
+      include: { organization: { select: { type: true, status: true } } },
     });
 
     if (!employee) {
-      throw new ForbiddenException(
-        'No employee profile is linked to this account.',
-      );
+      throw new ForbiddenException({
+        code: 'EMPLOYEE_PROFILE_NOT_LINKED',
+        message: 'No employee profile is linked to this account.',
+      });
+    }
+    if (
+      employee.organization.type !== 'PLATFORM' &&
+      !['ACTIVE', 'APPROVED'].includes(employee.organization.status)
+    ) {
+      throw new ForbiddenException({
+        code: 'COMPANY_AWAITING_VERIFICATION',
+        message: 'The organization is awaiting platform review and activation.',
+      });
     }
 
     return employee;

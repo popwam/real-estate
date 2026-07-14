@@ -1,12 +1,20 @@
 import type { CurrentOrganization, OrganizationStatus } from "@/types/auth";
+import type { OrganizationTypeCode } from "@/lib/organization-types";
 
 export type OrganizationProfile = {
   id: string;
   organizationId: string;
   legalName?: string | null;
   tradeName?: string | null;
+  displayName?: string | null;
   commercialRegNumber?: string | null;
+  commercialRegisterNumber?: string | null;
+  registrationNumber?: string | null;
+  commercialRegisterIssuedAt?: string | null;
+  commercialRegisterExpiresAt?: string | null;
   taxNumber?: string | null;
+  vatNumber?: string | null;
+  addressLine1?: string | null;
   website?: string | null;
   phone?: string | null;
   email?: string | null;
@@ -392,8 +400,8 @@ export type ReviewActionInput = {
 
 export type PlatformOrganizationInput = {
   name: string;
-  organizationType?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
-  type?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  organizationType?: OrganizationTypeCode;
+  type?: OrganizationTypeCode;
   displayName?: string;
   legalName?: string;
   tradeName?: string;

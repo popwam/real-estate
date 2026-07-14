@@ -11,11 +11,13 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/current-user.decorator';
+import { ORGANIZATION_TYPE_METADATA } from '../../common/organization-types';
 import { PermissionsGuard } from '../../common/permissions.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequestUser } from '../auth/types/jwt-payload';
 import { CompanyPublicService } from './company-public.service';
 import {
+  ApplyOrganizationDocumentFieldsDto,
   ReviewOrganizationDocumentDto,
   UpdateOrganizationLegalDto,
   UpdatePublicSiteDto,
@@ -160,6 +162,16 @@ export class CompanyPublicController {
     return this.service.reviewDocument(id, documentId, dto, user);
   }
 
+  @Post('organizations/:id/documents/:documentId/fields/review')
+  reviewExtractedFields(
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+    @Body() dto: ApplyOrganizationDocumentFieldsDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.reviewExtractedFields(id, documentId, dto, user);
+  }
+
   @Get('metadata/countries')
   metadataCountries() {
     return countries;
@@ -183,5 +195,10 @@ export class CompanyPublicController {
   @Get('metadata/calling-codes')
   metadataCallingCodes() {
     return callingCodes;
+  }
+
+  @Get('metadata/organization-types')
+  metadataOrganizationTypes() {
+    return ORGANIZATION_TYPE_METADATA;
   }
 }

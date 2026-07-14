@@ -1,5 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { loadEnvironment } from '../../config/load-environment';
 
 export const BASE_ROLES = [
   'platform_owner',
@@ -77,6 +78,10 @@ export const HR_RECRUITMENT_PERMISSIONS = [
   'hr.recruitment.interviews.manage',
   'hr.recruitment.offers.manage',
   'hr.recruitment.convert_to_employee',
+  'hr.applicants.create',
+  'hr.applicants.review',
+  'hr.interviews.view',
+  'hr.interviews.manage',
 ] as const;
 
 export const RESIDENT_QR_PERMISSIONS = [
@@ -183,6 +188,7 @@ export const BASE_PERMISSIONS = [
   ...RESIDENT_QR_PERMISSIONS,
   ...SELF_RESIDENT_PERMISSIONS,
   'hr.employees.view',
+  'hr.employees.manage',
   'hr.employees.create',
   'hr.employees.update',
   'hr.employees.deactivate',
@@ -299,6 +305,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'hr.manage',
     ...HR_RECRUITMENT_PERMISSIONS,
     'hr.employees.view',
+    'hr.employees.manage',
     'hr.employees.create',
     'hr.employees.update',
     'hr.employees.deactivate',
@@ -378,6 +385,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'hr.manage',
     ...HR_RECRUITMENT_PERMISSIONS,
     'hr.employees.view',
+    'hr.employees.manage',
     'hr.employees.create',
     'hr.employees.update',
     'hr.employees.deactivate',
@@ -421,6 +429,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'hr.manage',
     ...HR_RECRUITMENT_PERMISSIONS,
     'hr.employees.view',
+    'hr.employees.manage',
     'hr.employees.create',
     'hr.employees.update',
     'hr.employees.deactivate',
@@ -754,6 +763,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'hr.manage',
     ...HR_RECRUITMENT_PERMISSIONS,
     'hr.employees.view',
+    'hr.employees.manage',
     'hr.employees.create',
     'hr.employees.update',
     'hr.employees.deactivate',
@@ -794,6 +804,7 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'hr.manage',
     ...HR_RECRUITMENT_PERMISSIONS,
     'hr.employees.view',
+    'hr.employees.manage',
     'hr.employees.create',
     'hr.employees.update',
     'hr.employees.deactivate',
@@ -921,9 +932,9 @@ async function syncRolePermissions(
 }
 
 if (require.main === module) {
-  const connectionString =
-    process.env.DATABASE_URL ??
-    'postgresql://postgres:postgres@localhost:5432/popwam?schema=public';
+  loadEnvironment();
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error('DATABASE_URL is required.');
   const adapter = new PrismaPg({ connectionString });
   const prisma = new PrismaClient({ adapter });
 

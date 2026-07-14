@@ -27,6 +27,7 @@ import {
 } from '@prisma/client';
 import { randomBytes } from 'node:crypto';
 import { normalizeOptionalPhoneOrThrow } from '../../common/phone-normalization';
+import { requireCanonicalOrganizationType } from '../../common/organization-types';
 import { isPlatformUser, requireCurrentOrganizationId } from '../../common/organization-scope';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { HashService } from '../auth/hash.service';
@@ -1873,7 +1874,10 @@ export class CompanyProvisioningService {
   }
 
   private enumValue<T extends Record<string, string>>(source: T, value: unknown, field: string) {
-    const normalized = this.string(value)?.toUpperCase().replaceAll('-', '_').replaceAll(' ', '_');
+    if (field === 'organizationType') {
+      return requireCanonicalOrganizationType(value) as T[keyof T];
+    }
+    const normalized = this.string(value);
     if (normalized && Object.values(source).includes(normalized)) return normalized as T[keyof T];
     throw new BadRequestException(
       `${field} is invalid. Allowed values: ${Object.values(source).join(', ')}.`,

@@ -33,10 +33,10 @@ describe('HrRecruitmentService', () => {
         findFirst: jest.fn(),
         update: jest.fn(),
       },
-      hrApplicantInterview: { count: jest.fn() },
+      hrApplicantInterview: { count: jest.fn(), create: jest.fn(), update: jest.fn(), findFirst: jest.fn() },
       hrApplicantOffer: { count: jest.fn() },
       uploadedFile: { create: jest.fn() },
-      hrRecruitmentSettings: { upsert: jest.fn() },
+      hrRecruitmentSettings: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn(),
     };
     service = new HrRecruitmentService(prisma, storage as any, auditLogs as any, hrService as any);
@@ -149,5 +149,70 @@ describe('HrRecruitmentService', () => {
       ),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(hrService.createEmployee).not.toHaveBeenCalled();
+  });
+
+  it('blocks interview readiness when required documents are not approved', async () => {
+    prisma.hrApplicant.findUnique.mockResolvedValue({
+      id: 'app_1',
+      organizationId: 'org_1',
+      status: HrApplicantStatus.PENDING_REVIEW,
+      documents: [],
+      interviews: [],
+      offers: [],
+    });
+
+    await expect(
+      service.updateApplicant(
+        { userId: 'user_1', organizationId: 'org_1' } as any,
+        'app_1',
+        { status: HrApplicantStatus.READY_FOR_INTERVIEW },
+      ),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'APPLICANT_DOCUMENTS_MISSING' }),
+    });
+    expect(prisma.hrApplicant.update).not.toHaveBeenCalled();
+  });
+
+  it('allows approved required documents to become ready and schedule an interview', async () => {
+    const documents = [
+      HrApplicantDocumentType.CV,
+      HrApplicantDocumentType.NATIONAL_ID_FRONT,
+      HrApplicantDocumentType.NATIONAL_ID_BACK,
+    ].map((documentType) => ({ documentType, status: HrApplicantDocumentStatus.APPROVED }));
+    const applicant = {
+      id: 'app_1',
+      organizationId: 'org_1',
+      fullName: 'Mona Applicant',
+      status: HrApplicantStatus.PENDING_REVIEW,
+      documents,
+      interviews: [],
+      offers: [],
+    };
+    prisma.hrApplicant.findUnique.mockResolvedValueOnce(applicant);
+    prisma.hrApplicant.update.mockResolvedValueOnce({
+      ...applicant,
+      status: HrApplicantStatus.READY_FOR_INTERVIEW,
+    });
+
+    const ready = await service.updateApplicant(
+      { userId: 'user_1', organizationId: 'org_1' } as any,
+      'app_1',
+      { status: HrApplicantStatus.READY_FOR_INTERVIEW },
+    );
+    expect(ready.status).toBe(HrApplicantStatus.READY_FOR_INTERVIEW);
+
+    prisma.hrApplicant.findUnique.mockResolvedValueOnce({
+      ...applicant,
+      status: HrApplicantStatus.READY_FOR_INTERVIEW,
+    });
+    prisma.hrApplicantInterview.create.mockResolvedValue({ id: 'interview_1' });
+    prisma.hrApplicant.update.mockResolvedValueOnce({});
+    await expect(
+      service.createInterview(
+        { userId: 'user_1', organizationId: 'org_1' } as any,
+        'app_1',
+        { scheduledAt: '2026-07-20T09:00:00.000Z' },
+      ),
+    ).resolves.toEqual({ id: 'interview_1' });
   });
 });

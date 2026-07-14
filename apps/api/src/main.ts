@@ -2,6 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { EnvService } from './config/env.service';
+import { loadEnvironment } from './config/load-environment';
+
+loadEnvironment();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

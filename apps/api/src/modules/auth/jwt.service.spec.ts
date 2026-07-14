@@ -7,6 +7,7 @@ describe('JwtService', () => {
   beforeEach(() => {
     process.env = {
       ...originalEnv,
+      DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
       JWT_SECRET: 'test-access-secret',
       JWT_EXPIRES_IN: '15m',
       JWT_REFRESH_SECRET: 'test-refresh-secret',

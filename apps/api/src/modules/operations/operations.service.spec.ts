@@ -20,6 +20,11 @@ describe('OperationsService self attendance', () => {
     userId: 'user_1',
     name: 'Linked Employee',
     status: HrEmployeeStatus.ACTIVE,
+    loginEnabled: true,
+    organization: {
+      type: 'BROKERAGE',
+      status: 'ACTIVE',
+    },
   };
 
   afterEach(() => {
@@ -128,7 +133,9 @@ describe('OperationsService self attendance', () => {
         userId: user.userId,
         organizationId: user.organizationId,
         status: HrEmployeeStatus.ACTIVE,
+        loginEnabled: true,
       },
+      include: { organization: { select: { type: true, status: true } } },
     });
     expect(prisma.hrAttendanceRecord.create).toHaveBeenCalledWith(
       expect.objectContaining({

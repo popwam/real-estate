@@ -186,7 +186,7 @@ export class HrService {
     const email = this.optionalEmail(body.email);
     const phoneCountry = this.string(body.phoneCountry) ?? (await this.organizationCountry(organizationId));
     const phone = normalizeOptionalPhoneOrThrow(this.string(body.phone), 'phone', phoneCountry);
-    const allowLogin = body.allowLogin === false || body.loginEnabled === false ? false : Boolean(email);
+    const allowLogin = body.allowLogin === false || body.loginEnabled === false ? false : Boolean(email || phone);
     const roleName = this.string(body.role) ?? 'employee_self_service';
     const temporaryPassword = this.string(body.temporaryPassword) || '123456';
     const firstName = this.string(body.firstName);
@@ -201,15 +201,15 @@ export class HrService {
     const existingCode = await this.prisma.hrEmployee.findFirst({ where: { organizationId, employeeCode } });
     if (existingCode) throw new ConflictException('employeeCode already exists.');
 
-    if (allowLogin && !email) throw new BadRequestException('email is required when login is enabled.');
     if (email && allowLogin) await this.assertEmailAvailable(email);
+    const loginEmail = email ?? (phone ? this.phoneLoginEmail(phone, organizationId) : undefined);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const userRecord = allowLogin
         ? await tx.user.create({
             data: {
               organizationId,
-              email: email as string,
+              email: loginEmail as string,
               phone,
               firstName,
               lastName,
@@ -988,6 +988,12 @@ export class HrService {
   private async assertEmailAvailable(email: string, exceptUserId?: string) {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing && existing.id !== exceptUserId) throw new ConflictException('Email is already registered.');
+  }
+
+  private phoneLoginEmail(phone: string, organizationId: string) {
+    const safePhone = phone.replace(/\D/g, '');
+    const safeOrganization = organizationId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
+    return `phone.${safePhone}.${safeOrganization}@login.invalid`.toLowerCase();
   }
 
   private async assertEmployeeLimit(organizationId: string) {

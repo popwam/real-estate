@@ -108,3 +108,9 @@ export class ReviewOrganizationDocumentDto {
   status?: OrganizationDocumentStatus;
   note?: string;
 }
+
+export class ApplyOrganizationDocumentFieldsDto {
+  fields?: string[];
+  action?: 'APPLY' | 'REJECT';
+  confirmSensitive?: boolean;
+}

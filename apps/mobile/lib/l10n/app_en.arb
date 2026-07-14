@@ -165,6 +165,7 @@
   "noAttendanceHistory": "No attendance history",
   "attendanceHistoryAppearsHere": "Your recent check-in and check-out records appear here.",
   "noEmployeeProfileLinked": "No employee profile is linked to this account.",
+  "companyAwaitingVerification": "The organization is awaiting platform review and activation.",
   "alreadyCheckedIn": "You are already checked in.",
   "checkInBeforeCheckOut": "You must check in before checking out.",
   "attendanceVerificationStatus": "Verification",

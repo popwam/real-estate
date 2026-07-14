@@ -552,6 +552,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucun profil employé n’est lié à ce compte.';
 
   @override
+  String get companyAwaitingVerification =>
+      'L’organisation attend la vérification et l’activation de la plateforme.';
+
+  @override
   String get alreadyCheckedIn => 'Vous avez déjà pointé votre arrivée.';
 
   @override
