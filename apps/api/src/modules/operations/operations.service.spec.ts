@@ -645,10 +645,10 @@ describe('OperationsService employee access management', () => {
     );
   });
 
-  it('defaults blank temporary passwords to 123456 and forces password change', async () => {
+  it('generates a secure one-time temporary password and forces password change', async () => {
     const { service, tx, hashService } = setupEmployeeAccess();
 
-    await service.createHrEmployee(
+    const result = await service.createHrEmployee(
       {
         firstName: 'Default',
         email: 'default-password@example.com',
@@ -657,7 +657,8 @@ describe('OperationsService employee access management', () => {
       companyAdmin,
     );
 
-    expect(hashService.hash).toHaveBeenCalledWith('123456');
+    expect(hashService.hash).toHaveBeenCalledWith(expect.stringMatching(/^Pw-[A-Za-z0-9_-]{12}$/));
+    expect(result.temporaryPassword).toEqual(expect.stringMatching(/^Pw-[A-Za-z0-9_-]{12}$/));
     expect(tx.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

@@ -19,6 +19,8 @@ describe('AuthService', () => {
       slug: 'northline',
       type: 'DEVELOPER',
       status: 'APPROVED',
+      enabledLoginMethods: ['EMAIL_PASSWORD', 'PHONE_PASSWORD'],
+      subscription: { planCode: 'business' },
     },
     role: {
       permissions: [{ permission: { key: 'projects.view_own' } }],
@@ -34,6 +36,9 @@ describe('AuthService', () => {
       },
       refreshToken: {
         create: jest.fn().mockResolvedValue({ id: 'refresh_1' }),
+      },
+      platformPlan: {
+        findUnique: jest.fn().mockResolvedValue({ isActive: true, isArchived: false, allowedLoginMethods: ['EMAIL_PASSWORD', 'PHONE_PASSWORD'] }),
       },
       ...overrides,
     } as any;

@@ -8,6 +8,7 @@ import { AppService } from '../app.service';
 import { loadEnvironment } from '../config/load-environment';
 import { AuthService } from '../modules/auth/auth.service';
 import { CompanyProvisioningService } from '../modules/company-provisioning/company-provisioning.service';
+import { CrmLeadsService } from '../modules/crm/crm-leads.service';
 import { HrRecruitmentService } from '../modules/hr/hr-recruitment.service';
 import { HrService } from '../modules/hr/hr.service';
 import { OperationsService } from '../modules/operations/operations.service';
@@ -69,7 +70,7 @@ export async function runPlatformDoctor() {
       'Active role assignment',
       'Platform permissions',
       'RBAC',
-      'Base plans',
+      'Plan catalog',
       'Verification policies',
       'Organizations query',
       'Employee creation dependencies',
@@ -116,6 +117,7 @@ async function databaseChecks(prisma: PrismaClient, checks: Check[]) {
   const requiredTables = [
     'organizations', 'users', 'roles', 'permissions', 'role_permissions',
     'platform_plans', 'required_document_policies', 'organization_documents',
+    'platform_navigation_configurations', 'platform_metadata_records',
     'hr_employees', 'hr_attendance_records', 'organization_attendance_settings',
     'hr_applicants', 'hr_applicant_documents', 'hr_applicant_interviews',
   ];
@@ -125,12 +127,15 @@ async function databaseChecks(prisma: PrismaClient, checks: Check[]) {
   const tableSet = new Set(tables.map((table) => table.table_name));
   const missingTables = requiredTables.filter((table) => !tableSet.has(table));
   const requiredColumns: Record<string, string[]> = {
-    organizations: ['id', 'type', 'status', 'slug'],
+    organizations: ['id', 'type', 'status', 'slug', 'archivedAt', 'companySetupCompletedAt', 'enabledLoginMethods'],
     users: ['id', 'organizationId', 'roleId', 'isActive'],
     hr_employees: ['id', 'organizationId', 'userId', 'status', 'loginEnabled'],
     hr_attendance_records: ['organizationId', 'employeeId', 'checkInAt', 'checkOutAt', 'verificationStatus'],
     hr_applicants: ['organizationId', 'status', 'convertedEmployeeId'],
     organization_documents: ['organizationId', 'fileId', 'status', 'extractionStatus', 'extractedData'],
+    platform_plans: ['planType', 'durationValue', 'durationUnit', 'allowedLoginMethods'],
+    organization_subscriptions: ['endDateOverridden', 'endDateOverrideReason'],
+    user_navigation_preferences: ['hasDismissedPlatformWelcome'],
   };
   const columnRows = await prisma.$queryRaw<Array<{ table_name: string; column_name: string }>>`
     SELECT table_name, column_name
@@ -179,17 +184,26 @@ async function databaseChecks(prisma: PrismaClient, checks: Check[]) {
   checks.push({ label: 'Active role assignment', ok: Boolean(platformOwner?.roleId) });
 
   const countSafely = async (operation: Promise<number>) => operation.catch(() => -1);
-  const [permissionCount, roleCount, assignmentCount, planCount, policyCount] = await Promise.all([
+  const [permissionCount, roleCount, assignmentCount, ownerPermissionCount, planCount, policyCount, navigationCount] = await Promise.all([
     countSafely(prisma.permission.count({ where: { key: { in: [...BASE_PERMISSIONS] } } })),
     countSafely(prisma.role.count()),
     countSafely(prisma.rolePermission.count()),
+    platformOwner?.roleId
+      ? countSafely(prisma.rolePermission.count({ where: { roleId: platformOwner.roleId, permission: { key: { in: [...BASE_PERMISSIONS] } } } }))
+      : Promise.resolve(0),
     countSafely(prisma.platformPlan.count({ where: { isActive: true, isArchived: false } })),
     countSafely(prisma.requiredDocumentPolicy.count({ where: { isActive: true } })),
+    countSafely(prisma.platformNavigationConfiguration.count()),
   ]);
-  checks.push({ label: 'Platform permissions', ok: permissionCount === BASE_PERMISSIONS.length, detail: `${permissionCount}/${BASE_PERMISSIONS.length}` });
+  checks.push({ label: 'Platform permissions', ok: permissionCount === BASE_PERMISSIONS.length && ownerPermissionCount === BASE_PERMISSIONS.length, detail: `catalog ${permissionCount}/${BASE_PERMISSIONS.length}, owner ${ownerPermissionCount}/${BASE_PERMISSIONS.length}` });
   checks.push({ label: 'RBAC', ok: roleCount > 0 && assignmentCount > 0, detail: `${roleCount} roles, ${permissionCount} base permissions, ${assignmentCount} assignments` });
-  checks.push({ label: 'Base plans', ok: planCount > 0, detail: `${planCount}` });
-  checks.push({ label: 'Verification policies', ok: policyCount > 0, detail: `${policyCount}` });
+  checks.push({ label: 'Plan catalog', ok: planCount >= 0, detail: `${planCount} owner-created active plans` });
+  checks.push({ label: 'Verification policies', ok: policyCount >= 0, detail: `${policyCount} configured policies; built-in required-document fallback is available` });
+  checks.push({
+    label: 'Navigation configuration',
+    ok: navigationCount === 13,
+    detail: navigationCount < 0 ? 'unavailable until the required migration is applied' : `${navigationCount}/13 sections`,
+  });
 
   try {
     await prisma.organization.findMany({
@@ -223,6 +237,8 @@ async function applicationChecks(checks: Check[]) {
       ['HR module', HrService],
       ['Attendance service', OperationsService],
       ['Recruitment service', HrRecruitmentService],
+      ['CRM service', CrmLeadsService],
+      ['Finance/legal operations service', OperationsService],
       ['Company provisioning service', CompanyProvisioningService],
     ];
     for (const [label, token] of services) {

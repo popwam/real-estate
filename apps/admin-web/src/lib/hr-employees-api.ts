@@ -119,6 +119,10 @@ export type HrEmployee = {
   };
 };
 
+export type HrEmployeeCreateResult = HrEmployee & {
+  temporaryPassword?: string;
+};
+
 export type HrEmployeeIdentifier = {
   id?: string;
   type: string;
@@ -192,7 +196,7 @@ export function getHrEmployeeApi(id: string) {
 }
 
 export function createHrEmployeeApi(input: HrEmployeeInput) {
-  return apiRequest<HrEmployee>("/hr/employees", {
+  return apiRequest<HrEmployeeCreateResult>("/hr/employees", {
     method: "POST",
     body: JSON.stringify(input),
   });

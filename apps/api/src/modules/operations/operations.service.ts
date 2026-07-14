@@ -366,9 +366,12 @@ export class OperationsService {
     this.assertEmployeeRoleAssignable(roleName, user);
     const requestedPermissions = this.permissionKeys(input.permissions);
     await this.assertAssignableEmployeePermissions(requestedPermissions, user);
-    const password = this.optional(input.temporaryPassword ?? input.password) ?? '123456';
-    if (password !== '123456' && password.length < 8) {
-      throw new BadRequestException('temporaryPassword must be at least 8 characters.');
+    const generatedPassword = !this.optional(input.temporaryPassword ?? input.password);
+    const password = generatedPassword
+      ? this.generateTemporaryPassword()
+      : this.required(input.temporaryPassword ?? input.password, 'temporaryPassword');
+    if (password.length < 12 || password === '123456') {
+      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
     }
     const passwordHash = await this.hashService!.hash(password);
     const name = this.employeeName(input);
@@ -479,7 +482,10 @@ export class OperationsService {
     await this.recordAudit(user, 'employee.created', 'HrEmployee', record.id, {
       role: record.user?.role?.name ?? roleName,
     });
-    return this.hrEmployeeResponse(record);
+    return {
+      ...this.hrEmployeeResponse(record),
+      temporaryPassword: generatedPassword ? password : undefined,
+    };
   }
 
   async updateHrEmployee(
@@ -605,8 +611,8 @@ export class OperationsService {
     const temporaryPassword = generated
       ? this.generateTemporaryPassword()
       : this.required(input.temporaryPassword ?? input.password, 'temporaryPassword');
-    if (temporaryPassword !== '123456' && temporaryPassword.length < 8) {
-      throw new BadRequestException('temporaryPassword must be at least 8 characters.');
+    if (temporaryPassword.length < 12 || temporaryPassword === '123456') {
+      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
     }
     await this.prisma.user.update({
       where: { id: employee.userId },

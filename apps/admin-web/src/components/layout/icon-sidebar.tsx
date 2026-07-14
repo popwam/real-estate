@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, RotateCcw, Search, Settings, X } from "lucide-react";
-import type { NavItem, SidebarIconKey } from "@/components/layout/nav";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Pin, PinOff, RotateCcw, Settings, X } from "lucide-react";
+import type { NavItem } from "@/components/layout/nav";
 import { useSidebarPreferences } from "@/hooks/use-sidebar-preferences";
 import { useAllowedNavigation } from "@/hooks/use-navigation";
 import { useI18n } from "@/i18n";
+import { defaultSidebarPreferences, type SidebarPreferences } from "@/lib/sidebar-preferences";
 import { cn } from "@/lib/utils";
 
 export function IconSidebar() {
@@ -16,13 +17,17 @@ export function IconSidebar() {
   const allowedItems = useAllowedNavigation();
   const sidebar = useSidebarPreferences(allowedItems);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [groupSearch, setGroupSearch] = useState<Record<string, string>>({});
+  const [manualOpenGroup, setManualOpenGroup] = useState<{ pathname: string; key: string | null } | null>(null);
   const expanded = sidebar.mode === "expanded";
   const homeHref = allowedItems[0]?.href ?? "/login";
   const ToggleIcon = expanded === (direction === "ltr") ? ChevronLeft : ChevronRight;
   const visibleItems = sidebar.visibleItems;
   const groupedItems = useMemo(() => groupSidebarItems(visibleItems), [visibleItems]);
+
+  const activeGroupKey = groupedItems.find((group) =>
+    group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)),
+  )?.key ?? null;
+  const openGroup = manualOpenGroup?.pathname === pathname ? manualOpenGroup.key : activeGroupKey;
 
   return (
     <>
@@ -69,11 +74,7 @@ export function IconSidebar() {
               icon={sidebar.iconFor(item)}
             />
           )) : groupedItems.map((group) => {
-            const groupOpen = openGroups[group.key] ?? true;
-            const query = (groupSearch[group.key] ?? "").trim().toLowerCase();
-            const filteredItems = query
-              ? group.items.filter((item) => `${item.label} ${item.href}`.toLowerCase().includes(query))
-              : group.items;
+            const groupOpen = openGroup === group.key;
             const GroupIcon = sidebar.iconFor(group.items[0]);
             const activeInGroup = group.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
@@ -85,7 +86,7 @@ export function IconSidebar() {
                     "flex h-10 w-full items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-semibold hover:bg-[var(--color-surface-muted)]",
                     activeInGroup ? "text-[var(--color-accent)]" : "text-[var(--color-foreground)]",
                   )}
-                  onClick={() => setOpenGroups((current) => ({ ...current, [group.key]: !groupOpen }))}
+                  onClick={() => setManualOpenGroup({ pathname, key: openGroup === group.key ? null : group.key })}
                   aria-expanded={groupOpen}
                 >
                   <GroupIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -95,18 +96,7 @@ export function IconSidebar() {
                 </button>
                 {groupOpen ? (
                   <div className="mt-2 space-y-1">
-                    <label className="relative block">
-                      <span className="sr-only">{t("navigation.search")}</span>
-                      <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
-                      <input
-                        type="search"
-                        value={groupSearch[group.key] ?? ""}
-                        onChange={(event) => setGroupSearch((current) => ({ ...current, [group.key]: event.target.value }))}
-                        placeholder={t("navigation.searchPlaceholder")}
-                        className="h-9 w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] ps-9 pe-3 text-sm text-[var(--color-foreground)] outline-none focus:border-[var(--color-accent)]"
-                      />
-                    </label>
-                    {filteredItems.map((item) => (
+                    {group.items.map((item) => (
                     <SidebarNavLink
                       key={item.id}
                       item={item}
@@ -154,12 +144,11 @@ export function IconSidebar() {
         </div>
       </aside>
 
-      <SidebarCustomizePanel
-        open={customizeOpen}
+      {customizeOpen ? <SidebarCustomizePanel
         items={allowedItems}
         sidebar={sidebar}
         onClose={() => setCustomizeOpen(false)}
-      />
+      /> : null}
     </>
   );
 }
@@ -197,28 +186,26 @@ function SidebarNavLink({
 }
 
 function SidebarCustomizePanel({
-  open,
   items,
   sidebar,
   onClose,
 }: {
-  open: boolean;
   items: NavItem[];
   sidebar: ReturnType<typeof useSidebarPreferences>;
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const groups = useMemo(() => [...new Set(items.map((item) => item.group))], [items]);
+  const [activeGroup, setActiveGroup] = useState(groups[0] ?? "");
+  const [draft, setDraft] = useState<SidebarPreferences>(sidebar.preferences);
 
   useEffect(() => {
-    if (!open) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, open]);
-
-  if (!open) return null;
+  }, [onClose]);
 
   return (
     <>
@@ -252,48 +239,53 @@ function SidebarCustomizePanel({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-x-hidden px-5 py-5">
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold text-[var(--color-foreground)]">{t("sidebar.display")}</legend>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => sidebar.setMode("collapsed")}
-                className={modeButtonClass(sidebar.mode === "collapsed")}
+                onClick={() => setDraft((current) => ({ ...current, mode: "collapsed" }))}
+                className={modeButtonClass(draft.mode === "collapsed")}
               >
-                {sidebar.mode === "collapsed" ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+                {draft.mode === "collapsed" ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
                 {t("sidebar.iconOnly")}
               </button>
               <button
                 type="button"
-                onClick={() => sidebar.setMode("expanded")}
-                className={modeButtonClass(sidebar.mode === "expanded")}
+                onClick={() => setDraft((current) => ({ ...current, mode: "expanded" }))}
+                className={modeButtonClass(draft.mode === "expanded")}
               >
-                {sidebar.mode === "expanded" ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+                {draft.mode === "expanded" ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
                 {t("sidebar.iconAndText")}
               </button>
             </div>
           </fieldset>
 
-          <section>
+          <section className="min-h-0">
             <h3 className="mb-2 text-sm font-semibold text-[var(--color-foreground)]">{t("sidebar.visibleItems")}</h3>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <SidebarCustomizeRow key={item.id} item={item} sidebar={sidebar} groups={[...new Set(items.map((navItem) => navItem.group))]} />
+            <div className="mb-3 flex max-w-full gap-2 overflow-x-auto pb-1">
+              {groups.map((group) => <button key={group} type="button" onClick={() => setActiveGroup(group)} className={modeButtonClass(activeGroup === group)}>{group}</button>)}
+            </div>
+            <div className="max-h-[45vh] space-y-2 overflow-y-auto pe-1">
+              {items.filter((item) => item.group === activeGroup).map((item) => (
+                <SidebarCustomizeRow key={item.id} item={item} preferences={draft} setPreferences={setDraft} />
               ))}
             </div>
           </section>
         </div>
 
-        <div className="border-t border-[var(--color-border)] p-5">
+        <div className="sticky bottom-0 flex gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] p-5">
           <button
             type="button"
-            onClick={sidebar.reset}
-            className="ui-button ui-button-secondary w-full"
+            onClick={() => setDraft(defaultSidebarPreferences)}
+            className="ui-button ui-button-secondary"
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
             {t("sidebar.reset")}
           </button>
+          <button type="button" className="ui-button ui-button-secondary ms-auto" onClick={onClose}>{t("common.cancel")}</button>
+          <button type="button" className="ui-button ui-button-primary" onClick={() => { sidebar.apply(draft); onClose(); }}>{t("common.save")}</button>
         </div>
       </section>
     </>
@@ -302,17 +294,25 @@ function SidebarCustomizePanel({
 
 function SidebarCustomizeRow({
   item,
-  sidebar,
-  groups,
+  preferences,
+  setPreferences,
 }: {
   item: NavItem;
-  sidebar: ReturnType<typeof useSidebarPreferences>;
-  groups: string[];
+  preferences: SidebarPreferences;
+  setPreferences: React.Dispatch<React.SetStateAction<SidebarPreferences>>;
 }) {
   const { t } = useI18n();
   const Icon = item.icon;
-  const hidden = sidebar.isHidden(item.id);
-  const pinned = sidebar.isPinned(item.id);
+  const hidden = preferences.hiddenItemIds.includes(item.id);
+  const pinned = preferences.pinnedItemIds.includes(item.id);
+  const toggleHidden = () => setPreferences((current) => ({
+    ...current,
+    hiddenItemIds: hidden ? current.hiddenItemIds.filter((id) => id !== item.id) : [...new Set([...current.hiddenItemIds, item.id])],
+  }));
+  const togglePinned = () => setPreferences((current) => ({
+    ...current,
+    pinnedItemIds: pinned ? current.pinnedItemIds.filter((id) => id !== item.id) : [...new Set([item.id, ...current.pinnedItemIds])],
+  }));
 
   return (
     <div className="grid min-w-0 grid-cols-[1fr_auto] gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
@@ -320,34 +320,13 @@ function SidebarCustomizeRow({
         <Icon className="h-5 w-5 shrink-0 text-[var(--color-muted)]" aria-hidden="true" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[var(--color-foreground)]">{item.label}</p>
-          <p className="truncate text-xs text-[var(--color-muted)]">{item.group}</p>
-          <label className="mt-2 grid gap-1 text-xs">
-            <span className="font-semibold text-[var(--color-muted)]">{t("sidebar.displayName")}</span>
-            <input
-              value={sidebar.preferences.labelOverrides[item.id] ?? ""}
-              onChange={(event) => sidebar.setLabelOverride(item.id, event.target.value)}
-              placeholder={item.label}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-foreground)]"
-            />
-          </label>
-          <label className="mt-2 grid gap-1 text-xs">
-            <span className="font-semibold text-[var(--color-muted)]">{t("sidebar.moveToSection")}</span>
-            <select
-              value={sidebar.preferences.groupOverrides[item.id] ?? item.group}
-              onChange={(event) => sidebar.setGroupOverride(item.id, event.target.value)}
-              className="h-8 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-foreground)]"
-            >
-              {groups.map((group) => (
-                <option key={group} value={group}>{group}</option>
-              ))}
-            </select>
-          </label>
+          <p className="truncate text-xs text-[var(--color-muted)]">{item.href}</p>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
-          onClick={() => (hidden ? sidebar.showItem(item.id) : sidebar.hideItem(item.id))}
+          onClick={toggleHidden}
           className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]"
           aria-label={hidden ? t("sidebar.showItem") : t("sidebar.hideItem")}
           title={hidden ? t("sidebar.showItem") : t("sidebar.hideItem")}
@@ -356,28 +335,13 @@ function SidebarCustomizeRow({
         </button>
         <button
           type="button"
-          onClick={() => (pinned ? sidebar.unpinItem(item.id) : sidebar.pinItem(item.id))}
+          onClick={togglePinned}
           className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-foreground)]"
           aria-label={pinned ? t("sidebar.unpinItem") : t("sidebar.pinItem")}
           title={pinned ? t("sidebar.unpinItem") : t("sidebar.pinItem")}
         >
           {pinned ? <PinOff className="h-4 w-4" aria-hidden="true" /> : <Pin className="h-4 w-4" aria-hidden="true" />}
         </button>
-        <label className="sr-only" htmlFor={`sidebar-icon-${item.id}`}>{t("sidebar.chooseIcon")}</label>
-        <select
-          id={`sidebar-icon-${item.id}`}
-          value={sidebar.preferences.iconOverrides[item.id] ?? item.iconKey}
-          onChange={(event) => sidebar.setIconOverride(item.id, event.target.value as SidebarIconKey)}
-          className="h-9 max-w-32 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs font-semibold text-[var(--color-foreground)]"
-          title={t("sidebar.chooseIcon")}
-          aria-label={t("sidebar.chooseIcon")}
-        >
-          {Object.keys(sidebar.safeIconMap).map((iconKey) => (
-            <option key={iconKey} value={iconKey}>
-              {t(`sidebar.icon.${iconKey}`)}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   );

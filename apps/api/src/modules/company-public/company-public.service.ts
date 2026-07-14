@@ -60,6 +60,24 @@ export class CompanyPublicService {
     private readonly extraction: DocumentExtractionService,
   ) {}
 
+  async listPlatformMetadataOptions(category: 'COUNTRY' | 'CURRENCY' | 'LANGUAGE') {
+    const records = await this.prisma.platformMetadataRecord.findMany({
+      where: { category, isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+    });
+    return records.map((record) => {
+      const name = this.object(record.localizedName);
+      const configuration = this.object(record.configuration);
+      return {
+        ...configuration,
+        code: record.code,
+        value: record.code,
+        name,
+        label: this.string(name.en) ?? record.code,
+      };
+    });
+  }
+
   async getPublicSite(slug: string) {
     const normalizedSlug = this.slug(slug);
     const fallbackPath = `${this.fallbackPath()}/${normalizedSlug}`;
@@ -1036,6 +1054,12 @@ export class CompanyPublicService {
       ar: this.string(value.ar) ?? '',
       fr: this.string(value.fr) ?? '',
     } as Prisma.InputJsonValue;
+  }
+
+  private object(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : {};
   }
 
   private string(value: unknown) {

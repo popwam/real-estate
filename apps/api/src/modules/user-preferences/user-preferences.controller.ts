@@ -32,6 +32,19 @@ export class UserPreferencesController {
     return this.service.resetNavigation(user);
   }
 
+  @Get('platform-welcome')
+  getPlatformWelcome(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.getPlatformWelcome(user);
+  }
+
+  @Put('platform-welcome')
+  savePlatformWelcome(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Body() body: { hasDismissedPlatformWelcome?: boolean },
+  ) {
+    return this.service.savePlatformWelcome(user, body.hasDismissedPlatformWelcome === true);
+  }
+
   @Permissions('quick_actions.customize')
   @Get('quick-actions/:widgetKey')
   getQuickAction(

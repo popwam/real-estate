@@ -25,6 +25,9 @@ describe('CompanyPublicService extracted-field review', () => {
       organizationProfile: {
         upsert: jest.fn().mockResolvedValue({ legalName: 'Example Brokerage' }),
       },
+      platformMetadataRecord: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
     const auditLogs = { record: jest.fn().mockResolvedValue(undefined) };
     return {
@@ -71,5 +74,24 @@ describe('CompanyPublicService extracted-field review', () => {
       }),
     });
     expect(prisma.organizationProfile.upsert).not.toHaveBeenCalled();
+  });
+
+  it('returns only active Platform Owner metadata for business selectors', async () => {
+    const { service, prisma } = setup();
+    prisma.platformMetadataRecord.findMany.mockResolvedValue([
+      {
+        code: 'EG',
+        localizedName: { en: 'Egypt', ar: 'مصر', fr: 'Égypte' },
+        configuration: { callingCode: '+20' },
+      },
+    ]);
+
+    await expect(service.listPlatformMetadataOptions('COUNTRY')).resolves.toEqual([
+      expect.objectContaining({ code: 'EG', value: 'EG', label: 'Egypt', callingCode: '+20' }),
+    ]);
+    expect(prisma.platformMetadataRecord.findMany).toHaveBeenCalledWith({
+      where: { category: 'COUNTRY', isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+    });
   });
 });

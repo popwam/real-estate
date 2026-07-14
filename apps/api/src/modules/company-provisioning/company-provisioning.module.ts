@@ -5,6 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 import { CompanyProvisioningService } from './company-provisioning.service';
 import {
   OrganizationProvisioningController,
+  PlatformDashboardController,
   PlatformSettingsController,
   PlatformOrganizationsController,
 } from './company-provisioning.controller';
@@ -12,6 +13,7 @@ import {
 @Module({
   imports: [AuditLogsModule, AuthModule],
   controllers: [
+    PlatformDashboardController,
     PlatformOrganizationsController,
     PlatformSettingsController,
     OrganizationProvisioningController,

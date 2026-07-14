@@ -36,6 +36,37 @@ export class UserPreferencesService {
     return { reset: true };
   }
 
+  async getPlatformWelcome(user: AuthenticatedRequestUser) {
+    const preference = await this.prisma.userNavigationPreference.findUnique({
+      where: { userId: user.userId },
+      select: { hasDismissedPlatformWelcome: true, platformWelcomeDismissedAt: true },
+    });
+    return {
+      hasDismissedPlatformWelcome: preference?.hasDismissedPlatformWelcome ?? false,
+      dismissedAt: preference?.platformWelcomeDismissedAt ?? null,
+    };
+  }
+
+  async savePlatformWelcome(user: AuthenticatedRequestUser, dismissed: boolean) {
+    const preference = await this.prisma.userNavigationPreference.upsert({
+      where: { userId: user.userId },
+      create: {
+        userId: user.userId,
+        hasDismissedPlatformWelcome: dismissed,
+        platformWelcomeDismissedAt: dismissed ? new Date() : null,
+      },
+      update: {
+        hasDismissedPlatformWelcome: dismissed,
+        platformWelcomeDismissedAt: dismissed ? new Date() : null,
+      },
+      select: { hasDismissedPlatformWelcome: true, platformWelcomeDismissedAt: true },
+    });
+    return {
+      hasDismissedPlatformWelcome: preference.hasDismissedPlatformWelcome,
+      dismissedAt: preference.platformWelcomeDismissedAt,
+    };
+  }
+
   getQuickAction(user: AuthenticatedRequestUser, widgetKey: string) {
     return this.prisma.userQuickActionPreference.findUnique({
       where: { userId_widgetKey: { userId: user.userId, widgetKey } },

@@ -24,7 +24,7 @@ import {
   UpsertOrganizationDocumentDto,
   UpsertOrganizationOwnerDto,
 } from './company-public.dto';
-import { callingCodes, countries, currencies, languages, timezones } from './metadata-library';
+import { callingCodes, timezones } from './metadata-library';
 
 @ApiTags('Public Company Sites')
 @Controller('public')
@@ -174,17 +174,17 @@ export class CompanyPublicController {
 
   @Get('metadata/countries')
   metadataCountries() {
-    return countries;
+    return this.service.listPlatformMetadataOptions('COUNTRY');
   }
 
   @Get('metadata/currencies')
   metadataCurrencies() {
-    return currencies;
+    return this.service.listPlatformMetadataOptions('CURRENCY');
   }
 
   @Get('metadata/languages')
   metadataLanguages() {
-    return languages;
+    return this.service.listPlatformMetadataOptions('LANGUAGE');
   }
 
   @Get('metadata/timezones')

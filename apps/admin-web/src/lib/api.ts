@@ -253,6 +253,26 @@ export function updatePlatformOrganizationApi(id: string, input: Partial<Platfor
   });
 }
 
+export function getOrganizationDeletionImpactApi(id: string) {
+  return apiRequest<import("@/types/platform").OrganizationDeletionImpact>(`/platform/organizations/${encodeURIComponent(id)}/deletion-impact`);
+}
+
+export function archivePlatformOrganizationApi(id: string, reason?: string) {
+  return apiRequest<Organization>(`/platform/organizations/${encodeURIComponent(id)}/archive`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export function restorePlatformOrganizationApi(id: string) {
+  return apiRequest<Organization>(`/platform/organizations/${encodeURIComponent(id)}/restore`, { method: "POST", body: JSON.stringify({}) });
+}
+
+export function suspendPlatformOrganizationApi(id: string, reason?: string) {
+  return apiRequest<Organization>(`/platform/organizations/${encodeURIComponent(id)}/suspend`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export function deleteDraftPlatformOrganizationApi(id: string, confirmationName: string) {
+  return apiRequest<{ deleted: boolean; organizationId: string; removedCounts: Record<string, number> }>(`/platform/organizations/${encodeURIComponent(id)}/draft`, { method: "DELETE", body: JSON.stringify({ confirmationName }) });
+}
+
 export function getOrganizationActivationCheckApi(id: string) {
   return apiRequest<ActivationCheck>(`/platform/organizations/${id}/activation-check`);
 }
@@ -272,6 +292,44 @@ export function rejectProvisioningOrganizationApi(id: string, input: { reason: s
 
 export function getPlatformSettingsApi() {
   return apiRequest<PlatformSettingsSummary>("/platform/settings");
+}
+
+export function getPlatformDashboardApi() {
+  return apiRequest<import("@/types/platform").PlatformDashboard>("/platform/dashboard");
+}
+
+export function getPlatformNavigationApi() {
+  return apiRequest<import("@/types/platform").PlatformNavigationSection[]>("/platform/settings/navigation");
+}
+
+export function updatePlatformNavigationApi(sections: import("@/types/platform").PlatformNavigationSection[]) {
+  return apiRequest<import("@/types/platform").PlatformNavigationSection[]>("/platform/settings/navigation", {
+    method: "PATCH",
+    body: JSON.stringify({ sections }),
+  });
+}
+
+export function restorePlatformNavigationApi() {
+  return apiRequest<import("@/types/platform").PlatformNavigationSection[]>("/platform/settings/navigation/restore-defaults", { method: "POST" });
+}
+
+export function listPlatformMetadataApi(category?: string) {
+  const query = category ? `?category=${encodeURIComponent(category)}` : "";
+  return apiRequest<import("@/types/platform").PlatformMetadataRecord[]>(`/platform/settings/metadata${query}`);
+}
+
+export function createPlatformMetadataApi(input: Partial<import("@/types/platform").PlatformMetadataRecord>) {
+  return apiRequest<import("@/types/platform").PlatformMetadataRecord>("/platform/settings/metadata", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updatePlatformMetadataApi(id: string, input: Partial<import("@/types/platform").PlatformMetadataRecord>) {
+  return apiRequest<import("@/types/platform").PlatformMetadataRecord>(`/platform/settings/metadata/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }
 
 export function listPlatformPlansApi() {
