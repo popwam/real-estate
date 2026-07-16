@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { CompanyProvisioningService } from './company-provisioning.service';
 
@@ -201,5 +202,92 @@ describe('CompanyProvisioningService organization list', () => {
     });
     expect(JSON.stringify(logError.mock.calls)).not.toContain('db_password');
     expect(JSON.stringify(logError.mock.calls)).not.toContain('private-token');
+  });
+});
+
+describe('CompanyProvisioningService platform settings and profile', () => {
+  const platformOwner = {
+    userId: 'platform_owner_user',
+    organizationId: 'platform_org',
+    organizationType: 'PLATFORM',
+    role: 'platform_owner',
+    permissions: ['platform.settings.view', 'platform.organizations.view'],
+  };
+
+  function makeService(profile: Record<string, unknown> | null) {
+    const prisma = {
+      organization: { findUnique: jest.fn().mockResolvedValue(profile) },
+    };
+    return {
+      prisma,
+      service: new CompanyProvisioningService(
+        prisma as any,
+        { record: jest.fn() } as any,
+        {} as any,
+      ),
+    };
+  }
+
+  it('returns Platform Settings for a Platform Owner', async () => {
+    const { service } = makeService(null);
+    await expect(service.getPlatformSettings(platformOwner)).resolves.toEqual(
+      expect.objectContaining({ sections: expect.any(Array) }),
+    );
+  });
+
+  it('returns 403 when Platform Settings permission is missing', async () => {
+    const { service } = makeService(null);
+    await expect(
+      service.getPlatformSettings({ ...platformOwner, permissions: [] }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('returns a resilient organization profile with nullable setup data', async () => {
+    const { service, prisma } = makeService({
+      id: 'org_1',
+      name: 'Example',
+      slug: 'example',
+      profile: null,
+      subscription: null,
+      limits: null,
+      branches: [],
+      attendanceLocations: [],
+      wifiRules: [],
+      domainVerifications: [],
+      users: [],
+    });
+
+    await expect(
+      service.getPlatformOrganization('org_1', platformOwner),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        profile: null,
+        subscription: null,
+        limits: null,
+        branches: [],
+        companyRoleTemplates: [],
+      }),
+    );
+    expect(
+      prisma.organization.findUnique.mock.calls[0][0].include,
+    ).not.toHaveProperty('companyRoleTemplates');
+  });
+
+  it('returns 404 when the organization does not exist', async () => {
+    const { service } = makeService(null);
+    await expect(
+      service.getPlatformOrganization('missing', platformOwner),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns 403 before querying an organization when permission is missing', async () => {
+    const { service, prisma } = makeService(null);
+    await expect(
+      service.getPlatformOrganization('org_1', {
+        ...platformOwner,
+        permissions: ['platform.settings.view'],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.organization.findUnique).not.toHaveBeenCalled();
   });
 });

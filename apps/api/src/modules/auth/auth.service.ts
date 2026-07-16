@@ -21,6 +21,11 @@ import { HashService } from './hash.service';
 import { JwtService } from './jwt.service';
 import { AuthenticatedRequestUser } from './types/jwt-payload';
 import { ROLE_PERMISSIONS } from '../permissions/rbac.seed';
+import { buildAccessVersion } from './access-version';
+import {
+  isBlockedOrganizationStatus,
+  isOperationalOrganizationStatus,
+} from '../../common/organization-status';
 
 @Injectable()
 export class AuthService {
@@ -292,6 +297,8 @@ export class AuthService {
   }
 
   async me(currentUser: AuthenticatedRequestUser): Promise<CurrentUserResponseDto> {
+    if (currentUser.session) return currentUser.session;
+
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.userId },
       include: {
@@ -328,6 +335,7 @@ export class AuthService {
             attendanceEnabled: user.hrEmployeeProfile.status === 'ACTIVE',
           }
         : null,
+      accessVersion: buildAccessVersion(user),
     };
   }
 
@@ -344,6 +352,7 @@ export class AuthService {
       role,
       permissions,
       mustChangePassword: Boolean(user.mustChangePassword),
+      accessVersion: buildAccessVersion(user),
     };
     const accessToken = this.jwtService.signAccessToken(payload);
     const refreshToken = this.jwtService.signRefreshToken(payload);
@@ -369,6 +378,7 @@ export class AuthService {
             attendanceEnabled: user.hrEmployeeProfile.status === 'ACTIVE',
           }
         : null,
+      accessVersion: payload.accessVersion,
     };
   }
 
@@ -534,8 +544,8 @@ export class AuthService {
 
   private organizationCanLogin(organization: any) {
     if (!organization) return true;
-    if (['SUSPENDED', 'REVOKED'].includes(organization.status)) return false;
-    if (organization.type !== 'PLATFORM' && !['ACTIVE', 'APPROVED'].includes(organization.status)) {
+    if (isBlockedOrganizationStatus(organization.status)) return false;
+    if (organization.type !== 'PLATFORM' && !isOperationalOrganizationStatus(organization.status)) {
       return false;
     }
     const subscription = organization.subscription;

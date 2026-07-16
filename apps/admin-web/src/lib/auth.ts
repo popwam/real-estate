@@ -9,6 +9,11 @@ const ACCOUNTS_KEY = "popwam.admin.accounts";
 const ACTIVE_ACCOUNT_KEY = "popwam.admin.activeAccountId";
 const AUTH_EVENT = "popwam-auth-change";
 
+export type AuthChange = {
+  type: "login" | "refresh" | "account" | "logout";
+  session?: AuthSession;
+};
+
 export type StoredAccount = {
   userId: string;
   name: string;
@@ -40,7 +45,7 @@ export function getRefreshToken() {
 
 export function storeTokens(
   session: Pick<AuthSession, "accessToken" | "refreshToken"> & Partial<AuthSession>,
-  options: { persist?: boolean } = {},
+  options: { persist?: boolean; reason?: "login" | "refresh" } = {},
 ) {
   if (typeof window === "undefined") return;
   const persist = options.persist ?? true;
@@ -60,7 +65,10 @@ export function storeTokens(
     upsertAccount(account, persist);
   }
 
-  announceAuthChange();
+  announceAuthChange({
+    type: options.reason ?? "login",
+    session: session.user ? (session as AuthSession) : undefined,
+  });
 }
 
 export function clearTokens() {
@@ -72,7 +80,7 @@ export function clearTokens() {
   storage("local")?.removeItem(ACTIVE_ACCOUNT_KEY);
   storage("session")?.removeItem(ACTIVE_ACCOUNT_KEY);
   if (activeId) removeStoredAccount(activeId, false);
-  announceAuthChange();
+  announceAuthChange({ type: "logout" });
 }
 
 export function clearAllAccounts() {
@@ -84,7 +92,7 @@ export function clearAllAccounts() {
   storage("session")?.removeItem(ACTIVE_ACCOUNT_KEY);
   storage("local")?.removeItem(ACCOUNTS_KEY);
   storage("session")?.removeItem(ACCOUNTS_KEY);
-  announceAuthChange();
+  announceAuthChange({ type: "logout" });
 }
 
 export function getStoredAccounts() {
@@ -120,7 +128,7 @@ export function switchStoredAccount(userId: string) {
   other.removeItem(REFRESH_TOKEN_KEY);
   other.removeItem(ACTIVE_ACCOUNT_KEY);
   upsertAccount({ ...account, lastUsed: new Date().toISOString() }, account.persisted);
-  announceAuthChange();
+  announceAuthChange({ type: "account" });
   return true;
 }
 
@@ -134,7 +142,7 @@ export function removeStoredAccount(userId: string, announce = true) {
       storage(kind)?.removeItem(REFRESH_TOKEN_KEY);
     }
   }
-  if (announce) announceAuthChange();
+  if (announce) announceAuthChange({ type: "account" });
 }
 
 export function saveActiveAccountFromMe(me: MeResponse) {
@@ -156,13 +164,16 @@ export function saveActiveAccountFromMe(me: MeResponse) {
   );
 }
 
-export function onAuthChange(listener: () => void) {
+export function onAuthChange(listener: (change: AuthChange) => void) {
   if (typeof window === "undefined") return () => undefined;
-  window.addEventListener(AUTH_EVENT, listener);
-  window.addEventListener("storage", listener);
+  const authListener = (event: Event) =>
+    listener((event as CustomEvent<AuthChange>).detail ?? { type: "account" });
+  const storageListener = () => listener({ type: "account" });
+  window.addEventListener(AUTH_EVENT, authListener);
+  window.addEventListener("storage", storageListener);
   return () => {
-    window.removeEventListener(AUTH_EVENT, listener);
-    window.removeEventListener("storage", listener);
+    window.removeEventListener(AUTH_EVENT, authListener);
+    window.removeEventListener("storage", storageListener);
   };
 }
 
@@ -254,6 +265,8 @@ function isStoredAccount(value: unknown): value is StoredAccount {
   );
 }
 
-function announceAuthChange() {
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_EVENT));
+function announceAuthChange(change: AuthChange) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent<AuthChange>(AUTH_EVENT, { detail: change }));
+  }
 }

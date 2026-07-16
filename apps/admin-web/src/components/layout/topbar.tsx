@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { LogIn, LogOut, Power, Trash2, UserRound, Users } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { SESSION_QUERY_KEY } from "@/components/providers/auth-session-provider";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useAllowedNavigation } from "@/hooks/use-navigation";
@@ -24,8 +25,8 @@ import { cn } from "@/lib/utils";
 
 export function Topbar() {
   const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
+  const pathname = usePathname();
   const { t } = useI18n();
   const { data } = useCurrentUser();
   const navItems = useAllowedNavigation();
@@ -52,7 +53,11 @@ export function Topbar() {
   }, [menuOpen]);
 
   function refreshAuthState() {
-    queryClient.removeQueries({ queryKey: ["auth", "me"] });
+    setMenuOpen(false);
+  }
+
+  function refreshAccess() {
+    void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY, exact: true });
     setMenuOpen(false);
   }
 
@@ -164,6 +169,7 @@ export function Topbar() {
 
             <div className="grid gap-2 border-t border-[var(--color-border)] p-3">
               <MenuAction icon={<LogIn className="h-4 w-4" aria-hidden="true" />} label={t("account.add")} onClick={() => router.push("/login")} />
+              <MenuAction icon={<UserRound className="h-4 w-4" aria-hidden="true" />} label={t("account.refreshAccess")} onClick={refreshAccess} />
               <MenuAction icon={<UserRound className="h-4 w-4" aria-hidden="true" />} label={t("account.logoutCurrent")} onClick={logoutCurrent} />
               <MenuAction icon={<Users className="h-4 w-4" aria-hidden="true" />} label={t("account.logoutAll")} onClick={logoutAll} />
               <MenuAction icon={<Power className="h-4 w-4" aria-hidden="true" />} label={t("auth.signOut")} onClick={logoutCurrent} />

@@ -5,6 +5,7 @@ import {
   platformNav,
   type NavItem,
 } from "@/components/layout/nav";
+import { PERMISSIONS } from "@/lib/permission-keys";
 
 /**
  * Role-family navigation. Ordering is intentionally deterministic so primary
@@ -51,7 +52,7 @@ export function getAllNavItemsForUser(
 }
 
 const defaultPermissionsById: Record<string, string[]> = {
-  "platform-organizations": ["organizations.view_all", "platform.organizations.view"],
+  "platform-organizations": ["organizations.view_all", PERMISSIONS.platform.organizationsView],
   "platform-verifications": ["organizations.verify"],
   "platform-crm-leads": ["public_leads.view_all", "crm.leads.view"],
   "platform-deal-rooms": ["deal_rooms.join", "deal_rooms.manage"],
@@ -61,7 +62,7 @@ const defaultPermissionsById: Record<string, string[]> = {
   "platform-domains": ["organization_domains.verify", "organization_domains.view_own"],
   "platform-import-jobs": ["exports.platform_data", "imports.project_inventory"],
   "platform-exports": ["exports.platform_data", "reports.export"],
-  "platform-settings": ["platform.settings.view"],
+  "platform-settings": [PERMISSIONS.platform.settingsView],
   "dev-projects": ["projects.edit", "projects.create"],
   "dev-inventory": ["inventory.view_private", "inventory.create"],
   "dev-crm-leads": ["crm.leads.view_own", "crm.leads.view", "crm.leads.claim"],

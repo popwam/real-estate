@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
 import { archivePlatformOrganizationApi, deleteDraftPlatformOrganizationApi, getOrganizationDeletionImpactApi, restorePlatformOrganizationApi, suspendPlatformOrganizationApi } from "@/lib/api";
+import { localizedApiError } from "@/lib/api-errors";
 import {
   useCreateOrganizationAttendanceLocation,
   useActivateOrganization,
@@ -96,10 +97,10 @@ export function OrganizationProvisioningDetail({ tab = "overview" }: { tab?: Tab
   const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const id = params.id;
-  const { data, isLoading, error } = usePlatformOrganization(id);
+  const { data, isLoading, error, refetch } = usePlatformOrganization(id);
 
   if (isLoading) return <LoadingState label={t("provisioning.loadingCompany")} />;
-  if (error) return <FeedbackState tone="error" title={t("organizationReview.error")} description={error.message} />;
+  if (error) return <FeedbackState tone="error" title={t("organizationReview.error")} description={localizedApiError(error, t)} action={<Button type="button" onClick={() => refetch()}>{t("common.retry")}</Button>} />;
   if (!data) return null;
 
   return (

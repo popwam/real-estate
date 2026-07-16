@@ -8,14 +8,12 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { PERMISSIONS_KEY } from './permissions.decorator';
 import { ROLES_KEY } from './roles.decorator';
-import { PrismaService } from '../modules/database/prisma.service';
 import { AuthenticatedRequestUser } from '../modules/auth/types/jwt-payload';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext) {
@@ -42,47 +40,33 @@ export class PermissionsGuard implements CanActivate {
     }
 
     if (requiredRoles?.length && !requiredRoles.includes(user.role)) {
-      throw new ForbiddenException('Required role is missing.');
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'ROLE_REQUIRED',
+        message: 'Required role is missing.',
+      });
     }
 
     if (requiredPermissions?.length) {
-      const permissions = new Set([
-        ...(user.permissions ?? []),
-        ...(await this.loadPermissions(user.userId)),
-      ]);
+      const permissions = new Set(user.permissions ?? []);
       const hasAllPermissions = requiredPermissions.every((permission) =>
         this.hasPermission(permissions, permission),
       );
 
       if (!hasAllPermissions) {
-        throw new ForbiddenException('Required permission is missing.');
+        const requiredPermission = requiredPermissions.find(
+          (permission) => !this.hasPermission(permissions, permission),
+        );
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'PERMISSION_REQUIRED',
+          requiredPermission,
+          message: 'Required permission is missing.',
+        });
       }
     }
 
     return true;
-  }
-
-  private async loadPermissions(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return (
-      user?.role?.permissions.map(
-        (rolePermission) => rolePermission.permission.key,
-      ) ?? []
-    );
   }
 
   private hasPermission(permissions: Set<string>, permission: string) {

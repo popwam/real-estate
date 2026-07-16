@@ -19,6 +19,7 @@
     "env:check": "ts-node src/scripts/environment-check.ts",
     "platform:doctor": "ts-node src/scripts/platform-doctor.ts",
     "platform:repair": "ts-node src/scripts/platform-repair.ts",
+    "platform:repair-rbac": "ts-node src/scripts/platform-rbac-repair.ts",
     "seed:rbac": "ts-node src/modules/permissions/rbac.seed.ts",
     "seed:demo": "ts-node src/demo/seed-demo.ts",
     "db:reset:platform-owner-only": "ts-node src/scripts/reset-platform-owner-only.ts",

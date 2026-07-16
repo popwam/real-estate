@@ -116,6 +116,7 @@ export const BASE_PERMISSIONS = [
   'platform.organizations.create',
   'platform.organizations.update',
   'platform.organizations.archive',
+  'platform.organizations.restore',
   'platform.organizations.delete_draft',
   'platform.organizations.purge',
   'platform.organizations.verify',
@@ -127,6 +128,7 @@ export const BASE_PERMISSIONS = [
   'platform.investigations.view',
   'platform.investigations.manage',
   'platform.documents.review',
+  'platform.documents.view',
   'platform.subscriptions.manage',
   'platform.settings',
   'platform.settings.view',
@@ -138,6 +140,8 @@ export const BASE_PERMISSIONS = [
   'platform.metadata.manage',
   'platform.integrations.view',
   'platform.integrations.manage',
+  'platform.navigation.view',
+  'platform.navigation.manage',
   'platform.verification_policies.view',
   'platform.verification_policies.manage',
   'subscriptions.manage',
@@ -275,8 +279,12 @@ export const BASE_PERMISSIONS = [
   'disputes.raise',
 ] as const;
 
+export const PLATFORM_PERMISSIONS = BASE_PERMISSIONS.filter((permission) =>
+  permission.startsWith('platform.'),
+);
+
 export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
-  platform_owner: [...BASE_PERMISSIONS],
+  platform_owner: [...new Set([...BASE_PERMISSIONS, ...PLATFORM_PERMISSIONS])],
   platform_admin: [
     'organizations.verify',
     'organizations.suspend',
@@ -836,7 +844,17 @@ export async function seedBaseRolesAndPermissions(prisma: PrismaClient) {
         });
     rolesSeeded += 1;
 
-    const rolesToSync = await prisma.role.findMany({ where: { name } });
+    const rolesToSync = await prisma.role.findMany({
+      where: name.startsWith('platform_')
+        ? {
+            name,
+            OR: [
+              { organizationId: null },
+              { organization: { type: 'PLATFORM' } },
+            ],
+          }
+        : { name },
+    });
     const uniqueRoles = new Map(
       [systemRole, ...rolesToSync].map((role) => [role.id, role]),
     );
@@ -849,7 +867,7 @@ export async function seedBaseRolesAndPermissions(prisma: PrismaClient) {
   return { rolesSeeded, permissionsSeeded };
 }
 
-async function syncRolePermissions(
+export async function syncRolePermissions(
   prisma: Pick<PrismaClient, 'permission' | 'rolePermission'>,
   roleId: string,
   roleName: (typeof BASE_ROLES)[number],

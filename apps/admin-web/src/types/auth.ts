@@ -70,6 +70,7 @@ export type AuthSession = {
   organization: CurrentOrganization | null;
   permissions: string[];
   hrEmployee?: HrEmployeeSummary | null;
+  accessVersion?: string;
 };
 
 export type MeResponse = {
@@ -77,6 +78,7 @@ export type MeResponse = {
   organization: CurrentOrganization | null;
   permissions: string[];
   hrEmployee?: HrEmployeeSummary | null;
+  accessVersion?: string;
 };
 
 export type HrEmployeeSummary = {

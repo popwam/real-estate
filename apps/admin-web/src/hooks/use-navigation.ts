@@ -15,6 +15,9 @@ export function useAllowedNavigation() {
     queryKey: ["platform", "navigation-configuration"],
     queryFn: getPlatformNavigationApi,
     enabled: Boolean(data?.user),
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   return useMemo(
