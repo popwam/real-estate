@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
+import { SESSION_QUERY_KEY } from "@/components/providers/auth-session-provider";
 import {
   getAttendanceSettingsApi,
   createCompanyAccessLevelApi,
@@ -42,7 +43,10 @@ export function CompanyHrSettings() {
   });
   const createAccessLevel = useMutation({
     mutationFn: createCompanyAccessLevelApi,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["company-access-levels"] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["company-access-levels"] });
+      await qc.invalidateQueries({ queryKey: SESSION_QUERY_KEY, exact: true });
+    },
   });
 
   return (

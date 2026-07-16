@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SESSION_QUERY_KEY } from "@/components/providers/auth-session-provider";
 import {
   activateOrganizationApi,
   approveOrganizationApi,
@@ -392,7 +393,10 @@ export function useCreateCompanyRoleTemplate(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: Partial<CompanyRoleTemplate>) => createCompanyRoleTemplateApi(id, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "access-levels"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "access-levels"] });
+      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY, exact: true });
+    },
   });
 }
 
@@ -400,7 +404,10 @@ export function useUpdateCompanyRoleTemplate(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ templateId, input }: { templateId: string; input: Partial<CompanyRoleTemplate> }) => updateCompanyRoleTemplateApi(id, templateId, input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "access-levels"] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "access-levels"] });
+      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY, exact: true });
+    },
   });
 }
 

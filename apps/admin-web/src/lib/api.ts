@@ -42,10 +42,14 @@ type ApiOptions = RequestInit & {
   authRetried?: boolean;
 };
 
+let refreshPromise: Promise<AuthSession | null> | null = null;
+
 export class ApiError extends Error {
   status: number;
   details: unknown;
   requestId?: string;
+  code?: string;
+  requiredPermission?: string;
 
   constructor(status: number, message: string, details?: unknown, requestId?: string) {
     super(message);
@@ -53,6 +57,12 @@ export class ApiError extends Error {
     this.status = status;
     this.details = details;
     this.requestId = requestId;
+    if (details && typeof details === "object") {
+      const body = details as { code?: unknown; requiredPermission?: unknown };
+      this.code = typeof body.code === "string" ? body.code : undefined;
+      this.requiredPermission =
+        typeof body.requiredPermission === "string" ? body.requiredPermission : undefined;
+    }
   }
 }
 
@@ -107,7 +117,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   }
 
   if (response.status === 401 && options.auth !== false && path !== "/auth/refresh" && !options.authRetried) {
-    const refreshed = await refreshActiveSession();
+    const refreshed = await refreshActiveSessionOnce();
     if (refreshed) {
       const retryHeaders = new Headers(options.headers);
       retryHeaders.set("Authorization", `Bearer ${refreshed.accessToken}`);
@@ -196,6 +206,13 @@ export function getCurrentUserApi() {
   return apiRequest<MeResponse>("/auth/me");
 }
 
+function refreshActiveSessionOnce() {
+  refreshPromise ??= refreshActiveSession().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
 async function refreshActiveSession() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return null;
@@ -216,7 +233,10 @@ async function refreshActiveSession() {
       return null;
     }
     const session = body as AuthSession;
-    storeTokens(session, { persist: isActiveAccountPersisted() });
+    storeTokens(session, {
+      persist: isActiveAccountPersisted(),
+      reason: "refresh",
+    });
     return session;
   } catch {
     clearTokens();

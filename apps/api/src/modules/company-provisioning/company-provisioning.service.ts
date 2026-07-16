@@ -1148,7 +1148,6 @@ export class CompanyProvisioningService {
       wifiRules: true,
       domainVerifications: true,
       websiteSettings: true,
-      companyRoleTemplates: true,
       users: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
     } as const;
   }
@@ -1472,10 +1471,12 @@ export class CompanyProvisioningService {
   }
 
   private async findOrganizationForPlatform(id: string) {
-    return this.prisma.organization.findUniqueOrThrow({
+    const organization = await this.prisma.organization.findUnique({
       where: { id },
       include: this.organizationInclude(),
     });
+    if (!organization) throw new NotFoundException('Organization not found.');
+    return organization;
   }
 
   private async findOrganization(id: string) {
@@ -2092,6 +2093,14 @@ export class CompanyProvisioningService {
     const systemSubdomain = wildcardEnabled ? this.systemDomain(organization.slug) : null;
     return {
       ...organization,
+      profile: organization.profile ?? null,
+      subscription: organization.subscription ?? null,
+      limits: organization.limits ?? null,
+      branches: organization.branches ?? [],
+      attendanceLocations: organization.attendanceLocations ?? [],
+      wifiRules: organization.wifiRules ?? [],
+      domainVerifications: organization.domainVerifications ?? [],
+      companyRoleTemplates: organization.companyRoleTemplates ?? [],
       portalLinks: {
         systemSubdomain,
         fallbackPath: `${this.domainDefaults().fallbackPath}/${organization.slug}`,

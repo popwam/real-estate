@@ -24,6 +24,7 @@ export interface AuthResponseDto {
   organization: AuthOrganizationSummaryDto;
   permissions: string[];
   hrEmployee?: AuthHrEmployeeSummaryDto | null;
+  accessVersion: string;
 }
 
 export interface CurrentUserResponseDto {
@@ -31,6 +32,7 @@ export interface CurrentUserResponseDto {
   organization: AuthOrganizationSummaryDto;
   permissions: string[];
   hrEmployee?: AuthHrEmployeeSummaryDto | null;
+  accessVersion: string;
 }
 
 export interface AuthHrEmployeeSummaryDto {

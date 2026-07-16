@@ -17,7 +17,6 @@ describe('PermissionsGuard', () => {
         getAllAndOverride: (key: string) =>
           key === 'permissions' ? ['organizations.view_all'] : undefined,
       } as any,
-      { user: { findUnique: jest.fn() } } as any,
     );
 
     await expect(
@@ -36,7 +35,6 @@ describe('PermissionsGuard', () => {
         getAllAndOverride: (key: string) =>
           key === 'permissions' ? ['organizations.view_all'] : undefined,
       } as any,
-      { user: { findUnique: jest.fn().mockResolvedValue(null) } } as any,
     );
 
     await expect(
@@ -50,7 +48,6 @@ describe('PermissionsGuard', () => {
         getAllAndOverride: (key: string) =>
           key === 'permissions' ? ['organizations.verify'] : undefined,
       } as any,
-      { user: { findUnique: jest.fn() } } as any,
     );
 
     await expect(
@@ -70,7 +67,6 @@ describe('PermissionsGuard', () => {
         getAllAndOverride: (key: string) =>
           key === 'permissions' ? ['organizations.verify'] : undefined,
       } as any,
-      { user: { findUnique: jest.fn().mockResolvedValue(null) } } as any,
     );
 
     await expect(

@@ -20,12 +20,7 @@ export function PlatformGuard({ children }: { children: ReactNode }) {
 
   const hasPlatformAccess =
     isPlatformRole(data?.user.role) &&
-    data?.organization?.type === "PLATFORM" &&
-    hasAnyPermission(data, [
-      "organizations.verify",
-      "organizations.view_all",
-      "organizations.suspend",
-    ]);
+    data?.organization?.type === "PLATFORM";
 
   const organizationRoute = pathname.match(/^\/platform\/organizations\/([^/]+)(?:\/([^/]+))?$/);
   const sectionPermissions: Record<string, string[]> = {

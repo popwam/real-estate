@@ -1,0 +1,89 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const auth = vi.hoisted(() => ({
+  accessToken: "old-token",
+  clearTokens: vi.fn(),
+  storeTokens: vi.fn((session: { accessToken: string }) => {
+    auth.accessToken = session.accessToken;
+  }),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  clearTokens: auth.clearTokens,
+  getAccessToken: () => auth.accessToken,
+  getRefreshToken: () => "refresh-token",
+  isActiveAccountPersisted: () => true,
+  storeTokens: auth.storeTokens,
+}));
+
+import { ApiError, apiRequest } from "@/lib/api";
+import { localizedApiError } from "@/lib/api-errors";
+
+describe("API authentication error handling", () => {
+  beforeEach(() => {
+    auth.accessToken = "old-token";
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  it.each([403, 500])("does not log out or refresh the session for HTTP %s", async (status) => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ code: status === 403 ? "PERMISSION_REQUIRED" : "INTERNAL_ERROR", message: "raw" }), {
+        status,
+        headers: { "Content-Type": "application/json", "x-request-id": "request-1" },
+      }),
+    );
+
+    await expect(apiRequest("/protected")).rejects.toBeInstanceOf(ApiError);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(auth.clearTokens).not.toHaveBeenCalled();
+    expect(auth.storeTokens).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates concurrent refreshes and retries each request once", async () => {
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/auth/refresh")) {
+        return new Response(JSON.stringify({
+          accessToken: "new-token",
+          refreshToken: "new-refresh-token",
+          user: { id: "owner", email: "owner@example.test", role: "platform_owner", mustChangePassword: false },
+          organization: null,
+          permissions: ["platform.settings.view"],
+          accessVersion: "v2",
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      const authorization = new Headers(init?.headers).get("Authorization");
+      return authorization === "Bearer new-token"
+        ? new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "Content-Type": "application/json" } })
+        : new Response(JSON.stringify({ message: "expired" }), { status: 401, headers: { "Content-Type": "application/json" } });
+    });
+
+    await expect(Promise.all([
+      apiRequest("/protected/one"),
+      apiRequest("/protected/two"),
+    ])).resolves.toEqual([{ ok: true }, { ok: true }]);
+
+    const refreshCalls = vi.mocked(fetch).mock.calls.filter(([input]) => String(input).endsWith("/auth/refresh"));
+    expect(refreshCalls).toHaveLength(1);
+    expect(auth.storeTokens).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps permission failures to Arabic without exposing the raw English message", () => {
+    const error = new ApiError(403, "Required permission is missing.", {
+      code: "PERMISSION_REQUIRED",
+      requiredPermission: "platform.settings.view",
+    }, "request-2");
+    const messages: Record<string, string> = {
+      "apiErrors.permissionRequired": "لا تملك الصلاحية المطلوبة لعرض هذا المحتوى.",
+      "apiErrors.requestId": "معرّف الطلب: {requestId}.",
+    };
+    const translated = localizedApiError(
+      error,
+      (key, values) => (messages[key] ?? key).replace("{requestId}", String(values?.requestId ?? "")),
+    );
+
+    expect(translated).toContain("لا تملك الصلاحية");
+    expect(translated).toContain("request-2");
+    expect(translated).not.toContain("Required permission is missing");
+  });
+});

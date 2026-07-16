@@ -30,6 +30,7 @@ import {
   UserCheck,
   UsersRound,
 } from "lucide-react";
+import { PERMISSIONS } from "@/lib/permission-keys";
 
 export const safeSidebarIconMap = {
   dashboard: Home,
@@ -120,7 +121,7 @@ const platformNavItems: RawNavItem[] = [
   { id: "platform-domains", href: "/platform/domains", label: "Domains", icon: Globe2, group: "Settings", desktopPriority: 31, mobilePriority: 31 },
   { id: "platform-import-jobs", href: "/platform/import-export/jobs", label: "Import Jobs", icon: FileUp, group: "Documents", desktopPriority: 32, mobilePriority: 32 },
   { id: "platform-exports", href: "/platform/import-export/export", label: "Exports", icon: FileDown, group: "Reports", desktopPriority: 33, mobilePriority: 33 },
-  { id: "platform-settings", href: "/platform/settings", label: "Platform Settings", icon: Settings2, group: "Settings", permissions: ["platform.settings.view"], desktopPriority: 34, mobilePriority: 34 },
+  { id: "platform-settings", href: "/platform/settings", label: "Platform Settings", icon: Settings2, group: "Settings", permissions: [PERMISSIONS.platform.settingsView], desktopPriority: 34, mobilePriority: 34 },
   { id: "platform-ads", href: "/platform/ads/overview", label: "Ads", icon: Megaphone, group: "Platform", desktopPriority: 35, mobilePriority: 35 },
   { id: "platform-cameras", href: "/platform/cameras/overview", label: "Cameras", icon: Camera, group: "Platform", desktopPriority: 36, mobilePriority: 36 },
   { id: "my-units", href: "/my/units", label: "My Units", icon: Building2, group: "My Workspace", permissions: ["self.units.view"], desktopPriority: 90, mobilePriority: 90 },

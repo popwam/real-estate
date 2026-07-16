@@ -1,0 +1,96 @@
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient, UserRole } from '@prisma/client';
+import { loadEnvironment } from '../config/load-environment';
+import { seedBaseRolesAndPermissions } from '../modules/permissions/rbac.seed';
+
+export async function repairPlatformOwnerRbac(prisma: PrismaClient) {
+  const rbac = await seedBaseRolesAndPermissions(prisma);
+  const platformOrganization = await prisma.organization.findFirst({
+    where: { type: 'PLATFORM' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  if (!platformOrganization) {
+    throw new Error('Platform organization is required.');
+  }
+
+  const platformOwnerRole =
+    (await prisma.role.findFirst({
+      where: {
+        name: 'platform_owner',
+        organizationId: platformOrganization.id,
+      },
+      select: { id: true },
+    })) ??
+    (await prisma.role.findFirst({
+      where: { name: 'platform_owner', organizationId: null },
+      select: { id: true },
+    }));
+  if (!platformOwnerRole) {
+    throw new Error('Platform Owner role is required.');
+  }
+
+  const owners = await prisma.user.findMany({
+    where: { userRole: UserRole.PLATFORM_OWNER },
+    select: { id: true, organizationId: true, roleId: true },
+  });
+  if (!owners.length) {
+    throw new Error('Existing Platform Owner account is required.');
+  }
+
+  let assignmentsRepaired = 0;
+  for (const owner of owners) {
+    if (
+      owner.organizationId === platformOrganization.id &&
+      owner.roleId === platformOwnerRole.id
+    ) {
+      continue;
+    }
+    await prisma.user.update({
+      where: { id: owner.id },
+      data: {
+        organizationId: platformOrganization.id,
+        roleId: platformOwnerRole.id,
+      },
+    });
+    assignmentsRepaired += 1;
+  }
+
+  return {
+    ...rbac,
+    platformOwnersChecked: owners.length,
+    assignmentsRepaired,
+  };
+}
+
+async function main() {
+  if (!process.argv.includes('--confirm')) {
+    console.error('RBAC repair refused: pass --confirm explicitly.');
+    process.exitCode = 1;
+    return;
+  }
+  loadEnvironment();
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString || !/^postgres(?:ql)?:\/\//i.test(connectionString)) {
+    throw new Error('DATABASE_URL is missing or invalid.');
+  }
+
+  const prisma = new PrismaClient({
+    adapter: new PrismaPg({ connectionString }),
+  });
+  try {
+    const result = await repairPlatformOwnerRbac(prisma);
+    console.log(JSON.stringify(result));
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(
+      `Platform Owner RBAC repair failed safely: ${error instanceof Error ? error.name : 'Error'}`,
+    );
+    process.exitCode = 1;
+  });
+}

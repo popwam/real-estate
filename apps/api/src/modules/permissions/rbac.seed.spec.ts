@@ -1,4 +1,12 @@
-import { BASE_PERMISSIONS, BASE_ROLES, ROLE_PERMISSIONS } from './rbac.seed';
+import {
+  BASE_PERMISSIONS,
+  BASE_ROLES,
+  PLATFORM_PERMISSIONS,
+  ROLE_PERMISSIONS,
+  syncRolePermissions,
+} from './rbac.seed';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 describe('RBAC seed definitions', () => {
   it('defines required platform and marketplace-adjacent permission names', () => {
@@ -31,7 +39,14 @@ describe('RBAC seed definitions', () => {
       'platform.organizations.archive',
       'platform.organizations.delete_draft',
       'platform.metadata.manage',
+      'platform.documents.view',
+      'platform.navigation.view',
+      'platform.navigation.manage',
+      'platform.organizations.restore',
     ]));
+    expect(ROLE_PERMISSIONS.platform_owner).toEqual(
+      expect.arrayContaining(PLATFORM_PERMISSIONS),
+    );
   });
 
   it('never assigns platform permissions to company roles', () => {
@@ -49,4 +64,41 @@ describe('RBAC seed definitions', () => {
       expect(ROLE_PERMISSIONS[role]?.filter((permission) => permission.startsWith('platform.')) ?? []).toEqual([]);
     }
   });
+
+  it('contains every permission used by @Permissions decorators', () => {
+    const used = new Set<string>();
+    for (const file of typescriptFiles(join(process.cwd(), 'src'))) {
+      const source = readFileSync(file, 'utf8');
+      for (const decorator of source.matchAll(/@Permissions\(([^)]*)\)/gs)) {
+        for (const value of decorator[1].matchAll(/['"]([^'"]+)['"]/g)) {
+          used.add(value[1]);
+        }
+      }
+    }
+    const catalog = new Set<string>(BASE_PERMISSIONS);
+    expect([...used].filter((permission) => !catalog.has(permission))).toEqual([]);
+  });
+
+  it('uses idempotent upserts when repairing role assignments', async () => {
+    const permission = {
+      findUniqueOrThrow: jest.fn(({ where }) => ({ id: `id:${where.key}` })),
+    };
+    const rolePermission = { upsert: jest.fn() };
+    const prisma = { permission, rolePermission } as any;
+
+    await syncRolePermissions(prisma, 'owner-role', 'platform_owner');
+    await syncRolePermissions(prisma, 'owner-role', 'platform_owner');
+
+    expect(rolePermission.upsert).toHaveBeenCalledTimes(
+      ROLE_PERMISSIONS.platform_owner.length * 2,
+    );
+  });
 });
+
+function typescriptFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return typescriptFiles(path);
+    return entry.isFile() && entry.name.endsWith('.ts') ? [path] : [];
+  });
+}

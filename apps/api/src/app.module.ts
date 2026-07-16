@@ -1,7 +1,9 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RequestLoggingMiddleware } from './common/request-logging.middleware';
+import { ApiExceptionFilter } from './common/api-exception.filter';
 import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { EnvModule } from './config/env.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
@@ -101,7 +103,11 @@ import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rul
     PlatformAdminModule,
   ],
   controllers: [AppController],
-  providers: [AppService, RequestLoggingMiddleware],
+  providers: [
+    AppService,
+    RequestLoggingMiddleware,
+    { provide: APP_FILTER, useClass: ApiExceptionFilter },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

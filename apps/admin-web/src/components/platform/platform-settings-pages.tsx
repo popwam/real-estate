@@ -28,6 +28,7 @@ import {
 import { useI18n } from "@/i18n";
 import { createPlatformMetadataApi, getPlatformNavigationApi, listPlatformMetadataApi, restorePlatformNavigationApi, updatePlatformMetadataApi, updatePlatformNavigationApi, updatePlatformPlanApi } from "@/lib/api";
 import type { MetadataOption, PlatformMetadataRecord, PlatformNavigationSection, PlatformPlan } from "@/types/platform";
+import { localizedApiError } from "@/lib/api-errors";
 
 type Section = "index" | "metadata" | "plans" | "subscriptions" | "verification-policies" | "modules" | "navigation" | "domains";
 
@@ -68,9 +69,9 @@ export function PlatformSettingsPage({ section = "index" }: { section?: Section 
 
 function SettingsIndex() {
   const { t } = useI18n();
-  const { data, isLoading, error } = usePlatformSettings();
+  const { data, isLoading, error, refetch } = usePlatformSettings();
   if (isLoading) return <LoadingState label={t("common.loading")} />;
-  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={error.message} />;
+  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={localizedApiError(error, t)} action={<Button type="button" onClick={() => refetch()}>{t("common.retry")}</Button>} />;
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {sections.map((item) => (
@@ -175,7 +176,7 @@ function PlansSettings() {
       rows={data.map((plan) => [plan.code, plan.name, `${plan.priceAmount ?? 0} ${plan.priceCurrency}`, plan.isActive ? t("common.active") : t("common.inactive")])}
       onSubmit={submit}
       pending={create.isPending}
-      error={error?.message ?? create.error?.message ?? update.error?.message}
+      error={error || create.error || update.error ? localizedApiError(error ?? create.error ?? update.error, t) : undefined}
       fields={<><TextField label={t("platformSettings.planCode")} name="code" required /><TextField label={t("platformSettings.planName")} name="name" required /><TextField label={`${t("sidebar.displayName")} (EN)`} name="nameEn" required /><TextField label={`${t("sidebar.displayName")} (AR)`} name="nameAr" required /><TextField label={`${t("sidebar.displayName")} (FR)`} name="nameFr" required /><SelectField label={t("platformSettings.planType")} name="planType" options={["FREE", "TRIAL", "PAID", "CUSTOM"]} /><TextField label={t("platformSettings.price")} name="priceAmount" type="number" step="0.01" /><MetadataSelect label={t("provisioning.currency")} name="priceCurrency" options={currencies.data} required /><SelectField label={t("provisioning.billingCycle")} name="billingCycle" options={["DAY", "MONTHLY", "QUARTERLY", "YEARLY", "CUSTOM"]} /><TextField label={t("platformSettings.durationValue")} name="durationValue" type="number" min="1" defaultValue="1" /><SelectField label={t("platformSettings.durationUnit")} name="durationUnit" options={["DAY", "MONTH", "YEAR"]} /><TextField label={t("platformSettings.trialDays")} name="trialDays" type="number" defaultValue="0" /><CheckBox label={t("platformSettings.allowsNoExpiry")} name="allowsNoExpiry" /><MultiSelect label={t("platformSettings.enabledModules")} name="enabledModules" options={["HR", "CRM", "FINANCE", "LEGAL"]} /><MultiSelect label={t("platformSettings.allowedLoginMethods")} name="allowedLoginMethods" options={["EMAIL_PASSWORD", "PHONE_PASSWORD"]} defaultValues={["EMAIL_PASSWORD", "PHONE_PASSWORD"]} /><CheckBox label={t("common.active")} name="isActive" defaultChecked /></>}
     />
     <DetailCard title={t("platformSettings.editPlans")}>
@@ -231,7 +232,7 @@ function SubscriptionsSettings() {
   const { t } = useI18n();
   const { data = [], isLoading, error } = usePlatformSubscriptions();
   if (isLoading) return <LoadingState label={t("common.loading")} />;
-  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={error.message} />;
+  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={localizedApiError(error, t)} />;
   return <RowsCard title={t("platformSettings.subscriptions")} rows={data.map((item) => [item.organization?.name ?? item.organizationId, item.planCode, item.status, item.billingCycle])} />;
 }
 
@@ -263,7 +264,7 @@ function VerificationPolicySettings() {
       rows={data.map((policy) => [policy.countryCode, policy.organizationType, policy.documentType, policy.isRequired ? t("provisioning.required") : t("common.optional")])}
       onSubmit={submit}
       pending={create.isPending}
-      error={error?.message ?? create.error?.message}
+      error={error || create.error ? localizedApiError(error ?? create.error, t) : undefined}
       fields={<><MetadataSelect label={t("provisioning.country")} name="countryCode" options={countries.data} required /><SelectField label={t("provisioning.organizationType")} name="organizationType" options={["PLATFORM", "DEVELOPER", "BROKERAGE", "INDIVIDUAL_BROKER"]} /><SelectField label={t("provisioning.legalForm")} name="legalForm" options={["", "SOLE_PROPRIETORSHIP", "LLC", "JOINT_STOCK", "PARTNERSHIP", "BRANCH", "OTHER"]} /><SelectField label={t("provisioning.documentType")} name="documentType" options={["COMMERCIAL_REGISTER", "TAX_CARD", "VAT_CERTIFICATE", "INCORPORATION_DOCUMENT", "PROOF_OF_ADDRESS", "OWNER_ID_FRONT", "OWNER_ID_BACK", "AUTHORIZED_SIGNATORY_ID", "AUTHORIZATION_OR_POWER_OF_ATTORNEY", "BROKERAGE_LICENSE_OR_REGISTRATION"]} /><CheckBox label={t("provisioning.required")} name="isRequired" defaultChecked /><CheckBox label={t("platformSettings.requiresExpiry")} name="requiresExpiryDate" /><CheckBox label={t("platformSettings.ownerDocument")} name="ownerDocumentRequired" /><MultiSelect label={t("platformSettings.ownerRoles")} name="appliesToOwnerRoles" options={["OWNER", "PARTNER", "SHAREHOLDER", "AUTHORIZED_SIGNATORY", "LEGAL_REPRESENTATIVE"]} /><CheckBox label={t("common.active")} name="isActive" defaultChecked /><TextField label={t("provisioning.internalNotes")} name="notes" /></>}
     />
   );
@@ -273,7 +274,7 @@ function ModulesSettings() {
   const { t } = useI18n();
   const { data = [], isLoading, error } = usePlatformModules();
   if (isLoading) return <LoadingState label={t("common.loading")} />;
-  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={error.message} />;
+  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={localizedApiError(error, t)} />;
   return <RowsCard title={t("platformSettings.modules")} rows={data.map((item) => [item, t("platformSettings.available"), ""])} />;
 }
 
@@ -340,7 +341,7 @@ function NavigationSettings() {
         </div>
       </div>)}
     </div>
-    {save.error ? <FeedbackState className="mt-3" tone="error" title={t("platformSettings.error")} description={save.error.message} /> : null}
+    {save.error ? <FeedbackState className="mt-3" tone="error" title={t("platformSettings.error")} description={localizedApiError(save.error, t)} /> : null}
     <div className="sticky bottom-0 mt-4 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] pt-4">
       <Button type="button" className="ui-button-secondary" onClick={() => setDraft(null)}>{t("common.cancel")}</Button>
       <Button type="button" className="ui-button-secondary" onClick={() => restore.mutate()}><RotateCcw className="h-4 w-4" />{t("sidebar.reset")}</Button>
@@ -374,7 +375,7 @@ function DomainsSettings() {
   const { t } = useI18n();
   const { data, isLoading, error } = usePlatformDomainSettings();
   if (isLoading) return <LoadingState label={t("common.loading")} />;
-  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={error.message} />;
+  if (error) return <FeedbackState tone="error" title={t("platformSettings.error")} description={localizedApiError(error, t)} />;
   return (
     <DetailCard title={t("platformSettings.domains")}>
       <div className="grid gap-3 text-sm sm:grid-cols-2">

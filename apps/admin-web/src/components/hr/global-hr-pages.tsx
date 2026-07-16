@@ -8,6 +8,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SESSION_QUERY_KEY } from "@/components/providers/auth-session-provider";
 import { EmptyState } from "@/components/empty-state";
 import { FeedbackState } from "@/components/feedback-state";
 import { EmployeeForm, type EmployeeFormValues } from "@/components/hr/employee-form";
@@ -285,6 +286,7 @@ export function HrEmployeeDetailPage({ id }: { id: string }) {
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
     await queryClient.invalidateQueries({ queryKey: ["hr-employee", id] });
+    await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY, exact: true });
   };
   const update = useMutation({
     mutationFn: async (values: EmployeeFormValues) => {
