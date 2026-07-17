@@ -125,7 +125,8 @@ export type OrganizationDocumentsResponse = {
 export type RequiredDocumentPolicy = {
   id: string;
   countryCode: string;
-  organizationType: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER";
+  organizationType?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER" | null;
+  legacyOrganizationType?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER" | null;
   legalForm?: string | null;
   documentType: OrganizationDocument["documentType"];
   isRequired: boolean;
@@ -133,6 +134,16 @@ export type RequiredDocumentPolicy = {
   ownerDocumentRequired: boolean;
   appliesToOwnerRoles?: string[] | null;
   isActive: boolean;
+  supportedOrganizationTypeId?: string | null;
+  supportedOrganizationTypeCode?: string | null;
+  supportedOrganizationTypeNames?: TranslatedText | null;
+  requiredFieldCodes: string[];
+  acceptedMimeTypes: string[];
+  maxFileSizeMb: number;
+  minimumConfidence?: number | string | null;
+  blocksActivation: boolean;
+  sortOrder: number;
+  isArchived: boolean;
   notes?: string | null;
 };
 
@@ -250,8 +261,63 @@ export type PlatformMetadataRecord = {
   configuration: Record<string, unknown>;
   sortOrder: number;
   isActive: boolean;
+  isArchived: boolean;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type SupportedOrganizationType = {
+  id: string;
+  code: string;
+  legacyOrganizationType?: "PLATFORM" | "DEVELOPER" | "BROKERAGE" | "INDIVIDUAL_BROKER" | null;
+  names: TranslatedText;
+  descriptions: TranslatedText;
+  allowedCountryCodes: string[];
+  allowedLegalForms: string[];
+  requiredFieldCodes: string[];
+  isIndividual: boolean;
+  isActive: boolean;
+  isArchived: boolean;
+  sortOrder: number;
+};
+
+export type FieldEvidence = {
+  id: string;
+  fieldCode: string;
+  rawValue?: string | null;
+  normalizedValue?: string | null;
+  finalValue?: string | null;
+  confidence?: number | string | null;
+  reviewStatus: "EXTRACTED" | "AUTO_ACCEPTED" | "REVIEW_REQUIRED" | "CONFIRMED" | "CORRECTED" | "REJECTED" | "CONFLICT";
+  documentId: string;
+  documentType: string;
+  manuallyEdited: boolean;
+};
+
+export type OnboardingDocument = {
+  id: string;
+  documentType: string;
+  policyId?: string | null;
+  qualityStatus: string;
+  qualityWarnings: string[];
+  extractionStatus: string;
+  fieldEvidence?: FieldEvidence[];
+};
+
+export type OrganizationOnboardingSession = {
+  id: string;
+  status: "DRAFT" | "DOCUMENTS_REQUIRED" | "EXTRACTION_PENDING" | "REVIEW_REQUIRED" | "READY_TO_CREATE" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+  countryCode: string;
+  supportedOrganizationTypeId: string;
+  supportedOrganizationType: SupportedOrganizationType;
+  legalForm?: string | null;
+  completedFields: string[];
+  missingFields: string[];
+  conflictFields: string[];
+  documents: OnboardingDocument[];
+  fieldEvidence: FieldEvidence[];
+  expiresAt: string;
+  organizationId?: string | null;
 };
 
 export type MetadataOption = {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { CreateOrganizationForm } from "@/components/platform/create-organization-form";
+import { OrganizationOnboardingWizard } from "@/components/platform/organization-onboarding-wizard";
 import { useI18n } from "@/i18n";
 
 export default function NewPlatformOrganizationPage() {
@@ -21,7 +21,7 @@ export default function NewPlatformOrganizationPage() {
           </Link>
         }
       />
-      <CreateOrganizationForm />
+      <OrganizationOnboardingWizard />
     </>
   );
 }

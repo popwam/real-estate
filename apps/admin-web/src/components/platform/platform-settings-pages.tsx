@@ -26,9 +26,10 @@ import {
   useRequiredDocumentPolicies,
 } from "@/hooks/use-platform-admin";
 import { useI18n } from "@/i18n";
-import { createPlatformMetadataApi, getPlatformNavigationApi, listPlatformMetadataApi, restorePlatformNavigationApi, updatePlatformMetadataApi, updatePlatformNavigationApi, updatePlatformPlanApi } from "@/lib/api";
+import { copyPlatformPlanApi, createPlatformMetadataApi, deletePlatformPlanApi, getPlatformNavigationApi, listPlatformMetadataApi, listSupportedOrganizationTypesApi, restorePlatformNavigationApi, updatePlatformMetadataApi, updatePlatformNavigationApi, updatePlatformPlanApi } from "@/lib/api";
 import type { MetadataOption, PlatformMetadataRecord, PlatformNavigationSection, PlatformPlan } from "@/types/platform";
 import { localizedApiError } from "@/lib/api-errors";
+import { verificationPolicyOrganizationTypeOptions } from "@/lib/verification-policy-options";
 
 type Section = "index" | "metadata" | "plans" | "subscriptions" | "verification-policies" | "modules" | "navigation" | "domains";
 
@@ -147,7 +148,11 @@ function PlansSettings() {
   const { data = [], error } = usePlatformPlans();
   const create = useCreatePlatformPlan();
   const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const update = useMutation({ mutationFn: ({ id, input }: { id: string; input: Partial<PlatformPlan> }) => updatePlatformPlanApi(id, input), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["platform", "settings", "plans"] }) });
+  const copy = useMutation({ mutationFn: copyPlatformPlanApi, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["platform", "settings", "plans"] }) });
+  const remove = useMutation({ mutationFn: deletePlatformPlanApi, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["platform", "settings", "plans"] }) });
   const currencies = useMetadataCurrencies();
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -168,20 +173,26 @@ function PlansSettings() {
       allowedLoginMethods: selectedValues(form, "allowedLoginMethods"),
       isActive: checked(form, "isActive"),
     });
+    setCreateOpen(false);
     event.currentTarget.reset();
   }
   return (<div className="space-y-4">
-    <SettingsCollection
+    <div className="flex justify-end"><Button type="button" onClick={() => setCreateOpen((open) => !open)}>+ {t("common.add")} {t("platformSettings.plans")}</Button></div>
+    {createOpen ? <SettingsCollection
       title={t("platformSettings.plans")}
       rows={data.map((plan) => [plan.code, plan.name, `${plan.priceAmount ?? 0} ${plan.priceCurrency}`, plan.isActive ? t("common.active") : t("common.inactive")])}
       onSubmit={submit}
       pending={create.isPending}
       error={error || create.error || update.error ? localizedApiError(error ?? create.error ?? update.error, t) : undefined}
       fields={<><TextField label={t("platformSettings.planCode")} name="code" required /><TextField label={t("platformSettings.planName")} name="name" required /><TextField label={`${t("sidebar.displayName")} (EN)`} name="nameEn" required /><TextField label={`${t("sidebar.displayName")} (AR)`} name="nameAr" required /><TextField label={`${t("sidebar.displayName")} (FR)`} name="nameFr" required /><SelectField label={t("platformSettings.planType")} name="planType" options={["FREE", "TRIAL", "PAID", "CUSTOM"]} /><TextField label={t("platformSettings.price")} name="priceAmount" type="number" step="0.01" /><MetadataSelect label={t("provisioning.currency")} name="priceCurrency" options={currencies.data} required /><SelectField label={t("provisioning.billingCycle")} name="billingCycle" options={["DAY", "MONTHLY", "QUARTERLY", "YEARLY", "CUSTOM"]} /><TextField label={t("platformSettings.durationValue")} name="durationValue" type="number" min="1" defaultValue="1" /><SelectField label={t("platformSettings.durationUnit")} name="durationUnit" options={["DAY", "MONTH", "YEAR"]} /><TextField label={t("platformSettings.trialDays")} name="trialDays" type="number" defaultValue="0" /><CheckBox label={t("platformSettings.allowsNoExpiry")} name="allowsNoExpiry" /><MultiSelect label={t("platformSettings.enabledModules")} name="enabledModules" options={["HR", "CRM", "FINANCE", "LEGAL"]} /><MultiSelect label={t("platformSettings.allowedLoginMethods")} name="allowedLoginMethods" options={["EMAIL_PASSWORD", "PHONE_PASSWORD"]} defaultValues={["EMAIL_PASSWORD", "PHONE_PASSWORD"]} /><CheckBox label={t("common.active")} name="isActive" defaultChecked /></>}
-    />
+    /> : null}
     <DetailCard title={t("platformSettings.editPlans")}>
       <div className="max-h-[50vh] space-y-2 overflow-y-auto pe-1">
-        {data.map((plan) => <PlanRecordEditor key={plan.id} plan={plan} currencies={currencies.data} pending={update.isPending} onSave={(input) => update.mutate({ id: plan.id, input })} />)}
+        {data.map((plan) => <div key={plan.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><strong>{plan.name}</strong><p className="text-sm text-[var(--color-muted)]">{plan.code} · {plan.priceAmount ?? 0} {plan.priceCurrency} · {plan.isArchived ? "Archived" : plan.isActive ? t("common.active") : t("common.inactive")}</p></div><div className="flex flex-wrap gap-2"><Button className="ui-button-secondary" type="button" onClick={() => setEditingPlanId((current) => current === plan.id ? null : plan.id)}>{t("common.edit")}</Button><Button className="ui-button-secondary" type="button" disabled={copy.isPending} onClick={() => copy.mutate(plan.id)}>Copy</Button><Button className="ui-button-secondary" type="button" disabled={update.isPending} onClick={() => update.mutate({ id: plan.id, input: { isActive: !plan.isActive } })}>{plan.isActive ? "Disable" : "Activate"}</Button><Button className="ui-button-danger" type="button" disabled={remove.isPending} onClick={() => { if (window.confirm(`Delete ${plan.name}? Used plans will be archived and existing subscriptions remain unchanged.`)) remove.mutate(plan.id); }}>{t("common.delete")}</Button></div></div>
+          {editingPlanId === plan.id ? <div className="mt-3"><PlanRecordEditor plan={plan} currencies={currencies.data} pending={update.isPending} onSave={(input) => update.mutate({ id: plan.id, input })} /></div> : null}
+        </div>)}
+        {!data.length ? <p className="text-sm text-[var(--color-muted)]">{t("common.noResults")}</p> : null}
       </div>
     </DetailCard>
   </div>);
@@ -237,16 +248,18 @@ function SubscriptionsSettings() {
 }
 
 function VerificationPolicySettings() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data = [], error } = useRequiredDocumentPolicies();
   const create = useCreateRequiredDocumentPolicy();
   const countries = useMetadataCountries();
+  const supportedTypes = useQuery({ queryKey: ["platform", "supported-organization-types"], queryFn: listSupportedOrganizationTypesApi });
+  const policyTypeOptions = verificationPolicyOrganizationTypeOptions(supportedTypes.data ?? [], locale);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     create.mutate({
       countryCode: optional(form, "countryCode"),
-      organizationType: optional(form, "organizationType") as never,
+      supportedOrganizationTypeId: optional(form, "supportedOrganizationTypeId"),
       legalForm: optional(form, "legalForm"),
       documentType: optional(form, "documentType") as never,
       isRequired: checked(form, "isRequired"),
@@ -261,11 +274,11 @@ function VerificationPolicySettings() {
   return (
     <SettingsCollection
       title={t("platformSettings.verificationPolicies")}
-      rows={data.map((policy) => [policy.countryCode, policy.organizationType, policy.documentType, policy.isRequired ? t("provisioning.required") : t("common.optional")])}
+      rows={data.map((policy) => [policy.countryCode, policy.supportedOrganizationTypeNames?.[locale] ?? policy.supportedOrganizationTypeNames?.en ?? policy.supportedOrganizationTypeCode ?? policy.legacyOrganizationType ?? "", policy.documentType, policy.isRequired ? t("provisioning.required") : t("common.optional")])}
       onSubmit={submit}
       pending={create.isPending}
-      error={error || create.error ? localizedApiError(error ?? create.error, t) : undefined}
-      fields={<><MetadataSelect label={t("provisioning.country")} name="countryCode" options={countries.data} required /><SelectField label={t("provisioning.organizationType")} name="organizationType" options={["PLATFORM", "DEVELOPER", "BROKERAGE", "INDIVIDUAL_BROKER"]} /><SelectField label={t("provisioning.legalForm")} name="legalForm" options={["", "SOLE_PROPRIETORSHIP", "LLC", "JOINT_STOCK", "PARTNERSHIP", "BRANCH", "OTHER"]} /><SelectField label={t("provisioning.documentType")} name="documentType" options={["COMMERCIAL_REGISTER", "TAX_CARD", "VAT_CERTIFICATE", "INCORPORATION_DOCUMENT", "PROOF_OF_ADDRESS", "OWNER_ID_FRONT", "OWNER_ID_BACK", "AUTHORIZED_SIGNATORY_ID", "AUTHORIZATION_OR_POWER_OF_ATTORNEY", "BROKERAGE_LICENSE_OR_REGISTRATION"]} /><CheckBox label={t("provisioning.required")} name="isRequired" defaultChecked /><CheckBox label={t("platformSettings.requiresExpiry")} name="requiresExpiryDate" /><CheckBox label={t("platformSettings.ownerDocument")} name="ownerDocumentRequired" /><MultiSelect label={t("platformSettings.ownerRoles")} name="appliesToOwnerRoles" options={["OWNER", "PARTNER", "SHAREHOLDER", "AUTHORIZED_SIGNATORY", "LEGAL_REPRESENTATIVE"]} /><CheckBox label={t("common.active")} name="isActive" defaultChecked /><TextField label={t("provisioning.internalNotes")} name="notes" /></>}
+      error={error || create.error || supportedTypes.error ? localizedApiError(error ?? create.error ?? supportedTypes.error, t) : undefined}
+      fields={<><MetadataSelect label={t("provisioning.country")} name="countryCode" options={countries.data} required /><LabeledSelect label={t("provisioning.organizationType")} name="supportedOrganizationTypeId" options={policyTypeOptions} required /><SelectField label={t("provisioning.legalForm")} name="legalForm" options={["", "SOLE_PROPRIETORSHIP", "LLC", "JOINT_STOCK", "PARTNERSHIP", "BRANCH", "OTHER"]} /><SelectField label={t("provisioning.documentType")} name="documentType" options={["COMMERCIAL_REGISTER", "TAX_CARD", "VAT_CERTIFICATE", "INCORPORATION_DOCUMENT", "PROOF_OF_ADDRESS", "OWNER_ID_FRONT", "OWNER_ID_BACK", "AUTHORIZED_SIGNATORY_ID", "AUTHORIZATION_OR_POWER_OF_ATTORNEY", "BROKERAGE_LICENSE_OR_REGISTRATION"]} /><CheckBox label={t("provisioning.required")} name="isRequired" defaultChecked /><CheckBox label={t("platformSettings.requiresExpiry")} name="requiresExpiryDate" /><CheckBox label={t("platformSettings.ownerDocument")} name="ownerDocumentRequired" /><MultiSelect label={t("platformSettings.ownerRoles")} name="appliesToOwnerRoles" options={["OWNER", "PARTNER", "SHAREHOLDER", "AUTHORIZED_SIGNATORY", "LEGAL_REPRESENTATIVE"]} /><CheckBox label={t("common.active")} name="isActive" defaultChecked /><TextField label={t("provisioning.internalNotes")} name="notes" /></>}
     />
   );
 }
@@ -422,6 +435,10 @@ function TextField({ label, name, ...props }: InputHTMLAttributes<HTMLInputEleme
 
 function SelectField({ label, name, options }: { label: string; name: string; options: string[] }) {
   return <label className="space-y-2"><Label htmlFor={`settings-${name}`}>{label}</Label><select id={`settings-${name}`} name={name} className="ui-input">{options.map((option) => <option key={option} value={option}>{option ? option.replaceAll("_", " ") : "-"}</option>)}</select></label>;
+}
+
+function LabeledSelect({ label, name, options, required }: { label: string; name: string; options: Array<{ value: string; label: string }>; required?: boolean }) {
+  return <label className="space-y-2"><Label htmlFor={`settings-${name}`}>{label}</Label><select id={`settings-${name}`} name={name} className="ui-input" required={required}><option value="">{label}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 }
 
 function MetadataSelect({ label, name, options, defaultValue, required }: { label: string; name: string; options?: MetadataOption[]; defaultValue?: string; required?: boolean }) {

@@ -84,7 +84,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
   headers.set("Accept", "application/json");
   headers.set("x-request-id", requestId);
 
-  if (options.body && !headers.has("Content-Type")) {
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -352,6 +352,10 @@ export function updatePlatformMetadataApi(id: string, input: Partial<import("@/t
   });
 }
 
+export function deletePlatformMetadataApi(id: string) {
+  return apiRequest<{ disposition: "DELETED" | "ARCHIVED" }>(`/platform/settings/metadata/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function listPlatformPlansApi() {
   return apiRequest<PlatformPlan[]>("/platform/settings/plans");
 }
@@ -368,6 +372,50 @@ export function updatePlatformPlanApi(id: string, input: Partial<PlatformPlan>) 
     method: "PATCH",
     body: JSON.stringify(input),
   });
+}
+
+export function copyPlatformPlanApi(id: string) {
+  return apiRequest<PlatformPlan>(`/platform/settings/plans/${encodeURIComponent(id)}/copy`, { method: "POST" });
+}
+
+export function deletePlatformPlanApi(id: string) {
+  return apiRequest<{ disposition: "DELETED" | "ARCHIVED"; subscriptions: number }>(`/platform/settings/plans/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function listSupportedOrganizationTypesApi() {
+  return apiRequest<import("@/types/platform").SupportedOrganizationType[]>("/platform/settings/organization-types");
+}
+
+export function createOrganizationOnboardingApi(input: { countryCode: string; supportedOrganizationTypeId: string; legalForm?: string; operationalData?: Record<string, string> }) {
+  return apiRequest<import("@/types/platform").OrganizationOnboardingSession>("/platform/onboarding", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function getOrganizationOnboardingApi(id: string) {
+  return apiRequest<import("@/types/platform").OrganizationOnboardingSession>(`/platform/onboarding/${encodeURIComponent(id)}`);
+}
+
+export function getOnboardingRequiredDocumentsApi(id: string) {
+  return apiRequest<RequiredDocumentPolicy[]>(`/platform/onboarding/${encodeURIComponent(id)}/required-documents`);
+}
+
+export function uploadOnboardingDocumentApi(id: string, input: { file: File; documentType: string; policyId?: string }) {
+  const body = new FormData();
+  body.set("file", input.file);
+  body.set("documentType", input.documentType);
+  if (input.policyId) body.set("policyId", input.policyId);
+  return apiRequest<import("@/types/platform").OnboardingDocument>(`/platform/onboarding/${encodeURIComponent(id)}/documents`, { method: "POST", body });
+}
+
+export function runOnboardingExtractionApi(id: string, documentId: string) {
+  return apiRequest<import("@/types/platform").OrganizationOnboardingSession>(`/platform/onboarding/${encodeURIComponent(id)}/documents/${encodeURIComponent(documentId)}/extract`, { method: "POST" });
+}
+
+export function reviewOnboardingFieldApi(id: string, evidenceId: string, input: { action: "CONFIRMED" | "CORRECTED" | "REJECTED"; finalValue?: string; reason?: string }) {
+  return apiRequest(`/platform/onboarding/${encodeURIComponent(id)}/fields/${encodeURIComponent(evidenceId)}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function completeOrganizationOnboardingApi(id: string) {
+  return apiRequest<Organization>(`/platform/onboarding/${encodeURIComponent(id)}/complete`, { method: "POST" });
 }
 
 export function listPlatformSubscriptionsApi() {
