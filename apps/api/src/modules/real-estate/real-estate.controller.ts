@@ -118,6 +118,24 @@ export class RealEstateController {
     return this.service.updateUnit(user, id, body);
   }
 
+  @Permissions('real_estate.units.view')
+  @Get('units/:id/deletion-impact')
+  unitDeletionImpact(@CurrentUser() user: AuthenticatedRequestUser, @Param('id') id: string) {
+    return this.service.unitDeletionImpact(user, id);
+  }
+
+  @Permissions('real_estate.units.manage')
+  @Post('units/:id/archive')
+  archiveUnit(@CurrentUser() user: AuthenticatedRequestUser, @Param('id') id: string) {
+    return this.service.archiveUnit(user, id);
+  }
+
+  @Permissions('real_estate.units.manage')
+  @Delete('units/:id')
+  deleteUnit(@CurrentUser() user: AuthenticatedRequestUser, @Param('id') id: string) {
+    return this.service.deleteUnit(user, id);
+  }
+
   @Permissions('real_estate.unit_assignments.view')
   @Get('units/:id/assignments')
   listAssignments(@CurrentUser() user: AuthenticatedRequestUser, @Param('id') id: string) {

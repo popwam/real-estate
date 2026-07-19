@@ -208,6 +208,16 @@ async function seedPlatformPlans(prisma: PrismaClient) {
 }
 
 async function seedVerificationPolicies(prisma: PrismaClient) {
+  const supportedType = await prisma.supportedOrganizationType.findFirst({
+    where: {
+      code: 'BROKERAGE',
+      isActive: true,
+      isArchived: false,
+    },
+  });
+  if (!supportedType) {
+    throw new Error('Active BROKERAGE supported organization type is required.');
+  }
   const policies = [
     {
       countryCode: 'EG',
@@ -223,18 +233,35 @@ async function seedVerificationPolicies(prisma: PrismaClient) {
     },
   ];
   for (const policy of policies) {
-    await prisma.requiredDocumentPolicy.upsert({
+    const existing = await prisma.requiredDocumentPolicy.findFirst({
       where: {
-        countryCode_organizationType_legalForm_documentType: policy,
+        countryCode: policy.countryCode,
+        supportedOrganizationTypeId: supportedType.id,
+        legalForm: policy.legalForm,
+        documentType: policy.documentType,
+        isArchived: false,
       },
-      create: {
-        ...policy,
-        isRequired: true,
-        requiresExpiryDate: false,
-        ownerDocumentRequired: true,
-      },
-      update: { isActive: true },
     });
+    if (existing) {
+      await prisma.requiredDocumentPolicy.update({
+        where: { id: existing.id },
+        data: {
+          organizationType: supportedType.legacyOrganizationType,
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.requiredDocumentPolicy.create({
+        data: {
+          ...policy,
+          supportedOrganizationTypeId: supportedType.id,
+          organizationType: supportedType.legacyOrganizationType,
+          isRequired: true,
+          requiresExpiryDate: false,
+          ownerDocumentRequired: true,
+        },
+      });
+    }
   }
   return policies.length;
 }

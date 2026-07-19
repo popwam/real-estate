@@ -40,6 +40,7 @@ import { OperationsModule } from './modules/operations/operations.module';
 import { PaymentPlansModule } from './modules/payment-plans/payment-plans.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { PlatformOnboardingModule } from './modules/platform-onboarding/platform-onboarding.module';
 import { PublicModule } from './modules/public/public.module';
 import { PublicLeadsModule } from './modules/public-leads/public-leads.module';
 import { ProjectPhasesModule } from './modules/project-phases/project-phases.module';
@@ -101,6 +102,7 @@ import { VisibilityRulesModule } from './modules/visibility-rules/visibility-rul
     PublicModule,
     PublicLeadsModule,
     PlatformAdminModule,
+    PlatformOnboardingModule,
   ],
   controllers: [AppController],
   providers: [

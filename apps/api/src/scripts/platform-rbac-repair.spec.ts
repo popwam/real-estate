@@ -1,5 +1,8 @@
 import { seedBaseRolesAndPermissions } from '../modules/permissions/rbac.seed';
-import { repairPlatformOwnerRbac } from './platform-rbac-repair';
+import {
+  repairPlatformOwnerRbac,
+  toSafePrismaError,
+} from './platform-rbac-repair';
 
 jest.mock('../modules/permissions/rbac.seed', () => ({
   seedBaseRolesAndPermissions: jest.fn(),
@@ -42,6 +45,32 @@ describe('Platform Owner RBAC repair', () => {
     });
     expect(JSON.stringify(prisma.user.update.mock.calls)).not.toMatch(
       /password|token|email/i,
+    );
+  });
+
+  it('exposes only sanitized Prisma failure details', () => {
+    const error = Object.assign(
+      new Error(
+        'Cannot connect to postgresql://admin:top-secret@db.internal/app DATABASE_URL=postgresql://hidden:password@db/app token=private-token',
+      ),
+      {
+        name: 'PrismaClientKnownRequestError',
+        code: 'P1001',
+        meta: { modelName: 'Permission', databaseUrl: 'postgresql://leaked' },
+      },
+    );
+
+    const safe = toSafePrismaError(error);
+
+    expect(safe).toEqual({
+      errorName: 'PrismaClientKnownRequestError',
+      prismaCode: 'P1001',
+      modelName: 'Permission',
+      message:
+        'Cannot connect to [REDACTED_DATABASE_URL] DATABASE_URL=[REDACTED] token=[REDACTED]',
+    });
+    expect(JSON.stringify(safe)).not.toMatch(
+      /admin|top-secret|hidden|private-token|db\.internal/,
     );
   });
 });

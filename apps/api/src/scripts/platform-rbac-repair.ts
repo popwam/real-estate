@@ -3,6 +3,60 @@ import { PrismaClient, UserRole } from '@prisma/client';
 import { loadEnvironment } from '../config/load-environment';
 import { seedBaseRolesAndPermissions } from '../modules/permissions/rbac.seed';
 
+type SafePrismaError = {
+  errorName: string;
+  prismaCode: string | null;
+  modelName: string | null;
+  message: string;
+};
+
+export function toSafePrismaError(error: unknown): SafePrismaError {
+  const value = isRecord(error) ? error : {};
+  const meta = isRecord(value.meta) ? value.meta : {};
+  const prismaCode = value.code ?? value.errorCode;
+
+  return {
+    errorName:
+      safeIdentifier(value.name) ??
+      (error instanceof Error ? safeIdentifier(error.name) : null) ??
+      'Error',
+    prismaCode:
+      typeof prismaCode === 'string' && /^P\d{4}$/.test(prismaCode)
+        ? prismaCode
+        : null,
+    modelName: safeIdentifier(value.modelName) ?? safeIdentifier(meta.modelName),
+    message: sanitizeErrorMessage(
+      error instanceof Error ? error.message : 'Database operation failed.',
+    ),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function safeIdentifier(value: unknown): string | null {
+  return typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(value)
+    ? value
+    : null;
+}
+
+function sanitizeErrorMessage(message: string): string {
+  const sanitized = message
+    .replace(
+      /\b(?:postgres(?:ql)?|mysql|sqlserver|mongodb):\/\/[^\s"'`]+/gi,
+      '[REDACTED_DATABASE_URL]',
+    )
+    .replace(
+      /\b(DATABASE_URL|password|passwd|pwd|token|secret|api[_-]?key)\b\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+      '$1=[REDACTED]',
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return (sanitized || 'Database operation failed.').slice(0, 240);
+}
+
 export async function repairPlatformOwnerRbac(prisma: PrismaClient) {
   const rbac = await seedBaseRolesAndPermissions(prisma);
   const platformOrganization = await prisma.organization.findFirst({
@@ -88,9 +142,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error(
-      `Platform Owner RBAC repair failed safely: ${error instanceof Error ? error.name : 'Error'}`,
-    );
+    console.error(JSON.stringify(toSafePrismaError(error)));
     process.exitCode = 1;
   });
 }

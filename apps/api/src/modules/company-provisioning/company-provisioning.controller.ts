@@ -11,6 +11,7 @@ import {
   AttendanceLocationInputDto,
   ActivationReviewDto,
   CompanyRoleTemplateInputDto,
+  CreateRequiredDocumentPolicyDto,
   CreatePlatformCompanyDto,
   DomainInputDto,
   LimitsInputDto,
@@ -19,7 +20,7 @@ import {
   PlatformPlanInputDto,
   PlatformNavigationInputDto,
   PlatformMetadataInputDto,
-  RequiredDocumentPolicyInputDto,
+  UpdateRequiredDocumentPolicyDto,
   SubscriptionInputDto,
   WifiRuleInputDto,
 } from './dto/company-provisioning.dto';
@@ -221,6 +222,12 @@ export class PlatformSettingsController {
     return this.service.updatePlatformMetadata(metadataId, dto, user);
   }
 
+  @Permissions('platform.metadata.manage')
+  @Delete('metadata/:metadataId')
+  deleteMetadata(@Param('metadataId') metadataId: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.deletePlatformMetadata(metadataId, user);
+  }
+
   @Permissions('platform.plans.view')
   @Get('plans')
   listPlans(@CurrentUser() user: AuthenticatedRequestUser) {
@@ -243,6 +250,24 @@ export class PlatformSettingsController {
     return this.service.updatePlatformPlan(planId, dto, user);
   }
 
+  @Permissions('platform.plans.view')
+  @Get('plans/:planId/deletion-impact')
+  planDeletionImpact(@Param('planId') planId: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.platformPlanDeletionImpact(planId, user);
+  }
+
+  @Permissions('platform.plans.manage')
+  @Post('plans/:planId/copy')
+  copyPlan(@Param('planId') planId: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.copyPlatformPlan(planId, user);
+  }
+
+  @Permissions('platform.plans.manage')
+  @Delete('plans/:planId')
+  deletePlan(@Param('planId') planId: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.deletePlatformPlan(planId, user);
+  }
+
   @Permissions('platform.subscriptions.view')
   @Get('subscriptions')
   listSubscriptions(@CurrentUser() user: AuthenticatedRequestUser) {
@@ -257,7 +282,7 @@ export class PlatformSettingsController {
 
   @Permissions('platform.verification_policies.manage')
   @Post('verification-policies')
-  createPolicy(@Body() dto: RequiredDocumentPolicyInputDto, @CurrentUser() user: AuthenticatedRequestUser) {
+  createPolicy(@Body() dto: CreateRequiredDocumentPolicyDto, @CurrentUser() user: AuthenticatedRequestUser) {
     return this.service.createRequiredDocumentPolicy(dto, user);
   }
 
@@ -265,10 +290,16 @@ export class PlatformSettingsController {
   @Patch('verification-policies/:policyId')
   updatePolicy(
     @Param('policyId') policyId: string,
-    @Body() dto: RequiredDocumentPolicyInputDto,
+    @Body() dto: UpdateRequiredDocumentPolicyDto,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.service.updateRequiredDocumentPolicy(policyId, dto, user);
+  }
+
+  @Permissions('platform.verification_policies.manage')
+  @Delete('verification-policies/:policyId')
+  deletePolicy(@Param('policyId') policyId: string, @CurrentUser() user: AuthenticatedRequestUser) {
+    return this.service.deleteRequiredDocumentPolicy(policyId, user);
   }
 
   @Permissions('platform.settings.view')

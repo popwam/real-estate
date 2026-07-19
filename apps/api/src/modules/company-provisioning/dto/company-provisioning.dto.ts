@@ -174,6 +174,7 @@ export class ActivationReviewDto {
 
 export class RequiredDocumentPolicyInputDto {
   countryCode?: string;
+  /** @deprecated Derived from supportedOrganizationTypeId and ignored as a source of truth. */
   organizationType?: OrganizationType;
   legalForm?: OrganizationLegalForm | null;
   documentType?: OrganizationDocumentType;
@@ -182,8 +183,24 @@ export class RequiredDocumentPolicyInputDto {
   ownerDocumentRequired?: boolean;
   appliesToOwnerRoles?: string[];
   isActive?: boolean;
+  supportedOrganizationTypeId?: string;
+  requiredFieldCodes?: string[];
+  acceptedMimeTypes?: string[];
+  maxFileSizeMb?: number;
+  minimumConfidence?: number;
+  blocksActivation?: boolean;
+  sortOrder?: number;
+  isArchived?: boolean;
   notes?: string;
 }
+
+export class CreateRequiredDocumentPolicyDto extends RequiredDocumentPolicyInputDto {
+  declare countryCode: string;
+  declare supportedOrganizationTypeId: string;
+  declare documentType: OrganizationDocumentType;
+}
+
+export class UpdateRequiredDocumentPolicyDto extends RequiredDocumentPolicyInputDto {}
 
 export class PlatformPlanInputDto {
   code?: string;
@@ -224,6 +241,7 @@ export class PlatformMetadataInputDto {
   configuration?: Record<string, unknown>;
   sortOrder?: number;
   isActive?: boolean;
+  isArchived?: boolean;
 }
 
 export class CompanyRoleTemplateInputDto {

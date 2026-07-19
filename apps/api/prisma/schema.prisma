@@ -855,6 +855,43 @@ enum DocumentExtractionProvider {
   AI_PROVIDER
 }
 
+enum ExchangeRateSourceType {
+  MANUAL
+  API
+}
+
+enum OrganizationOnboardingStatus {
+  DRAFT
+  DOCUMENTS_REQUIRED
+  EXTRACTION_PENDING
+  REVIEW_REQUIRED
+  READY_TO_CREATE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum OnboardingDocumentQualityStatus {
+  ACCEPTED
+  LOW_RESOLUTION
+  BLUR_SUSPECTED
+  CROPPED_SUSPECTED
+  DARK_IMAGE
+  CORRUPTED
+  PASSWORD_PROTECTED
+  UNSUPPORTED
+}
+
+enum FieldEvidenceReviewStatus {
+  EXTRACTED
+  AUTO_ACCEPTED
+  REVIEW_REQUIRED
+  CONFIRMED
+  CORRECTED
+  REJECTED
+  CONFLICT
+}
+
 enum FilePurpose {
   PUBLIC_MEDIA
   PROJECT_MEDIA
@@ -960,173 +997,187 @@ enum UserRole {
 }
 
 model Organization {
-  id                  String                       @id @default(cuid())
-  name                String
-  slug                String                       @unique
-  companyCode         String?                      @unique
-  type                OrganizationType
-  country             String?
-  city                String?
-  timezone            String?
-  currency            String?
-  defaultLanguage     String?
-  status              OrganizationStatus           @default(DRAFT)
-  plan                String?
-  planExpiresAt       DateTime?
-  createdAt           DateTime                     @default(now())
-  updatedAt           DateTime                     @updatedAt
-  archivedAt          DateTime?
-  archivedPreviousStatus OrganizationStatus?
-  companySetupCompletedAt DateTime?
-  enabledLoginMethods Json                         @default("[\"EMAIL_PASSWORD\",\"PHONE_PASSWORD\"]")
-  profile             OrganizationProfile?
-  verifications       OrganizationVerification[]
-  users               User[]
-  roles               Role[]
-  auditLogs           AuditLog[]
-  uploadedFiles       UploadedFile[]
-  notificationEvents  NotificationEvent[]
-  developerProfile    DeveloperProfile?
-  brokerageProfile    BrokerageProfile?
-  brokerProfiles      BrokerProfile[]
-  projects            Project[]                    @relation("DeveloperProjects")
-  inventoryUnits      InventoryUnit[]              @relation("DeveloperInventoryUnits")
-  brokerAccessRules   BrokerAccessRule[]           @relation("DeveloperBrokerAccessRules")
-  developerAgreements DeveloperBrokerageAgreement[] @relation("DeveloperAgreements")
-  brokerageAgreements DeveloperBrokerageAgreement[] @relation("BrokerageAgreements")
-  developerDealRooms  DealRoom[]                    @relation("DeveloperDealRooms")
-  brokerageDealRooms  DealRoom[]                    @relation("BrokerageDealRooms")
-  dealRoomParticipants DealRoomParticipant[]
-  developerDeals      Deal[]                        @relation("DeveloperDeals")
-  brokerageDeals      Deal[]                        @relation("BrokerageDeals")
-  commissionRules     CommissionRule[]              @relation("DeveloperCommissionRules")
-  recipientCommissionRules CommissionRule[]          @relation("CommissionRuleRecipientOrganization")
-  developerCommissionEntries CommissionEntry[]       @relation("DeveloperCommissionEntries")
-  brokerageCommissionEntries CommissionEntry[]       @relation("BrokerageCommissionEntries")
-  recipientCommissionEntries CommissionEntry[]       @relation("CommissionEntryRecipientOrganization")
-  websiteSettings   OrganizationWebsiteSettings?
-  publicSiteSettings OrganizationPublicSiteSettings?
-  owners            OrganizationOwner[]
-  organizationDocuments OrganizationDocument[]
-  domainVerifications OrganizationDomainVerification[]
-  publicLeads       PublicLead[]
-  crmClients        CrmClient[]
-  crmLeads          CrmLead[]                    @relation("CrmLeadOwningOrganization")
-  claimedCrmLeads   CrmLead[]                    @relation("CrmLeadClaimedOrganization")
-  conversations     Conversation[]
-  conversationParticipants ConversationParticipant[]
-  crmActivities     CrmActivity[]                @relation("CrmActivityOrganization")
-  actorCrmActivities CrmActivity[]               @relation("CrmActivityActorOrganization")
-  importJobs        ImportJob[]
-  crmPipelineStages CrmPipelineStage[]
-  crmNotes          CrmNote[]
-  crmFollowUpTasks  CrmFollowUpTask[]
-  hrDepartments     HrDepartment[]
-  hrEmployees       HrEmployee[]
-  hrWorkGroups      HrWorkGroup[]
-  hrTeams           HrTeam[]
-  hrEmployeeDocuments HrEmployeeDocument[]
-  hrJobOpenings     HrJobOpening[]
-  hrApplicants      HrApplicant[]
-  hrApplicantDocuments HrApplicantDocument[]
-  hrApplicantInterviews HrApplicantInterview[]
-  hrApplicantOffers HrApplicantOffer[]
-  hrRecruitmentSettings HrRecruitmentSettings?
-  hrEmployeeTransferLogs HrEmployeeTransferLog[]
-  hrEmployeeTitleChangeLogs HrEmployeeTitleChangeLog[]
-  hrAttendanceRecords HrAttendanceRecord[]
-  attendanceSettings OrganizationAttendanceSettings?
-  branches          OrganizationBranch[]
-  subscription      OrganizationSubscription?
-  limits            OrganizationLimits?
-  companyRoleTemplates CompanyRoleTemplate[]
-  attendanceLocations OrganizationAttendanceLocation[]
-  wifiRules         OrganizationWifiRule[]
-  accountingAccounts AccountingAccount[]
-  accountingCategories AccountingCategory[]
-  accountingTransactions AccountingTransaction[]
-  legalDocuments   LegalDocument[]
-  legalCases       LegalCase[]
-  adsCampaigns     AdsCampaign[]
-  cameraDevices    CameraDevice[]
-  operationsActivities OperationsActivity[]
-  invitations       OrganizationInvitation[]
+  id                          String                           @id @default(cuid())
+  name                        String
+  slug                        String                           @unique
+  companyCode                 String?                          @unique
+  type                        OrganizationType
+  country                     String?
+  city                        String?
+  timezone                    String?
+  currency                    String?
+  defaultLanguage             String?
+  status                      OrganizationStatus               @default(DRAFT)
+  plan                        String?
+  planExpiresAt               DateTime?
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
+  archivedAt                  DateTime?
+  archivedPreviousStatus      OrganizationStatus?
+  companySetupCompletedAt     DateTime?
+  enabledLoginMethods         Json                             @default("[\"EMAIL_PASSWORD\",\"PHONE_PASSWORD\"]")
+  profile                     OrganizationProfile?
+  verifications               OrganizationVerification[]
+  users                       User[]
+  roles                       Role[]
+  auditLogs                   AuditLog[]
+  uploadedFiles               UploadedFile[]
+  notificationEvents          NotificationEvent[]
+  developerProfile            DeveloperProfile?
+  brokerageProfile            BrokerageProfile?
+  brokerProfiles              BrokerProfile[]
+  projects                    Project[]                        @relation("DeveloperProjects")
+  inventoryUnits              InventoryUnit[]                  @relation("DeveloperInventoryUnits")
+  brokerAccessRules           BrokerAccessRule[]               @relation("DeveloperBrokerAccessRules")
+  developerAgreements         DeveloperBrokerageAgreement[]    @relation("DeveloperAgreements")
+  brokerageAgreements         DeveloperBrokerageAgreement[]    @relation("BrokerageAgreements")
+  developerDealRooms          DealRoom[]                       @relation("DeveloperDealRooms")
+  brokerageDealRooms          DealRoom[]                       @relation("BrokerageDealRooms")
+  dealRoomParticipants        DealRoomParticipant[]
+  developerDeals              Deal[]                           @relation("DeveloperDeals")
+  brokerageDeals              Deal[]                           @relation("BrokerageDeals")
+  commissionRules             CommissionRule[]                 @relation("DeveloperCommissionRules")
+  recipientCommissionRules    CommissionRule[]                 @relation("CommissionRuleRecipientOrganization")
+  developerCommissionEntries  CommissionEntry[]                @relation("DeveloperCommissionEntries")
+  brokerageCommissionEntries  CommissionEntry[]                @relation("BrokerageCommissionEntries")
+  recipientCommissionEntries  CommissionEntry[]                @relation("CommissionEntryRecipientOrganization")
+  websiteSettings             OrganizationWebsiteSettings?
+  publicSiteSettings          OrganizationPublicSiteSettings?
+  owners                      OrganizationOwner[]
+  organizationDocuments       OrganizationDocument[]
+  domainVerifications         OrganizationDomainVerification[]
+  publicLeads                 PublicLead[]
+  crmClients                  CrmClient[]
+  crmLeads                    CrmLead[]                        @relation("CrmLeadOwningOrganization")
+  claimedCrmLeads             CrmLead[]                        @relation("CrmLeadClaimedOrganization")
+  conversations               Conversation[]
+  conversationParticipants    ConversationParticipant[]
+  crmActivities               CrmActivity[]                    @relation("CrmActivityOrganization")
+  actorCrmActivities          CrmActivity[]                    @relation("CrmActivityActorOrganization")
+  importJobs                  ImportJob[]
+  crmPipelineStages           CrmPipelineStage[]
+  crmNotes                    CrmNote[]
+  crmFollowUpTasks            CrmFollowUpTask[]
+  hrDepartments               HrDepartment[]
+  hrEmployees                 HrEmployee[]
+  hrWorkGroups                HrWorkGroup[]
+  hrTeams                     HrTeam[]
+  hrEmployeeDocuments         HrEmployeeDocument[]
+  hrJobOpenings               HrJobOpening[]
+  hrApplicants                HrApplicant[]
+  hrApplicantDocuments        HrApplicantDocument[]
+  hrApplicantInterviews       HrApplicantInterview[]
+  hrApplicantOffers           HrApplicantOffer[]
+  hrRecruitmentSettings       HrRecruitmentSettings?
+  hrEmployeeTransferLogs      HrEmployeeTransferLog[]
+  hrEmployeeTitleChangeLogs   HrEmployeeTitleChangeLog[]
+  hrAttendanceRecords         HrAttendanceRecord[]
+  attendanceSettings          OrganizationAttendanceSettings?
+  branches                    OrganizationBranch[]
+  subscription                OrganizationSubscription?
+  limits                      OrganizationLimits?
+  companyRoleTemplates        CompanyRoleTemplate[]
+  attendanceLocations         OrganizationAttendanceLocation[]
+  wifiRules                   OrganizationWifiRule[]
+  accountingAccounts          AccountingAccount[]
+  accountingCategories        AccountingCategory[]
+  accountingTransactions      AccountingTransaction[]
+  legalDocuments              LegalDocument[]
+  legalCases                  LegalCase[]
+  adsCampaigns                AdsCampaign[]
+  cameraDevices               CameraDevice[]
+  operationsActivities        OperationsActivity[]
+  invitations                 OrganizationInvitation[]
   projectBrokerAuthorizations ProjectBrokerAuthorization[]
-  assignedPublicLeads PublicLead[]            @relation("PublicLeadAssignedOrganization")
-  attributedVisitorSessions PublicVisitorSession[] @relation("VisitorAttributedOrganization")
-  customerProfiles CustomerProfile[]
-  realEstateProjects Compound[]
-  buildings         Building[]
-  floors            Floor[]
-  units             Unit[]
-  unitCustomerAssignments UnitCustomerAssignment[]
-  unitQrPasses      UnitQrPass[]
-  accessIntegrations AccessIntegration[]
+  assignedPublicLeads         PublicLead[]                     @relation("PublicLeadAssignedOrganization")
+  attributedVisitorSessions   PublicVisitorSession[]           @relation("VisitorAttributedOrganization")
+  customerProfiles            CustomerProfile[]
+  realEstateProjects          Compound[]
+  buildings                   Building[]
+  floors                      Floor[]
+  units                       Unit[]
+  unitCustomerAssignments     UnitCustomerAssignment[]
+  unitQrPasses                UnitQrPass[]
+  accessIntegrations          AccessIntegration[]
+  supportedOrganizationTypeId String?
+  supportedOrganizationType   SupportedOrganizationType?       @relation(fields: [supportedOrganizationTypeId], references: [id], onDelete: SetNull)
+  completedOnboardingSession  OrganizationOnboardingSession?   @relation("CompletedOnboardingOrganization")
 
   @@index([type, status])
+  @@index([supportedOrganizationTypeId])
   @@map("organizations")
 }
 
 model PlatformPlan {
-  id              String                   @id @default(cuid())
-  code            String                   @unique
-  name            String
-  localizedName   Json?
-  description     String?
-  planType        PlatformPlanType         @default(PAID)
-  priceAmount     Decimal?                 @db.Decimal(12, 2)
-  priceCurrency   String                   @default("USD")
-  billingCycle    OrganizationBillingCycle @default(MONTHLY)
-  durationValue   Int                      @default(1)
-  durationUnit    PlanDurationUnit         @default(MONTH)
-  allowsNoExpiry  Boolean                  @default(false)
-  trialDays       Int                      @default(0)
-  limits          Json                     @default("{}")
-  enabledModules  Json                     @default("{}")
-  allowedLoginMethods Json                 @default("[\"EMAIL_PASSWORD\",\"PHONE_PASSWORD\"]")
-  isActive        Boolean                  @default(true)
-  isArchived      Boolean                  @default(false)
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  id                  String                   @id @default(cuid())
+  code                String                   @unique
+  name                String
+  localizedName       Json?
+  description         String?
+  planType            PlatformPlanType         @default(PAID)
+  priceAmount         Decimal?                 @db.Decimal(12, 2)
+  priceCurrency       String                   @default("USD")
+  billingCycle        OrganizationBillingCycle @default(MONTHLY)
+  durationValue       Int                      @default(1)
+  durationUnit        PlanDurationUnit         @default(MONTH)
+  allowsNoExpiry      Boolean                  @default(false)
+  trialDays           Int                      @default(0)
+  limits              Json                     @default("{}")
+  enabledModules      Json                     @default("{}")
+  allowedLoginMethods Json                     @default("[\"EMAIL_PASSWORD\",\"PHONE_PASSWORD\"]")
+  isActive            Boolean                  @default(true)
+  isArchived          Boolean                  @default(false)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
 
   @@index([isActive, isArchived])
   @@map("platform_plans")
 }
 
 model RequiredDocumentPolicy {
-  id                    String                    @id @default(cuid())
-  countryCode           String
-  organizationType      OrganizationType
-  legalForm             OrganizationLegalForm?
-  documentType          OrganizationDocumentType
-  isRequired            Boolean                   @default(true)
-  requiresExpiryDate    Boolean                   @default(false)
-  ownerDocumentRequired Boolean                   @default(false)
-  appliesToOwnerRoles   Json                      @default("[]")
-  isActive              Boolean                   @default(true)
-  notes                 String?
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
+  id                          String                           @id @default(cuid())
+  countryCode                 String
+  organizationType            OrganizationType?
+  legalForm                   OrganizationLegalForm?
+  documentType                OrganizationDocumentType
+  isRequired                  Boolean                          @default(true)
+  requiresExpiryDate          Boolean                          @default(false)
+  ownerDocumentRequired       Boolean                          @default(false)
+  appliesToOwnerRoles         Json                             @default("[]")
+  isActive                    Boolean                          @default(true)
+  notes                       String?
+  supportedOrganizationTypeId String?
+  requiredFieldCodes          String[]                         @default([])
+  acceptedMimeTypes           String[]                         @default(["application/pdf", "image/jpeg", "image/png", "image/webp"])
+  maxFileSizeMb               Int                              @default(10)
+  minimumConfidence           Decimal?                         @db.Decimal(5, 4)
+  blocksActivation            Boolean                          @default(true)
+  sortOrder                   Int                              @default(0)
+  isArchived                  Boolean                          @default(false)
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
+  supportedOrganizationType   SupportedOrganizationType?       @relation(fields: [supportedOrganizationTypeId], references: [id], onDelete: SetNull)
+  onboardingDocuments         OrganizationOnboardingDocument[]
 
-  @@unique([countryCode, organizationType, legalForm, documentType])
   @@index([countryCode, organizationType, isActive])
+  @@index([supportedOrganizationTypeId, countryCode, isActive, isArchived, sortOrder])
   @@map("required_document_policies")
 }
 
 model CompanyRoleTemplate {
-  id              String       @id @default(cuid())
-  organizationId  String
-  code            String
-  displayName     String
-  localizedName   Json?
-  description     String?
-  permissions     String[]     @default([])
-  isSystem        Boolean      @default(false)
-  isActive        Boolean      @default(true)
-  sortOrder       Int          @default(0)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String
+  displayName    String
+  localizedName  Json?
+  description    String?
+  permissions    String[]     @default([])
+  isSystem       Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, code])
   @@index([organizationId, isActive, sortOrder])
@@ -1134,73 +1185,73 @@ model CompanyRoleTemplate {
 }
 
 model OrganizationProfile {
-  id                      String        @id @default(cuid())
-  organizationId          String        @unique
-  legalName               String?
-  tradeName               String?
-  displayName             String?
-  responsibleSubmitterName String?
-  responsibleSubmitterEmail String?
-  responsibleSubmitterPhone String?
-  commercialRegNumber     String?
-  commercialRegisterNumber String?
-  commercialRegisterOffice String?
-  commercialRegisterIssuedAt DateTime?
+  id                          String                 @id @default(cuid())
+  organizationId              String                 @unique
+  legalName                   String?
+  tradeName                   String?
+  displayName                 String?
+  responsibleSubmitterName    String?
+  responsibleSubmitterEmail   String?
+  responsibleSubmitterPhone   String?
+  commercialRegNumber         String?
+  commercialRegisterNumber    String?
+  commercialRegisterOffice    String?
+  commercialRegisterIssuedAt  DateTime?
   commercialRegisterExpiresAt DateTime?
-  registrationNumber      String?
-  taxNumber               String?
-  vatNumber               String?
-  taxOffice               String?
-  legalForm               OrganizationLegalForm?
-  incorporationDate       DateTime?
-  countryCode             String?
-  regionCode              String?
-  cityCode                String?
-  cityName                String?
-  addressLine1            String?
-  addressLine2            String?
-  postalCode              String?
-  preferredLanguage       String?
-  defaultCurrency         String?
-  publicEmail             String?
-  publicPhone             String?
-  website                 String?
-  phone                   String?
-  email                   String?
-  address                 String?
-  logoUrl                 String?
-  description             String?
-  localizedDisplayName    Json?
-  socialLinks             Json?
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  organization            Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  registrationNumber          String?
+  taxNumber                   String?
+  vatNumber                   String?
+  taxOffice                   String?
+  legalForm                   OrganizationLegalForm?
+  incorporationDate           DateTime?
+  countryCode                 String?
+  regionCode                  String?
+  cityCode                    String?
+  cityName                    String?
+  addressLine1                String?
+  addressLine2                String?
+  postalCode                  String?
+  preferredLanguage           String?
+  defaultCurrency             String?
+  publicEmail                 String?
+  publicPhone                 String?
+  website                     String?
+  phone                       String?
+  email                       String?
+  address                     String?
+  logoUrl                     String?
+  description                 String?
+  localizedDisplayName        Json?
+  socialLinks                 Json?
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+  organization                Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("organization_profiles")
 }
 
 model OrganizationPublicSiteSettings {
-  id                  String                      @id @default(cuid())
-  organizationId      String                      @unique
-  mode                OrganizationPublicSiteMode  @default(PORTAL)
-  theme               OrganizationPublicSiteTheme @default(REAL_ESTATE)
-  defaultLanguage     String                      @default("en")
-  supportedLanguages  String[]                    @default(["en", "ar", "fr"])
-  showLogo            Boolean                     @default(true)
-  showContactInfo     Boolean                     @default(true)
-  showOffices         Boolean                     @default(true)
-  showGallery         Boolean                     @default(true)
-  showProjects        Boolean                     @default(true)
-  showLeadForm        Boolean                     @default(true)
-  redirectUrl         String?
-  seoTitle            Json?
-  seoDescription      Json?
-  publicHeadline      Json?
-  publicDescription   Json?
-  galleryImages       Json?
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
-  organization        Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                 String                      @id @default(cuid())
+  organizationId     String                      @unique
+  mode               OrganizationPublicSiteMode  @default(PORTAL)
+  theme              OrganizationPublicSiteTheme @default(REAL_ESTATE)
+  defaultLanguage    String                      @default("en")
+  supportedLanguages String[]                    @default(["en", "ar", "fr"])
+  showLogo           Boolean                     @default(true)
+  showContactInfo    Boolean                     @default(true)
+  showOffices        Boolean                     @default(true)
+  showGallery        Boolean                     @default(true)
+  showProjects       Boolean                     @default(true)
+  showLeadForm       Boolean                     @default(true)
+  redirectUrl        String?
+  seoTitle           Json?
+  seoDescription     Json?
+  publicHeadline     Json?
+  publicDescription  Json?
+  galleryImages      Json?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  organization       Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([mode, theme])
   @@map("organization_public_site_settings")
@@ -1217,14 +1268,14 @@ model OrganizationOwner {
   identifierValue        String?
   identifierCountryCode  String?
   ownershipPercentage    Decimal?                            @db.Decimal(5, 2)
-  role                   OrganizationOwnerRole                @default(OWNER)
+  role                   OrganizationOwnerRole               @default(OWNER)
   phone                  String?
   email                  String?
   idFrontFileId          String?
   idBackFileId           String?
   passportFileId         String?
   proofFileId            String?
-  verificationStatus     OrganizationOwnerVerificationStatus  @default(NOT_REVIEWED)
+  verificationStatus     OrganizationOwnerVerificationStatus @default(NOT_REVIEWED)
   createdAt              DateTime                            @default(now())
   updatedAt              DateTime                            @updatedAt
   organization           Organization                        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1238,25 +1289,25 @@ model OrganizationOwner {
 }
 
 model OrganizationDocument {
-  id                String                               @id @default(cuid())
-  organizationId    String
-  documentType      OrganizationDocumentType
-  fileId            String?
-  status            OrganizationDocumentStatus           @default(MISSING)
-  expiresAt         DateTime?
-  issuedAt          DateTime?
-  issuingAuthority  String?
-  extractedData     Json?
-  extractionProvider DocumentExtractionProvider          @default(NONE)
-  extractionStatus  OrganizationDocumentExtractionStatus @default(NOT_REQUESTED)
-  extractionMessage String?
-  reviewedById      String?
-  reviewedAt        DateTime?
-  createdAt         DateTime                             @default(now())
-  updatedAt         DateTime                             @updatedAt
-  organization      Organization                         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  file              UploadedFile?                        @relation("OrganizationDocumentFile", fields: [fileId], references: [id], onDelete: SetNull)
-  reviewedBy        User?                                @relation("OrganizationDocumentReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  id                 String                               @id @default(cuid())
+  organizationId     String
+  documentType       OrganizationDocumentType
+  fileId             String?
+  status             OrganizationDocumentStatus           @default(MISSING)
+  expiresAt          DateTime?
+  issuedAt           DateTime?
+  issuingAuthority   String?
+  extractedData      Json?
+  extractionProvider DocumentExtractionProvider           @default(NONE)
+  extractionStatus   OrganizationDocumentExtractionStatus @default(NOT_REQUESTED)
+  extractionMessage  String?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  createdAt          DateTime                             @default(now())
+  updatedAt          DateTime                             @updatedAt
+  organization       Organization                         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  file               UploadedFile?                        @relation("OrganizationDocumentFile", fields: [fileId], references: [id], onDelete: SetNull)
+  reviewedBy         User?                                @relation("OrganizationDocumentReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([organizationId, documentType, status])
   @@index([organizationId, extractionStatus])
@@ -1264,33 +1315,33 @@ model OrganizationDocument {
 }
 
 model OrganizationVerification {
-  id                  String              @id @default(cuid())
-  organizationId      String
-  documentType        String
-  uploadedFileId      String?
-  documentUrl         String?
-  expiryDate          DateTime?
-  status              VerificationStatus  @default(DRAFT)
-  verifiedById        String?
-  verifiedAt          DateTime?
-  rejectionReason     String?
-  notes               String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  uploadedFile        UploadedFile?       @relation(fields: [uploadedFileId], references: [id], onDelete: SetNull)
-  verifiedBy          User?               @relation("VerifiedOrganizationDocuments", fields: [verifiedById], references: [id], onDelete: SetNull)
+  id              String             @id @default(cuid())
+  organizationId  String
+  documentType    String
+  uploadedFileId  String?
+  documentUrl     String?
+  expiryDate      DateTime?
+  status          VerificationStatus @default(DRAFT)
+  verifiedById    String?
+  verifiedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedFile    UploadedFile?      @relation(fields: [uploadedFileId], references: [id], onDelete: SetNull)
+  verifiedBy      User?              @relation("VerifiedOrganizationDocuments", fields: [verifiedById], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@map("organization_verifications")
 }
 
 model OrganizationWebsiteSettings {
-  id              String        @id @default(cuid())
-  organizationId  String        @unique
-  publicSlug      String        @unique
-  subdomain       String        @unique
-  customDomain    String?       @unique
+  id              String       @id @default(cuid())
+  organizationId  String       @unique
+  publicSlug      String       @unique
+  subdomain       String       @unique
+  customDomain    String?      @unique
   siteTitle       String
   siteDescription String?
   logoUrl         String?
@@ -1299,33 +1350,33 @@ model OrganizationWebsiteSettings {
   contactPhone    String?
   contactEmail    String?
   whatsappUrl     String?
-  isPublished     Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isPublished     Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([isPublished])
   @@map("organization_website_settings")
 }
 
 model OrganizationDomainVerification {
-  id                String                    @id @default(cuid())
+  id                String                        @id @default(cuid())
   organizationId    String
   domain            String
   type              OrganizationDomainType
-  status            DomainVerificationStatus  @default(PENDING)
+  status            DomainVerificationStatus      @default(PENDING)
   verificationToken String
-  isDefault         Boolean                   @default(false)
+  isDefault         Boolean                       @default(false)
   lastCheckedAt     DateTime?
   verifiedAt        DateTime?
   failureReason     String?
   statusNote        String?
-  redirectMode      OrganizationRedirectMode  @default(NONE)
+  redirectMode      OrganizationRedirectMode      @default(NONE)
   redirectUrl       String?
   inboundSourceMode OrganizationInboundSourceMode @default(NONE)
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  organization      Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  organization      Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, domain])
   @@index([domain, type, status])
@@ -1333,22 +1384,22 @@ model OrganizationDomainVerification {
 }
 
 model OrganizationSubscription {
-  id             String                         @id @default(cuid())
-  organizationId String                         @unique
-  planCode       String
-  planName       String
-  status         OrganizationSubscriptionStatus @default(TRIAL)
-  startsAt       DateTime?
-  endsAt         DateTime?
-  trialEndsAt    DateTime?
-  billingCycle   OrganizationBillingCycle       @default(MONTHLY)
-  autoRenew      Boolean                        @default(false)
-  notes          String?
-  endDateOverridden Boolean                       @default(false)
+  id                    String                         @id @default(cuid())
+  organizationId        String                         @unique
+  planCode              String
+  planName              String
+  status                OrganizationSubscriptionStatus @default(TRIAL)
+  startsAt              DateTime?
+  endsAt                DateTime?
+  trialEndsAt           DateTime?
+  billingCycle          OrganizationBillingCycle       @default(MONTHLY)
+  autoRenew             Boolean                        @default(false)
+  notes                 String?
+  endDateOverridden     Boolean                        @default(false)
   endDateOverrideReason String?
-  createdAt      DateTime                       @default(now())
-  updatedAt      DateTime                       @updatedAt
-  organization   Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+  organization          Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([status, endsAt])
   @@map("organization_subscriptions")
@@ -1380,151 +1431,153 @@ model OrganizationLimits {
 }
 
 model User {
-  id                              String                      @id @default(cuid())
-  organizationId                  String?
-  roleId                          String?
-  email                           String                      @unique
-  passwordHash                    String?
-  mustChangePassword              Boolean                     @default(false)
-  firstName                       String?
-  lastName                        String?
-  phone                           String?
-  userRole                        UserRole
-  isActive                        Boolean                     @default(true)
-  lastLoginAt                     DateTime?
-  createdAt                       DateTime                    @default(now())
-  updatedAt                       DateTime                    @updatedAt
-  organization                    Organization?               @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  role                            Role?                       @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  refreshTokens                   RefreshToken[]
-  auditLogs                       AuditLog[]
-  uploadedFiles                   UploadedFile[]
-  notificationEvents              NotificationEvent[]
-  verifiedOrganizationDocuments   OrganizationVerification[]   @relation("VerifiedOrganizationDocuments")
-  brokerProfile                   BrokerProfile?
-  verifiedBrokerProfiles          BrokerProfile[]              @relation("VerifiedBrokerProfiles")
-  unitHolds                       UnitAvailability[]           @relation("UnitHolds")
-  grantedBrokerAccessRules        BrokerAccessRule[]           @relation("BrokerAccessGrantedBy")
-  createdClients                  Client[]                      @relation("ClientCreatedBy")
-  leads                           Lead[]                        @relation("LeadBroker")
-  leadClaims                      LeadClaim[]                   @relation("LeadClaimBroker")
-  leadClaimConflicts              LeadClaimConflict[]           @relation("LeadClaimConflictAttemptedBy")
-  resolvedLeadClaimConflicts      LeadClaimConflict[]           @relation("LeadClaimConflictResolvedBy")
-  reservationRequests             ReservationRequest[]          @relation("ReservationRequestBroker")
-  createdDealRooms                DealRoom[]                    @relation("DealRoomCreatedBy")
-  brokerDealRooms                 DealRoom[]                    @relation("DealRoomBroker")
-  dealRoomParticipants            DealRoomParticipant[]
-  dealRoomMessages                DealRoomMessage[]             @relation("DealRoomMessageSenderUser")
-  createdDeals                    Deal[]                        @relation("DealCreatedBy")
-  approvedDeals                   Deal[]                        @relation("DealApprovedBy")
-  cancelledDeals                  Deal[]                        @relation("DealCancelledBy")
-  brokerDeals                     Deal[]                        @relation("DealBroker")
-  targetCommissionRules           CommissionRule[]              @relation("CommissionRuleTargetUser")
-  brokerCommissionEntries         CommissionEntry[]             @relation("CommissionEntryBroker")
-  recipientCommissionEntries      CommissionEntry[]             @relation("CommissionEntryRecipientUser")
-  createdImportJobs                ImportJob[]                   @relation("ImportJobCreatedBy")
-  claimedCrmLeads                 CrmLead[]                      @relation("CrmLeadClaimedBroker")
-  conversationParticipants        ConversationParticipant[]
-  crmActivities                   CrmActivity[]                   @relation("CrmActivityActorUser")
-  crmLeadStageChanges             CrmLeadStageHistory[]           @relation("CrmLeadStageChangedBy")
-  authoredCrmNotes                CrmNote[]                       @relation("CrmNoteAuthor")
-  assignedCrmTasks                CrmFollowUpTask[]               @relation("CrmTaskAssignee")
-  createdCrmTasks                 CrmFollowUpTask[]               @relation("CrmTaskCreator")
-  hrEmployeeProfile               HrEmployee?
-  managedHrEmployees              HrEmployee[]                   @relation("HrEmployeeDirectManager")
-  secondaryManagedHrEmployees     HrEmployee[]                   @relation("HrEmployeeSecondaryManager")
-  managedHrWorkGroups             HrWorkGroupManager[]
-  managedHrTeams                  HrTeam[]                       @relation("HrTeamManager")
-  createdHrJobOpenings            HrJobOpening[]                 @relation("HrJobOpeningCreatedBy")
-  reviewedHrApplicants            HrApplicant[]                  @relation("HrApplicantReviewedBy")
-  interviewedHrApplicants         HrApplicantInterview[]         @relation("HrApplicantInterviewer")
-  createdHrEmployeeTransferLogs   HrEmployeeTransferLog[]        @relation("HrTransferLogCreatedBy")
-  createdHrEmployeeTitleChanges   HrEmployeeTitleChangeLog[]     @relation("HrTitleChangeCreatedBy")
-  createdAccountingTransactions   AccountingTransaction[]          @relation("AccountingTransactionCreatedBy")
-  operationsActivities            OperationsActivity[]             @relation("OperationsActivityActorUser")
-  approvedAccountingTransactions  AccountingTransaction[]          @relation("AccountingTransactionApprovedBy")
-  reviewedLegalDocuments          LegalDocument[]                  @relation("LegalDocumentReviewedBy")
-  reviewedOrganizationDocuments   OrganizationDocument[]            @relation("OrganizationDocumentReviewedBy")
-  createdOrganizationInvitations  OrganizationInvitation[]         @relation("InvitationCreatedBy")
-  acceptedOrganizationInvitations OrganizationInvitation[]         @relation("InvitationAcceptedBy")
-  createdProjectBrokerAuthorizations ProjectBrokerAuthorization[]  @relation("ProjectBrokerAuthorizationCreatedBy")
-  brokerProjectAuthorizations     ProjectBrokerAuthorization[]      @relation("ProjectBrokerAuthorizationBroker")
-  assignedPublicLeads             PublicLead[]                      @relation("PublicLeadAssignedBroker")
-  attributedVisitorSessions       PublicVisitorSession[]            @relation("VisitorAttributedBroker")
-  customerProfiles                CustomerProfile[]
-  unitCustomerAssignments         UnitCustomerAssignment[]
-  unitQrPasses                    UnitQrPass[]
-  navigationPreferences           UserNavigationPreference[]
-  quickActionPreferences          UserQuickActionPreference[]
+  id                                 String                          @id @default(cuid())
+  organizationId                     String?
+  roleId                             String?
+  email                              String                          @unique
+  passwordHash                       String?
+  mustChangePassword                 Boolean                         @default(false)
+  firstName                          String?
+  lastName                           String?
+  phone                              String?
+  userRole                           UserRole
+  isActive                           Boolean                         @default(true)
+  lastLoginAt                        DateTime?
+  createdAt                          DateTime                        @default(now())
+  updatedAt                          DateTime                        @updatedAt
+  organization                       Organization?                   @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  role                               Role?                           @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  refreshTokens                      RefreshToken[]
+  auditLogs                          AuditLog[]
+  uploadedFiles                      UploadedFile[]
+  notificationEvents                 NotificationEvent[]
+  verifiedOrganizationDocuments      OrganizationVerification[]      @relation("VerifiedOrganizationDocuments")
+  brokerProfile                      BrokerProfile?
+  verifiedBrokerProfiles             BrokerProfile[]                 @relation("VerifiedBrokerProfiles")
+  unitHolds                          UnitAvailability[]              @relation("UnitHolds")
+  grantedBrokerAccessRules           BrokerAccessRule[]              @relation("BrokerAccessGrantedBy")
+  createdClients                     Client[]                        @relation("ClientCreatedBy")
+  leads                              Lead[]                          @relation("LeadBroker")
+  leadClaims                         LeadClaim[]                     @relation("LeadClaimBroker")
+  leadClaimConflicts                 LeadClaimConflict[]             @relation("LeadClaimConflictAttemptedBy")
+  resolvedLeadClaimConflicts         LeadClaimConflict[]             @relation("LeadClaimConflictResolvedBy")
+  reservationRequests                ReservationRequest[]            @relation("ReservationRequestBroker")
+  createdDealRooms                   DealRoom[]                      @relation("DealRoomCreatedBy")
+  brokerDealRooms                    DealRoom[]                      @relation("DealRoomBroker")
+  dealRoomParticipants               DealRoomParticipant[]
+  dealRoomMessages                   DealRoomMessage[]               @relation("DealRoomMessageSenderUser")
+  createdDeals                       Deal[]                          @relation("DealCreatedBy")
+  approvedDeals                      Deal[]                          @relation("DealApprovedBy")
+  cancelledDeals                     Deal[]                          @relation("DealCancelledBy")
+  brokerDeals                        Deal[]                          @relation("DealBroker")
+  targetCommissionRules              CommissionRule[]                @relation("CommissionRuleTargetUser")
+  brokerCommissionEntries            CommissionEntry[]               @relation("CommissionEntryBroker")
+  recipientCommissionEntries         CommissionEntry[]               @relation("CommissionEntryRecipientUser")
+  createdImportJobs                  ImportJob[]                     @relation("ImportJobCreatedBy")
+  claimedCrmLeads                    CrmLead[]                       @relation("CrmLeadClaimedBroker")
+  conversationParticipants           ConversationParticipant[]
+  crmActivities                      CrmActivity[]                   @relation("CrmActivityActorUser")
+  crmLeadStageChanges                CrmLeadStageHistory[]           @relation("CrmLeadStageChangedBy")
+  authoredCrmNotes                   CrmNote[]                       @relation("CrmNoteAuthor")
+  assignedCrmTasks                   CrmFollowUpTask[]               @relation("CrmTaskAssignee")
+  createdCrmTasks                    CrmFollowUpTask[]               @relation("CrmTaskCreator")
+  hrEmployeeProfile                  HrEmployee?
+  managedHrEmployees                 HrEmployee[]                    @relation("HrEmployeeDirectManager")
+  secondaryManagedHrEmployees        HrEmployee[]                    @relation("HrEmployeeSecondaryManager")
+  managedHrWorkGroups                HrWorkGroupManager[]
+  managedHrTeams                     HrTeam[]                        @relation("HrTeamManager")
+  createdHrJobOpenings               HrJobOpening[]                  @relation("HrJobOpeningCreatedBy")
+  reviewedHrApplicants               HrApplicant[]                   @relation("HrApplicantReviewedBy")
+  interviewedHrApplicants            HrApplicantInterview[]          @relation("HrApplicantInterviewer")
+  createdHrEmployeeTransferLogs      HrEmployeeTransferLog[]         @relation("HrTransferLogCreatedBy")
+  createdHrEmployeeTitleChanges      HrEmployeeTitleChangeLog[]      @relation("HrTitleChangeCreatedBy")
+  createdAccountingTransactions      AccountingTransaction[]         @relation("AccountingTransactionCreatedBy")
+  operationsActivities               OperationsActivity[]            @relation("OperationsActivityActorUser")
+  approvedAccountingTransactions     AccountingTransaction[]         @relation("AccountingTransactionApprovedBy")
+  reviewedLegalDocuments             LegalDocument[]                 @relation("LegalDocumentReviewedBy")
+  reviewedOrganizationDocuments      OrganizationDocument[]          @relation("OrganizationDocumentReviewedBy")
+  createdOrganizationInvitations     OrganizationInvitation[]        @relation("InvitationCreatedBy")
+  acceptedOrganizationInvitations    OrganizationInvitation[]        @relation("InvitationAcceptedBy")
+  createdProjectBrokerAuthorizations ProjectBrokerAuthorization[]    @relation("ProjectBrokerAuthorizationCreatedBy")
+  brokerProjectAuthorizations        ProjectBrokerAuthorization[]    @relation("ProjectBrokerAuthorizationBroker")
+  assignedPublicLeads                PublicLead[]                    @relation("PublicLeadAssignedBroker")
+  attributedVisitorSessions          PublicVisitorSession[]          @relation("VisitorAttributedBroker")
+  customerProfiles                   CustomerProfile[]
+  unitCustomerAssignments            UnitCustomerAssignment[]
+  unitQrPasses                       UnitQrPass[]
+  navigationPreferences              UserNavigationPreference[]
+  quickActionPreferences             UserQuickActionPreference[]
+  createdOnboardingSessions          OrganizationOnboardingSession[] @relation("OnboardingCreatedBy")
+  reviewedFieldEvidence              OrganizationFieldEvidence[]     @relation("FieldEvidenceReviewedBy")
 
   @@index([organizationId, userRole])
   @@map("users")
 }
 
 model Role {
-  id              String            @id @default(cuid())
-  organizationId  String?
-  name            String
-  description     String?
-  isSystem        Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  organization    Organization?     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  users           User[]
-  permissions     RolePermission[]
+  id             String           @id @default(cuid())
+  organizationId String?
+  name           String
+  description    String?
+  isSystem       Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users          User[]
+  permissions    RolePermission[]
 
   @@unique([organizationId, name])
   @@map("roles")
 }
 
 model Permission {
-  id              String            @id @default(cuid())
-  key             String            @unique
-  description     String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  roles           RolePermission[]
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolePermission[]
 
   @@map("permissions")
 }
 
 model RolePermission {
-  roleId          String
-  permissionId    String
-  createdAt       DateTime      @default(now())
-  role            Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission      Permission    @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
 }
 
 model RefreshToken {
-  id              String      @id @default(cuid())
-  userId          String
-  tokenHash       String      @unique
-  expiresAt       DateTime
-  revokedAt       DateTime?
-  createdAt       DateTime    @default(now())
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@map("refresh_tokens")
 }
 
 model AuditLog {
-  id              String          @id @default(cuid())
-  organizationId  String?
-  actorUserId     String?
-  action          String
-  entityType      String
-  entityId        String?
-  metadata        Json?
-  ipAddress       String?
-  userAgent       String?
-  createdAt       DateTime        @default(now())
-  organization    Organization?   @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  actorUser       User?           @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  id             String        @id @default(cuid())
+  organizationId String?
+  actorUserId    String?
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime      @default(now())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actorUser      User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, entityType, entityId])
   @@index([actorUserId, createdAt])
@@ -1532,46 +1585,47 @@ model AuditLog {
 }
 
 model UploadedFile {
-  id                          String                       @id @default(cuid())
-  organizationId              String?
-  uploadedById                String?
-  filePurpose                 FilePurpose                  @default(QUARANTINE)
-  bucket                      String
-  objectKey                   String
-  url                         String?
-  mimeType                    String?
-  sizeBytes                   Int?
-  visibility                  FileVisibility               @default(PRIVATE)
-  checksum                    String?
-  createdAt                   DateTime                     @default(now())
-  organization                Organization?                @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  uploadedBy                  User?                        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
-  organizationVerifications   OrganizationVerification[]
-  organizationDocuments       OrganizationDocument[]        @relation("OrganizationDocumentFile")
-  organizationOwnerIdFrontFiles OrganizationOwner[]         @relation("OrganizationOwnerIdFrontFile")
-  organizationOwnerIdBackFiles OrganizationOwner[]          @relation("OrganizationOwnerIdBackFile")
-  organizationOwnerPassportFiles OrganizationOwner[]        @relation("OrganizationOwnerPassportFile")
-  organizationOwnerProofFiles OrganizationOwner[]           @relation("OrganizationOwnerProofFile")
-  hrApplicantDocuments     HrApplicantDocument[]            @relation("HrApplicantDocumentFile")
+  id                             String                           @id @default(cuid())
+  organizationId                 String?
+  uploadedById                   String?
+  filePurpose                    FilePurpose                      @default(QUARANTINE)
+  bucket                         String
+  objectKey                      String
+  url                            String?
+  mimeType                       String?
+  sizeBytes                      Int?
+  visibility                     FileVisibility                   @default(PRIVATE)
+  checksum                       String?
+  createdAt                      DateTime                         @default(now())
+  organization                   Organization?                    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  uploadedBy                     User?                            @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  organizationVerifications      OrganizationVerification[]
+  organizationDocuments          OrganizationDocument[]           @relation("OrganizationDocumentFile")
+  organizationOwnerIdFrontFiles  OrganizationOwner[]              @relation("OrganizationOwnerIdFrontFile")
+  organizationOwnerIdBackFiles   OrganizationOwner[]              @relation("OrganizationOwnerIdBackFile")
+  organizationOwnerPassportFiles OrganizationOwner[]              @relation("OrganizationOwnerPassportFile")
+  organizationOwnerProofFiles    OrganizationOwner[]              @relation("OrganizationOwnerProofFile")
+  hrApplicantDocuments           HrApplicantDocument[]            @relation("HrApplicantDocumentFile")
+  onboardingDocuments            OrganizationOnboardingDocument[]
 
   @@index([organizationId, createdAt])
   @@map("uploaded_files")
 }
 
 model NotificationEvent {
-  id              String          @id @default(cuid())
-  organizationId  String?
-  userId          String?
-  type            String
-  channel         String
-  payload         Json
-  status          String          @default("PENDING")
-  scheduledAt     DateTime?
-  sentAt          DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  organization    Organization?   @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id             String        @id @default(cuid())
+  organizationId String?
+  userId         String?
+  type           String
+  channel        String
+  payload        Json
+  status         String        @default("PENDING")
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@index([type, createdAt])
@@ -1579,107 +1633,107 @@ model NotificationEvent {
 }
 
 model DeveloperProfile {
-  id                    String        @id @default(cuid())
-  organizationId        String        @unique
-  yearsInMarket         Int?
-  totalUnitsDelivered   Int?
-  portfolioUrl          String?
-  reraRegistration      String?
-  nucaRegistration      String?
-  activeProjectsCount   Int           @default(0)
-  settings              Json?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                  String       @id @default(cuid())
+  organizationId      String       @unique
+  yearsInMarket       Int?
+  totalUnitsDelivered Int?
+  portfolioUrl        String?
+  reraRegistration    String?
+  nucaRegistration    String?
+  activeProjectsCount Int          @default(0)
+  settings            Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("developer_profiles")
 }
 
 model BrokerageProfile {
-  id                    String        @id @default(cuid())
-  organizationId        String        @unique
-  brokerLicenseNumber   String?
-  reraBrokerageNumber   String?
-  maxBrokersAllowed     Int?
-  activeBrokersCount    Int           @default(0)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                  String       @id @default(cuid())
+  organizationId      String       @unique
+  brokerLicenseNumber String?
+  reraBrokerageNumber String?
+  maxBrokersAllowed   Int?
+  activeBrokersCount  Int          @default(0)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("brokerage_profiles")
 }
 
 model BrokerProfile {
-  id                    String              @id @default(cuid())
-  userId                String              @unique
-  organizationId        String?
-  isIndividual          Boolean             @default(false)
-  nationalId            String?
-  nationalIdUrl         String?
-  yearsExperience       Int?
-  specializations       String[]
-  verificationStatus    VerificationStatus  @default(DRAFT)
-  verifiedById          String?
-  restrictionLevel      String?
-  dealCount             Int                 @default(0)
-  successRate           Float?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization          Organization?       @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  verifiedBy            User?               @relation("VerifiedBrokerProfiles", fields: [verifiedById], references: [id], onDelete: SetNull)
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  organizationId     String?
+  isIndividual       Boolean            @default(false)
+  nationalId         String?
+  nationalIdUrl      String?
+  yearsExperience    Int?
+  specializations    String[]
+  verificationStatus VerificationStatus @default(DRAFT)
+  verifiedById       String?
+  restrictionLevel   String?
+  dealCount          Int                @default(0)
+  successRate        Float?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization       Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  verifiedBy         User?              @relation("VerifiedBrokerProfiles", fields: [verifiedById], references: [id], onDelete: SetNull)
 
   @@index([organizationId, verificationStatus])
   @@map("broker_profiles")
 }
 
 model Project {
-  id                    String              @id @default(cuid())
-  developerId           String
-  name                  String
-  slug                  String
-  type                  ProjectType
-  status                ProjectStatus       @default(DRAFT)
-  city                  String?
-  district              String?
+  id                   String                       @id @default(cuid())
+  developerId          String
+  name                 String
+  slug                 String
+  type                 ProjectType
+  status               ProjectStatus                @default(DRAFT)
+  city                 String?
+  district             String?
   // TODO(Team 2): replace latitude/longitude with PostGIS geometry once Prisma mapping is finalized.
-  latitude              Decimal?            @db.Decimal(10, 7)
-  longitude             Decimal?            @db.Decimal(10, 7)
-  address               String?
-  deliveryDate          DateTime?
-  description           String?
-  coverImageUrl         String?
-  images                String[]
-  videos                String[]
-  brochureUrl           String?
-  amenities             String[]
-  visibility            ProjectVisibility   @default(PRIVATE)
-  sellingMode           ProjectSellingMode  @default(OWNER_ONLY)
-  isFeatured            Boolean             @default(false)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  developer             Organization        @relation("DeveloperProjects", fields: [developerId], references: [id], onDelete: Cascade)
-  phases                ProjectPhase[]
-  inventoryUnits        InventoryUnit[]
-  paymentPlans          PaymentPlan[]
-  brokerAccessRules     BrokerAccessRule[]
-  clients               Client[]
-  leads                 Lead[]
-  leadClaims            LeadClaim[]
-  leadClaimConflicts    LeadClaimConflict[]
-  reservationRequests   ReservationRequest[]
-  dealRooms             DealRoom[]
-  deals                 Deal[]
-  commissionRules       CommissionRule[]
-  commissionEntries     CommissionEntry[]
-  publicLeads           PublicLead[]
-  crmLeads              CrmLead[]
-  conversations         Conversation[]
-  legalDocuments        LegalDocument[]
-  cameraDevices         CameraDevice[]
-  brokerAuthorizations  ProjectBrokerAuthorization[]
-  visitorSessions       PublicVisitorSession[]
-  visitorEvents         PublicVisitorEvent[]
+  latitude             Decimal?                     @db.Decimal(10, 7)
+  longitude            Decimal?                     @db.Decimal(10, 7)
+  address              String?
+  deliveryDate         DateTime?
+  description          String?
+  coverImageUrl        String?
+  images               String[]
+  videos               String[]
+  brochureUrl          String?
+  amenities            String[]
+  visibility           ProjectVisibility            @default(PRIVATE)
+  sellingMode          ProjectSellingMode           @default(OWNER_ONLY)
+  isFeatured           Boolean                      @default(false)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  developer            Organization                 @relation("DeveloperProjects", fields: [developerId], references: [id], onDelete: Cascade)
+  phases               ProjectPhase[]
+  inventoryUnits       InventoryUnit[]
+  paymentPlans         PaymentPlan[]
+  brokerAccessRules    BrokerAccessRule[]
+  clients              Client[]
+  leads                Lead[]
+  leadClaims           LeadClaim[]
+  leadClaimConflicts   LeadClaimConflict[]
+  reservationRequests  ReservationRequest[]
+  dealRooms            DealRoom[]
+  deals                Deal[]
+  commissionRules      CommissionRule[]
+  commissionEntries    CommissionEntry[]
+  publicLeads          PublicLead[]
+  crmLeads             CrmLead[]
+  conversations        Conversation[]
+  legalDocuments       LegalDocument[]
+  cameraDevices        CameraDevice[]
+  brokerAuthorizations ProjectBrokerAuthorization[]
+  visitorSessions      PublicVisitorSession[]
+  visitorEvents        PublicVisitorEvent[]
 
   @@unique([developerId, slug])
   @@index([developerId, status])
@@ -1711,18 +1765,18 @@ model OrganizationInvitation {
 }
 
 model ProjectBrokerAuthorization {
-  id                 String                           @id @default(cuid())
-  projectId          String
-  organizationId     String?
-  brokerUserId       String?
-  status             ProjectBrokerAuthorizationStatus @default(ACTIVE)
-  createdByUserId    String
-  createdAt          DateTime                         @default(now())
-  updatedAt          DateTime                         @updatedAt
-  project            Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  organization       Organization?                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brokerUser         User?                            @relation("ProjectBrokerAuthorizationBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  createdBy          User                             @relation("ProjectBrokerAuthorizationCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  id              String                           @id @default(cuid())
+  projectId       String
+  organizationId  String?
+  brokerUserId    String?
+  status          ProjectBrokerAuthorizationStatus @default(ACTIVE)
+  createdByUserId String
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+  project         Project                          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization    Organization?                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brokerUser      User?                            @relation("ProjectBrokerAuthorizationBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  createdBy       User                             @relation("ProjectBrokerAuthorizationCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
   @@unique([projectId, organizationId])
   @@unique([projectId, brokerUserId])
@@ -1733,58 +1787,58 @@ model ProjectBrokerAuthorization {
 }
 
 model ProjectPhase {
-  id                    String          @id @default(cuid())
-  projectId             String
-  name                  String
-  deliveryDate          DateTime?
-  totalUnits            Int?
-  availableUnits        Int?
-  status                ProjectStatus   @default(DRAFT)
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  project               Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  inventoryUnits        InventoryUnit[]
+  id             String          @id @default(cuid())
+  projectId      String
+  name           String
+  deliveryDate   DateTime?
+  totalUnits     Int?
+  availableUnits Int?
+  status         ProjectStatus   @default(DRAFT)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inventoryUnits InventoryUnit[]
 
   @@index([projectId, status])
   @@map("project_phases")
 }
 
 model InventoryUnit {
-  id                    String              @id @default(cuid())
-  projectId             String
-  phaseId               String?
-  developerId           String
-  unitNumber            String
-  unitType              UnitType
-  floor                 String?
-  areaSqm               Decimal?            @db.Decimal(12, 2)
-  bedrooms              Int?
-  bathrooms             Int?
-  finishing             UnitFinishing?
-  view                  String?
-  basePrice             Decimal?            @db.Decimal(14, 2)
-  currency              String              @default("EGP")
-  pricePerSqm           Decimal?            @db.Decimal(14, 2)
-  status                UnitStatus          @default(AVAILABLE)
-  visibility            UnitVisibility      @default(INHERIT_PROJECT)
-  images                String[]
-  floorPlanUrl          String?
-  features              Json?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  project               Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  phase                 ProjectPhase?       @relation(fields: [phaseId], references: [id], onDelete: SetNull)
-  developer             Organization        @relation("DeveloperInventoryUnits", fields: [developerId], references: [id], onDelete: Cascade)
-  availabilityRecords   UnitAvailability[]
-  paymentPlans          PaymentPlan[]
-  leads                 Lead[]
-  leadClaims            LeadClaim[]
-  reservationRequests   ReservationRequest[]
-  dealRooms             DealRoom[]
-  deals                 Deal[]
-  commissionEntries     CommissionEntry[]
-  crmLeads              CrmLead[]
-  conversations         Conversation[]
+  id                  String               @id @default(cuid())
+  projectId           String
+  phaseId             String?
+  developerId         String
+  unitNumber          String
+  unitType            UnitType
+  floor               String?
+  areaSqm             Decimal?             @db.Decimal(12, 2)
+  bedrooms            Int?
+  bathrooms           Int?
+  finishing           UnitFinishing?
+  view                String?
+  basePrice           Decimal?             @db.Decimal(14, 2)
+  currency            String               @default("EGP")
+  pricePerSqm         Decimal?             @db.Decimal(14, 2)
+  status              UnitStatus           @default(AVAILABLE)
+  visibility          UnitVisibility       @default(INHERIT_PROJECT)
+  images              String[]
+  floorPlanUrl        String?
+  features            Json?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase               ProjectPhase?        @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  developer           Organization         @relation("DeveloperInventoryUnits", fields: [developerId], references: [id], onDelete: Cascade)
+  availabilityRecords UnitAvailability[]
+  paymentPlans        PaymentPlan[]
+  leads               Lead[]
+  leadClaims          LeadClaim[]
+  reservationRequests ReservationRequest[]
+  dealRooms           DealRoom[]
+  deals               Deal[]
+  commissionEntries   CommissionEntry[]
+  crmLeads            CrmLead[]
+  conversations       Conversation[]
 
   @@unique([projectId, unitNumber])
   @@index([developerId, status])
@@ -1793,17 +1847,17 @@ model InventoryUnit {
 }
 
 model UnitAvailability {
-  id                    String                @id @default(cuid())
-  unitId                String
-  heldById              String?
-  reservationRequestId  String?
-  heldType              AvailabilityHoldType
-  heldAt                DateTime              @default(now())
-  expiresAt             DateTime?
-  releasedAt            DateTime?
-  unit                  InventoryUnit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  heldBy                User?                 @relation("UnitHolds", fields: [heldById], references: [id], onDelete: SetNull)
-  reservationRequest    ReservationRequest?   @relation(fields: [reservationRequestId], references: [id], onDelete: SetNull)
+  id                   String               @id @default(cuid())
+  unitId               String
+  heldById             String?
+  reservationRequestId String?
+  heldType             AvailabilityHoldType
+  heldAt               DateTime             @default(now())
+  expiresAt            DateTime?
+  releasedAt           DateTime?
+  unit                 InventoryUnit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  heldBy               User?                @relation("UnitHolds", fields: [heldById], references: [id], onDelete: SetNull)
+  reservationRequest   ReservationRequest?  @relation(fields: [reservationRequestId], references: [id], onDelete: SetNull)
 
   @@index([unitId, releasedAt])
   @@index([heldById, heldAt])
@@ -1812,22 +1866,22 @@ model UnitAvailability {
 }
 
 model PaymentPlan {
-  id                    String            @id @default(cuid())
-  projectId             String
-  unitId                String?
-  scope                 PaymentPlanScope
-  name                  String
-  downPaymentPct        Decimal?          @db.Decimal(5, 2)
-  installmentMonths     Int?
-  installmentPct        Decimal?          @db.Decimal(5, 2)
-  onDeliveryPct         Decimal?          @db.Decimal(5, 2)
-  maintenanceFee        Decimal?          @db.Decimal(14, 2)
-  isActive              Boolean           @default(true)
-  conditions            Json?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  project               Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit                  InventoryUnit?     @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  id                String           @id @default(cuid())
+  projectId         String
+  unitId            String?
+  scope             PaymentPlanScope
+  name              String
+  downPaymentPct    Decimal?         @db.Decimal(5, 2)
+  installmentMonths Int?
+  installmentPct    Decimal?         @db.Decimal(5, 2)
+  onDeliveryPct     Decimal?         @db.Decimal(5, 2)
+  maintenanceFee    Decimal?         @db.Decimal(14, 2)
+  isActive          Boolean          @default(true)
+  conditions        Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit              InventoryUnit?   @relation(fields: [unitId], references: [id], onDelete: SetNull)
 
   @@index([projectId, isActive])
   @@index([unitId, isActive])
@@ -1835,20 +1889,20 @@ model PaymentPlan {
 }
 
 model BrokerAccessRule {
-  id                    String                    @id @default(cuid())
-  projectId             String
-  developerId           String
-  granteeType           BrokerAccessGranteeType
-  granteeId             String
-  accessLevel           BrokerAccessLevel
-  grantedAt             DateTime                  @default(now())
-  expiresAt             DateTime?
-  grantedById           String?
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  project               Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  developer             Organization              @relation("DeveloperBrokerAccessRules", fields: [developerId], references: [id], onDelete: Cascade)
-  grantedBy             User?                     @relation("BrokerAccessGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  id          String                  @id @default(cuid())
+  projectId   String
+  developerId String
+  granteeType BrokerAccessGranteeType
+  granteeId   String
+  accessLevel BrokerAccessLevel
+  grantedAt   DateTime                @default(now())
+  expiresAt   DateTime?
+  grantedById String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  project     Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  developer   Organization            @relation("DeveloperBrokerAccessRules", fields: [developerId], references: [id], onDelete: Cascade)
+  grantedBy   User?                   @relation("BrokerAccessGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
 
   @@unique([projectId, granteeType, granteeId])
   @@index([developerId, projectId])
@@ -1857,18 +1911,18 @@ model BrokerAccessRule {
 }
 
 model DeveloperBrokerageAgreement {
-  id                    String            @id @default(cuid())
-  developerId           String
-  brokerageId           String
-  status                AgreementStatus   @default(PENDING)
-  commissionOverride    Json?
-  signedAt              DateTime?
-  expiresAt             DateTime?
-  termsUrl              String?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  developer             Organization      @relation("DeveloperAgreements", fields: [developerId], references: [id], onDelete: Cascade)
-  brokerage             Organization      @relation("BrokerageAgreements", fields: [brokerageId], references: [id], onDelete: Cascade)
+  id                 String          @id @default(cuid())
+  developerId        String
+  brokerageId        String
+  status             AgreementStatus @default(PENDING)
+  commissionOverride Json?
+  signedAt           DateTime?
+  expiresAt          DateTime?
+  termsUrl           String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  developer          Organization    @relation("DeveloperAgreements", fields: [developerId], references: [id], onDelete: Cascade)
+  brokerage          Organization    @relation("BrokerageAgreements", fields: [brokerageId], references: [id], onDelete: Cascade)
 
   @@unique([developerId, brokerageId])
   @@index([developerId, status])
@@ -1877,23 +1931,23 @@ model DeveloperBrokerageAgreement {
 }
 
 model Client {
-  id                    String      @id @default(cuid())
-  projectId             String?
-  name                  String
-  phoneHash             String
-  phoneLast4            String?
-  source                LeadSource  @default(MANUAL)
-  createdById           String?
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-  project               Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdBy             User?       @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  leads                 Lead[]
-  leadClaims            LeadClaim[]
-  dealRooms             DealRoom[]
-  deals                 Deal[]
-  dealRoomParticipants  DealRoomParticipant[]
-  dealRoomMessages      DealRoomMessage[] @relation("DealRoomMessageSenderClient")
+  id                   String                @id @default(cuid())
+  projectId            String?
+  name                 String
+  phoneHash            String
+  phoneLast4           String?
+  source               LeadSource            @default(MANUAL)
+  createdById          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  project              Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy            User?                 @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  leads                Lead[]
+  leadClaims           LeadClaim[]
+  dealRooms            DealRoom[]
+  deals                Deal[]
+  dealRoomParticipants DealRoomParticipant[]
+  dealRoomMessages     DealRoomMessage[]     @relation("DealRoomMessageSenderClient")
 
   @@unique([phoneHash, projectId])
   @@index([phoneHash])
@@ -1901,25 +1955,25 @@ model Client {
 }
 
 model Lead {
-  id                    String      @id @default(cuid())
-  clientId              String
-  projectId             String
-  unitId                String?
-  brokerUserId          String
-  brokerageId           String?
-  status                LeadStatus  @default(NEW)
-  source                LeadSource  @default(MANUAL)
-  notes                 String?
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-  client                Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  project               Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit                  InventoryUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  broker                User        @relation("LeadBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  claims                LeadClaim[]
-  reservationRequests   ReservationRequest[]
-  dealRooms             DealRoom[]
-  deals                 Deal[]
+  id                  String               @id @default(cuid())
+  clientId            String
+  projectId           String
+  unitId              String?
+  brokerUserId        String
+  brokerageId         String?
+  status              LeadStatus           @default(NEW)
+  source              LeadSource           @default(MANUAL)
+  notes               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  client              Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit                InventoryUnit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  broker              User                 @relation("LeadBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  claims              LeadClaim[]
+  reservationRequests ReservationRequest[]
+  dealRooms           DealRoom[]
+  deals               Deal[]
 
   @@index([projectId, status])
   @@index([brokerUserId, status])
@@ -1928,31 +1982,31 @@ model Lead {
 }
 
 model LeadClaim {
-  id                    String          @id @default(cuid())
-  leadId                String
-  clientId              String
-  projectId             String
-  unitId                String?
-  brokerUserId          String
-  brokerageId           String?
-  clientPhoneHash       String
-  status                LeadClaimStatus @default(ACTIVE)
-  source                LeadSource      @default(MANUAL)
-  notes                 String?
-  claimedAt             DateTime        @default(now())
-  expiresAt             DateTime
-  releasedAt            DateTime?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  lead                  Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  client                Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  project               Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit                  InventoryUnit?  @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  broker                User            @relation("LeadClaimBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  conflicts             LeadClaimConflict[] @relation("ExistingLeadClaimConflicts")
-  reservationRequests   ReservationRequest[]
-  dealRooms             DealRoom[]
-  deals                 Deal[]
+  id                  String               @id @default(cuid())
+  leadId              String
+  clientId            String
+  projectId           String
+  unitId              String?
+  brokerUserId        String
+  brokerageId         String?
+  clientPhoneHash     String
+  status              LeadClaimStatus      @default(ACTIVE)
+  source              LeadSource           @default(MANUAL)
+  notes               String?
+  claimedAt           DateTime             @default(now())
+  expiresAt           DateTime
+  releasedAt          DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  lead                Lead                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client              Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit                InventoryUnit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  broker              User                 @relation("LeadClaimBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  conflicts           LeadClaimConflict[]  @relation("ExistingLeadClaimConflicts")
+  reservationRequests ReservationRequest[]
+  dealRooms           DealRoom[]
+  deals               Deal[]
 
   @@index([clientPhoneHash, projectId, status])
   @@index([brokerUserId, status])
@@ -1961,21 +2015,21 @@ model LeadClaim {
 }
 
 model LeadClaimConflict {
-  id                    String                        @id @default(cuid())
-  existingClaimId       String
-  attemptedById         String
-  projectId             String
-  clientPhoneHash       String
-  resolution            LeadClaimConflictResolution?
-  resolvedById          String?
-  resolvedAt            DateTime?
-  notes                 String?
-  createdAt             DateTime                      @default(now())
-  updatedAt             DateTime                      @updatedAt
-  existingClaim         LeadClaim                     @relation("ExistingLeadClaimConflicts", fields: [existingClaimId], references: [id], onDelete: Cascade)
-  attemptedBy           User                          @relation("LeadClaimConflictAttemptedBy", fields: [attemptedById], references: [id], onDelete: Cascade)
-  project               Project                       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  resolvedBy            User?                         @relation("LeadClaimConflictResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  id              String                       @id @default(cuid())
+  existingClaimId String
+  attemptedById   String
+  projectId       String
+  clientPhoneHash String
+  resolution      LeadClaimConflictResolution?
+  resolvedById    String?
+  resolvedAt      DateTime?
+  notes           String?
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+  existingClaim   LeadClaim                    @relation("ExistingLeadClaimConflicts", fields: [existingClaimId], references: [id], onDelete: Cascade)
+  attemptedBy     User                         @relation("LeadClaimConflictAttemptedBy", fields: [attemptedById], references: [id], onDelete: Cascade)
+  project         Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resolvedBy      User?                        @relation("LeadClaimConflictResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@index([projectId, clientPhoneHash])
   @@index([attemptedById, createdAt])
@@ -1983,30 +2037,30 @@ model LeadClaimConflict {
 }
 
 model ReservationRequest {
-  id                    String                    @id @default(cuid())
-  leadId                String
-  leadClaimId           String
-  projectId             String
-  unitId                String
-  developerId           String
-  brokerUserId          String
-  brokerageId           String?
-  status                ReservationRequestStatus  @default(PENDING)
-  notes                 String?
-  rejectionReason       String?
-  requestedAt           DateTime                  @default(now())
-  approvedAt            DateTime?
-  rejectedAt            DateTime?
-  cancelledAt           DateTime?
-  createdAt             DateTime                  @default(now())
-  updatedAt             DateTime                  @updatedAt
-  lead                  Lead                      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  leadClaim             LeadClaim                 @relation(fields: [leadClaimId], references: [id], onDelete: Cascade)
-  project               Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit                  InventoryUnit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  broker                User                      @relation("ReservationRequestBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  availabilityRecords   UnitAvailability[]
-  dealRoom              DealRoom?
+  id                  String                   @id @default(cuid())
+  leadId              String
+  leadClaimId         String
+  projectId           String
+  unitId              String
+  developerId         String
+  brokerUserId        String
+  brokerageId         String?
+  status              ReservationRequestStatus @default(PENDING)
+  notes               String?
+  rejectionReason     String?
+  requestedAt         DateTime                 @default(now())
+  approvedAt          DateTime?
+  rejectedAt          DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  lead                Lead                     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadClaim           LeadClaim                @relation(fields: [leadClaimId], references: [id], onDelete: Cascade)
+  project             Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit                InventoryUnit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  broker              User                     @relation("ReservationRequestBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  availabilityRecords UnitAvailability[]
+  dealRoom            DealRoom?
 
   @@index([developerId, status])
   @@index([brokerUserId, status])
@@ -2015,35 +2069,35 @@ model ReservationRequest {
 }
 
 model DealRoom {
-  id                    String                @id @default(cuid())
-  reservationRequestId  String                @unique
-  leadClaimId           String
-  leadId                String
-  clientId              String
-  projectId             String
-  unitId                String
-  developerId           String
-  brokerageId           String?
-  brokerUserId          String
-  createdByUserId       String
-  status                DealRoomStatus        @default(OPEN)
-  clientInviteToken     String?
-  clientInvitedAt       DateTime?
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
-  reservationRequest    ReservationRequest    @relation(fields: [reservationRequestId], references: [id], onDelete: Cascade)
-  leadClaim             LeadClaim             @relation(fields: [leadClaimId], references: [id], onDelete: Cascade)
-  lead                  Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  client                Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  project               Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit                  InventoryUnit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  developer             Organization          @relation("DeveloperDealRooms", fields: [developerId], references: [id], onDelete: Cascade)
-  brokerage             Organization?         @relation("BrokerageDealRooms", fields: [brokerageId], references: [id], onDelete: SetNull)
-  broker                User                  @relation("DealRoomBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  createdBy             User                  @relation("DealRoomCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  participants          DealRoomParticipant[]
-  messages              DealRoomMessage[]
-  deal                  Deal?
+  id                   String                @id @default(cuid())
+  reservationRequestId String                @unique
+  leadClaimId          String
+  leadId               String
+  clientId             String
+  projectId            String
+  unitId               String
+  developerId          String
+  brokerageId          String?
+  brokerUserId         String
+  createdByUserId      String
+  status               DealRoomStatus        @default(OPEN)
+  clientInviteToken    String?
+  clientInvitedAt      DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  reservationRequest   ReservationRequest    @relation(fields: [reservationRequestId], references: [id], onDelete: Cascade)
+  leadClaim            LeadClaim             @relation(fields: [leadClaimId], references: [id], onDelete: Cascade)
+  lead                 Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client               Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit                 InventoryUnit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  developer            Organization          @relation("DeveloperDealRooms", fields: [developerId], references: [id], onDelete: Cascade)
+  brokerage            Organization?         @relation("BrokerageDealRooms", fields: [brokerageId], references: [id], onDelete: SetNull)
+  broker               User                  @relation("DealRoomBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  createdBy            User                  @relation("DealRoomCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  participants         DealRoomParticipant[]
+  messages             DealRoomMessage[]
+  deal                 Deal?
 
   @@index([developerId, status])
   @@index([brokerUserId, status])
@@ -2053,22 +2107,22 @@ model DealRoom {
 }
 
 model DealRoomParticipant {
-  id              String                    @id @default(cuid())
-  dealRoomId      String
-  userId          String?
-  clientId        String?
-  organizationId  String?
-  role            DealRoomParticipantRole
-  status          DealRoomParticipantStatus @default(ACTIVE)
-  invitedAt       DateTime?
-  joinedAt        DateTime?
-  leftAt          DateTime?
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
-  dealRoom        DealRoom                  @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
-  user            User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  client          Client?                   @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  organization    Organization?             @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  id             String                    @id @default(cuid())
+  dealRoomId     String
+  userId         String?
+  clientId       String?
+  organizationId String?
+  role           DealRoomParticipantRole
+  status         DealRoomParticipantStatus @default(ACTIVE)
+  invitedAt      DateTime?
+  joinedAt       DateTime?
+  leftAt         DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  dealRoom       DealRoom                  @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  user           User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  client         Client?                   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  organization   Organization?             @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@index([dealRoomId, role, status])
   @@index([userId, status])
@@ -2078,17 +2132,17 @@ model DealRoomParticipant {
 }
 
 model DealRoomMessage {
-  id              String              @id @default(cuid())
-  dealRoomId      String
-  senderUserId    String?
-  senderClientId  String?
-  messageType     DealRoomMessageType @default(TEXT)
-  body            String
-  metadata        Json?
-  createdAt       DateTime            @default(now())
-  dealRoom        DealRoom            @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
-  senderUser      User?               @relation("DealRoomMessageSenderUser", fields: [senderUserId], references: [id], onDelete: SetNull)
-  senderClient    Client?             @relation("DealRoomMessageSenderClient", fields: [senderClientId], references: [id], onDelete: SetNull)
+  id             String              @id @default(cuid())
+  dealRoomId     String
+  senderUserId   String?
+  senderClientId String?
+  messageType    DealRoomMessageType @default(TEXT)
+  body           String
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+  dealRoom       DealRoom            @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  senderUser     User?               @relation("DealRoomMessageSenderUser", fields: [senderUserId], references: [id], onDelete: SetNull)
+  senderClient   Client?             @relation("DealRoomMessageSenderClient", fields: [senderClientId], references: [id], onDelete: SetNull)
 
   @@index([dealRoomId, createdAt])
   @@index([senderUserId, createdAt])
@@ -2097,42 +2151,42 @@ model DealRoomMessage {
 }
 
 model Deal {
-  id              String        @id @default(cuid())
-  dealRoomId      String        @unique
-  projectId       String
-  unitId          String
-  developerId     String
-  brokerageId     String?
-  brokerUserId    String
-  leadId          String
-  leadClaimId     String
-  clientId        String
-  status          DealStatus    @default(SOLD)
-  finalPrice      Decimal?      @db.Decimal(14, 2)
-  currency        String        @default("EGP")
-  createdByUserId String
-  approvedById    String?
-  approvedAt      DateTime?
-  soldAt          DateTime?
-  cancelledById   String?
-  cancelledAt     DateTime?
+  id                 String              @id @default(cuid())
+  dealRoomId         String              @unique
+  projectId          String
+  unitId             String
+  developerId        String
+  brokerageId        String?
+  brokerUserId       String
+  leadId             String
+  leadClaimId        String
+  clientId           String
+  status             DealStatus          @default(SOLD)
+  finalPrice         Decimal?            @db.Decimal(14, 2)
+  currency           String              @default("EGP")
+  createdByUserId    String
+  approvedById       String?
+  approvedAt         DateTime?
+  soldAt             DateTime?
+  cancelledById      String?
+  cancelledAt        DateTime?
   cancellationReason String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  dealRoom        DealRoom      @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
-  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit            InventoryUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  developer       Organization  @relation("DeveloperDeals", fields: [developerId], references: [id], onDelete: Cascade)
-  brokerage       Organization? @relation("BrokerageDeals", fields: [brokerageId], references: [id], onDelete: SetNull)
-  broker          User          @relation("DealBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  lead            Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  leadClaim       LeadClaim     @relation(fields: [leadClaimId], references: [id], onDelete: Cascade)
-  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy       User          @relation("DealCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  approvedBy      User?         @relation("DealApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  cancelledBy     User?         @relation("DealCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
-  commissionEntries CommissionEntry[]
-  disputes        CommissionDispute[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  dealRoom           DealRoom            @relation(fields: [dealRoomId], references: [id], onDelete: Cascade)
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit               InventoryUnit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  developer          Organization        @relation("DeveloperDeals", fields: [developerId], references: [id], onDelete: Cascade)
+  brokerage          Organization?       @relation("BrokerageDeals", fields: [brokerageId], references: [id], onDelete: SetNull)
+  broker             User                @relation("DealBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  lead               Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadClaim          LeadClaim           @relation(fields: [leadClaimId], references: [id], onDelete: Cascade)
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy          User                @relation("DealCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  approvedBy         User?               @relation("DealApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  cancelledBy        User?               @relation("DealCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  commissionEntries  CommissionEntry[]
+  disputes           CommissionDispute[]
 
   @@index([developerId, status])
   @@index([brokerUserId, status])
@@ -2142,24 +2196,24 @@ model Deal {
 }
 
 model CommissionRule {
-  id              String              @id @default(cuid())
-  developerId     String
-  projectId       String
-  partyType       CommissionPartyType
+  id                   String              @id @default(cuid())
+  developerId          String
+  projectId            String
+  partyType            CommissionPartyType
   targetOrganizationId String?
-  targetUserId    String?
-  commissionType  CommissionType
-  value           Decimal             @db.Decimal(14, 4)
-  currency        String              @default("EGP")
-  isActive        Boolean             @default(true)
-  notes           String?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  developer       Organization        @relation("DeveloperCommissionRules", fields: [developerId], references: [id], onDelete: Cascade)
-  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  targetOrganization Organization?    @relation("CommissionRuleRecipientOrganization", fields: [targetOrganizationId], references: [id], onDelete: SetNull)
-  targetUser      User?               @relation("CommissionRuleTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
-  commissionEntries CommissionEntry[]
+  targetUserId         String?
+  commissionType       CommissionType
+  value                Decimal             @db.Decimal(14, 4)
+  currency             String              @default("EGP")
+  isActive             Boolean             @default(true)
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  developer            Organization        @relation("DeveloperCommissionRules", fields: [developerId], references: [id], onDelete: Cascade)
+  project              Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  targetOrganization   Organization?       @relation("CommissionRuleRecipientOrganization", fields: [targetOrganizationId], references: [id], onDelete: SetNull)
+  targetUser           User?               @relation("CommissionRuleTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  commissionEntries    CommissionEntry[]
 
   @@index([developerId, projectId, isActive])
   @@index([partyType, targetOrganizationId])
@@ -2168,36 +2222,36 @@ model CommissionRule {
 }
 
 model CommissionEntry {
-  id              String              @id @default(cuid())
-  dealId          String
-  commissionRuleId String?
-  projectId       String
-  unitId          String
-  developerId     String
-  brokerageId     String?
-  brokerUserId    String
-  partyType       CommissionPartyType
+  id                      String              @id @default(cuid())
+  dealId                  String
+  commissionRuleId        String?
+  projectId               String
+  unitId                  String
+  developerId             String
+  brokerageId             String?
+  brokerUserId            String
+  partyType               CommissionPartyType
   recipientOrganizationId String?
-  recipientUserId String?
-  commissionType  CommissionType?
-  amount          Decimal             @db.Decimal(14, 2)
-  currency        String              @default("EGP")
-  status          CommissionStatus    @default(PENDING)
-  rejectionReason String?
-  approvedAt      DateTime?
-  rejectedAt      DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  deal            Deal                @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  commissionRule  CommissionRule?     @relation(fields: [commissionRuleId], references: [id], onDelete: SetNull)
-  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  unit            InventoryUnit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  developer       Organization        @relation("DeveloperCommissionEntries", fields: [developerId], references: [id], onDelete: Cascade)
-  brokerage       Organization?       @relation("BrokerageCommissionEntries", fields: [brokerageId], references: [id], onDelete: SetNull)
-  broker          User                @relation("CommissionEntryBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
-  recipientOrganization Organization? @relation("CommissionEntryRecipientOrganization", fields: [recipientOrganizationId], references: [id], onDelete: SetNull)
-  recipientUser   User?               @relation("CommissionEntryRecipientUser", fields: [recipientUserId], references: [id], onDelete: SetNull)
-  disputes        CommissionDispute[]
+  recipientUserId         String?
+  commissionType          CommissionType?
+  amount                  Decimal             @db.Decimal(14, 2)
+  currency                String              @default("EGP")
+  status                  CommissionStatus    @default(PENDING)
+  rejectionReason         String?
+  approvedAt              DateTime?
+  rejectedAt              DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  deal                    Deal                @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  commissionRule          CommissionRule?     @relation(fields: [commissionRuleId], references: [id], onDelete: SetNull)
+  project                 Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  unit                    InventoryUnit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  developer               Organization        @relation("DeveloperCommissionEntries", fields: [developerId], references: [id], onDelete: Cascade)
+  brokerage               Organization?       @relation("BrokerageCommissionEntries", fields: [brokerageId], references: [id], onDelete: SetNull)
+  broker                  User                @relation("CommissionEntryBroker", fields: [brokerUserId], references: [id], onDelete: Cascade)
+  recipientOrganization   Organization?       @relation("CommissionEntryRecipientOrganization", fields: [recipientOrganizationId], references: [id], onDelete: SetNull)
+  recipientUser           User?               @relation("CommissionEntryRecipientUser", fields: [recipientUserId], references: [id], onDelete: SetNull)
+  disputes                CommissionDispute[]
 
   @@index([developerId, status])
   @@index([brokerageId, status])
@@ -2208,16 +2262,16 @@ model CommissionEntry {
 }
 
 model CommissionDispute {
-  id              String        @id @default(cuid())
-  dealId          String
+  id                String           @id @default(cuid())
+  dealId            String
   commissionEntryId String?
-  status          DisputeStatus @default(OPEN)
-  reason          String?
-  resolutionNotes String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  deal            Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  commissionEntry CommissionEntry? @relation(fields: [commissionEntryId], references: [id], onDelete: SetNull)
+  status            DisputeStatus    @default(OPEN)
+  reason            String?
+  resolutionNotes   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deal              Deal             @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  commissionEntry   CommissionEntry? @relation(fields: [commissionEntryId], references: [id], onDelete: SetNull)
 
   @@index([dealId, status])
   @@index([commissionEntryId, status])
@@ -2225,45 +2279,45 @@ model CommissionDispute {
 }
 
 model PublicLead {
-  id              String            @id @default(cuid())
-  organizationId  String?
-  projectId       String?
-  name            String
-  phone           String
-  phoneHash       String?
-  phoneLast4      String?
-  email           String?
-  normalizedEmail String?
-  message         String?
-  sourcePage      String?
-  utm             Json?
-  consent         Boolean
-  consentAt       DateTime?
-  idempotencyKey  String?
-  status          PublicLeadStatus  @default(NEW)
-  statusNote      String?
-  spamScore       Int               @default(0)
-  spamSignals     Json?
-  sourceIpHash    String?
-  userAgentHash   String?
+  id                     String                  @id @default(cuid())
+  organizationId         String?
+  projectId              String?
+  name                   String
+  phone                  String
+  phoneHash              String?
+  phoneLast4             String?
+  email                  String?
+  normalizedEmail        String?
+  message                String?
+  sourcePage             String?
+  utm                    Json?
+  consent                Boolean
+  consentAt              DateTime?
+  idempotencyKey         String?
+  status                 PublicLeadStatus        @default(NEW)
+  statusNote             String?
+  spamScore              Int                     @default(0)
+  spamSignals            Json?
+  sourceIpHash           String?
+  userAgentHash          String?
   preferredContactMethod PreferredContactMethod?
-  visitorId       String?
-  visitorSessionId String?
-  assignmentType  LeadAssignmentType @default(COMPANY)
-  assignmentReason String?
+  visitorId              String?
+  visitorSessionId       String?
+  assignmentType         LeadAssignmentType      @default(COMPANY)
+  assignmentReason       String?
   assignedOrganizationId String?
-  assignedBrokerUserId String?
-  firstTouchAttribution Json?
-  lastTouchAttribution Json?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  organization    Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  project         Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  crmLead         CrmLead?
-  visitor         PublicVisitor?        @relation(fields: [visitorId], references: [id], onDelete: SetNull)
-  visitorSession  PublicVisitorSession? @relation(fields: [visitorSessionId], references: [id], onDelete: SetNull)
-  assignedOrganization Organization?    @relation("PublicLeadAssignedOrganization", fields: [assignedOrganizationId], references: [id], onDelete: SetNull)
-  assignedBroker  User?                 @relation("PublicLeadAssignedBroker", fields: [assignedBrokerUserId], references: [id], onDelete: SetNull)
+  assignedBrokerUserId   String?
+  firstTouchAttribution  Json?
+  lastTouchAttribution   Json?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  organization           Organization?           @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  project                Project?                @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  crmLead                CrmLead?
+  visitor                PublicVisitor?          @relation(fields: [visitorId], references: [id], onDelete: SetNull)
+  visitorSession         PublicVisitorSession?   @relation(fields: [visitorSessionId], references: [id], onDelete: SetNull)
+  assignedOrganization   Organization?           @relation("PublicLeadAssignedOrganization", fields: [assignedOrganizationId], references: [id], onDelete: SetNull)
+  assignedBroker         User?                   @relation("PublicLeadAssignedBroker", fields: [assignedBrokerUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@index([projectId, status])
@@ -2366,38 +2420,38 @@ model CrmClient {
 }
 
 model CrmLead {
-  id                        String                  @id @default(cuid())
-  organizationId            String
-  projectId                 String?
-  unitId                    String?
-  publicLeadId              String?                 @unique
-  clientId                  String
-  status                    CrmLeadStatus           @default(NEW)
-  statusNote                String?
-  pipelineStageId           String?
-  preferredContactMethod    PreferredContactMethod  @default(CALL)
-  claimedByBrokerUserId     String?
-  claimedByOrganizationId   String?
-  claimedAt                 DateTime?
-  assignmentType            LeadAssignmentType?
-  assignmentReason          String?
-  sourcePage                String?
-  utm                       Json?
-  createdAt                 DateTime                @default(now())
-  updatedAt                 DateTime                @updatedAt
-  organization              Organization            @relation("CrmLeadOwningOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
-  project                   Project?                @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  unit                      InventoryUnit?          @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  publicLead                PublicLead?             @relation(fields: [publicLeadId], references: [id], onDelete: SetNull)
-  client                    CrmClient               @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  claimedByBroker           User?                   @relation("CrmLeadClaimedBroker", fields: [claimedByBrokerUserId], references: [id], onDelete: SetNull)
-  claimedByOrganization     Organization?           @relation("CrmLeadClaimedOrganization", fields: [claimedByOrganizationId], references: [id], onDelete: SetNull)
-  pipelineStage             CrmPipelineStage?       @relation(fields: [pipelineStageId], references: [id], onDelete: SetNull)
-  stageHistory              CrmLeadStageHistory[]
-  conversations             Conversation[]
-  activities                CrmActivity[]
-  notes                     CrmNote[]
-  followUpTasks             CrmFollowUpTask[]
+  id                      String                 @id @default(cuid())
+  organizationId          String
+  projectId               String?
+  unitId                  String?
+  publicLeadId            String?                @unique
+  clientId                String
+  status                  CrmLeadStatus          @default(NEW)
+  statusNote              String?
+  pipelineStageId         String?
+  preferredContactMethod  PreferredContactMethod @default(CALL)
+  claimedByBrokerUserId   String?
+  claimedByOrganizationId String?
+  claimedAt               DateTime?
+  assignmentType          LeadAssignmentType?
+  assignmentReason        String?
+  sourcePage              String?
+  utm                     Json?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  organization            Organization           @relation("CrmLeadOwningOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  project                 Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  unit                    InventoryUnit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  publicLead              PublicLead?            @relation(fields: [publicLeadId], references: [id], onDelete: SetNull)
+  client                  CrmClient              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  claimedByBroker         User?                  @relation("CrmLeadClaimedBroker", fields: [claimedByBrokerUserId], references: [id], onDelete: SetNull)
+  claimedByOrganization   Organization?          @relation("CrmLeadClaimedOrganization", fields: [claimedByOrganizationId], references: [id], onDelete: SetNull)
+  pipelineStage           CrmPipelineStage?      @relation(fields: [pipelineStageId], references: [id], onDelete: SetNull)
+  stageHistory            CrmLeadStageHistory[]
+  conversations           Conversation[]
+  activities              CrmActivity[]
+  notes                   CrmNote[]
+  followUpTasks           CrmFollowUpTask[]
 
   @@index([organizationId, status])
   @@index([organizationId, pipelineStageId])
@@ -2409,25 +2463,25 @@ model CrmLead {
 }
 
 model Conversation {
-  id              String                    @id @default(cuid())
-  organizationId  String
-  projectId       String?
-  unitId          String?
-  crmLeadId       String?
-  type            ConversationType          @default(PUBLIC_LEAD)
-  status          ConversationStatus        @default(OPEN)
-  statusNote      String?
-  shareToken      String                    @unique
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project         Project?                  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  unit            InventoryUnit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  crmLead         CrmLead?                  @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
-  participants    ConversationParticipant[]
-  messages        ConversationMessage[]
-  activities      CrmActivity[]
-  notes           CrmNote[]
+  id             String                    @id @default(cuid())
+  organizationId String
+  projectId      String?
+  unitId         String?
+  crmLeadId      String?
+  type           ConversationType          @default(PUBLIC_LEAD)
+  status         ConversationStatus        @default(OPEN)
+  statusNote     String?
+  shareToken     String                    @unique
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?                  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  unit           InventoryUnit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  crmLead        CrmLead?                  @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
+  participants   ConversationParticipant[]
+  messages       ConversationMessage[]
+  activities     CrmActivity[]
+  notes          CrmNote[]
 
   @@index([organizationId, status])
   @@index([projectId, status])
@@ -2436,18 +2490,18 @@ model Conversation {
 }
 
 model ConversationParticipant {
-  id              String                      @id @default(cuid())
-  conversationId  String
-  userId          String?
-  organizationId  String?
-  publicRole      ConversationParticipantRole
-  displayName     String?
-  joinedAt        DateTime                    @default(now())
-  lastReadAt      DateTime?
-  conversation    Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user            User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  organization    Organization?               @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  messages        ConversationMessage[]
+  id             String                      @id @default(cuid())
+  conversationId String
+  userId         String?
+  organizationId String?
+  publicRole     ConversationParticipantRole
+  displayName    String?
+  joinedAt       DateTime                    @default(now())
+  lastReadAt     DateTime?
+  conversation   Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization   Organization?               @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  messages       ConversationMessage[]
 
   @@index([conversationId, publicRole])
   @@index([userId, conversationId])
@@ -2456,15 +2510,15 @@ model ConversationParticipant {
 }
 
 model ConversationMessage {
-  id                    String                    @id @default(cuid())
-  conversationId         String
-  senderParticipantId    String?
-  type                  ConversationMessageType    @default(TEXT)
-  body                  String
-  metadata              Json?
-  createdAt             DateTime                  @default(now())
-  conversation          Conversation              @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderParticipant     ConversationParticipant?  @relation(fields: [senderParticipantId], references: [id], onDelete: SetNull)
+  id                  String                   @id @default(cuid())
+  conversationId      String
+  senderParticipantId String?
+  type                ConversationMessageType  @default(TEXT)
+  body                String
+  metadata            Json?
+  createdAt           DateTime                 @default(now())
+  conversation        Conversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderParticipant   ConversationParticipant? @relation(fields: [senderParticipantId], references: [id], onDelete: SetNull)
 
   @@index([conversationId, createdAt])
   @@index([senderParticipantId, createdAt])
@@ -2472,24 +2526,24 @@ model ConversationMessage {
 }
 
 model CrmActivity {
-  id                    String           @id @default(cuid())
-  organizationId        String
-  crmLeadId             String?
-  conversationId        String?
-  actorUserId           String?
-  actorOrganizationId   String?
-  actorRole             String?
-  publicActorName       String?
-  type                  CrmActivityType
-  title                 String
-  body                  String?
-  metadata              Json?
-  createdAt             DateTime         @default(now())
-  organization          Organization     @relation("CrmActivityOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
-  crmLead               CrmLead?         @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
-  conversation          Conversation?    @relation(fields: [conversationId], references: [id], onDelete: SetNull)
-  actorUser             User?            @relation("CrmActivityActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
-  actorOrganization     Organization?    @relation("CrmActivityActorOrganization", fields: [actorOrganizationId], references: [id], onDelete: SetNull)
+  id                  String          @id @default(cuid())
+  organizationId      String
+  crmLeadId           String?
+  conversationId      String?
+  actorUserId         String?
+  actorOrganizationId String?
+  actorRole           String?
+  publicActorName     String?
+  type                CrmActivityType
+  title               String
+  body                String?
+  metadata            Json?
+  createdAt           DateTime        @default(now())
+  organization        Organization    @relation("CrmActivityOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  crmLead             CrmLead?        @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
+  conversation        Conversation?   @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  actorUser           User?           @relation("CrmActivityActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorOrganization   Organization?   @relation("CrmActivityActorOrganization", fields: [actorOrganizationId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, createdAt])
   @@index([crmLeadId, createdAt])
@@ -2538,19 +2592,19 @@ model CrmLeadStageHistory {
 }
 
 model CrmNote {
-  id              String            @id @default(cuid())
-  organizationId  String
-  crmLeadId       String?
-  conversationId  String?
-  authorUserId    String
-  body            String
-  visibility      CrmNoteVisibility @default(INTERNAL)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  crmLead         CrmLead?          @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
-  conversation    Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
-  author          User              @relation("CrmNoteAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  id             String            @id @default(cuid())
+  organizationId String
+  crmLeadId      String?
+  conversationId String?
+  authorUserId   String
+  body           String
+  visibility     CrmNoteVisibility @default(INTERNAL)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  crmLead        CrmLead?          @relation(fields: [crmLeadId], references: [id], onDelete: SetNull)
+  conversation   Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  author         User              @relation("CrmNoteAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
   @@index([crmLeadId, createdAt])
@@ -2582,23 +2636,23 @@ model CrmFollowUpTask {
 }
 
 model ImportJob {
-  id                String             @id @default(cuid())
-  organizationId    String
-  createdByUserId   String?
-  type              ImportJobType      @default(PROJECT_INVENTORY)
-  status            ImportJobStatus    @default(DRAFT)
-  originalFileName  String?
-  sourceFormat      ImportSourceFormat
-  totalRows         Int                @default(0)
-  validRows         Int                @default(0)
-  invalidRows       Int                @default(0)
-  summary           Json?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  committedAt       DateTime?
-  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy         User?              @relation("ImportJobCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  rows              ImportJobRow[]
+  id               String             @id @default(cuid())
+  organizationId   String
+  createdByUserId  String?
+  type             ImportJobType      @default(PROJECT_INVENTORY)
+  status           ImportJobStatus    @default(DRAFT)
+  originalFileName String?
+  sourceFormat     ImportSourceFormat
+  totalRows        Int                @default(0)
+  validRows        Int                @default(0)
+  invalidRows      Int                @default(0)
+  summary          Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  committedAt      DateTime?
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy        User?              @relation("ImportJobCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  rows             ImportJobRow[]
 
   @@index([organizationId, status, createdAt])
   @@index([createdByUserId, createdAt])
@@ -2606,17 +2660,17 @@ model ImportJob {
 }
 
 model ImportJobRow {
-  id                String          @id @default(cuid())
-  importJobId       String
-  rowNumber         Int
-  rawData           Json
-  normalizedData    Json?
-  status            ImportRowStatus
-  errors            Json?
-  warnings          Json?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  importJob         ImportJob       @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  id             String          @id @default(cuid())
+  importJobId    String
+  rowNumber      Int
+  rawData        Json
+  normalizedData Json?
+  status         ImportRowStatus
+  errors         Json?
+  warnings       Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  importJob      ImportJob       @relation(fields: [importJobId], references: [id], onDelete: Cascade)
 
   @@unique([importJobId, rowNumber])
   @@index([importJobId, status])
@@ -2637,29 +2691,29 @@ model HrDepartment {
 }
 
 model OrganizationBranch {
-  id                   String       @id @default(cuid())
+  id                   String                           @id @default(cuid())
   organizationId       String
   parentBranchId       String?
   name                 String
   code                 String?
-  type                 OrganizationBranchType @default(BRANCH)
+  type                 OrganizationBranchType           @default(BRANCH)
   address              String?
   city                 String?
   country              String?
   timezone             String?
   latitude             Float?
   longitude            Float?
-  exactRadiusMeters    Int          @default(30)
-  expandedRadiusMeters Int          @default(1000)
-  isDefault            Boolean      @default(false)
-  isActive             Boolean      @default(true)
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parentBranch         OrganizationBranch? @relation("OrganizationBranchHierarchy", fields: [parentBranchId], references: [id], onDelete: Restrict)
-  offices              OrganizationBranch[] @relation("OrganizationBranchHierarchy")
-  officeEmployees      HrEmployee[] @relation("HrEmployeeOffice")
-  branchEmployees      HrEmployee[] @relation("HrEmployeeBranch")
+  exactRadiusMeters    Int                              @default(30)
+  expandedRadiusMeters Int                              @default(1000)
+  isDefault            Boolean                          @default(false)
+  isActive             Boolean                          @default(true)
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  organization         Organization                     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentBranch         OrganizationBranch?              @relation("OrganizationBranchHierarchy", fields: [parentBranchId], references: [id], onDelete: Restrict)
+  offices              OrganizationBranch[]             @relation("OrganizationBranchHierarchy")
+  officeEmployees      HrEmployee[]                     @relation("HrEmployeeOffice")
+  branchEmployees      HrEmployee[]                     @relation("HrEmployeeBranch")
   attendanceRecords    HrAttendanceRecord[]
   attendanceLocations  OrganizationAttendanceLocation[]
   wifiRules            OrganizationWifiRule[]
@@ -2716,92 +2770,92 @@ model OrganizationWifiRule {
 }
 
 model HrEmployee {
-  id             String               @id @default(cuid())
-  organizationId String
-  userId         String?              @unique
-  departmentId   String?
-  officeId       String?
-  branchId       String?
-  positionId     String?
-  jobLevelId     String?
-  directManagerId String?
-  secondaryManagerId String?
-  workGroupId    String?
-  teamId         String?
-  photoFileId    String?
-  faceReferenceFileId String?
-  faceVerificationConsent Boolean     @default(false)
-  faceVerificationStatus HrFaceVerificationStatus @default(NOT_CONFIGURED)
-  employeeCode   String?
-  legalName      String?
-  displayName    String?
-  localizedNames Json?
-  maritalStatus  String?
-  gender         String?
-  dateOfBirth    DateTime?
-  nationalityCountryCode String?
-  residenceCountryCode String?
-  preferredLanguage String?
-  timezone       String?
-  locale         String?
-  currency       String?
-  workStartDate  DateTime?
-  hireDate       DateTime?
-  isUnderProbation Boolean            @default(false)
-  probationEndDate DateTime?
-  hasDisability  Boolean              @default(false)
-  disabilityStatus String?
-  disabilityNotes String?
-  employmentType HrEmploymentType?
-  contractType   String?
-  jobTitle       String?
-  workScheduleType HrWorkScheduleType?
-  workScheduleId String?
-  shiftGroupId   String?
-  attendanceProfileId String?
-  leaveProfileId String?
-  breakProfileId String?
+  id                          String                     @id @default(cuid())
+  organizationId              String
+  userId                      String?                    @unique
+  departmentId                String?
+  officeId                    String?
+  branchId                    String?
+  positionId                  String?
+  jobLevelId                  String?
+  directManagerId             String?
+  secondaryManagerId          String?
+  workGroupId                 String?
+  teamId                      String?
+  photoFileId                 String?
+  faceReferenceFileId         String?
+  faceVerificationConsent     Boolean                    @default(false)
+  faceVerificationStatus      HrFaceVerificationStatus   @default(NOT_CONFIGURED)
+  employeeCode                String?
+  legalName                   String?
+  displayName                 String?
+  localizedNames              Json?
+  maritalStatus               String?
+  gender                      String?
+  dateOfBirth                 DateTime?
+  nationalityCountryCode      String?
+  residenceCountryCode        String?
+  preferredLanguage           String?
+  timezone                    String?
+  locale                      String?
+  currency                    String?
+  workStartDate               DateTime?
+  hireDate                    DateTime?
+  isUnderProbation            Boolean                    @default(false)
+  probationEndDate            DateTime?
+  hasDisability               Boolean                    @default(false)
+  disabilityStatus            String?
+  disabilityNotes             String?
+  employmentType              HrEmploymentType?
+  contractType                String?
+  jobTitle                    String?
+  workScheduleType            HrWorkScheduleType?
+  workScheduleId              String?
+  shiftGroupId                String?
+  attendanceProfileId         String?
+  leaveProfileId              String?
+  breakProfileId              String?
   allowedAttendanceLocationId String?
-  exactRadiusMeters Int?
-  expandedRadiusMeters Int?
-  webCheckInAllowed Boolean           @default(true)
-  mobileCheckInAllowed Boolean        @default(true)
-  requireLivePhoto Boolean            @default(false)
-  requireFaceVerification Boolean     @default(false)
-  requireDvrReview Boolean            @default(false)
-  webWifiPolicy WebWifiPolicy?
-  remoteWorkAllowed Boolean           @default(false)
-  holidayWorkPolicy String?
-  payrollProfileId String?
-  allowancesProfileId String?
-  deductionsProfileId String?
-  salaryAmount Decimal?               @db.Decimal(14, 2)
-  salaryCurrency String?
-  paymentFrequency HrPaymentFrequency?
-  paymentMethod HrPaymentMethod?
-  loginEnabled   Boolean              @default(true)
-  name           String
-  email          String?
-  phone          String?
-  roleTitle      String?
-  status         HrEmployeeStatus     @default(ACTIVE)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
-  department     HrDepartment?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  office         OrganizationBranch?  @relation("HrEmployeeOffice", fields: [officeId], references: [id], onDelete: SetNull)
-  branch         OrganizationBranch?  @relation("HrEmployeeBranch", fields: [branchId], references: [id], onDelete: SetNull)
-  directManager  User?                @relation("HrEmployeeDirectManager", fields: [directManagerId], references: [id], onDelete: SetNull)
-  secondaryManager User?              @relation("HrEmployeeSecondaryManager", fields: [secondaryManagerId], references: [id], onDelete: SetNull)
-  workGroup      HrWorkGroup?         @relation(fields: [workGroupId], references: [id], onDelete: SetNull)
-  team           HrTeam?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  identifiers    EmployeeIdentifier[]
-  documents      HrEmployeeDocument[]
-  convertedApplicants HrApplicant[] @relation("HrApplicantConvertedEmployee")
-  transferLogs   HrEmployeeTransferLog[]
-  titleChangeLogs HrEmployeeTitleChangeLog[]
-  attendance     HrAttendanceRecord[]
+  exactRadiusMeters           Int?
+  expandedRadiusMeters        Int?
+  webCheckInAllowed           Boolean                    @default(true)
+  mobileCheckInAllowed        Boolean                    @default(true)
+  requireLivePhoto            Boolean                    @default(false)
+  requireFaceVerification     Boolean                    @default(false)
+  requireDvrReview            Boolean                    @default(false)
+  webWifiPolicy               WebWifiPolicy?
+  remoteWorkAllowed           Boolean                    @default(false)
+  holidayWorkPolicy           String?
+  payrollProfileId            String?
+  allowancesProfileId         String?
+  deductionsProfileId         String?
+  salaryAmount                Decimal?                   @db.Decimal(14, 2)
+  salaryCurrency              String?
+  paymentFrequency            HrPaymentFrequency?
+  paymentMethod               HrPaymentMethod?
+  loginEnabled                Boolean                    @default(true)
+  name                        String
+  email                       String?
+  phone                       String?
+  roleTitle                   String?
+  status                      HrEmployeeStatus           @default(ACTIVE)
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  organization                Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                        User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  department                  HrDepartment?              @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  office                      OrganizationBranch?        @relation("HrEmployeeOffice", fields: [officeId], references: [id], onDelete: SetNull)
+  branch                      OrganizationBranch?        @relation("HrEmployeeBranch", fields: [branchId], references: [id], onDelete: SetNull)
+  directManager               User?                      @relation("HrEmployeeDirectManager", fields: [directManagerId], references: [id], onDelete: SetNull)
+  secondaryManager            User?                      @relation("HrEmployeeSecondaryManager", fields: [secondaryManagerId], references: [id], onDelete: SetNull)
+  workGroup                   HrWorkGroup?               @relation(fields: [workGroupId], references: [id], onDelete: SetNull)
+  team                        HrTeam?                    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  identifiers                 EmployeeIdentifier[]
+  documents                   HrEmployeeDocument[]
+  convertedApplicants         HrApplicant[]              @relation("HrApplicantConvertedEmployee")
+  transferLogs                HrEmployeeTransferLog[]
+  titleChangeLogs             HrEmployeeTitleChangeLog[]
+  attendance                  HrAttendanceRecord[]
 
   @@unique([organizationId, employeeCode])
   @@index([organizationId, status])
@@ -2831,16 +2885,16 @@ model EmployeeIdentifier {
 }
 
 model HrWorkGroup {
-  id                          String                 @id @default(cuid())
+  id                          String               @id @default(cuid())
   organizationId              String
   name                        String
   workScheduleId              String?
   allowedAttendanceLocationId String?
   attendanceProfileId         String?
-  isActive                    Boolean                @default(true)
-  createdAt                   DateTime               @default(now())
-  updatedAt                   DateTime               @updatedAt
-  organization                Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isActive                    Boolean              @default(true)
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  organization                Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   managers                    HrWorkGroupManager[]
   employees                   HrEmployee[]
   teams                       HrTeam[]
@@ -2882,19 +2936,19 @@ model HrTeam {
 }
 
 model HrEmployeeDocument {
-  id                 String               @id @default(cuid())
+  id                 String                     @id @default(cuid())
   organizationId     String
   employeeId         String
   documentType       String
   fileId             String?
-  status             HrDocumentStatus     @default(MISSING)
+  status             HrDocumentStatus           @default(MISSING)
   expiresAt          DateTime?
   aiReviewStatus     EmployeeVerificationStatus @default(NOT_REVIEWED)
-  manualReviewStatus HrManualReviewStatus @default(NOT_REVIEWED)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  employee           HrEmployee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  manualReviewStatus HrManualReviewStatus       @default(NOT_REVIEWED)
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee           HrEmployee                 @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, status])
   @@index([employeeId, expiresAt])
@@ -2902,7 +2956,7 @@ model HrEmployeeDocument {
 }
 
 model HrJobOpening {
-  id                 String             @id @default(cuid())
+  id                 String              @id @default(cuid())
   organizationId     String
   title              String
   localizedTitle     Json?
@@ -2913,13 +2967,13 @@ model HrJobOpening {
   workMode           HrWorkScheduleType?
   description        Json?
   requirements       Json?
-  status             HrJobOpeningStatus @default(DRAFT)
-  publicApplyEnabled Boolean            @default(false)
+  status             HrJobOpeningStatus  @default(DRAFT)
+  publicApplyEnabled Boolean             @default(false)
   createdById        String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy          User?              @relation("HrJobOpeningCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy          User?               @relation("HrJobOpeningCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   applicants         HrApplicant[]
 
   @@index([organizationId, status])
@@ -2928,49 +2982,49 @@ model HrJobOpening {
 }
 
 model HrApplicant {
-  id                      String                    @id @default(cuid())
-  organizationId          String
-  jobOpeningId            String?
-  source                  HrApplicantSource         @default(HR_MANUAL)
-  status                  HrApplicantStatus         @default(PENDING_REVIEW)
-  fullName                String
-  localizedName           Json?
-  email                   String?
-  phoneCountry            String?
-  phone                   String?
-  normalizedPhone         String?
-  countryCode             String?
-  nationalityCountryCode  String?
-  preferredLanguage       String?
-  address                 String?
-  educationLevel          String?
-  university              String?
-  graduationYear          Int?
-  currentJobTitle         String?
-  yearsOfExperience       Decimal?                  @db.Decimal(5, 2)
-  lastSalaryAmount        Decimal?                  @db.Decimal(14, 2)
-  lastSalaryCurrency      String?
-  expectedSalaryAmount    Decimal?                  @db.Decimal(14, 2)
-  expectedSalaryCurrency  String?
-  noticePeriod            String?
-  linkedinUrl             String?
-  portfolioUrl            String?
-  notes                   String?
-  aiReviewStatus          HrApplicantAiReviewStatus @default(NOT_REQUESTED)
-  aiReviewSummary         Json?
-  convertedEmployeeId     String?                   @unique
-  submittedAt             DateTime?
-  reviewedAt              DateTime?
-  reviewedById            String?
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
-  organization            Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  jobOpening              HrJobOpening?             @relation(fields: [jobOpeningId], references: [id], onDelete: SetNull)
-  convertedEmployee       HrEmployee?               @relation("HrApplicantConvertedEmployee", fields: [convertedEmployeeId], references: [id], onDelete: SetNull)
-  reviewedBy              User?                     @relation("HrApplicantReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  documents               HrApplicantDocument[]
-  interviews              HrApplicantInterview[]
-  offers                  HrApplicantOffer[]
+  id                     String                    @id @default(cuid())
+  organizationId         String
+  jobOpeningId           String?
+  source                 HrApplicantSource         @default(HR_MANUAL)
+  status                 HrApplicantStatus         @default(PENDING_REVIEW)
+  fullName               String
+  localizedName          Json?
+  email                  String?
+  phoneCountry           String?
+  phone                  String?
+  normalizedPhone        String?
+  countryCode            String?
+  nationalityCountryCode String?
+  preferredLanguage      String?
+  address                String?
+  educationLevel         String?
+  university             String?
+  graduationYear         Int?
+  currentJobTitle        String?
+  yearsOfExperience      Decimal?                  @db.Decimal(5, 2)
+  lastSalaryAmount       Decimal?                  @db.Decimal(14, 2)
+  lastSalaryCurrency     String?
+  expectedSalaryAmount   Decimal?                  @db.Decimal(14, 2)
+  expectedSalaryCurrency String?
+  noticePeriod           String?
+  linkedinUrl            String?
+  portfolioUrl           String?
+  notes                  String?
+  aiReviewStatus         HrApplicantAiReviewStatus @default(NOT_REQUESTED)
+  aiReviewSummary        Json?
+  convertedEmployeeId    String?                   @unique
+  submittedAt            DateTime?
+  reviewedAt             DateTime?
+  reviewedById           String?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+  organization           Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobOpening             HrJobOpening?             @relation(fields: [jobOpeningId], references: [id], onDelete: SetNull)
+  convertedEmployee      HrEmployee?               @relation("HrApplicantConvertedEmployee", fields: [convertedEmployeeId], references: [id], onDelete: SetNull)
+  reviewedBy             User?                     @relation("HrApplicantReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  documents              HrApplicantDocument[]
+  interviews             HrApplicantInterview[]
+  offers                 HrApplicantOffer[]
 
   @@index([organizationId, status])
   @@index([organizationId, jobOpeningId])
@@ -2980,21 +3034,21 @@ model HrApplicant {
 }
 
 model HrApplicantDocument {
-  id               String                            @id @default(cuid())
+  id               String                    @id @default(cuid())
   applicantId      String
   organizationId   String
   documentType     HrApplicantDocumentType
   fileId           String?
-  status           HrApplicantDocumentStatus         @default(UPLOADED)
-  extractionStatus HrApplicantAiReviewStatus         @default(NOT_REQUESTED)
+  status           HrApplicantDocumentStatus @default(UPLOADED)
+  extractionStatus HrApplicantAiReviewStatus @default(NOT_REQUESTED)
   extractedData    Json?
   reviewerNotes    String?
   expiresAt        DateTime?
-  createdAt        DateTime                          @default(now())
-  updatedAt        DateTime                          @updatedAt
-  applicant        HrApplicant                       @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  organization     Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  file             UploadedFile?                     @relation("HrApplicantDocumentFile", fields: [fileId], references: [id], onDelete: SetNull)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  applicant        HrApplicant               @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organization     Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  file             UploadedFile?             @relation("HrApplicantDocumentFile", fields: [fileId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@index([applicantId, documentType])
@@ -3003,21 +3057,21 @@ model HrApplicantDocument {
 }
 
 model HrApplicantInterview {
-  id              String                     @id @default(cuid())
-  applicantId     String
-  organizationId  String
-  scheduledAt     DateTime
-  interviewType   HrApplicantInterviewType   @default(PHONE)
-  location        String?
-  interviewerId   String?
-  status          HrApplicantInterviewStatus @default(SCHEDULED)
-  notes           String?
-  score           Int?
-  createdAt       DateTime                   @default(now())
-  updatedAt       DateTime                   @updatedAt
-  applicant       HrApplicant                @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  organization    Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  interviewer     User?                      @relation("HrApplicantInterviewer", fields: [interviewerId], references: [id], onDelete: SetNull)
+  id             String                     @id @default(cuid())
+  applicantId    String
+  organizationId String
+  scheduledAt    DateTime
+  interviewType  HrApplicantInterviewType   @default(PHONE)
+  location       String?
+  interviewerId  String?
+  status         HrApplicantInterviewStatus @default(SCHEDULED)
+  notes          String?
+  score          Int?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  applicant      HrApplicant                @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  interviewer    User?                      @relation("HrApplicantInterviewer", fields: [interviewerId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, scheduledAt])
   @@index([applicantId, status])
@@ -3025,23 +3079,23 @@ model HrApplicantInterview {
 }
 
 model HrApplicantOffer {
-  id              String                 @id @default(cuid())
-  applicantId     String
-  organizationId  String
-  status          HrApplicantOfferStatus @default(DRAFT)
-  salaryAmount    Decimal?               @db.Decimal(14, 2)
-  salaryCurrency  String?
-  officeId        String?
-  departmentId    String?
-  positionId      String?
-  managerId       String?
-  workScheduleId  String?
-  startsAt        DateTime?
-  notes           String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  applicant       HrApplicant            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String                 @id @default(cuid())
+  applicantId    String
+  organizationId String
+  status         HrApplicantOfferStatus @default(DRAFT)
+  salaryAmount   Decimal?               @db.Decimal(14, 2)
+  salaryCurrency String?
+  officeId       String?
+  departmentId   String?
+  positionId     String?
+  managerId      String?
+  workScheduleId String?
+  startsAt       DateTime?
+  notes          String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  applicant      HrApplicant            @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, status])
   @@index([applicantId, status])
@@ -3049,19 +3103,19 @@ model HrApplicantOffer {
 }
 
 model HrRecruitmentSettings {
-  id                              String       @id @default(cuid())
-  organizationId                  String       @unique
-  requiredCv                      Boolean      @default(true)
-  requiredGraduationCertificate   Boolean      @default(false)
-  requiredNationalId              Boolean      @default(true)
-  requiredMilitaryCertificate     Boolean      @default(false)
-  requiredLastSalaryProof         Boolean      @default(false)
-  requiredExperienceCertificates  Boolean      @default(false)
-  countrySpecificRequirements     Json?
-  jobSpecificOverrides            Json?
-  createdAt                       DateTime     @default(now())
-  updatedAt                       DateTime     @updatedAt
-  organization                    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                             String       @id @default(cuid())
+  organizationId                 String       @unique
+  requiredCv                     Boolean      @default(true)
+  requiredGraduationCertificate  Boolean      @default(false)
+  requiredNationalId             Boolean      @default(true)
+  requiredMilitaryCertificate    Boolean      @default(false)
+  requiredLastSalaryProof        Boolean      @default(false)
+  requiredExperienceCertificates Boolean      @default(false)
+  countrySpecificRequirements    Json?
+  jobSpecificOverrides           Json?
+  createdAt                      DateTime     @default(now())
+  updatedAt                      DateTime     @updatedAt
+  organization                   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("hr_recruitment_settings")
 }
@@ -3114,42 +3168,42 @@ model HrEmployeeTitleChangeLog {
 }
 
 model HrAttendanceRecord {
-  id             String             @id @default(cuid())
-  organizationId String
-  employeeId     String
-  date           DateTime
-  checkInAt      DateTime?
-  checkOutAt     DateTime?
-  status         HrAttendanceStatus
-  note           String?
-  checkInLatitude  Float?
-  checkInLongitude Float?
-  checkOutLatitude Float?
-  checkOutLongitude Float?
-  checkInWifiSsid String?
-  checkInWifiBssid String?
-  checkOutWifiSsid String?
-  checkOutWifiBssid String?
-  checkInPhotoFileId String?
-  checkOutPhotoFileId String?
-  checkInDeviceId String?
-  checkOutDeviceId String?
-  branchId String?
-  developerOptionsEnabled Boolean?
-  usbDebuggingEnabled Boolean?
-  verificationStatus AttendanceVerificationStatus @default(PENDING_REVIEW)
+  id                         String                       @id @default(cuid())
+  organizationId             String
+  employeeId                 String
+  date                       DateTime
+  checkInAt                  DateTime?
+  checkOutAt                 DateTime?
+  status                     HrAttendanceStatus
+  note                       String?
+  checkInLatitude            Float?
+  checkInLongitude           Float?
+  checkOutLatitude           Float?
+  checkOutLongitude          Float?
+  checkInWifiSsid            String?
+  checkInWifiBssid           String?
+  checkOutWifiSsid           String?
+  checkOutWifiBssid          String?
+  checkInPhotoFileId         String?
+  checkOutPhotoFileId        String?
+  checkInDeviceId            String?
+  checkOutDeviceId           String?
+  branchId                   String?
+  developerOptionsEnabled    Boolean?
+  usbDebuggingEnabled        Boolean?
+  verificationStatus         AttendanceVerificationStatus @default(PENDING_REVIEW)
   verificationFailureReasons Json?
-  dvrVerificationStatus DvrVerificationStatus @default(NOT_REQUIRED)
-  dvrReferenceId String?
-  minutesLate Int?
-  lateLevel AttendanceLateLevel?
-  penaltyType AttendancePenaltyType?
-  penaltyValue String?
-  requiresReview Boolean @default(false)
-  attendanceSource AttendanceSource @default(MANUAL_ADMIN)
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  employee       HrEmployee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branch         OrganizationBranch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  dvrVerificationStatus      DvrVerificationStatus        @default(NOT_REQUIRED)
+  dvrReferenceId             String?
+  minutesLate                Int?
+  lateLevel                  AttendanceLateLevel?
+  penaltyType                AttendancePenaltyType?
+  penaltyValue               String?
+  requiresReview             Boolean                      @default(false)
+  attendanceSource           AttendanceSource             @default(MANUAL_ADMIN)
+  organization               Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee                   HrEmployee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch                     OrganizationBranch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, date])
   @@index([employeeId, date])
@@ -3159,38 +3213,38 @@ model HrAttendanceRecord {
 }
 
 model OrganizationAttendanceSettings {
-  id                  String       @id @default(cuid())
-  organizationId      String       @unique
-  requireLocation     Boolean      @default(false)
-  allowedLatitude     Float?
-  allowedLongitude    Float?
-  allowedRadiusMeters Int?
-  exactRadiusMeters Int @default(30)
-  expandedRadiusMeters Int @default(1000)
-  gracePeriodMinutes Int @default(10)
-  firstLateSliceMinutes Int @default(15)
-  firstLatePenaltyType AttendancePenaltyType @default(MARK_LATE)
-  firstLatePenaltyValue String?
-  secondLateSliceMinutes Int @default(30)
-  secondLatePenaltyType AttendancePenaltyType @default(MANUAL_REVIEW)
-  secondLatePenaltyValue String?
-  beyondSecondSlicePenaltyType AttendancePenaltyType @default(MANUAL_REVIEW)
-  requireWifi         Boolean      @default(false)
-  allowedWifiSsids    String[]     @default([])
-  allowedWifiBssids   String[]     @default([])
-  blockDeveloperOptions Boolean    @default(true)
-  blockUsbDebugging   Boolean      @default(true)
-  requirePhoto        Boolean      @default(false)
-  requireDvrReview    Boolean      @default(false)
-  allowWebCheckIn Boolean @default(true)
-  allowMobileCheckIn Boolean @default(true)
-  allowExpandedRadiusWithReview Boolean @default(true)
-  webWifiPolicy WebWifiPolicy @default(MANUAL_REVIEW)
-  workStartTime String @default("09:00")
-  workEndTime String @default("17:00")
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                            String                @id @default(cuid())
+  organizationId                String                @unique
+  requireLocation               Boolean               @default(false)
+  allowedLatitude               Float?
+  allowedLongitude              Float?
+  allowedRadiusMeters           Int?
+  exactRadiusMeters             Int                   @default(30)
+  expandedRadiusMeters          Int                   @default(1000)
+  gracePeriodMinutes            Int                   @default(10)
+  firstLateSliceMinutes         Int                   @default(15)
+  firstLatePenaltyType          AttendancePenaltyType @default(MARK_LATE)
+  firstLatePenaltyValue         String?
+  secondLateSliceMinutes        Int                   @default(30)
+  secondLatePenaltyType         AttendancePenaltyType @default(MANUAL_REVIEW)
+  secondLatePenaltyValue        String?
+  beyondSecondSlicePenaltyType  AttendancePenaltyType @default(MANUAL_REVIEW)
+  requireWifi                   Boolean               @default(false)
+  allowedWifiSsids              String[]              @default([])
+  allowedWifiBssids             String[]              @default([])
+  blockDeveloperOptions         Boolean               @default(true)
+  blockUsbDebugging             Boolean               @default(true)
+  requirePhoto                  Boolean               @default(false)
+  requireDvrReview              Boolean               @default(false)
+  allowWebCheckIn               Boolean               @default(true)
+  allowMobileCheckIn            Boolean               @default(true)
+  allowExpandedRadiusWithReview Boolean               @default(true)
+  webWifiPolicy                 WebWifiPolicy         @default(MANUAL_REVIEW)
+  workStartTime                 String                @default("09:00")
+  workEndTime                   String                @default("17:00")
+  createdAt                     DateTime              @default(now())
+  updatedAt                     DateTime              @updatedAt
+  organization                  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("organization_attendance_settings")
 }
@@ -3210,14 +3264,14 @@ model AccountingAccount {
 }
 
 model AccountingCategory {
-  id             String                  @id @default(cuid())
+  id             String                     @id @default(cuid())
   organizationId String
   name           String
   type           AccountingTransactionType?
-  isActive       Boolean                 @default(true)
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isActive       Boolean                    @default(true)
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   transactions   AccountingTransaction[]
 
   @@index([organizationId, isActive])
@@ -3225,24 +3279,24 @@ model AccountingCategory {
 }
 
 model AccountingTransaction {
-  id              String                    @id @default(cuid())
-  organizationId  String
-  type            AccountingTransactionType
-  amount          Decimal                   @db.Decimal(14, 2)
-  currency        String                    @default("EGP")
-  categoryId      String?
-  description     String?
-  occurredAt      DateTime
-  status          AccountingTransactionStatus @default(DRAFT)
+  id               String                      @id @default(cuid())
+  organizationId   String
+  type             AccountingTransactionType
+  amount           Decimal                     @db.Decimal(14, 2)
+  currency         String                      @default("EGP")
+  categoryId       String?
+  description      String?
+  occurredAt       DateTime
+  status           AccountingTransactionStatus @default(DRAFT)
   approvedByUserId String?
-  approvedAt      DateTime?
-  approvalNote    String?
-  createdByUserId String?
-  createdAt       DateTime                  @default(now())
-  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  category        AccountingCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdBy       User?                     @relation("AccountingTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  approvedBy      User?                     @relation("AccountingTransactionApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  approvedAt       DateTime?
+  approvalNote     String?
+  createdByUserId  String?
+  createdAt        DateTime                    @default(now())
+  organization     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category         AccountingCategory?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy        User?                       @relation("AccountingTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  approvedBy       User?                       @relation("AccountingTransactionApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, type])
@@ -3346,22 +3400,22 @@ model OperationsActivity {
 }
 
 model CustomerProfile {
-  id             String                @id @default(cuid())
-  organizationId String
-  userId         String?
-  fullName       String
-  localizedName  Json?
-  phone          String
-  email          String?
-  nationalId     String?
-  preferredLanguage String             @default("en")
-  status         CustomerProfileStatus @default(LEAD)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
-  assignments    UnitCustomerAssignment[]
-  qrPasses       UnitQrPass[]
+  id                String                   @id @default(cuid())
+  organizationId    String
+  userId            String?
+  fullName          String
+  localizedName     Json?
+  phone             String
+  email             String?
+  nationalId        String?
+  preferredLanguage String                   @default("en")
+  status            CustomerProfileStatus    @default(LEAD)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignments       UnitCustomerAssignment[]
+  qrPasses          UnitQrPass[]
 
   @@index([organizationId, status])
   @@index([organizationId, phone])
@@ -3425,7 +3479,7 @@ model Floor {
 }
 
 model Unit {
-  id             String               @id @default(cuid())
+  id             String                   @id @default(cuid())
   organizationId String
   projectId      String
   buildingId     String
@@ -3433,23 +3487,25 @@ model Unit {
   unitNumber     String
   unitCode       String
   unitType       RealEstateUnitType
-  status         RealEstateUnitStatus @default(AVAILABLE)
-  area           Decimal?             @db.Decimal(12, 2)
+  status         RealEstateUnitStatus     @default(AVAILABLE)
+  area           Decimal?                 @db.Decimal(12, 2)
   bedrooms       Int?
   bathrooms      Int?
-  qrPassEnabled  Boolean              @default(true)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project        Compound             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  building       Building             @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  floor          Floor?               @relation(fields: [floorId], references: [id], onDelete: SetNull)
+  qrPassEnabled  Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  archivedAt     DateTime?
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Compound                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  building       Building                 @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  floor          Floor?                   @relation(fields: [floorId], references: [id], onDelete: SetNull)
   assignments    UnitCustomerAssignment[]
   qrPasses       UnitQrPass[]
 
   @@unique([organizationId, unitCode])
   @@unique([buildingId, unitNumber])
   @@index([organizationId, status])
+  @@index([organizationId, archivedAt, status])
   @@index([projectId, buildingId])
   @@map("units")
 }
@@ -3480,27 +3536,27 @@ model UnitCustomerAssignment {
 }
 
 model UnitQrPass {
-  id                String            @id @default(cuid())
+  id                String           @id @default(cuid())
   organizationId    String
   unitId            String
   customerProfileId String?
   userId            String?
   passType          UnitQrPassType
-  tokenHash         String            @unique
+  tokenHash         String           @unique
   displayCode       String?
-  status            UnitQrPassStatus  @default(ACTIVE)
+  status            UnitQrPassStatus @default(ACTIVE)
   startsAt          DateTime?
   expiresAt         DateTime?
   maxUses           Int?
-  useCount          Int               @default(0)
+  useCount          Int              @default(0)
   lastUsedAt        DateTime?
-  metadata          Json              @default("{}")
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  unit              Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  customerProfile   CustomerProfile?  @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
-  user              User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  metadata          Json             @default("{}")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unit              Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  customerProfile   CustomerProfile? @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
+  user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@index([unitId, status])
@@ -3525,15 +3581,15 @@ model AccessIntegration {
 }
 
 model UserNavigationPreference {
-  id          String   @id @default(cuid())
-  userId      String
-  layout      Json     @default("{}")
-  hiddenItems Json     @default("[]")
-  pinnedItems Json     @default("[]")
-  hasDismissedPlatformWelcome Boolean @default(false)
-  platformWelcomeDismissedAt DateTime?
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                          String    @id @default(cuid())
+  userId                      String
+  layout                      Json      @default("{}")
+  hiddenItems                 Json      @default("[]")
+  pinnedItems                 Json      @default("[]")
+  hasDismissedPlatformWelcome Boolean   @default(false)
+  platformWelcomeDismissedAt  DateTime?
+  updatedAt                   DateTime  @updatedAt
+  user                        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
   @@map("user_navigation_preferences")
@@ -3561,12 +3617,143 @@ model PlatformMetadataRecord {
   configuration Json     @default("{}")
   sortOrder     Int      @default(0)
   isActive      Boolean  @default(true)
+  isArchived    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([category, code])
-  @@index([category, isActive, sortOrder])
+  @@index([category, isActive, isArchived, sortOrder])
   @@map("platform_metadata_records")
+}
+
+model SupportedOrganizationType {
+  id                     String                          @id @default(cuid())
+  code                   String                          @unique
+  legacyOrganizationType OrganizationType?
+  names                  Json                            @default("{}")
+  descriptions           Json                            @default("{}")
+  iconObjectKey          String?
+  allowedCountryCodes    String[]                        @default([])
+  allowedLegalForms      OrganizationLegalForm[]         @default([])
+  requiredFieldCodes     String[]                        @default([])
+  isIndividual           Boolean                         @default(false)
+  isActive               Boolean                         @default(true)
+  isArchived             Boolean                         @default(false)
+  sortOrder              Int                             @default(0)
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @updatedAt
+  organizations          Organization[]
+  verificationPolicies   RequiredDocumentPolicy[]
+  onboardingSessions     OrganizationOnboardingSession[]
+
+  @@index([isActive, isArchived, sortOrder])
+  @@index([legacyOrganizationType])
+  @@map("supported_organization_types")
+}
+
+model ExchangeRate {
+  id                String                 @id @default(cuid())
+  baseCurrencyCode  String
+  quoteCurrencyCode String
+  rate              Decimal                @db.Decimal(24, 10)
+  provider          String?
+  sourceType        ExchangeRateSourceType @default(MANUAL)
+  fetchedAt         DateTime?
+  expiresAt         DateTime?
+  isActive          Boolean                @default(true)
+  metadata          Json                   @default("{}")
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@unique([baseCurrencyCode, quoteCurrencyCode, sourceType])
+  @@index([baseCurrencyCode, quoteCurrencyCode, isActive])
+  @@map("exchange_rates")
+}
+
+model OrganizationOnboardingSession {
+  id                          String                           @id @default(cuid())
+  status                      OrganizationOnboardingStatus     @default(DRAFT)
+  countryCode                 String
+  supportedOrganizationTypeId String
+  legalForm                   OrganizationLegalForm?
+  operationalData             Json                             @default("{}")
+  completedFields             String[]                         @default([])
+  missingFields               String[]                         @default([])
+  conflictFields              String[]                         @default([])
+  createdById                 String
+  organizationId              String?                          @unique
+  expiresAt                   DateTime
+  completedAt                 DateTime?
+  cancelledAt                 DateTime?
+  createdAt                   DateTime                         @default(now())
+  updatedAt                   DateTime                         @updatedAt
+  supportedOrganizationType   SupportedOrganizationType        @relation(fields: [supportedOrganizationTypeId], references: [id], onDelete: Restrict)
+  createdBy                   User                             @relation("OnboardingCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  organization                Organization?                    @relation("CompletedOnboardingOrganization", fields: [organizationId], references: [id], onDelete: SetNull)
+  documents                   OrganizationOnboardingDocument[]
+  fieldEvidence               OrganizationFieldEvidence[]
+
+  @@index([status, expiresAt])
+  @@index([countryCode, supportedOrganizationTypeId, status])
+  @@map("organization_onboarding_sessions")
+}
+
+model OrganizationOnboardingDocument {
+  id                 String                               @id @default(cuid())
+  sessionId          String
+  policyId           String?
+  documentType       OrganizationDocumentType
+  fileId             String
+  qualityStatus      OnboardingDocumentQualityStatus      @default(ACCEPTED)
+  qualityWarnings    String[]                             @default([])
+  extractionProvider String?
+  extractionModel    String?
+  extractionStatus   OrganizationDocumentExtractionStatus @default(NOT_REQUESTED)
+  extractionResult   Json?
+  providerRequestId  String?
+  extractedAt        DateTime?
+  archivedAt         DateTime?
+  createdAt          DateTime                             @default(now())
+  updatedAt          DateTime                             @updatedAt
+  session            OrganizationOnboardingSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  policy             RequiredDocumentPolicy?              @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  file               UploadedFile                         @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  fieldEvidence      OrganizationFieldEvidence[]
+
+  @@index([sessionId, documentType, extractionStatus])
+  @@index([policyId])
+  @@map("organization_onboarding_documents")
+}
+
+model OrganizationFieldEvidence {
+  id                 String                         @id @default(cuid())
+  sessionId          String
+  documentId         String
+  fieldCode          String
+  rawValue           String?
+  normalizedValue    String?
+  finalValue         String?
+  confidence         Decimal?                       @db.Decimal(5, 4)
+  documentType       OrganizationDocumentType
+  pageNumber         Int?
+  boundingBox        Json?
+  extractionProvider String
+  model              String?
+  modelVersion       String?
+  manuallyEdited     Boolean                        @default(false)
+  reviewStatus       FieldEvidenceReviewStatus      @default(EXTRACTED)
+  reviewedByUserId   String?
+  reviewedAt         DateTime?
+  correctionReason   String?
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+  session            OrganizationOnboardingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  document           OrganizationOnboardingDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  reviewedBy         User?                          @relation("FieldEvidenceReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, fieldCode, reviewStatus])
+  @@index([documentId, fieldCode])
+  @@map("organization_field_evidence")
 }
 
 model UserQuickActionPreference {

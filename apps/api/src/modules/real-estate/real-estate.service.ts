@@ -192,10 +192,26 @@ export class RealEstateService {
   }
 
   async updateUnit(user: AuthenticatedRequestUser, id: string, input: any) {
-    await this.findUnit(user, id);
+    const current = await this.findUnit(user, id);
+    let projectId: string | undefined;
+    let buildingId: string | undefined;
+    if (input.buildingId) {
+      const building = await this.findBuilding(user, this.requiredString(input.buildingId, 'buildingId'));
+      projectId = this.optionalString(input.projectId) ?? building.projectId;
+      if (building.projectId !== projectId || building.organizationId !== current.organizationId) throw new BadRequestException('buildingId does not belong to the selected project and organization.');
+      buildingId = building.id;
+    } else if (input.projectId && input.projectId !== current.projectId) {
+      throw new BadRequestException('Select a building that belongs to the new project.');
+    }
+    if (input.floorId) {
+      const floor = await this.findFloor(user, input.floorId);
+      if ((buildingId ?? current.buildingId) !== floor.buildingId) throw new BadRequestException('floorId does not belong to the selected building.');
+    }
     return this.prisma.unit.update({
       where: { id },
       data: {
+        projectId,
+        buildingId,
         floorId: input.floorId === null ? null : this.optionalString(input.floorId) ?? undefined,
         unitNumber: this.optionalString(input.unitNumber) ?? undefined,
         unitCode: this.optionalString(input.unitCode) ?? undefined,
@@ -207,6 +223,24 @@ export class RealEstateService {
         qrPassEnabled: typeof input.qrPassEnabled === 'boolean' ? input.qrPassEnabled : undefined,
       },
     });
+  }
+
+  async unitDeletionImpact(user: AuthenticatedRequestUser, id: string) {
+    const unit = await this.findUnit(user, id);
+    const [assignments, qrPasses] = await Promise.all([this.prisma.unitCustomerAssignment.count({ where: { unitId: id } }), this.prisma.unitQrPass.count({ where: { unitId: id } })]);
+    return { unitId: unit.id, assignments, qrPasses, references: assignments + qrPasses, canDelete: assignments + qrPasses === 0, disposition: assignments + qrPasses ? 'ARCHIVE_ONLY' : 'DELETE_ALLOWED' };
+  }
+
+  async archiveUnit(user: AuthenticatedRequestUser, id: string) {
+    await this.findUnit(user, id);
+    return this.prisma.unit.update({ where: { id }, data: { archivedAt: new Date(), qrPassEnabled: false } });
+  }
+
+  async deleteUnit(user: AuthenticatedRequestUser, id: string) {
+    const impact = await this.unitDeletionImpact(user, id);
+    if (!impact.canDelete) return { disposition: 'ARCHIVED', impact, unit: await this.archiveUnit(user, id) };
+    await this.prisma.unit.delete({ where: { id } });
+    return { disposition: 'DELETED', impact };
   }
 
   async listAssignments(user: AuthenticatedRequestUser, unitId: string) {

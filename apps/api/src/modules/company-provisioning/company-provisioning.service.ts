@@ -40,6 +40,7 @@ import {
   AttendanceLocationInputDto,
   ActivationReviewDto,
   CompanyRoleTemplateInputDto,
+  CreateRequiredDocumentPolicyDto,
   CreatePlatformCompanyDto,
   DomainInputDto,
   FirstAdminInputDto,
@@ -51,6 +52,7 @@ import {
   PlatformMetadataInputDto,
   RequiredDocumentPolicyInputDto,
   SubscriptionInputDto,
+  UpdateRequiredDocumentPolicyDto,
   WifiRuleInputDto,
 } from './dto/company-provisioning.dto';
 
@@ -76,6 +78,9 @@ const SUPPORTED_LOGIN_METHODS = new Set([
 ]);
 
 type Tx = Prisma.TransactionClient;
+type RequiredPolicyWithSupportedType = Prisma.RequiredDocumentPolicyGetPayload<{
+  include: { supportedOrganizationType: true };
+}>;
 
 type OrganizationListRequestContext = {
   requestId?: string;
@@ -192,6 +197,10 @@ export class CompanyProvisioningService {
       profile.organizationType ?? profile.type ?? dto.organizationType ?? dto.type,
       'organizationType',
     );
+    if (type === OrganizationType.PLATFORM) {
+      const platformExists = await this.prisma.organization.count({ where: { type: OrganizationType.PLATFORM } });
+      if (platformExists) throw new ConflictException('A platform organization already exists.');
+    }
     const name = this.requiredString(
       profile.displayName ?? profile.tradeName ?? profile.name ?? dto.name,
       'displayName',
@@ -208,6 +217,8 @@ export class CompanyProvisioningService {
     const subscription = dto.subscription?.planCode
       ? await this.prepareSubscription(dto.subscription)
       : undefined;
+    const activeLanguageCodes = (await this.prisma.platformMetadataRecord.findMany({ where: { category: 'LANGUAGE', isActive: true, isArchived: false }, orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }], select: { code: true } })).map((item) => item.code.toLowerCase());
+    const supportedLanguages = activeLanguageCodes.length ? activeLanguageCodes : ['en', 'ar', 'fr'];
 
     const result = await this.prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
@@ -288,7 +299,7 @@ export class CompanyProvisioningService {
               mode: 'DISABLED',
               theme: 'REAL_ESTATE',
               defaultLanguage: this.string(profile.defaultLanguage) ?? 'en',
-              supportedLanguages: ['en', 'ar', 'fr'],
+              supportedLanguages,
               publicHeadline: {
                 en: name,
                 ar: name,
@@ -758,6 +769,7 @@ export class CompanyProvisioningService {
 
   async createPlatformPlan(dto: PlatformPlanInputDto, user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.plans.manage');
+    await this.assertActivePlanCurrency(dto.priceCurrency);
     const plan = await this.prisma.platformPlan.create({ data: this.platformPlanData(dto, true) as any });
     await this.record(user, 'platform.plan.created', 'PlatformPlan', plan.id);
     return plan;
@@ -765,9 +777,46 @@ export class CompanyProvisioningService {
 
   async updatePlatformPlan(id: string, dto: PlatformPlanInputDto, user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.plans.manage');
+    await this.assertActivePlanCurrency(dto.priceCurrency);
+    const current = await this.prisma.platformPlan.findUnique({ where: { id } });
+    if (!current) throw new NotFoundException('Platform plan not found.');
+    if (dto.isArchived === true) dto.isActive = false;
     const plan = await this.prisma.platformPlan.update({ where: { id }, data: this.platformPlanData(dto, false) as any });
     await this.record(user, 'platform.plan.updated', 'PlatformPlan', plan.id);
     return plan;
+  }
+
+  async platformPlanDeletionImpact(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.plans.view');
+    const plan = await this.prisma.platformPlan.findUnique({ where: { id } });
+    if (!plan) throw new NotFoundException('Platform plan not found.');
+    const subscriptions = await this.prisma.organizationSubscription.count({ where: { planCode: plan.code } });
+    return { planId: id, subscriptions, canDelete: subscriptions === 0, disposition: subscriptions ? 'ARCHIVE_ONLY' : 'DELETE_ALLOWED' };
+  }
+
+  async copyPlatformPlan(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.plans.manage');
+    const plan = await this.prisma.platformPlan.findUnique({ where: { id } });
+    if (!plan) throw new NotFoundException('Platform plan not found.');
+    let code = `${plan.code}_copy`;
+    let suffix = 2;
+    while (await this.prisma.platformPlan.findUnique({ where: { code } })) code = `${plan.code}_copy_${suffix++}`;
+    const copied = await this.prisma.platformPlan.create({ data: { code, name: `${plan.name} copy`, localizedName: (plan.localizedName ?? undefined) as Prisma.InputJsonValue | undefined, description: plan.description, planType: plan.planType, priceAmount: plan.priceAmount, priceCurrency: plan.priceCurrency, billingCycle: plan.billingCycle, durationValue: plan.durationValue, durationUnit: plan.durationUnit, allowsNoExpiry: plan.allowsNoExpiry, trialDays: plan.trialDays, limits: plan.limits as Prisma.InputJsonValue, enabledModules: plan.enabledModules as Prisma.InputJsonValue, allowedLoginMethods: plan.allowedLoginMethods as Prisma.InputJsonValue, isActive: false, isArchived: false } });
+    await this.record(user, 'platform.plan.copied', 'PlatformPlan', copied.id, undefined, { sourcePlanId: id });
+    return copied;
+  }
+
+  async deletePlatformPlan(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.plans.manage');
+    const impact = await this.platformPlanDeletionImpact(id, user);
+    if (!impact.canDelete) {
+      const archived = await this.prisma.platformPlan.update({ where: { id }, data: { isArchived: true, isActive: false } });
+      await this.record(user, 'platform.plan.archived', 'PlatformPlan', id, undefined, { subscriptions: impact.subscriptions });
+      return { disposition: 'ARCHIVED', subscriptions: impact.subscriptions, plan: archived };
+    }
+    await this.prisma.platformPlan.delete({ where: { id } });
+    await this.record(user, 'platform.plan.deleted', 'PlatformPlan', id);
+    return { disposition: 'DELETED', subscriptions: 0 };
   }
 
   async listPlatformSubscriptions(user: AuthenticatedRequestUser) {
@@ -781,23 +830,74 @@ export class CompanyProvisioningService {
 
   async listRequiredDocumentPolicies(user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.verification_policies.view');
-    return this.prisma.requiredDocumentPolicy.findMany({
-      orderBy: [{ countryCode: 'asc' }, { organizationType: 'asc' }, { documentType: 'asc' }],
+    const policies = await this.prisma.requiredDocumentPolicy.findMany({
+      include: { supportedOrganizationType: true },
+      orderBy: [{ countryCode: 'asc' }, { legalForm: 'asc' }, { sortOrder: 'asc' }, { documentType: 'asc' }],
     });
+    return policies
+      .sort((left, right) =>
+        left.countryCode.localeCompare(right.countryCode)
+        || (left.supportedOrganizationType?.sortOrder ?? Number.MAX_SAFE_INTEGER) - (right.supportedOrganizationType?.sortOrder ?? Number.MAX_SAFE_INTEGER)
+        || (left.supportedOrganizationType?.code ?? '').localeCompare(right.supportedOrganizationType?.code ?? '')
+        || (left.legalForm ?? '').localeCompare(right.legalForm ?? '')
+        || left.sortOrder - right.sortOrder,
+      )
+      .map((policy) => this.requiredPolicyResponse(policy));
   }
 
-  async createRequiredDocumentPolicy(dto: RequiredDocumentPolicyInputDto, user: AuthenticatedRequestUser) {
+  async createRequiredDocumentPolicy(dto: CreateRequiredDocumentPolicyDto, user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.verification_policies.manage');
-    const policy = await this.prisma.requiredDocumentPolicy.create({ data: this.requiredPolicyData(dto, true) as any });
+    let policy;
+    try {
+      policy = await this.prisma.$transaction(async (tx) => {
+        const data = await this.requiredPolicyData(dto, true, tx);
+        await this.assertNoRequiredPolicyDuplicate(tx, data);
+        return tx.requiredDocumentPolicy.create({
+          data: data as Prisma.RequiredDocumentPolicyUncheckedCreateInput,
+          include: { supportedOrganizationType: true },
+        });
+      });
+    } catch (error) {
+      this.rethrowRequiredPolicyConflict(error);
+    }
     await this.record(user, 'platform.verification_policy.created', 'RequiredDocumentPolicy', policy.id);
-    return policy;
+    return this.requiredPolicyResponse(policy);
   }
 
-  async updateRequiredDocumentPolicy(id: string, dto: RequiredDocumentPolicyInputDto, user: AuthenticatedRequestUser) {
+  async updateRequiredDocumentPolicy(id: string, dto: UpdateRequiredDocumentPolicyDto, user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.verification_policies.manage');
-    const policy = await this.prisma.requiredDocumentPolicy.update({ where: { id }, data: this.requiredPolicyData(dto, false) as any });
+    let policy;
+    try {
+      policy = await this.prisma.$transaction(async (tx) => {
+        const current = await tx.requiredDocumentPolicy.findUnique({ where: { id } });
+        if (!current) throw new NotFoundException('Verification policy not found.');
+        const data = await this.requiredPolicyData(dto, false, tx, current);
+        await this.assertNoRequiredPolicyDuplicate(tx, data, current);
+        return tx.requiredDocumentPolicy.update({
+          where: { id },
+          data: data as Prisma.RequiredDocumentPolicyUncheckedUpdateInput,
+          include: { supportedOrganizationType: true },
+        });
+      });
+    } catch (error) {
+      this.rethrowRequiredPolicyConflict(error);
+    }
     await this.record(user, 'platform.verification_policy.updated', 'RequiredDocumentPolicy', policy.id);
-    return policy;
+    return this.requiredPolicyResponse(policy);
+  }
+
+  async deleteRequiredDocumentPolicy(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.verification_policies.manage');
+    const policy = await this.prisma.requiredDocumentPolicy.findUnique({ where: { id }, include: { _count: { select: { onboardingDocuments: true } } } });
+    if (!policy) throw new NotFoundException('Verification policy not found.');
+    if (policy._count.onboardingDocuments) {
+      const archived = await this.prisma.requiredDocumentPolicy.update({ where: { id }, data: { isArchived: true, isActive: false } });
+      await this.record(user, 'platform.verification_policy.archived', 'RequiredDocumentPolicy', id, undefined, { onboardingDocuments: policy._count.onboardingDocuments });
+      return { disposition: 'ARCHIVED', policy: archived };
+    }
+    await this.prisma.requiredDocumentPolicy.delete({ where: { id } });
+    await this.record(user, 'platform.verification_policy.deleted', 'RequiredDocumentPolicy', id);
+    return { disposition: 'DELETED' };
   }
 
   getPlatformModules(user: AuthenticatedRequestUser) {
@@ -976,52 +1076,39 @@ export class CompanyProvisioningService {
 
   private async policiesForOrganization(organization: {
     type: OrganizationType;
+    supportedOrganizationTypeId: string | null;
     country: string | null;
     profile: { countryCode: string | null; legalForm: OrganizationLegalForm | null } | null;
   }) {
     const countryCode = (organization.profile?.countryCode ?? organization.country ?? '').toUpperCase();
-    const policies = countryCode ? await this.prisma.requiredDocumentPolicy.findMany({
-      where: {
-        countryCode,
-        organizationType: organization.type,
-        isActive: true,
-        OR: [{ legalForm: organization.profile?.legalForm ?? null }, { legalForm: null }],
-      },
-    }) : [];
-    return policies.length ? policies : this.defaultPolicies(countryCode, organization.type);
-  }
-
-  private defaultPolicies(_countryCode: string, organizationType: OrganizationType) {
-    if (organizationType === OrganizationType.PLATFORM) return [];
-    if (organizationType === OrganizationType.INDIVIDUAL_BROKER) {
-      return [
-        this.defaultPolicy(OrganizationDocumentType.OWNER_ID_FRONT, false),
-        this.defaultPolicy(OrganizationDocumentType.OWNER_ID_BACK, false),
-        this.defaultPolicy(OrganizationDocumentType.BROKERAGE_LICENSE_OR_REGISTRATION, true),
-      ];
+    if (!countryCode) return [];
+    const common = { countryCode, isActive: true, isArchived: false } as const;
+    const ordered = [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }];
+    if (organization.supportedOrganizationTypeId && organization.profile?.legalForm) {
+      const exact = await this.prisma.requiredDocumentPolicy.findMany({
+        where: { ...common, supportedOrganizationTypeId: organization.supportedOrganizationTypeId, legalForm: organization.profile.legalForm },
+        orderBy: ordered,
+      });
+      if (exact.length) return exact;
     }
-    return [
-      this.defaultPolicy(OrganizationDocumentType.COMMERCIAL_REGISTER, true),
-      this.defaultPolicy(OrganizationDocumentType.TAX_CARD, false),
-      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_FRONT, false),
-      this.defaultPolicy(OrganizationDocumentType.OWNER_ID_BACK, false),
-      this.defaultPolicy(OrganizationDocumentType.AUTHORIZED_SIGNATORY_ID, false),
-      this.defaultPolicy(OrganizationDocumentType.AUTHORIZATION_OR_POWER_OF_ATTORNEY, false),
-    ];
-  }
-
-  private defaultPolicy(
-    documentType: OrganizationDocumentType,
-    requiresExpiryDate: boolean,
-    ownerDocumentRequired = false,
-  ) {
-    return {
-      documentType,
-      isRequired: true,
-      requiresExpiryDate,
-      ownerDocumentRequired,
-      appliesToOwnerRoles: ['OWNER', 'PARTNER', 'SHAREHOLDER', 'AUTHORIZED_SIGNATORY', 'LEGAL_REPRESENTATIVE'],
-    };
+    if (organization.supportedOrganizationTypeId) {
+      const generic = await this.prisma.requiredDocumentPolicy.findMany({
+        where: { ...common, supportedOrganizationTypeId: organization.supportedOrganizationTypeId, legalForm: null },
+        orderBy: ordered,
+      });
+      if (generic.length) return generic;
+    }
+    if (organization.profile?.legalForm) {
+      const legacyExact = await this.prisma.requiredDocumentPolicy.findMany({
+        where: { ...common, supportedOrganizationTypeId: null, organizationType: organization.type, legalForm: organization.profile.legalForm },
+        orderBy: ordered,
+      });
+      if (legacyExact.length) return legacyExact;
+    }
+    return this.prisma.requiredDocumentPolicy.findMany({
+      where: { ...common, supportedOrganizationTypeId: null, organizationType: organization.type, legalForm: null },
+      orderBy: ordered,
+    });
   }
 
   private ownerRoleApplies(role: string, policies: Array<{ appliesToOwnerRoles: any }>) {
@@ -1062,15 +1149,36 @@ export class CompanyProvisioningService {
     };
   }
 
-  private requiredPolicyData(dto: RequiredDocumentPolicyInputDto, creating: boolean) {
+  private async assertActivePlanCurrency(currency: string | undefined) {
+    if (!currency) return;
+    const code = currency.trim().toUpperCase();
+    const record = await this.prisma.platformMetadataRecord.findUnique({ where: { category_code: { category: 'CURRENCY', code } } });
+    if (!record || !record.isActive || record.isArchived) throw new BadRequestException('Plan currency must be an active platform currency.');
+  }
+
+  private async requiredPolicyData(
+    dto: RequiredDocumentPolicyInputDto,
+    creating: boolean,
+    db: Pick<Tx, 'supportedOrganizationType'>,
+    current?: {
+      countryCode: string;
+      supportedOrganizationTypeId: string | null;
+      organizationType: OrganizationType | null;
+      legalForm: OrganizationLegalForm | null;
+      documentType: OrganizationDocumentType;
+      isArchived: boolean;
+    },
+  ) {
+    const supportedOrganizationTypeId = creating
+      ? this.requiredString(dto.supportedOrganizationTypeId, 'supportedOrganizationTypeId')
+      : this.string(dto.supportedOrganizationTypeId);
+    const supportedType = supportedOrganizationTypeId
+      ? await this.resolveSupportedOrganizationTypeForPolicy(db, supportedOrganizationTypeId)
+      : undefined;
     return {
       countryCode: creating ? this.requiredString(dto.countryCode, 'countryCode').toUpperCase() : this.string(dto.countryCode)?.toUpperCase(),
-      organizationType: creating
-        ? this.enumValue(OrganizationType, dto.organizationType, 'organizationType')
-        : dto.organizationType
-          ? this.enumValue(OrganizationType, dto.organizationType, 'organizationType')
-          : undefined,
-      legalForm: dto.legalForm || null,
+      organizationType: supportedType ? supportedType.legacyOrganizationType : undefined,
+      legalForm: creating ? dto.legalForm || null : dto.legalForm === undefined ? undefined : dto.legalForm || null,
       documentType: creating
         ? this.enumValue(OrganizationDocumentType, dto.documentType, 'documentType')
         : dto.documentType
@@ -1081,7 +1189,92 @@ export class CompanyProvisioningService {
       ownerDocumentRequired: this.booleanOrUndefined(dto.ownerDocumentRequired),
       appliesToOwnerRoles: dto.appliesToOwnerRoles ? (dto.appliesToOwnerRoles as Prisma.InputJsonValue) : undefined,
       isActive: this.booleanOrUndefined(dto.isActive),
+      supportedOrganizationTypeId,
+      requiredFieldCodes: dto.requiredFieldCodes ? this.stringArray(dto.requiredFieldCodes) : undefined,
+      acceptedMimeTypes: dto.acceptedMimeTypes ? this.stringArray(dto.acceptedMimeTypes) : undefined,
+      maxFileSizeMb: this.optionalInt(dto.maxFileSizeMb, 1, 25),
+      minimumConfidence: dto.minimumConfidence === undefined ? undefined : this.decimal(dto.minimumConfidence, 'minimumConfidence'),
+      blocksActivation: this.booleanOrUndefined(dto.blocksActivation),
+      sortOrder: this.optionalInt(dto.sortOrder, 0, 100000),
+      isArchived: this.booleanOrUndefined(dto.isArchived),
       notes: this.string(dto.notes),
+    };
+  }
+
+  private async resolveSupportedOrganizationTypeForPolicy(
+    db: Pick<Tx, 'supportedOrganizationType'>,
+    id: string,
+  ) {
+    const type = await db.supportedOrganizationType.findUnique({ where: { id } });
+    if (!type) throw new NotFoundException('Supported organization type not found.');
+    if (!type.isActive || type.isArchived) {
+      throw new BadRequestException('Supported organization type must be active and not archived.');
+    }
+    if (type.code.toUpperCase() === 'PLATFORM' || type.legacyOrganizationType === OrganizationType.PLATFORM) {
+      throw new BadRequestException('Verification policies cannot be created for PLATFORM.');
+    }
+    return type;
+  }
+
+  private async assertNoRequiredPolicyDuplicate(
+    tx: Tx,
+    data: {
+      countryCode?: string;
+      supportedOrganizationTypeId?: string | null;
+      legalForm?: OrganizationLegalForm | null;
+      documentType?: OrganizationDocumentType;
+      isArchived?: boolean;
+    },
+    current?: {
+      id: string;
+      countryCode: string;
+      supportedOrganizationTypeId: string | null;
+      legalForm: OrganizationLegalForm | null;
+      documentType: OrganizationDocumentType;
+      isArchived: boolean;
+    },
+  ) {
+    const countryCode = data.countryCode ?? current?.countryCode;
+    const typeId = data.supportedOrganizationTypeId ?? current?.supportedOrganizationTypeId;
+    const legalForm = data.legalForm === undefined ? current?.legalForm ?? null : data.legalForm;
+    const documentType = data.documentType ?? current?.documentType;
+    const isArchived = data.isArchived ?? current?.isArchived ?? false;
+    if (isArchived || !countryCode || !typeId || !documentType) return;
+    const duplicate = await tx.requiredDocumentPolicy.findFirst({
+      where: {
+        countryCode,
+        supportedOrganizationTypeId: typeId,
+        legalForm,
+        documentType,
+        isArchived: false,
+        ...(current ? { id: { not: current.id } } : {}),
+      },
+      select: { id: true },
+    });
+    if (duplicate) this.throwRequiredPolicyConflict();
+  }
+
+  private throwRequiredPolicyConflict(): never {
+    throw new ConflictException({
+      code: 'VERIFICATION_POLICY_ALREADY_EXISTS',
+      message: 'An active verification policy already exists for this country, organization type, legal form, and document type.',
+    });
+  }
+
+  private rethrowRequiredPolicyConflict(error: unknown): never {
+    if (error instanceof ConflictException) throw error;
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      this.throwRequiredPolicyConflict();
+    }
+    throw error;
+  }
+
+  private requiredPolicyResponse(policy: RequiredPolicyWithSupportedType) {
+    return {
+      ...policy,
+      supportedOrganizationTypeCode: policy.supportedOrganizationType?.code ?? null,
+      supportedOrganizationTypeNames: policy.supportedOrganizationType?.names ?? null,
+      legacyOrganizationType: policy.organizationType,
     };
   }
 
@@ -1383,6 +1576,8 @@ export class CompanyProvisioningService {
 
   async createPlatformMetadata(dto: PlatformMetadataInputDto, user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.metadata.manage');
+    await this.validateMetadataConfiguration(dto);
+    if (dto.category?.trim().toUpperCase() === 'LANGUAGE' && dto.configuration?.isDefault === true) await this.clearDefaultLanguage();
     const created = await this.prisma.platformMetadataRecord.create({ data: this.platformMetadataData(dto, true) as any });
     await this.record(user, 'platform.metadata.created', 'PlatformMetadataRecord', created.id);
     return created;
@@ -1392,12 +1587,31 @@ export class CompanyProvisioningService {
     this.assertPlatform(user, 'platform.metadata.manage');
     const current = await this.prisma.platformMetadataRecord.findUnique({ where: { id } });
     if (!current) throw new NotFoundException('Platform metadata record not found.');
+    await this.validateMetadataConfiguration({ ...dto, category: dto.category ?? current.category, code: dto.code ?? current.code }, id);
+    if (current.category === 'LANGUAGE' && dto.configuration?.isDefault === true) await this.clearDefaultLanguage(id);
+    if (current.category === 'LANGUAGE' && this.metadataIsDefault(current.configuration) && (dto.isActive === false || dto.isArchived === true)) throw new ConflictException('Assign another default language before disabling or archiving this language.');
     const updated = await this.prisma.platformMetadataRecord.update({
       where: { id },
       data: this.platformMetadataData({ ...dto, category: dto.category ?? current.category, code: dto.code ?? current.code }, false) as any,
     });
     await this.record(user, 'platform.metadata.updated', 'PlatformMetadataRecord', updated.id);
     return updated;
+  }
+
+  async deletePlatformMetadata(id: string, user: AuthenticatedRequestUser) {
+    this.assertPlatform(user, 'platform.metadata.manage');
+    const record = await this.prisma.platformMetadataRecord.findUnique({ where: { id } });
+    if (!record) throw new NotFoundException('Platform metadata record not found.');
+    if (record.category === 'LANGUAGE' && this.metadataIsDefault(record.configuration)) throw new ConflictException('The default language cannot be deleted. Assign a replacement first.');
+    const impact = await this.metadataDeletionImpact(record.category, record.code);
+    if (impact.references > 0) {
+      const archived = await this.prisma.platformMetadataRecord.update({ where: { id }, data: { isArchived: true, isActive: false } });
+      await this.record(user, 'platform.metadata.archived', 'PlatformMetadataRecord', id, undefined, impact);
+      return { disposition: 'ARCHIVED', impact, record: archived };
+    }
+    await this.prisma.platformMetadataRecord.delete({ where: { id } });
+    await this.record(user, 'platform.metadata.deleted', 'PlatformMetadataRecord', id);
+    return { disposition: 'DELETED', impact };
   }
 
   private safeErrorName(error: unknown) {
@@ -2116,8 +2330,9 @@ export class CompanyProvisioningService {
     entityType: string,
     entityId: string,
     organizationId = actor.organizationId,
+    metadata?: Record<string, unknown>,
   ) {
-    return this.auditLogs.record({ action, entityType, entityId, organizationId, actor });
+    return this.auditLogs.record({ action, entityType, entityId, organizationId, actor, metadata });
   }
 
   private async assertOfficeParent(organizationId: string, dto: OfficeInputDto, currentId?: string) {
@@ -2193,11 +2408,73 @@ export class CompanyProvisioningService {
     return {
       category,
       code: creating ? this.requiredString(code, 'code') : code,
-      localizedName: creating || dto.localizedName ? this.localizedTitle(dto.localizedName) : undefined,
+      localizedName: creating || dto.localizedName ? this.localizedMetadataName(dto.localizedName) : undefined,
       configuration: dto.configuration ? this.jsonObject(dto.configuration) as Prisma.InputJsonValue : undefined,
       sortOrder: this.optionalInt(dto.sortOrder, 0, 100000),
       isActive: this.booleanOrUndefined(dto.isActive),
+      isArchived: this.booleanOrUndefined(dto.isArchived),
     };
+  }
+
+  private localizedMetadataName(value: unknown) {
+    const source = this.jsonObject(value);
+    const normalized: Record<string, string> = {};
+    for (const [locale, candidate] of Object.entries(source)) {
+      if (!/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/.test(locale)) continue;
+      const title = this.string(candidate);
+      if (title) normalized[locale.toLowerCase()] = title.slice(0, 120);
+    }
+    if (!normalized.en) throw new BadRequestException('English metadata name is required as a core fallback.');
+    return normalized as Prisma.InputJsonValue;
+  }
+
+  private async validateMetadataConfiguration(dto: PlatformMetadataInputDto, currentId?: string) {
+    const category = dto.category?.trim().toUpperCase();
+    const code = dto.code?.trim().toUpperCase();
+    const config = dto.configuration ?? {};
+    if (category === 'LANGUAGE') {
+      const direction = typeof config.direction === 'string' ? config.direction.toUpperCase() : 'LTR';
+      if (!['RTL', 'LTR'].includes(direction)) throw new BadRequestException('Language direction must be RTL or LTR.');
+      if (config.fallbackLanguageCode && String(config.fallbackLanguageCode).toUpperCase() === code) throw new BadRequestException('A language cannot fall back to itself.');
+      if (config.isDefault === true && (dto.isActive === false || dto.isArchived === true)) throw new BadRequestException('The default language must remain active and unarchived.');
+    }
+    if (category === 'COUNTRY') {
+      const defaultCurrencyCode = typeof config.defaultCurrencyCode === 'string' ? config.defaultCurrencyCode.trim().toUpperCase() : undefined;
+      const allowed = Array.isArray(config.allowedCurrencyCodes) ? config.allowedCurrencyCodes.filter((item): item is string => typeof item === 'string').map((item) => item.trim().toUpperCase()) : [];
+      if (defaultCurrencyCode && !allowed.includes(defaultCurrencyCode)) throw new BadRequestException('Country default currency must be included in allowedCurrencyCodes.');
+      for (const currencyCode of new Set(allowed)) {
+        const currency = await this.prisma.platformMetadataRecord.findUnique({ where: { category_code: { category: 'CURRENCY', code: currencyCode } } });
+        if (!currency || !currency.isActive || currency.isArchived) throw new BadRequestException(`Country currency ${currencyCode} is not active.`);
+      }
+    }
+    if (category === 'CURRENCY' && code && !/^[A-Z]{3}$/.test(code)) throw new BadRequestException('Currency code must follow ISO 4217 format.');
+    if (currentId && dto.isArchived && dto.isActive) throw new BadRequestException('Archived metadata cannot remain active.');
+  }
+
+  private metadataIsDefault(configuration: Prisma.JsonValue) {
+    return Boolean(configuration && typeof configuration === 'object' && !Array.isArray(configuration) && (configuration as Record<string, unknown>).isDefault === true);
+  }
+
+  private async clearDefaultLanguage(exceptId?: string) {
+    const records = await this.prisma.platformMetadataRecord.findMany({ where: { category: 'LANGUAGE', ...(exceptId ? { id: { not: exceptId } } : {}) } });
+    const updates = records.filter((record) => this.metadataIsDefault(record.configuration)).map((record) => this.prisma.platformMetadataRecord.update({ where: { id: record.id }, data: { configuration: { ...(record.configuration as Record<string, unknown>), isDefault: false } as Prisma.InputJsonValue } }));
+    if (updates.length) await this.prisma.$transaction(updates);
+  }
+
+  private async metadataDeletionImpact(category: string, code: string) {
+    if (category === 'LANGUAGE') {
+      const [organizations, profiles] = await Promise.all([this.prisma.organization.count({ where: { defaultLanguage: { equals: code, mode: 'insensitive' } } }), this.prisma.organizationProfile.count({ where: { preferredLanguage: { equals: code, mode: 'insensitive' } } })]);
+      return { references: organizations + profiles, organizations, profiles };
+    }
+    if (category === 'CURRENCY') {
+      const [organizations, profiles, plans] = await Promise.all([this.prisma.organization.count({ where: { currency: { equals: code, mode: 'insensitive' } } }), this.prisma.organizationProfile.count({ where: { defaultCurrency: { equals: code, mode: 'insensitive' } } }), this.prisma.platformPlan.count({ where: { priceCurrency: code } })]);
+      return { references: organizations + profiles + plans, organizations, profiles, plans };
+    }
+    if (category === 'COUNTRY') {
+      const [organizations, profiles, policies] = await Promise.all([this.prisma.organization.count({ where: { country: { equals: code, mode: 'insensitive' } } }), this.prisma.organizationProfile.count({ where: { countryCode: { equals: code, mode: 'insensitive' } } }), this.prisma.requiredDocumentPolicy.count({ where: { countryCode: code } })]);
+      return { references: organizations + profiles + policies, organizations, profiles, policies };
+    }
+    return { references: 0 };
   }
 
   private r2Configured() {

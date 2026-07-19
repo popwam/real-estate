@@ -147,3 +147,249 @@ The read-only `pnpm --filter api platform:doctor` result against the configured 
 - Overall readiness: **NO-GO**.
 
 Do not begin P1 until an authorized operator applies the additive migration in the intended environment, runs the idempotent RBAC seed and (only if needed) `CONFIRM_PLATFORM_REPAIR=true pnpm --filter api platform:repair`, reruns the doctor to `GO`, and completes manual EN/AR/FR Platform Owner acceptance checks. The repair does not create plans, countries, currencies, languages, subscriptions, organizations, or other business records.
+
+---
+
+# Platform metadata and document-first onboarding implementation — 2026-07-17
+
+## Executive summary
+
+Implemented an additive, backward-compatible foundation for dynamic platform metadata, supported organization types, exchange rates, safe plan/policy/unit lifecycle operations, and document-first organization onboarding. Existing organizations retain the legacy `Organization.type`; a nullable supported-type relation is added and backfilled only for exact legacy matches. No migration, seed, deploy, Railway variable change, commit, or push was performed. `DOCUMENT_EXTRACTION_AUTO_RUN` remains false.
+
+## Implemented behavior
+
+- Reused `PlatformMetadataRecord` for languages, countries, and currencies. Added archive state, dynamic translation-map support, default-language protection, safe deletion impact checks, active-currency validation, and country default/allowed-currency validation.
+- Added safe public country-icon upload for SVG/PNG/WebP. The endpoint checks MIME, matching extension, size, empty input, and rejects SVG scripts, event handlers, active/external links, `foreignObject`, iframe/object/embed content. Only an R2 object key and MIME metadata are stored.
+- Added dynamic `SupportedOrganizationType` management while preserving the legacy enum. `PLATFORM` is filtered out of the new wizard and protected in the API; a second Platform organization returns a conflict.
+- Added manual exchange-rate storage and provider-status reporting. API refresh stays disabled in manual mode when `FX_PROVIDER`/`FX_API_KEY` are absent; no external FX provider was selected or contacted.
+- Expanded verification policies with supported type, field coverage, MIME limits, size, confidence, activation blocking, ordering, and archive state. Matching prefers country + type + legal form, then country + type without legal form. Removed the old implicit default-document fallback: no matching policy means no required documents.
+- Added plan deletion impact, copy, activation/deactivation, archive-on-use, and delete-when-unused APIs. Plan currencies must be active metadata currencies. The Admin page now shows plans as cards, opens only one editor, and keeps the create form behind an explicit add button.
+- Added unit project/building/floor validation, deletion impact, archive, and delete-when-unused endpoints. Existing assignments or QR passes force archive instead of deletion.
+- Replaced the new-organization Admin page with a document-first wizard. It accepts country, supported type, optional legal form, and operational settings only; it does not ask for legal name, registration, tax, incorporation, or legal address before documents.
+- Added resumable onboarding sessions with expiry and statuses: `DRAFT`, `DOCUMENTS_REQUIRED`, `EXTRACTION_PENDING`, `REVIEW_REQUIRED`, `READY_TO_CREATE`, `COMPLETED`, `CANCELLED`, `EXPIRED`.
+- Added private onboarding documents, quality results/warnings, structured extraction results, multi-source field evidence, confidence, review state, corrections, source retention, conflicts, missing-field calculation, next-document ranking, and transactional organization creation only from `READY_TO_CREATE`.
+- Added audit events for session creation/update/cancel, document upload, extraction start/success/failure, field confirmation/correction/rejection, organization creation, metadata lifecycle, country icon upload, plans, policies, supported types, and exchange rates. Raw document text, signed URLs, provider tokens, and document contents are not written to application logs.
+- Added Cloudflare Workers AI adapter configuration for vision/text model names, timeout, bounded retry, AI Gateway authentication, and disabled AI Gateway payload logging. Non-retryable 4xx responses are not retried. PDF extraction returns a clear error until a Railway-compatible page-to-image adapter is deliberately added; PDFs are not sent blindly to an image model.
+- Added focused tests for no-policy behavior, PLATFORM rejection, empty/unsupported files, signature mismatch, protected PDFs, and low-resolution PNGs.
+
+## Database and relations
+
+New tables:
+
+- `supported_organization_types`
+- `exchange_rates`
+- `organization_onboarding_sessions`
+- `organization_onboarding_documents`
+- `organization_field_evidence`
+
+Extended tables:
+
+- `organizations.supportedOrganizationTypeId` (nullable FK; legacy `type` preserved)
+- `required_document_policies` (supported type, covered fields, MIME/size/confidence/order/archive controls)
+- `platform_metadata_records.isArchived`
+- `units.archivedAt`
+
+Important relations:
+
+- supported organization type → organizations, policies, onboarding sessions
+- onboarding session → creator, supported type, documents, field evidence, and one completed organization
+- onboarding document → private uploaded file, matched policy, and multiple evidence rows
+- evidence → session, source document, and optional reviewer
+
+## Migration
+
+New migration: `20260717170000_platform_document_first_onboarding`.
+
+It is additive and data-preserving: it creates enums/tables/indexes/FKs, adds nullable or safely defaulted columns, inserts four compatibility supported-type rows with `ON CONFLICT DO NOTHING`, and backfills supported-type links only where the legacy enum has an exact match. It contains no `DROP`, destructive SQL, status rewrite, or deletion. The pre-existing untracked migration `20260717130000_sync_organization_status_enum` was not edited.
+
+## APIs added or changed
+
+Metadata and settings:
+
+- `DELETE /platform/settings/metadata/:metadataId`
+- `POST /platform/settings/countries/:id/icon`
+- `GET|POST /platform/settings/organization-types`
+- `PATCH|DELETE /platform/settings/organization-types/:id`
+- `GET|POST /platform/settings/exchange-rates`
+- `GET /platform/settings/exchange-rates/provider-status`
+- `PATCH|DELETE /platform/settings/exchange-rates/:id`
+- `GET /platform/settings/plans/:planId/deletion-impact`
+- `POST /platform/settings/plans/:planId/copy`
+- `DELETE /platform/settings/plans/:planId`
+- `DELETE /platform/settings/verification-policies/:policyId`
+
+Document-first onboarding:
+
+- `POST /platform/onboarding`
+- `GET|PATCH /platform/onboarding/:id`
+- `GET /platform/onboarding/:id/required-documents`
+- `POST /platform/onboarding/:id/documents`
+- `POST /platform/onboarding/:id/documents/:documentId/extract`
+- `PATCH /platform/onboarding/:id/fields/:evidenceId`
+- `GET /platform/onboarding/:id/progress`
+- `POST /platform/onboarding/:id/complete`
+- `POST /platform/onboarding/:id/cancel`
+
+Units:
+
+- `GET /real-estate/units/:id/deletion-impact`
+- `POST /real-estate/units/:id/archive`
+- `DELETE /real-estate/units/:id`
+- existing `PATCH /real-estate/units/:id` now validates project/building/floor changes
+
+## Admin pages changed
+
+- `/platform/organizations/new`: document-first wizard with selection, upload/processing, evidence review, missing/conflict summary, and final creation.
+- `/platform/settings/plans`: list/card-first UI, explicit add form, single-plan edit, copy, state toggle, and confirmed safe delete/archive.
+- Existing metadata and verification-policy pages continue to use the current design system and APIs. Full dedicated exchange-rate/supported-type CRUD pages and a country-icon upload control remain to be surfaced in Admin Web; their protected APIs are implemented.
+
+## Cloudflare extraction path
+
+1. Validate session, active policy, MIME, size, signature, PDF protection/page estimate, and available image dimensions.
+2. Save accepted input privately to quarantine through the existing `FileStorageService`; only bucket/object key are persisted.
+3. Manual extraction endpoint reads the private object and calls the configured Cloudflare Workers AI vision model through the existing AI Gateway.
+4. Validate and bound the returned structured object before storage; normalize Unicode whitespace and Arabic/Persian digits while retaining raw values.
+5. Store evidence rows, require review for sensitive fields, detect conflicts, recompute missing fields, and rank the next policy document.
+6. Create the organization transactionally only after all required fields are resolved and the session is `READY_TO_CREATE`.
+
+Models/variables found and reused without exposing values: `CLOUDFLARE_AI_MODEL`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_AI_GATEWAY_ID`, `CLOUDFLARE_AI_GATEWAY_TOKEN`, `R2_COMPANY_DOCUMENTS_*`, `R2_QUARANTINE_UPLOADS_*`, `R2_PUBLIC_MEDIA_*`, and the existing `FileStorageService` purpose routing.
+
+New `.env.example` names:
+
+- `CLOUDFLARE_DOCUMENT_VISION_MODEL`
+- `CLOUDFLARE_DOCUMENT_TEXT_MODEL`
+- `DOCUMENT_EXTRACTION_MAX_PAGES`
+- `DOCUMENT_EXTRACTION_TIMEOUT_MS`
+- `DOCUMENT_EXTRACTION_MAX_RETRIES`
+- `FX_PROVIDER`
+- `FX_API_KEY`
+- `FX_BASE_CURRENCY`
+- `FX_REFRESH_INTERVAL_HOURS`
+
+## Verification results
+
+- Prisma validate: passed on the final schema.
+- Prisma generate: passed on the final schema.
+- API build: passed.
+- API unit tests: 32 suites passed; 151 tests passed; 1 existing test skipped.
+- New onboarding/quality tests: 2 suites passed; 6 tests passed.
+- Admin Web tests: 2 files passed; 7 tests passed.
+- Admin Web ESLint: passed.
+- Admin Web production build/typecheck: passed; 123 routes generated.
+- New onboarding module ESLint: implementation has no errors; test mocks retain typed-boundary warnings. The project-wide API lint remains failed with 3,699 errors and 262 warnings across pre-existing files (`no-unsafe-*`, existing test mocks, and existing services). Its `--fix` side effects were removed; no unrelated formatting changes remain in `git diff`.
+- `git diff --check`: passed (line-ending notices only).
+- `prisma migrate status`: not run because the configured `DATABASE_URL` was classified as remote/managed. This avoided touching or interrogating staging/production.
+- API e2e tests: not run because they require the configured database target, which is remote/managed.
+
+## Incomplete items and real reasons
+
+- PDF-to-image extraction adapter: not implemented because no compatible PDF rasterization dependency exists in the API package and relying on an undocumented Railway system binary would be unsafe. PDF uploads receive deterministic quality checks, but manual extraction clearly asks for a document image until an adapter is selected and deployed.
+- Signed download URL generation: the current storage service only supports private put/read. This implementation does not invent permanent public URLs; adding short-lived presigning requires an explicit storage API extension and tests.
+- Dedicated Admin CRUD screens for exchange rates and supported organization types, metadata-specific editors for all requested language/country/currency fields, country-icon upload control, and full unit archive/delete controls remain incomplete. The underlying protected APIs and data rules are present.
+- Advanced blur/crop/darkness analysis is not claimed. Confirmed format/signature/size/password/page/dimension checks are implemented; uncertain dimensions and page counts are warnings.
+- Organization post-creation setup (first admin, subscription, limits, offices, attendance) remains in the existing follow-up flow; onboarding creates only the reviewed draft organization.
+- No live Cloudflare/R2 request was executed because this task does not authorize consuming external resources or exposing configured secrets during local verification.
+
+## Deployment risks
+
+- Apply the new migration before deploying API code; generated Prisma access to new tables/columns will otherwise fail.
+- Back up and review migration SQL, especially enum names and exact legacy-type backfill rows, against the target schema.
+- Seed the expanded permission catalog before manual acceptance; otherwise new endpoints correctly return 403.
+- Configure both document model variables and verify the chosen vision model's actual image input contract in the target Cloudflare account.
+- Keep `DOCUMENT_EXTRACTION_AUTO_RUN=false`; the wizard calls extraction only from the explicit manual action.
+- Do not enable PDF extraction until a tested rasterization adapter and Railway runtime dependency are available.
+
+## Manual application order (do not run automatically)
+
+1. Back up the target database and review `apps/api/prisma/migrations/20260717170000_platform_document_first_onboarding/migration.sql`.
+2. Set the new environment variables with real values in the deployment platform; keep `DOCUMENT_EXTRACTION_AUTO_RUN=false`.
+3. Run `pnpm --filter api run prisma:validate` and `pnpm --filter api run prisma:generate` in the release workspace.
+4. Apply migrations through the approved release pipeline (`prisma migrate deploy`) only after explicit target confirmation.
+5. Run the existing idempotent RBAC seed/repair workflow to add the new catalog keys and Platform Owner mappings; do not reset passwords.
+6. Build API and Admin Web, then deploy through the normal reviewed pipeline.
+7. Run read-only health/migration checks, then the manual acceptance flow below.
+
+## Platform Owner manual acceptance
+
+1. Add a fourth language, set direction/fallback/active state through API, verify it appears in metadata lists, and verify the current core translation coverage notice remains honest.
+2. Configure EGP as active, set Egypt's allowed currencies to include EGP, then set EGP as default; confirm a disallowed default is rejected.
+3. Upload valid PNG/WebP/SVG country icons and confirm a script/external-link SVG is rejected.
+4. Create a non-PLATFORM supported type; verify PLATFORM is absent from onboarding and a second PLATFORM API attempt returns 409.
+5. Confirm a type/country with no active policy requests no document; add an ordered policy and confirm only its documents appear.
+6. Create/copy/edit/delete an unused plan; attach a subscription and confirm deletion archives the used plan with impact count.
+7. Start onboarding, upload an image, run extraction manually, review source/confidence, correct one field with a reason, create a conflict with a second document, resolve it, and verify creation is blocked until ready.
+8. Verify the created organization retains its legacy type plus supported-type link and that existing organizations still open/edit normally.
+9. Test unit edit/project-building validation, deletion impact, unused deletion, and archive-on-reference.
+10. Verify unauthorized roles receive 403, validation returns 400, expected conflicts return 409, and internal errors show a Request ID without Prisma details or secrets.
+# Dynamic verification policy type correction — 2026-07-18
+
+## Discovered problem
+
+`RequiredDocumentPolicy` still treated the legacy `OrganizationType` enum as the required source of truth. New policies accepted `organizationType` directly, while `supportedOrganizationTypeId` was optional, and the legacy composite unique constraint prevented distinct dynamic organization types from sharing one legacy enum value.
+
+## Files changed for this correction
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260717170000_platform_document_first_onboarding/migration.sql`
+- `apps/api/src/modules/company-provisioning/dto/company-provisioning.dto.ts`
+- `apps/api/src/modules/company-provisioning/company-provisioning.controller.ts`
+- `apps/api/src/modules/company-provisioning/company-provisioning.service.ts`
+- `apps/api/src/modules/company-provisioning/verification-policy.service.spec.ts`
+- `apps/api/src/modules/platform-onboarding/platform-onboarding.service.ts`
+- `apps/api/src/modules/platform-onboarding/platform-onboarding.service.spec.ts`
+- `apps/api/src/scripts/reset-platform-owner-only.ts`
+- `apps/admin-web/src/components/platform/platform-settings-pages.tsx`
+- `apps/admin-web/src/lib/verification-policy-options.ts`
+- `apps/admin-web/src/lib/verification-policy-options.test.ts`
+- `apps/admin-web/src/types/platform.ts`
+- `IMPLEMENTATION_NOTES.md`
+
+## Schema and backend behavior
+
+- `RequiredDocumentPolicy.organizationType` is now nullable and retained only as a compatibility field.
+- `supportedOrganizationTypeId` remains nullable in the database so unlinked legacy policies remain valid.
+- Creating a policy requires `supportedOrganizationTypeId`; the backend resolves the referenced active, non-archived supported type and derives `organizationType` from its `legacyOrganizationType` value. Custom types therefore store `organizationType = null`.
+- Updating `supportedOrganizationTypeId` recalculates the legacy value. A client-supplied `organizationType` is never used as the source of truth.
+- `PLATFORM` is rejected by both dynamic code and legacy enum value.
+- Create and update perform an unarchived-policy duplicate check inside the transaction. Duplicate checks and PostgreSQL `P2002` uniqueness races return HTTP 409 with `VERIFICATION_POLICY_ALREADY_EXISTS`.
+- Policy listing includes the supported type and exposes its id, code, translated names, and a legacy value for compatibility. Ordering uses country, supported-type sort order/code, legal form, and policy sort order.
+- Onboarding and activation matching now use the dynamic type first, then its generic `legalForm = null` policy, and only then fall back to old policies whose `supportedOrganizationTypeId` is null. Archived and inactive policies are excluded.
+- The Admin policy selector reads active supported organization types, displays the localized name with the code fallback, and excludes `PLATFORM`, archived, and inactive types.
+
+## Correction to the unapplied migration
+
+Migration `20260717170000_platform_document_first_onboarding` now drops `NOT NULL` from the legacy `organizationType` column, adds and backfills nullable `supportedOrganizationTypeId`, and preserves policies that cannot be linked. It drops only this obsolete index:
+
+- `required_document_policies_countryCode_organizationType_legalForm_documentType_key`
+
+Dropping that index does not delete or modify policy data. It is replaced by these PostgreSQL partial unique indexes for non-archived, dynamically linked policies:
+
+- `required_document_policies_unarchived_dynamic_type_no_legal_form_key` on `(countryCode, supportedOrganizationTypeId, documentType)` where `isArchived = false`, `legalForm IS NULL`, and `supportedOrganizationTypeId IS NOT NULL`.
+- `required_document_policies_unarchived_dynamic_type_legal_form_key` on `(countryCode, supportedOrganizationTypeId, legalForm, documentType)` where `isArchived = false`, `legalForm IS NOT NULL`, and `supportedOrganizationTypeId IS NOT NULL`.
+
+No table or column is dropped, and no existing policy row is deleted.
+
+Before deployment, review the target database for duplicate non-archived policies, especially rows with `legalForm IS NULL`. PostgreSQL's old nullable composite unique rule may have allowed such duplicates. If any exist, creation of the new partial unique index will stop the migration safely rather than deleting or rewriting rows; duplicates must be reviewed manually before retrying.
+
+## Verification results
+
+- `prisma format`: passed.
+- `prisma validate`: passed.
+- `prisma generate`: passed with Prisma Client 7.8.0.
+- API verification-policy and Onboarding tests: 2 suites passed, 13 tests passed.
+- API build: passed.
+- Admin verification-policy options test: 1 file passed, 2 tests passed.
+- Admin production build: passed; 123 pages generated.
+
+The first API build exposed a compile-time reference in `reset-platform-owner-only.ts` to the removed Prisma composite key. The script was updated (not executed) to resolve the dynamic `BROKERAGE` type and use find/update-or-create semantics. The subsequent API build passed.
+
+## Deployment state
+
+The migration was not applied. No `migrate deploy`, `db push`, `migrate reset`, commit, push, or deployment command was run. No database connection was made for this correction.
+
+## RBAC catalog consistency repair — 2026-07-19
+
+- Added the four existing recruitment role permissions (`hr.applicants.create`, `hr.applicants.review`, `hr.interviews.view`, and `hr.interviews.manage`) to `BASE_PERMISSIONS`; no permission was removed or renamed.
+- Added a centralized RBAC invariant test requiring every permission in every `ROLE_PERMISSIONS` mapping to exist in `BASE_PERMISSIONS`.
+- Restricted `platform-rbac-repair.ts` failure output to a sanitized error name, Prisma code, model name, and short redacted message. Database URLs and common secret assignments are removed.
+- Centralized RBAC test passed (7/7), API build passed, and the production API TypeScript check passed. The full test-inclusive TypeScript check remains blocked by the pre-existing `files.service.spec.ts:143` nullability error. No database, migration, reset, commit, push, or deployment command was run.
