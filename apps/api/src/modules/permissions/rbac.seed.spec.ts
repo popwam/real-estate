@@ -79,6 +79,18 @@ describe('RBAC seed definitions', () => {
     expect([...used].filter((permission) => !catalog.has(permission))).toEqual([]);
   });
 
+  it('contains every role permission in the base permission catalog', () => {
+    const catalog = new Set<string>(BASE_PERMISSIONS);
+    const missing = Object.entries(ROLE_PERMISSIONS).flatMap(
+      ([role, permissions]) =>
+        permissions
+          .filter((permission) => !catalog.has(permission))
+          .map((permission) => ({ role, permission })),
+    );
+
+    expect(missing).toEqual([]);
+  });
+
   it('uses idempotent upserts when repairing role assignments', async () => {
     const permission = {
       findUniqueOrThrow: jest.fn(({ where }) => ({ id: `id:${where.key}` })),

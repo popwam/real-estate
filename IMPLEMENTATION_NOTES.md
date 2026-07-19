@@ -386,3 +386,10 @@ The first API build exposed a compile-time reference in `reset-platform-owner-on
 ## Deployment state
 
 The migration was not applied. No `migrate deploy`, `db push`, `migrate reset`, commit, push, or deployment command was run. No database connection was made for this correction.
+
+## RBAC catalog consistency repair — 2026-07-19
+
+- Added the four existing recruitment role permissions (`hr.applicants.create`, `hr.applicants.review`, `hr.interviews.view`, and `hr.interviews.manage`) to `BASE_PERMISSIONS`; no permission was removed or renamed.
+- Added a centralized RBAC invariant test requiring every permission in every `ROLE_PERMISSIONS` mapping to exist in `BASE_PERMISSIONS`.
+- Restricted `platform-rbac-repair.ts` failure output to a sanitized error name, Prisma code, model name, and short redacted message. Database URLs and common secret assignments are removed.
+- Centralized RBAC test passed (7/7), API build passed, and the production API TypeScript check passed. The full test-inclusive TypeScript check remains blocked by the pre-existing `files.service.spec.ts:143` nullability error. No database, migration, reset, commit, push, or deployment command was run.
