@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { OrganizationType, UserRole } from '@prisma/client';
 import { CompanyProvisioningService } from './company-provisioning.service';
 
 describe('CompanyProvisioningService organization list', () => {
@@ -289,5 +291,129 @@ describe('CompanyProvisioningService platform settings and profile', () => {
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.organization.findUnique).not.toHaveBeenCalled();
+  });
+});
+
+describe('CompanyProvisioningService first administrator', () => {
+  const platformAdmin = {
+    userId: 'platform_admin_user',
+    organizationId: 'platform_org',
+    organizationType: 'PLATFORM',
+    role: 'platform_admin',
+    permissions: ['platform.organizations.manage'],
+  };
+
+  function setup(type: OrganizationType = OrganizationType.DEVELOPER) {
+    const tx = {
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'company_1', type }),
+      },
+      user: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'user_1', ...data })),
+      },
+      role: {
+        upsert: jest.fn().mockResolvedValue({ id: 'role_1', name: 'company_owner' }),
+      },
+      permission: {
+        upsert: jest.fn().mockImplementation(({ create }) => Promise.resolve({ id: `permission_${create.key}` })),
+      },
+      rolePermission: { upsert: jest.fn().mockResolvedValue({}) },
+      hrEmployee: {
+        count: jest.fn().mockResolvedValue(0),
+        create: jest.fn().mockResolvedValue({ id: 'employee_1' }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn().mockImplementation((callback) => callback(tx)),
+    };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const hash = { hash: jest.fn().mockResolvedValue('password_hash') };
+    const service = new CompanyProvisioningService(prisma as any, audit as any, hash as any);
+    jest.spyOn(service as any, 'buildActivationCheck').mockResolvedValue({
+      canActivate: true,
+      missingRequirements: [],
+      blockingDocuments: [],
+      blockingOwners: [],
+      blockingSubscriptionReasons: [],
+      blockingOfficeReasons: [],
+      blockingAdminReasons: [],
+      requiredDocuments: [],
+    });
+    return { service, prisma, tx, audit, hash };
+  }
+
+  const input = {
+    name: 'Company Owner',
+    email: 'OWNER@EXAMPLE.TEST',
+    phoneCountry: 'MD',
+    phone: '69123456',
+    temporaryPassword: 'temporary-password-123',
+    roleTemplate: 'company_owner' as const,
+  };
+
+  it('creates the user in the requested organization with the template role and forced password change', async () => {
+    const { service, tx, audit, hash } = setup();
+
+    const response = await service.createOrganizationFirstAdmin('company_1', input, platformAdmin);
+    expect(response).toEqual(
+      expect.objectContaining({
+        user: expect.objectContaining({ id: 'user_1', organizationId: 'company_1', roleId: 'role_1' }),
+        activationCheck: expect.objectContaining({ canActivate: true }),
+      }),
+    );
+    expect(response.user).not.toHaveProperty('passwordHash');
+
+    expect(tx.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: 'company_1',
+        roleId: 'role_1',
+        email: 'owner@example.test',
+        passwordHash: 'password_hash',
+        mustChangePassword: true,
+        userRole: UserRole.DEVELOPER_OWNER,
+      }),
+    });
+    expect(hash.hash).toHaveBeenCalledWith(input.temporaryPassword);
+    expect(tx.hrEmployee.create).toHaveBeenCalledWith({ data: expect.objectContaining({ organizationId: 'company_1', userId: 'user_1' }) });
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'platform.organization.first_admin_created',
+      entityId: 'user_1',
+      organizationId: 'company_1',
+      actor: platformAdmin,
+    }));
+    expect(JSON.stringify(audit.record.mock.calls)).not.toContain(input.temporaryPassword);
+  });
+
+  it('blocks creation when the organization already has a qualified owner or admin', async () => {
+    const { service, tx } = setup(OrganizationType.BROKERAGE);
+    tx.user.findFirst.mockResolvedValue({ id: 'existing_admin' });
+
+    await expect(service.createOrganizationFirstAdmin('company_1', input, platformAdmin))
+      .rejects.toBeInstanceOf(ConflictException);
+    expect(tx.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        organizationId: 'company_1',
+        userRole: { in: [UserRole.BROKERAGE_OWNER, UserRole.BROKERAGE_ADMIN] },
+      }),
+    }));
+    expect(tx.user.create).not.toHaveBeenCalled();
+  });
+
+  it('allows only the owner template for an individual broker', async () => {
+    const { service } = setup(OrganizationType.INDIVIDUAL_BROKER);
+    await expect(service.createOrganizationFirstAdmin('company_1', { ...input, roleTemplate: 'company_admin' }, platformAdmin))
+      .rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects Platform organizations and non-owner/admin platform actors', async () => {
+    const platformOrganization = setup(OrganizationType.PLATFORM);
+    await expect(platformOrganization.service.createOrganizationFirstAdmin('company_1', input, platformAdmin))
+      .rejects.toBeInstanceOf(BadRequestException);
+
+    const developer = setup();
+    await expect(developer.service.createOrganizationFirstAdmin('company_1', input, { ...platformAdmin, role: 'platform_support' }))
+      .rejects.toBeInstanceOf(ForbiddenException);
   });
 });

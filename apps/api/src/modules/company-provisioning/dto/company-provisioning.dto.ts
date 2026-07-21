@@ -152,7 +152,7 @@ export class FirstAdminInputDto {
   phoneCountry?: string;
   phone?: string;
   temporaryPassword?: string;
-  roleTemplate?: 'company_owner' | 'company_admin' | 'hr_manager';
+  roleTemplate?: 'company_owner' | 'company_admin';
 }
 
 export class CreatePlatformCompanyDto extends OrganizationProfileInputDto {

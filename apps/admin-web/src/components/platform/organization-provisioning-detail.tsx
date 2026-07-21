@@ -5,7 +5,7 @@ import type { InputHTMLAttributes, ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,8 +17,10 @@ import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
 import { archivePlatformOrganizationApi, deleteDraftPlatformOrganizationApi, getOrganizationDeletionImpactApi, restorePlatformOrganizationApi, suspendPlatformOrganizationApi } from "@/lib/api";
 import { localizedApiError } from "@/lib/api-errors";
+import { firstAdminRoleTemplateOptions } from "@/lib/first-admin";
 import {
   useCreateOrganizationAttendanceLocation,
+  useCreateOrganizationFirstAdmin,
   useActivateOrganization,
   useCompanyRoleTemplates,
   useCreateCompanyRoleTemplate,
@@ -847,14 +849,65 @@ function PermissionPicker() {
 
 function UsersTab({ id }: { id: string }) {
   const { t } = useI18n();
+  const organization = usePlatformOrganization(id);
+  const createFirstAdmin = useCreateOrganizationFirstAdmin(id);
+  const users = organization.data?.users ?? [];
+  const organizationType = organization.data?.type;
+  const roleOptions = firstAdminRoleTemplateOptions(organizationType);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const target = event.currentTarget;
+    const form = new FormData(target);
+    createFirstAdmin.mutate({
+      name: required(form, "name"),
+      email: required(form, "email"),
+      phoneCountry: optional(form, "phoneCountry"),
+      phone: optional(form, "phone"),
+      temporaryPassword: required(form, "temporaryPassword"),
+      roleTemplate: required(form, "roleTemplate") as "company_owner" | "company_admin",
+    }, { onSuccess: () => target.reset() });
+  }
+
   return (
-    <DetailCard title={t("provisioning.createFirstAdmin")}>
-      <p className="text-sm leading-6 text-[var(--color-muted)]">{t("provisioning.usersAfterCreation")}</p>
-      <Link className="ui-button ui-button-secondary mt-4" href={`/platform/organizations/${id}`}>
-        <ExternalLink className="h-4 w-4" aria-hidden="true" />
-        {t("provisioning.reviewCompany")}
-      </Link>
-    </DetailCard>
+    <div className="space-y-5">
+      <DetailCard title={t("provisioning.createFirstAdmin")}>
+        <p className="mb-4 text-sm leading-6 text-[var(--color-muted)]">{t("provisioning.usersAfterCreation")}</p>
+        {organizationType === "PLATFORM" ? (
+          <ErrorLine message={t("provisioning.firstAdminPlatformForbidden")} />
+        ) : (
+          <form className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={submit}>
+            <TextField required label={t("provisioning.adminName")} name="name" autoComplete="name" />
+            <TextField required type="email" label={t("provisioning.adminEmail")} name="email" autoComplete="email" />
+            <TextField label={t("provisioning.adminPhoneCountry")} name="phoneCountry" placeholder="MD" />
+            <TextField type="tel" label={t("provisioning.adminPhone")} name="phone" autoComplete="tel" />
+            <TextField required minLength={12} type="password" label={t("provisioning.temporaryPassword")} name="temporaryPassword" autoComplete="new-password" />
+            <label className="space-y-2">
+              <Label htmlFor="detail-roleTemplate">{t("provisioning.roleTemplate")}</Label>
+              <select id="detail-roleTemplate" name="roleTemplate" className="ui-input" defaultValue={roleOptions[0]} required>
+                {roleOptions.map((option) => (
+                  <option key={option} value={option}>{t(option === "company_owner" ? "provisioning.companyOwner" : "provisioning.companyAdmin")}</option>
+                ))}
+              </select>
+            </label>
+            <SaveButton pending={createFirstAdmin.isPending} label={t("common.create")} />
+          </form>
+        )}
+        {createFirstAdmin.isSuccess ? <p role="status" className="mt-4 text-sm text-[var(--color-success)]">{t("provisioning.firstAdminCreated")}</p> : null}
+        {createFirstAdmin.error ? <ErrorLine message={localizedApiError(createFirstAdmin.error, t)} /> : null}
+      </DetailCard>
+      <DetailCard title={t("provisioning.organizationUsers")}>
+        <div className="divide-y divide-[var(--color-border)]">
+          {users.length ? users.map((user) => (
+            <div key={user.id} className="grid gap-1 py-3 text-sm sm:grid-cols-3">
+              <span className="font-medium text-[var(--color-foreground)]">{[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}</span>
+              <span className="text-[var(--color-muted)]">{user.email}</span>
+              <span className="text-[var(--color-muted)]">{user.role?.name ?? user.userRole}</span>
+            </div>
+          )) : <p className="text-sm text-[var(--color-muted)]">{t("provisioning.noRecords")}</p>}
+        </div>
+      </DetailCard>
+    </div>
   );
 }
 
@@ -975,6 +1028,10 @@ function ErrorLine({ message }: { message: string }) {
 function optional(data: FormData, key: string) {
   const value = String(data.get(key) ?? "").trim();
   return value || undefined;
+}
+
+function required(data: FormData, key: string) {
+  return String(data.get(key) ?? "").trim();
 }
 
 function numberValue(data: FormData, key: string) {

@@ -14,6 +14,7 @@ import {
   CreateRequiredDocumentPolicyDto,
   CreatePlatformCompanyDto,
   DomainInputDto,
+  FirstAdminInputDto,
   LimitsInputDto,
   OfficeInputDto,
   OrganizationProfileInputDto,
@@ -220,6 +221,17 @@ export class PlatformSettingsController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.service.updatePlatformMetadata(metadataId, dto, user);
+  }
+
+  @Permissions('platform.organizations.manage')
+  @Post(':id/first-admin')
+  @ApiOperation({ summary: 'Create the first owner or administrator for a company.' })
+  createFirstAdmin(
+    @Param('id') id: string,
+    @Body() dto: FirstAdminInputDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.service.createOrganizationFirstAdmin(id, dto, user);
   }
 
   @Permissions('platform.metadata.manage')
