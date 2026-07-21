@@ -210,6 +210,32 @@ export type PlatformSettingsSummary = {
   };
 };
 
+export type FirstAdminInput = {
+  name: string;
+  email: string;
+  phoneCountry?: string;
+  phone?: string;
+  temporaryPassword: string;
+  roleTemplate: "company_owner" | "company_admin";
+};
+
+export type OrganizationUser = {
+  id: string;
+  email: string;
+  phone?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  userRole: string;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  role?: { id: string; name: string } | null;
+};
+
+export type FirstAdminResponse = {
+  user: OrganizationUser;
+  activationCheck: ActivationCheck;
+};
+
 export type PlatformDashboard = {
   generatedAt: string;
   organizations: {
@@ -514,6 +540,7 @@ export type Organization = CurrentOrganization & {
   wifiRules?: OrganizationWifiRule[];
   domainVerifications?: OrganizationDomainRecord[];
   companyRoleTemplates?: CompanyRoleTemplate[];
+  users?: OrganizationUser[];
   portalLinks?: {
     systemSubdomain: string;
     fallbackPath: string;

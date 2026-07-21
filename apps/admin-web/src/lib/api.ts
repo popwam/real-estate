@@ -297,6 +297,16 @@ export function getOrganizationActivationCheckApi(id: string) {
   return apiRequest<ActivationCheck>(`/platform/organizations/${id}/activation-check`);
 }
 
+export function createOrganizationFirstAdminApi(
+  id: string,
+  input: import("@/types/platform").FirstAdminInput,
+) {
+  return apiRequest<import("@/types/platform").FirstAdminResponse>(
+    `/platform/organizations/${encodeURIComponent(id)}/first-admin`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
 export function activateOrganizationApi(id: string) {
   return apiRequest<ActivationCheck & { organization?: Organization }>(`/platform/organizations/${id}/activate`, {
     method: "POST",

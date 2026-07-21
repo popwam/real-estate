@@ -786,6 +786,72 @@ export class CompanyProvisioningService {
     return plan;
   }
 
+  async createOrganizationFirstAdmin(
+    organizationId: string,
+    dto: FirstAdminInputDto,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertFirstAdminPlatformActor(user);
+    const result = await this.prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.findUnique({
+        where: { id: organizationId },
+        select: { id: true, type: true },
+      });
+      if (!organization) throw new NotFoundException('Organization not found.');
+      this.assertFirstAdminRoleTemplate(organization.type, dto.roleTemplate);
+
+      const existingAdmin = await tx.user.findFirst({
+        where: {
+          organizationId,
+          userRole: { in: this.qualifiedAdminRoles(organization.type) },
+        },
+        select: { id: true },
+      });
+      if (existingAdmin) {
+        throw new ConflictException('This organization already has an owner or administrator.');
+      }
+
+      return {
+        user: await this.createFirstAdmin(tx, organizationId, organization.type, dto),
+        organizationType: organization.type,
+      };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }).catch((error: unknown) => {
+      if (this.prismaErrorCode(error) === 'P2034') {
+        throw new ConflictException('The first administrator was created by another request.');
+      }
+      throw error;
+    });
+
+    await this.auditLogs.record({
+      action: 'platform.organization.first_admin_created',
+      entityType: 'User',
+      entityId: result.user.id,
+      organizationId,
+      actor: user,
+      metadata: {
+        roleTemplate: this.firstAdminRoleTemplate(result.organizationType, dto.roleTemplate),
+      },
+    });
+
+    return {
+      user: {
+        id: result.user.id,
+        organizationId: result.user.organizationId,
+        roleId: result.user.roleId,
+        email: result.user.email,
+        phone: result.user.phone,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        userRole: result.user.userRole,
+        isActive: result.user.isActive,
+        mustChangePassword: result.user.mustChangePassword,
+        createdAt: result.user.createdAt,
+        updatedAt: result.user.updatedAt,
+      },
+      activationCheck: await this.buildActivationCheck(organizationId),
+    };
+  }
+
   async platformPlanDeletionImpact(id: string, user: AuthenticatedRequestUser) {
     this.assertPlatform(user, 'platform.plans.view');
     const plan = await this.prisma.platformPlan.findUnique({ where: { id } });
@@ -1341,7 +1407,7 @@ export class CompanyProvisioningService {
       wifiRules: true,
       domainVerifications: true,
       websiteSettings: true,
-      users: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
+      users: { select: { id: true, email: true, phone: true, firstName: true, lastName: true, userRole: true, isActive: true, mustChangePassword: true, role: true } },
     } as const;
   }
 
@@ -1768,7 +1834,8 @@ export class CompanyProvisioningService {
     if (!email) throw new BadRequestException('admin email is required.');
     const existing = await tx.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException('Admin email is already registered.');
-    const roleName = dto.roleTemplate ?? 'company_admin';
+    const roleName = this.firstAdminRoleTemplate(organizationType, dto.roleTemplate);
+    this.assertFirstAdminRoleTemplate(organizationType, roleName);
     const role = await this.ensureRole(tx, organizationId, roleName);
     const name = this.requiredString(dto.name, 'admin name');
     const temporaryPassword = this.requiredString(dto.temporaryPassword, 'temporaryPassword');
@@ -2075,11 +2142,53 @@ export class CompanyProvisioningService {
   }
 
   private userRoleForOrganization(type: OrganizationType, roleName: string) {
-    if (type === OrganizationType.PLATFORM) return UserRole.PLATFORM_ADMIN;
-    if (type === OrganizationType.BROKERAGE || type === OrganizationType.INDIVIDUAL_BROKER) {
+    if (type === OrganizationType.PLATFORM) {
+      throw new BadRequestException('Platform organizations cannot be provisioned through the first-admin flow.');
+    }
+    if (type === OrganizationType.INDIVIDUAL_BROKER) return UserRole.INDIVIDUAL_BROKER;
+    if (type === OrganizationType.BROKERAGE) {
       return roleName === 'company_owner' ? UserRole.BROKERAGE_OWNER : UserRole.BROKERAGE_ADMIN;
     }
     return roleName === 'company_owner' ? UserRole.DEVELOPER_OWNER : UserRole.DEVELOPER_ADMIN;
+  }
+
+  private assertFirstAdminRoleTemplate(type: OrganizationType, roleTemplate?: string) {
+    const role = this.firstAdminRoleTemplate(type, roleTemplate);
+    const allowed = type === OrganizationType.INDIVIDUAL_BROKER
+      ? ['company_owner']
+      : type === OrganizationType.DEVELOPER || type === OrganizationType.BROKERAGE
+        ? ['company_owner', 'company_admin']
+        : [];
+    if (!allowed.includes(role)) {
+      throw new BadRequestException('roleTemplate is not valid for this organization type.');
+    }
+  }
+
+  private firstAdminRoleTemplate(type: OrganizationType, roleTemplate?: string) {
+    return roleTemplate ?? (type === OrganizationType.INDIVIDUAL_BROKER ? 'company_owner' : 'company_admin');
+  }
+
+  private qualifiedAdminRoles(type: OrganizationType): UserRole[] {
+    if (type === OrganizationType.DEVELOPER) {
+      return [UserRole.DEVELOPER_OWNER, UserRole.DEVELOPER_ADMIN];
+    }
+    if (type === OrganizationType.BROKERAGE) {
+      return [UserRole.BROKERAGE_OWNER, UserRole.BROKERAGE_ADMIN];
+    }
+    if (type === OrganizationType.INDIVIDUAL_BROKER) {
+      return [UserRole.INDIVIDUAL_BROKER];
+    }
+    return [];
+  }
+
+  private assertFirstAdminPlatformActor(user: AuthenticatedRequestUser) {
+    if (
+      !isPlatformUser(user) ||
+      !['platform_owner', 'platform_admin'].includes(user.role) ||
+      !user.permissions.includes('platform.organizations.manage')
+    ) {
+      throw new ForbiddenException('Platform Owner or Platform Admin permission is required.');
+    }
   }
 
   private async nextEmployeeCode(tx: Tx, organizationId: string) {

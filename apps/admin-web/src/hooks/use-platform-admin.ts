@@ -7,6 +7,7 @@ import {
   approveOrganizationApi,
   approveVerificationApi,
   createCompanyRoleTemplateApi,
+  createOrganizationFirstAdminApi,
   createPlatformPlanApi,
   createRequiredDocumentPolicyApi,
   getOrganizationReviewApi,
@@ -75,6 +76,7 @@ import {
 } from "@/lib/api";
 import type {
   CompanyRoleTemplate,
+  FirstAdminInput,
   OrganizationAttendanceLocation,
   OrganizationDomainRecord,
   OrganizationDocument,
@@ -119,6 +121,19 @@ export function useOrganizationActivationCheck(id: string) {
     queryKey: ["platform", "organizations", id, "activation-check"],
     queryFn: () => getOrganizationActivationCheckApi(id),
     enabled: Boolean(id),
+  });
+}
+
+export function useCreateOrganizationFirstAdmin(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: FirstAdminInput) => createOrganizationFirstAdminApi(id, input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "provisioning"] }),
+        queryClient.invalidateQueries({ queryKey: ["platform", "organizations", id, "activation-check"] }),
+      ]);
+    },
   });
 }
 

@@ -16,7 +16,7 @@ vi.mock("@/lib/auth", () => ({
   storeTokens: auth.storeTokens,
 }));
 
-import { ApiError, apiRequest } from "@/lib/api";
+import { ApiError, apiRequest, createOrganizationFirstAdminApi } from "@/lib/api";
 import { localizedApiError } from "@/lib/api-errors";
 
 describe("API authentication error handling", () => {
@@ -85,5 +85,27 @@ describe("API authentication error handling", () => {
     expect(translated).toContain("لا تملك الصلاحية");
     expect(translated).toContain("request-2");
     expect(translated).not.toContain("Required permission is missing");
+  });
+
+  it("posts the complete first-admin payload to the organization endpoint", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      user: { id: "user-1", organizationId: "company/one" },
+      activationCheck: { canActivate: true },
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const input = {
+      name: "Company Owner",
+      email: "owner@example.test",
+      phoneCountry: "MD",
+      phone: "69123456",
+      temporaryPassword: "temporary-password-123",
+      roleTemplate: "company_owner" as const,
+    };
+
+    await createOrganizationFirstAdminApi("company/one", input);
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/platform\/organizations\/company%2Fone\/first-admin$/),
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
   });
 });
