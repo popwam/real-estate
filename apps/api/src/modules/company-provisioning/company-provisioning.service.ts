@@ -6,6 +6,7 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   DomainVerificationStatus,
@@ -28,6 +29,7 @@ import {
 import { randomBytes } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { normalizeOptionalPhoneOrThrow } from '../../common/phone-normalization';
 import { requireCanonicalOrganizationType } from '../../common/organization-types';
 import { isPlatformUser, requireCurrentOrganizationId } from '../../common/organization-scope';
@@ -78,6 +80,17 @@ const SUPPORTED_LOGIN_METHODS = new Set([
 ]);
 
 type Tx = Prisma.TransactionClient;
+type RoleProvisioningClient = Pick<Tx, 'permission' | 'role' | 'rolePermission'>;
+type PreparedFirstAdmin = {
+  email: string;
+  phone?: string;
+  firstName: string;
+  lastName?: string;
+  name: string;
+  passwordHash: string;
+  roleName: string;
+  userRole: UserRole;
+};
 type RequiredPolicyWithSupportedType = Prisma.RequiredDocumentPolicyGetPayload<{
   include: { supportedOrganizationType: true };
 }>;
@@ -85,6 +98,14 @@ type RequiredPolicyWithSupportedType = Prisma.RequiredDocumentPolicyGetPayload<{
 type OrganizationListRequestContext = {
   requestId?: string;
   route?: string;
+};
+
+type FirstAdminRequestContext = {
+  requestId?: string;
+  onTiming?: (
+    stage: 'validation' | 'hash' | 'roleProvisioning' | 'dbTransaction' | 'audit',
+    durationMs: number,
+  ) => void;
 };
 
 const PLATFORM_PERMISSIONS = [
@@ -219,6 +240,9 @@ export class CompanyProvisioningService {
       : undefined;
     const activeLanguageCodes = (await this.prisma.platformMetadataRecord.findMany({ where: { category: 'LANGUAGE', isActive: true, isArchived: false }, orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }], select: { code: true } })).map((item) => item.code.toLowerCase());
     const supportedLanguages = activeLanguageCodes.length ? activeLanguageCodes : ['en', 'ar', 'fr'];
+    const preparedAdmin = dto.adminUser
+      ? await this.prepareFirstAdmin(type, dto.adminUser)
+      : null;
 
     const result = await this.prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
@@ -330,8 +354,8 @@ export class CompanyProvisioningService {
         },
       });
 
-      const adminUser = dto.adminUser
-        ? await this.createFirstAdmin(tx, organization.id, type, dto.adminUser)
+      const adminUser = preparedAdmin
+        ? await this.createFirstAdmin(tx, organization.id, preparedAdmin)
         : null;
 
       return { organizationId: organization.id, adminUserId: adminUser?.id ?? null };
@@ -790,48 +814,83 @@ export class CompanyProvisioningService {
     organizationId: string,
     dto: FirstAdminInputDto,
     user: AuthenticatedRequestUser,
+    context: FirstAdminRequestContext = {},
   ) {
+    const validationStartedAt = performance.now();
     this.assertFirstAdminPlatformActor(user);
-    const result = await this.prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.findUnique({
-        where: { id: organizationId },
-        select: { id: true, type: true },
-      });
-      if (!organization) throw new NotFoundException('Organization not found.');
-      this.assertFirstAdminRoleTemplate(organization.type, dto.roleTemplate);
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, type: true },
+    });
+    if (!organization) throw new NotFoundException('Organization not found.');
 
-      const existingAdmin = await tx.user.findFirst({
-        where: {
-          organizationId,
-          userRole: { in: this.qualifiedAdminRoles(organization.type) },
+    const input = this.validateFirstAdminInput(organization.type, dto);
+    const duplicateEmail = await this.prisma.user.findUnique({
+      where: { email: input.email },
+      select: { id: true },
+    });
+    if (duplicateEmail) throw this.duplicateFirstAdminEmail();
+    this.recordFirstAdminTiming(context, 'validation', validationStartedAt);
+
+    // Password hashing is deliberately completed before opening the interactive
+    // transaction. Role provisioning is also idempotent and does not need to hold
+    // the organization row lock.
+    const hashStartedAt = performance.now();
+    const passwordHash = await this.hashService.hash(input.temporaryPassword);
+    this.recordFirstAdminTiming(context, 'hash', hashStartedAt);
+    const roleStartedAt = performance.now();
+    const role = await this.ensureRole(this.prisma, organizationId, input.roleName);
+    this.recordFirstAdminTiming(context, 'roleProvisioning', roleStartedAt);
+    const { temporaryPassword: _discardedPassword, ...preparedInput } = input;
+    const prepared: PreparedFirstAdmin = { ...preparedInput, passwordHash };
+
+    let result: { user: Awaited<ReturnType<CompanyProvisioningService['createFirstAdmin']>>; organizationType: OrganizationType };
+    const transactionStartedAt = performance.now();
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        const lockedOrganizations = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT "id"
+          FROM "organizations"
+          WHERE "id" = ${organizationId}
+          FOR UPDATE
+        `);
+        if (!lockedOrganizations.length) throw new NotFoundException('Organization not found.');
+
+        const existingAdmin = await tx.user.findFirst({
+          where: {
+            organizationId,
+            userRole: { in: this.qualifiedAdminRoles(organization.type) },
+          },
+          select: { id: true },
+        });
+        if (existingAdmin) throw this.firstAdminAlreadyExists();
+
+        return {
+          user: await this.createFirstAdmin(tx, organizationId, prepared, role),
+          organizationType: organization.type,
+        };
+      });
+    } catch (error) {
+      throw this.mapFirstAdminPersistenceError(error, context.requestId);
+    } finally {
+      this.recordFirstAdminTiming(context, 'dbTransaction', transactionStartedAt);
+    }
+
+    const auditStartedAt = performance.now();
+    try {
+      await this.auditLogs.record({
+        action: 'platform.organization.first_admin_created',
+        entityType: 'User',
+        entityId: result.user.id,
+        organizationId,
+        actor: user,
+        metadata: {
+          roleTemplate: this.firstAdminRoleTemplate(result.organizationType, dto.roleTemplate),
         },
-        select: { id: true },
       });
-      if (existingAdmin) {
-        throw new ConflictException('This organization already has an owner or administrator.');
-      }
-
-      return {
-        user: await this.createFirstAdmin(tx, organizationId, organization.type, dto),
-        organizationType: organization.type,
-      };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }).catch((error: unknown) => {
-      if (this.prismaErrorCode(error) === 'P2034') {
-        throw new ConflictException('The first administrator was created by another request.');
-      }
-      throw error;
-    });
-
-    await this.auditLogs.record({
-      action: 'platform.organization.first_admin_created',
-      entityType: 'User',
-      entityId: result.user.id,
-      organizationId,
-      actor: user,
-      metadata: {
-        roleTemplate: this.firstAdminRoleTemplate(result.organizationType, dto.roleTemplate),
-      },
-    });
+    } finally {
+      this.recordFirstAdminTiming(context, 'audit', auditStartedAt);
+    }
 
     return {
       user: {
@@ -1827,34 +1886,21 @@ export class CompanyProvisioningService {
   private async createFirstAdmin(
     tx: Tx,
     organizationId: string,
-    organizationType: OrganizationType,
-    dto: FirstAdminInputDto,
+    prepared: PreparedFirstAdmin,
+    preparedRole?: { id: string },
   ) {
-    const email = this.optionalEmail(dto.email);
-    if (!email) throw new BadRequestException('admin email is required.');
-    const existing = await tx.user.findUnique({ where: { email } });
-    if (existing) throw new ConflictException('Admin email is already registered.');
-    const roleName = this.firstAdminRoleTemplate(organizationType, dto.roleTemplate);
-    this.assertFirstAdminRoleTemplate(organizationType, roleName);
-    const role = await this.ensureRole(tx, organizationId, roleName);
-    const name = this.requiredString(dto.name, 'admin name');
-    const temporaryPassword = this.requiredString(dto.temporaryPassword, 'temporaryPassword');
-    if (temporaryPassword.length < 12 || temporaryPassword === '123456') {
-      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
-    }
-    const [firstName, ...rest] = name.split(/\s+/);
-    const phone = normalizeOptionalPhoneOrThrow(dto.phone, 'admin phone', dto.phoneCountry);
+    const role = preparedRole ?? await this.ensureRole(tx, organizationId, prepared.roleName);
     const user = await tx.user.create({
       data: {
         organizationId,
         roleId: role.id,
-        email,
-        phone,
-        firstName,
-        lastName: rest.join(' ') || undefined,
-        passwordHash: await this.hashService.hash(temporaryPassword),
+        email: prepared.email,
+        phone: prepared.phone,
+        firstName: prepared.firstName,
+        lastName: prepared.lastName,
+        passwordHash: prepared.passwordHash,
         mustChangePassword: true,
-        userRole: this.userRoleForOrganization(organizationType, roleName),
+        userRole: prepared.userRole,
       },
     });
     await tx.hrEmployee.create({
@@ -1862,16 +1908,46 @@ export class CompanyProvisioningService {
         organizationId,
         userId: user.id,
         employeeCode: await this.nextEmployeeCode(tx, organizationId),
-        name,
-        legalName: name,
-        displayName: name,
-        email,
-        phone,
+        name: prepared.name,
+        legalName: prepared.name,
+        displayName: prepared.name,
+        email: prepared.email,
+        phone: prepared.phone,
         loginEnabled: true,
-        roleTitle: roleName.replaceAll('_', ' '),
+        roleTitle: prepared.roleName.replaceAll('_', ' '),
       },
     });
     return user;
+  }
+
+  private validateFirstAdminInput(organizationType: OrganizationType, dto: FirstAdminInputDto) {
+    const email = this.optionalEmail(dto.email);
+    if (!email) throw new BadRequestException('admin email is required.');
+    const roleName = this.firstAdminRoleTemplate(organizationType, dto.roleTemplate);
+    this.assertFirstAdminRoleTemplate(organizationType, roleName);
+    const name = this.requiredString(dto.name, 'admin name');
+    const temporaryPassword = this.requiredString(dto.temporaryPassword, 'temporaryPassword');
+    if (temporaryPassword.length < 12 || temporaryPassword === '123456') {
+      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
+    }
+    const [firstName, ...rest] = name.split(/\s+/);
+    return {
+      email,
+      phone: normalizeOptionalPhoneOrThrow(dto.phone, 'admin phone', dto.phoneCountry),
+      firstName,
+      lastName: rest.join(' ') || undefined,
+      name,
+      temporaryPassword,
+      roleName,
+      userRole: this.userRoleForOrganization(organizationType, roleName),
+    };
+  }
+
+  private async prepareFirstAdmin(organizationType: OrganizationType, dto: FirstAdminInputDto): Promise<PreparedFirstAdmin> {
+    const input = this.validateFirstAdminInput(organizationType, dto);
+    const passwordHash = await this.hashService.hash(input.temporaryPassword);
+    const { temporaryPassword: _discardedPassword, ...preparedInput } = input;
+    return { ...preparedInput, passwordHash };
   }
 
   private async prepareSubscription(dto: SubscriptionInputDto) {
@@ -2120,25 +2196,78 @@ export class CompanyProvisioningService {
     return { create: data, update: data };
   }
 
-  private async ensureRole(tx: Tx, organizationId: string, roleName: string) {
-    const role = await tx.role.upsert({
+  private async ensureRole(db: RoleProvisioningClient, organizationId: string, roleName: string) {
+    const role = await db.role.upsert({
       where: { organizationId_name: { organizationId, name: roleName } },
       create: { organizationId, name: roleName, isSystem: true, description: `Organization role: ${roleName}` },
       update: {},
     });
-    for (const permissionKey of ROLE_PERMISSIONS[roleName] ?? ROLE_PERMISSIONS.company_admin) {
-      const permission = await tx.permission.upsert({
-        where: { key: permissionKey },
-        create: { key: permissionKey, description: `Base permission: ${permissionKey}` },
-        update: {},
-      });
-      await tx.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
-        create: { roleId: role.id, permissionId: permission.id },
-        update: {},
-      });
-    }
+    const permissionKeys = [...new Set(ROLE_PERMISSIONS[roleName] ?? ROLE_PERMISSIONS.company_admin)];
+    await db.permission.createMany({
+      data: permissionKeys.map((key) => ({ key, description: `Base permission: ${key}` })),
+      skipDuplicates: true,
+    });
+    const permissions = await db.permission.findMany({
+      where: { key: { in: permissionKeys } },
+      select: { id: true },
+    });
+    await db.rolePermission.createMany({
+      data: permissions.map((permission) => ({ roleId: role.id, permissionId: permission.id })),
+      skipDuplicates: true,
+    });
     return role;
+  }
+
+  private firstAdminAlreadyExists() {
+    return new ConflictException({
+      code: 'FIRST_ADMIN_ALREADY_EXISTS',
+      message: 'This organization already has an owner or administrator.',
+    });
+  }
+
+  private duplicateFirstAdminEmail() {
+    return new ConflictException({
+      code: 'DUPLICATE_EMAIL',
+      message: 'Admin email is already registered.',
+    });
+  }
+
+  private mapFirstAdminPersistenceError(error: unknown, requestId?: string): unknown {
+    if (error instanceof ConflictException || error instanceof NotFoundException) return error;
+    const code = this.prismaErrorCode(error);
+    if (code === 'P2002' && this.prismaUniqueTargetIncludes(error, 'email')) {
+      return this.duplicateFirstAdminEmail();
+    }
+    if (code === 'P2002' || code === 'P2028' || code === 'P2034') {
+      return new ServiceUnavailableException(
+        {
+          code: 'FIRST_ADMIN_TEMPORARILY_UNAVAILABLE',
+          message: 'The first administrator could not be created safely. Please retry.',
+          ...(requestId ? { requestId } : {}),
+        },
+        { cause: error },
+      );
+    }
+    return error;
+  }
+
+  private prismaUniqueTargetIncludes(error: unknown, field: string) {
+    if (!error || typeof error !== 'object' || !('meta' in error)) return false;
+    const target = (error as { meta?: { target?: unknown } }).meta?.target;
+    const values = Array.isArray(target) ? target : [target];
+    return values.some((value) => typeof value === 'string' && value.toLowerCase().includes(field.toLowerCase()));
+  }
+
+  private recordFirstAdminTiming(
+    context: FirstAdminRequestContext,
+    stage: 'validation' | 'hash' | 'roleProvisioning' | 'dbTransaction' | 'audit',
+    startedAt: number,
+  ) {
+    try {
+      context.onTiming?.(stage, Math.max(0, performance.now() - startedAt));
+    } catch {
+      // Test-only instrumentation must never affect provisioning behavior.
+    }
   }
 
   private userRoleForOrganization(type: OrganizationType, roleName: string) {

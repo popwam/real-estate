@@ -393,3 +393,84 @@ The migration was not applied. No `migrate deploy`, `db push`, `migrate reset`, 
 - Added a centralized RBAC invariant test requiring every permission in every `ROLE_PERMISSIONS` mapping to exist in `BASE_PERMISSIONS`.
 - Restricted `platform-rbac-repair.ts` failure output to a sanitized error name, Prisma code, model name, and short redacted message. Database URLs and common secret assignments are removed.
 - Centralized RBAC test passed (7/7), API build passed, and the production API TypeScript check passed. The full test-inclusive TypeScript check remains blocked by the pre-existing `files.service.spec.ts:143` nullability error. No database, migration, reset, commit, push, or deployment command was run.
+
+---
+
+# First-admin transaction stabilization - 2026-07-22
+
+## Root cause
+
+`POST /platform/settings/:id/first-admin` used a Prisma interactive transaction at `Serializable` isolation and kept it open while `HashService.hash` performed CPU-intensive `scrypt`. The same transaction also provisioned the role and all of its permissions one at a time. `company_admin` currently expands to 83 permissions, so this path could execute 167 sequential role/permission queries (one role upsert plus two queries per permission) before the user and HR employee writes. Organization lookup, existing-admin lookup, duplicate-email lookup, user creation, employee count, and employee creation were additional serial operations. Under staging network/pool latency this exceeded the interactive transaction lifetime and produced Prisma `P2028`; `Serializable` also added unnecessary contention.
+
+No network call or audit write was found inside this transaction. The audit write was already after commit. No nested transaction or use of `this.prisma` from inside the callback was found. The dominant defect was the combination of scrypt plus the very large serial RBAC query fan-out inside the interactive transaction, not a missing index and not a timeout setting.
+
+The Railway 500 logs/second warning had a separate source: request middleware emitted one info log for every successful request and also logged CORS `OPTIONS` requests. A failed request could additionally be logged by both the middleware and the exception filter.
+
+## Files modified
+
+- `apps/api/src/modules/company-provisioning/company-provisioning.controller.ts`
+- `apps/api/src/modules/company-provisioning/company-provisioning.service.ts`
+- `apps/api/src/modules/company-provisioning/company-provisioning.service.spec.ts`
+- `apps/api/src/common/api-exception.filter.ts`
+- `apps/api/src/common/api-exception.filter.spec.ts`
+- `apps/api/src/common/request-log-sanitizer.ts`
+- `apps/api/src/common/request-log-sanitizer.spec.ts`
+- `apps/api/src/common/request-logging.middleware.ts`
+- `apps/api/src/common/request-logging.middleware.spec.ts`
+- `IMPLEMENTATION_NOTES.md`
+
+`FirstAdminInputDto` was reviewed. Its service-level validation remains the source of truth in this module, so no DTO contract or route change was required. The route remains exactly `POST /platform/settings/:id/first-admin`.
+
+## Transaction before
+
+- `Serializable` interactive transaction.
+- Organization lookup and first-admin `findFirst` check.
+- Duplicate-email lookup.
+- Role upsert plus up to 166 sequential permission/role-permission upserts.
+- Name, email, phone, role-template, and password validation.
+- CPU-heavy scrypt password hashing.
+- User creation, employee count, and HR employee creation.
+- Audit and activation-check queries after commit.
+
+## Transaction after
+
+Before opening the transaction, the service now validates the actor/input, loads the organization, checks the email, completes scrypt hashing, discards the plaintext password from the prepared object, and provisions RBAC idempotently. RBAC provisioning is reduced from up to 167 sequential queries to four bulk queries: role upsert, permission `createMany`, permission `findMany`, and role-permission `createMany`.
+
+The transaction now uses PostgreSQL's default isolation and contains only five necessary database operations: lock the target organization row, check for an existing qualified admin, create the user, count employees for the existing employee-code convention, and create the linked HR employee. No hashing, audit logging, network I/O, noisy logs, or CPU-heavy work occurs in the transaction. No timeout or `maxWait` increase was added.
+
+The combined organization-creation helper also hashes the optional admin password before its organization transaction. Because the new organization row must exist before its role foreign key can be created, that combined flow performs only the four bulk RBAC queries inside its existing creation transaction instead of the former per-permission loop.
+
+## Concurrency protection
+
+The first-admin endpoint acquires `SELECT ... FOR UPDATE` on the single `organizations` row, then performs the qualified-admin check. Concurrent requests for the same organization serialize on that row. After the first request commits, the second request sees the created owner/admin and returns HTTP 409 with `FIRST_ADMIN_ALREADY_EXISTS`; requests for different organizations do not block each other.
+
+This is an atomic short-transaction condition and does not require `Serializable` or a retry loop. A unique index on all owner/admin roles was deliberately not added because it would incorrectly prevent legitimate additional administrators after initial provisioning. The existing unique user-email constraint remains the database race guard for email; known and raced duplicate emails return HTTP 409 with `DUPLICATE_EMAIL`.
+
+`P2028`, `P2034`, and non-email `P2002` persistence conflicts are returned as HTTP 503 with `FIRST_ADMIN_TEMPORARILY_UNAVAILABLE`, with the raw Prisma error retained only as the internal cause. The exception filter walks the safe cause chain so its structured error record contains `P2028` while the response never exposes raw database details. Request IDs are preserved.
+
+## Logging fix
+
+Successful request logging is now disabled by default and can only be enabled explicitly with `REQUEST_LOG_SUCCESS=true`. CORS `OPTIONS` requests are never logged. HTTP 5xx errors are logged once by `ApiExceptionFilter`, not again by the request middleware. The first-admin organization ID and query string are sanitized to `/platform/settings/:id/first-admin`.
+
+Error records contain only `event`, `requestId`, `method`, sanitized `path`, `errorName`, and `prismaCode`. Tests verify that raw Prisma messages and organization identifiers are absent. Passwords, request bodies, tokens, cookies, authorization headers, database URLs, and other secrets are not logged.
+
+## Performance and tests
+
+Safe local measurement found 83 permissions in the `company_admin` template, reducing role provisioning from up to 167 sequential queries to four bulk queries. A real scrypt hash measured approximately 54.18 ms on the local test host. The service exposes an opt-in test-only timing callback for `validation`, `hash`, `roleProvisioning`, `dbTransaction`, and `audit`; the production controller does not pass it and no production timing log is emitted.
+
+- Focused first-admin, error-filter, path-sanitizer, and request-logging tests: 4 suites passed, 38 tests passed.
+- Full `pnpm --filter api test`: 34 suites passed; 183 tests passed; 1 existing test skipped.
+- `pnpm --filter api build`: passed.
+- Covered: successful creation, existing admin 409/code, two-request concurrency with one success, hashing before transaction, all supported organization-type/role mappings, invalid role template, duplicate email including P2002 race, P2028 safe handling and request ID, bulk role assignment, audit placement/sanitization, safe stage timing, sanitized error logging, default-off success logs, and skipped preflight logs.
+
+## Migration
+
+No migration is required or created. The current `users(organizationId, userRole)` index supports the existing-admin lookup, the user email remains unique, the role and employee constraints already exist, and row locking supplies the required per-organization atomicity. No migration was applied and no database command was run.
+
+## Remaining risks and E2E
+
+- A real staging E2E run is still required to measure validation, four-query role provisioning, the five-operation transaction, audit, and activation-check latency against Railway/PostgreSQL under actual pool load.
+- The row-lock invariant protects this endpoint and any future path that follows the same protocol. Direct SQL or a future admin-creation path that bypasses it can still create additional admins; that is intentional for normal post-provisioning administration. If a cross-path permanent marker is later required, it should be a dedicated first-admin claim rather than a unique constraint on every admin role.
+- Employee codes still use the existing count-plus-one convention. Unrelated concurrent employee creation can produce a non-email uniqueness conflict; it now fails safely as retryable 503 instead of leaking Prisma data, but replacing the organization-wide employee-code allocator is separate work.
+- Audit is intentionally outside the transaction. If audit storage fails after the user commits, the endpoint can fail while the admin exists; an outbox/reconciliation design would be needed for atomic business-write/audit delivery without lengthening this transaction.
+- No live staging database, deploy, `prisma migrate deploy`, reset, secret change, commit, or push was performed.

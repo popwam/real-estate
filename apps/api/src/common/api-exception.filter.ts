@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { sanitizeRequestPath } from './request-log-sanitizer';
 
 type RequestWithId = Request & { requestId?: string };
 
@@ -30,9 +31,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
         event: 'api_request_failed',
         requestId: requestId ?? null,
         method: request.method,
-        path: request.route?.path ?? request.path,
-        errorName:
-          exception instanceof Error ? exception.name : 'UnknownError',
+        path: sanitizeRequestPath(request.originalUrl ?? request.url ?? request.path),
+        errorName: this.errorName(exception),
         prismaCode: this.prismaCode(exception),
       });
     }
@@ -74,10 +74,26 @@ export class ApiExceptionFilter implements ExceptionFilter {
   }
 
   private prismaCode(exception: unknown) {
-    if (!exception || typeof exception !== 'object' || !('code' in exception)) {
-      return null;
+    let current = exception;
+    for (let depth = 0; depth < 4 && current && typeof current === 'object'; depth += 1) {
+      if ('code' in current) {
+        const code = (current as { code?: unknown }).code;
+        if (typeof code === 'string' && /^P\d{4}$/.test(code)) return code;
+      }
+      current = 'cause' in current ? (current as { cause?: unknown }).cause : undefined;
     }
-    const code = (exception as { code?: unknown }).code;
-    return typeof code === 'string' && /^P\d{4}$/.test(code) ? code : null;
+    return null;
+  }
+
+  private errorName(exception: unknown) {
+    let current = exception;
+    let fallback = 'UnknownError';
+    for (let depth = 0; depth < 4 && current && typeof current === 'object'; depth += 1) {
+      if (current instanceof Error && /^[A-Za-z0-9_.-]{1,80}$/.test(current.name)) {
+        fallback = current.name;
+      }
+      current = 'cause' in current ? (current as { cause?: unknown }).cause : undefined;
+    }
+    return fallback;
   }
 }

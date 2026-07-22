@@ -35,4 +35,10 @@ describe('request log sanitizers', () => {
       '/invitations/:token',
     );
   });
+
+  it('redacts the organization id from first-admin paths', () => {
+    expect(sanitizeRequestPath('/platform/settings/company-secret-id/first-admin?trace=true')).toBe(
+      '/platform/settings/:id/first-admin',
+    );
+  });
 });

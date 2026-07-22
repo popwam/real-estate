@@ -4,6 +4,7 @@ const BY_TOKEN_PATTERN = /^\/conversations\/by-token\/[^/?#]+(\/messages)?$/;
 const ORGANIZATION_DOMAIN_PATTERN = /^\/organization-domains\/[^/?#]+(\/[^/?#]+)?$/;
 const PLATFORM_DOMAIN_PATTERN = /^\/platform-admin\/domains\/[^/?#]+(\/[^/?#]+)?$/;
 const INVITATION_TOKEN_PATTERN = /^\/invitations\/[^/?#]+(\/accept)?$/;
+const FIRST_ADMIN_PATTERN = /^\/platform\/settings\/[^/?#]+\/first-admin$/;
 
 export function sanitizeRequestPath(path: string | undefined): string {
   if (!path) {
@@ -22,6 +23,10 @@ export function sanitizeRequestPath(path: string | undefined): string {
     return pathname.endsWith('/accept')
       ? '/invitations/:token/accept'
       : '/invitations/:token';
+  }
+
+  if (FIRST_ADMIN_PATTERN.test(pathname)) {
+    return '/platform/settings/:id/first-admin';
   }
 
   if (ORGANIZATION_DOMAIN_PATTERN.test(pathname)) {
