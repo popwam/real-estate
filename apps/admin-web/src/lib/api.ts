@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { clearTokens, getAccessToken, getRefreshToken, isActiveAccountPersisted, storeTokens } from "@/lib/auth";
 import type { AuthSession, MeResponse } from "@/types/auth";
@@ -302,7 +302,7 @@ export function createOrganizationFirstAdminApi(
   input: import("@/types/platform").FirstAdminInput,
 ) {
   return apiRequest<import("@/types/platform").FirstAdminResponse>(
-    `/platform/organizations/${encodeURIComponent(id)}/first-admin`,
+    `/platform/settings/${encodeURIComponent(id)}/first-admin`,
     { method: "POST", body: JSON.stringify(input) },
   );
 }
@@ -773,3 +773,4 @@ export function requestMoreVerificationApi(id: string, input: ReviewActionInput)
     body: JSON.stringify(input),
   });
 }
+
