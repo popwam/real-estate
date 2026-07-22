@@ -50,12 +50,20 @@ export class RequestLoggingMiddleware implements NestMiddleware {
     requestId: string,
     durationMs: number,
   ) {
-    if (process.env.NODE_ENV === 'test') {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      request.method === 'OPTIONS' ||
+      process.env.REQUEST_LOG_SUCCESS !== 'true'
+    ) {
       return;
     }
 
     const statusCode = response.statusCode;
-    const level = statusCode >= 500 ? 'error' : 'info';
+    // Failed requests are logged once by ApiExceptionFilter with the underlying
+    // error name and Prisma code. This opt-in middleware log is for successful
+    // request diagnostics only and is disabled by default in every environment.
+    if (statusCode >= 500) return;
+    const level = 'info' as const;
     const entry: RequestLogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -72,13 +80,6 @@ export class RequestLoggingMiddleware implements NestMiddleware {
       organizationId: request.user?.organizationId,
       role: request.user?.role,
     };
-
-    if (level === 'error') {
-      entry.errorName = 'HttpError';
-      entry.errorMessage = `HTTP ${statusCode} response`;
-      console.error(JSON.stringify(entry));
-      return;
-    }
 
     console.log(JSON.stringify(entry));
   }

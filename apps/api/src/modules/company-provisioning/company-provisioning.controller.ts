@@ -230,8 +230,11 @@ export class PlatformSettingsController {
     @Param('id') id: string,
     @Body() dto: FirstAdminInputDto,
     @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() request: Request & { requestId?: string },
   ) {
-    return this.service.createOrganizationFirstAdmin(id, dto, user);
+    return this.service.createOrganizationFirstAdmin(id, dto, user, {
+      requestId: request.requestId,
+    });
   }
 
   @Permissions('platform.metadata.manage')
