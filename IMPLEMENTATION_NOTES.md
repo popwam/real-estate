@@ -474,3 +474,40 @@ No migration is required or created. The current `users(organizationId, userRole
 - Employee codes still use the existing count-plus-one convention. Unrelated concurrent employee creation can produce a non-email uniqueness conflict; it now fails safely as retryable 503 instead of leaking Prisma data, but replacing the organization-wide employee-code allocator is separate work.
 - Audit is intentionally outside the transaction. If audit storage fails after the user commits, the endpoint can fail while the admin exists; an outbox/reconciliation design would be needed for atomic business-write/audit delivery without lengthening this transaction.
 - No live staging database, deploy, `prisma migrate deploy`, reset, secret change, commit, or push was performed.
+
+## Employee attendance evidence and reference-photo workflow (2026-07-29)
+
+### Existing attendance architecture found
+
+Employee self-service attendance is implemented in `apps/mobile` (Flutter), not the admin web. It uses the existing `/hr/attendance/me/today`, `/me/history`, `/check-in`, `/check-out`, and protected `/evidence-photo` APIs. The API already enforced linked active employees, organization scope, location radius, Wi-Fi, developer-options/USB checks, protected attendance uploads, and DVR review.
+
+### Files changed
+
+- `apps/api/prisma/schema.prisma`
+- `apps/api/prisma/migrations/20260729180000_attendance_reference_photo_verification/migration.sql`
+- `apps/api/src/modules/operations/operations.service.ts`
+- `apps/api/src/modules/operations/operations.controller.ts`
+- `apps/mobile/lib/features/attendance/{data,services}/*`
+- `apps/admin-web/src/lib/hr-settings-api.ts` and HR attendance translations/page
+
+### Employee check-in, location, and camera flow
+
+The mobile flow now gathers GPS before camera, sends latitude/longitude, accuracy, and capture time, then opens the preferred front camera. It accepts only a fresh camera capture, shows an on-device preview, and permits retake before private upload. The API recalculates distance and rejects missing/out-of-policy locations; optional `maxGpsAccuracyMeters` is enforced server-side. No base64 or permanent public URL is stored.
+
+### Reference photos and face verification
+
+`EmployeeAttendanceReferencePhoto` keeps immutable historical reference records. The safe default policy, `firstAttendancePhotoRequiresApproval=true`, creates `PENDING_REFERENCE_APPROVAL`; HR can approve/reject it through the new review API, and approval revokes prior active references with an audit event. HR can also manually approve/reject a record's face verification. Attendance records preserve image IDs, reference ID, provider, confidence, review actor/time, and rejection reason.
+
+There is deliberately no automated face-recognition provider in this implementation. `MANUAL` is recorded as the provider and reference-backed checks use `MANUAL_REVIEW_REQUIRED` when `requireFaceVerification` is enabled. Photo capture, reference management, and manual review are complete; automated matching is not claimed.
+
+### Reference-photo schema integrity follow-up
+
+The un-applied `20260729180000_attendance_reference_photo_verification` migration was corrected in place. `EmployeeAttendanceReferencePhoto.fileId` is now a required `UploadedFile` relation with `ON DELETE RESTRICT`; `sourceAttendanceId` is an `HrAttendanceRecord` relation with `ON DELETE SET NULL`; approver/revoker and attendance face-reviewer IDs are named `User` relations with `ON DELETE SET NULL`. `referenceImageId` and `capturedImageId` are also restricted `UploadedFile` relations: they are populated only from the validated self-service attendance `photoFileId` contract. Legacy `checkInPhotoFileId`/`checkOutPhotoFileId` remain scalars for backward-compatible historical data, although the current self-service API validates supplied values as attendance `UploadedFile.id` values.
+
+The schema adds a composite `HrEmployee(id, organizationId)` unique key and uses it for the reference-photo employee relation, preventing employee/organization cross-tenant mismatches at the database layer. A partial unique index permits exactly one `APPROVED_REFERENCE` per employee. The review service still revokes the previous reference within its transaction and converts a concurrent unique violation into HTTP 409. `maxGpsAccuracyMeters` now has both a database CHECK (`NULL OR > 0`) and service validation. No confidence-range CHECK was added because no real biometric provider contract establishes a scale. No migration was applied.
+
+### Backend enforcement, admin, tests, and migration
+
+The existing backend checks remain active; evidence is never trusted from the frontend alone. Admin attendance columns now expose reference/captured image IDs and face status/confidence; protected file preview continues to use the existing authorization path. New HR APIs are permission-gated by `hr.attendance.review`/`hr.attendance.manage`.
+
+The migration is additive and was created but **not applied**. Focused mobile widget tests passed, API attendance tests passed, and both `pnpm --filter api build` and `pnpm --filter admin-web build` passed. A real biometric provider, device E2E permission tests, and staged migration/E2E validation remain required before claiming automated face matching.
