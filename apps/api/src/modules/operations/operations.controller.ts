@@ -420,6 +420,26 @@ export class OperationsController {
   ) {
     return this.operations.myAttendanceHistory(user);
   }
+  @Get('hr/employees/:employeeId/attendance-references') listEmployeeAttendanceReferences(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.listEmployeeAttendanceReferences(employeeId, user);
+  }
+  @Patch('hr/attendance-references/:id/review') reviewAttendanceReference(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.reviewAttendanceReference(id, body, user);
+  }
+  @Patch('hr/attendance/:id/face-verification') reviewAttendanceFaceVerification(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.reviewAttendanceFaceVerification(id, body, user);
+  }
   @Post('hr/attendance/evidence-photo')
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),

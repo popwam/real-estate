@@ -59,6 +59,8 @@ class AttendanceVerificationPayload {
   const AttendanceVerificationPayload({
     this.latitude,
     this.longitude,
+    this.locationAccuracyMeters,
+    this.locationCapturedAt,
     this.wifiSsid,
     this.wifiBssid,
     this.photoFileId,
@@ -69,6 +71,8 @@ class AttendanceVerificationPayload {
 
   final double? latitude;
   final double? longitude;
+  final double? locationAccuracyMeters;
+  final DateTime? locationCapturedAt;
   final String? wifiSsid;
   final String? wifiBssid;
   final String? photoFileId;
@@ -80,6 +84,10 @@ class AttendanceVerificationPayload {
     return {
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (locationAccuracyMeters != null)
+        'locationAccuracyMeters': locationAccuracyMeters,
+      if (locationCapturedAt != null)
+        'locationCapturedAt': locationCapturedAt!.toUtc().toIso8601String(),
       if (wifiSsid != null && wifiSsid!.trim().isNotEmpty)
         'wifiSsid': wifiSsid!.trim(),
       if (wifiBssid != null && wifiBssid!.trim().isNotEmpty)

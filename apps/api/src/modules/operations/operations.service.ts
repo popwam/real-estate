@@ -15,6 +15,8 @@ import {
   AttendanceLateLevel,
   AttendancePenaltyType,
   AttendanceSource,
+  AttendanceFaceVerificationStatus,
+  AttendanceReferencePhotoStatus,
   AttendanceVerificationStatus,
   CameraDeviceProvider,
   CameraDeviceStatus,
@@ -913,6 +915,10 @@ export class OperationsService {
       'checkIn',
       user,
     );
+    const photoFileId = this.optional(input.photoFileId ?? input.checkInPhotoFileId);
+    const face = verification.reject
+      ? { status: AttendanceFaceVerificationStatus.NOT_REQUIRED, provider: null, referenceImageId: null, createReferenceCandidate: false }
+      : await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
     const { start, end, date } = this.todayBounds();
     const openRecord = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
@@ -954,6 +960,10 @@ export class OperationsService {
           : undefined,
         dvrVerificationStatus: verification.dvrStatus,
         dvrReferenceId: this.optional(input.dvrReferenceId),
+        referenceImageId: face.referenceImageId,
+        capturedImageId: photoFileId,
+        faceVerificationProvider: face.provider,
+        faceVerificationStatus: face.status,
         minutesLate: late.minutesLate,
         lateLevel: late.lateLevel,
         penaltyType: late.penaltyType,
@@ -975,6 +985,24 @@ export class OperationsService {
       employee.name,
       this.attendanceMetadata(input, verification),
     );
+    if (face.createReferenceCandidate && photoFileId && this.prisma.employeeAttendanceReferencePhoto) {
+      await this.prisma.employeeAttendanceReferencePhoto.create({
+        data: {
+          organizationId: employee.organizationId,
+          employeeId: employee.id,
+          fileId: photoFileId,
+          sourceAttendanceId: record.id,
+          status: policy.firstAttendancePhotoRequiresApproval
+            ? AttendanceReferencePhotoStatus.PENDING_REFERENCE_APPROVAL
+            : AttendanceReferencePhotoStatus.APPROVED_REFERENCE,
+          approvedById: policy.firstAttendancePhotoRequiresApproval ? undefined : user.userId,
+          approvedAt: policy.firstAttendancePhotoRequiresApproval ? undefined : new Date(),
+        },
+      });
+      if (!policy.firstAttendancePhotoRequiresApproval) {
+        await this.prisma.hrEmployee.update({ where: { id: employee.id }, data: { faceReferenceFileId: photoFileId } });
+      }
+    }
     if (verification.reject) {
       throw new BadRequestException({
         message: 'Attendance verification failed.',
@@ -982,6 +1010,50 @@ export class OperationsService {
       });
     }
     return this.selfAttendanceEnvelope(record);
+  }
+
+  async listEmployeeAttendanceReferences(employeeId: string, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
+    await this.findEmployeeForMutation(employeeId, user);
+    return this.prisma.employeeAttendanceReferencePhoto.findMany({
+      where: { employeeId, ...operationOrganizationWhere(user) }, orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async reviewAttendanceReference(id: string, input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
+    const reference = await this.prisma.employeeAttendanceReferencePhoto.findFirstOrThrow({ where: { id, ...operationOrganizationWhere(user) } }).catch(() => { throw new NotFoundException('Reference photo not found.'); });
+    const approve = input.approve === true;
+    let updated: any;
+    try {
+      updated = await this.prisma.$transaction(async (tx) => {
+        if (approve) {
+          await tx.employeeAttendanceReferencePhoto.updateMany({ where: { employeeId: reference.employeeId, status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE }, data: { status: AttendanceReferencePhotoStatus.REVOKED, revokedById: user.userId, revokedAt: new Date() } });
+        }
+        const next = await tx.employeeAttendanceReferencePhoto.update({ where: { id }, data: approve ? { status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE, approvedById: user.userId, approvedAt: new Date(), rejectionReason: null } : { status: AttendanceReferencePhotoStatus.REJECTED, rejectionReason: this.optional(input.rejectionReason) ?? 'REJECTED_BY_REVIEWER' } });
+        if (approve) await tx.hrEmployee.update({ where: { id: reference.employeeId }, data: { faceReferenceFileId: reference.fileId } });
+        return next;
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'P2002') {
+        throw new ConflictException('Another reference photo was approved concurrently. Refresh and try again.');
+      }
+      throw error;
+    }
+    await this.recordAudit(user, approve ? 'attendance.reference_approved' : 'attendance.reference_rejected', 'EmployeeAttendanceReferencePhoto', id, { employeeId: reference.employeeId });
+    return updated;
+  }
+
+  async reviewAttendanceFaceVerification(id: string, input: any, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
+    await this.assertExists('hrAttendanceRecord', id, user);
+    const approved = input.approve === true;
+    const record = await this.prisma.hrAttendanceRecord.update({ where: { id }, data: { faceVerificationStatus: approved ? AttendanceFaceVerificationStatus.APPROVED_MANUALLY : AttendanceFaceVerificationStatus.REJECTED, faceVerificationReviewedById: user.userId, faceVerificationReviewedAt: new Date(), faceVerificationRejectionReason: approved ? null : this.optional(input.rejectionReason) ?? 'REJECTED_BY_REVIEWER', requiresReview: !approved } });
+    await this.recordAudit(user, approved ? 'attendance.face_approved_manually' : 'attendance.face_rejected', 'HrAttendanceRecord', id);
+    return record;
   }
 
   async checkOutHrAttendance(input: any, user: AuthenticatedRequestUser) {
@@ -2819,6 +2891,12 @@ export class OperationsService {
       blockDeveloperOptions: input.blockDeveloperOptions === undefined ? true : Boolean(input.blockDeveloperOptions),
       blockUsbDebugging: input.blockUsbDebugging === undefined ? true : Boolean(input.blockUsbDebugging),
       requirePhoto: Boolean(input.requirePhoto),
+      maxGpsAccuracyMeters: this.optionalPositiveInt(input.maxGpsAccuracyMeters, 'maxGpsAccuracyMeters'),
+      firstAttendancePhotoRequiresApproval:
+        input.firstAttendancePhotoRequiresApproval === undefined
+          ? true
+          : Boolean(input.firstAttendancePhotoRequiresApproval),
+      requireFaceVerification: Boolean(input.requireFaceVerification),
       requireDvrReview: Boolean(input.requireDvrReview),
       allowWebCheckIn: input.allowWebCheckIn === undefined ? true : Boolean(input.allowWebCheckIn),
       allowMobileCheckIn: input.allowMobileCheckIn === undefined ? true : Boolean(input.allowMobileCheckIn),
@@ -3190,6 +3268,12 @@ export class OperationsService {
       checkOutWifiBssid: record?.checkOutWifiBssid ?? null,
       checkInPhotoFileId: record?.checkInPhotoFileId ?? null,
       checkOutPhotoFileId: record?.checkOutPhotoFileId ?? null,
+      referenceImageId: record?.referenceImageId ?? null,
+      capturedImageId: record?.capturedImageId ?? null,
+      faceVerificationProvider: record?.faceVerificationProvider ?? null,
+      faceVerificationConfidence: record?.faceVerificationConfidence ?? null,
+      faceVerificationStatus: record?.faceVerificationStatus ?? AttendanceFaceVerificationStatus.NOT_REQUIRED,
+      faceVerificationRejectionReason: record?.faceVerificationRejectionReason ?? null,
       canCheckIn: !checkInAt || Boolean(checkOutAt) || terminalFailure,
       canCheckOut: Boolean(checkInAt && !checkOutAt && !terminalFailure),
       durationMinutes: this.durationMinutes(checkInAt, checkOutAt),
@@ -3308,6 +3392,9 @@ export class OperationsService {
         blockDeveloperOptions: true,
         blockUsbDebugging: true,
         requirePhoto: false,
+        maxGpsAccuracyMeters: null,
+        firstAttendancePhotoRequiresApproval: true,
+        requireFaceVerification: false,
         requireDvrReview: false,
         allowWebCheckIn: true,
         allowMobileCheckIn: true,
@@ -3328,6 +3415,7 @@ export class OperationsService {
     const reasons: string[] = [];
     const latitude = this.optionalNumber(input.latitude);
     const longitude = this.optionalNumber(input.longitude);
+    const locationAccuracyMeters = this.optionalNumber(input.locationAccuracyMeters);
     const wifiSsid = this.optional(input.wifiSsid);
     const wifiBssid = normalizeWifiId(this.optional(input.wifiBssid));
     const photoFileId = this.optional(
@@ -3376,6 +3464,9 @@ export class OperationsService {
             reasons.push('OUTSIDE_ALLOWED_LOCATION');
           }
         }
+      }
+      if (policy.maxGpsAccuracyMeters && (locationAccuracyMeters === undefined || locationAccuracyMeters > policy.maxGpsAccuracyMeters)) {
+        reasons.push('GPS_ACCURACY_TOO_LOW');
       }
     }
     if (policy.requireWifi) {
@@ -3450,6 +3541,8 @@ export class OperationsService {
     return {
       [`${prefix}Latitude`]: this.optionalNumber(input.latitude),
       [`${prefix}Longitude`]: this.optionalNumber(input.longitude),
+      [`${prefix}LocationAccuracyMeters`]: this.optionalNumber(input.locationAccuracyMeters),
+      [`${prefix}LocationCapturedAt`]: this.safeDate(input.locationCapturedAt),
       [`${prefix}WifiSsid`]: this.optional(input.wifiSsid),
       [`${prefix}WifiBssid`]: normalizeWifiId(this.optional(input.wifiBssid)),
       [`${prefix}PhotoFileId`]: this.optional(
@@ -3517,10 +3610,48 @@ export class OperationsService {
     return undefined;
   }
 
+  private safeDate(value: unknown) {
+    if (typeof value !== 'string' && !(value instanceof Date)) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  /** Provider boundary. No biometric provider is configured in this release, so
+   * reference-backed photos deliberately remain in HR manual review. */
+  private async prepareAttendanceFaceVerification(employee: any, photoFileId: string | undefined, policy: any) {
+    if (!photoFileId) return { status: AttendanceFaceVerificationStatus.NOT_REQUIRED, provider: null, referenceImageId: null, createReferenceCandidate: false };
+    const reference = this.prisma.employeeAttendanceReferencePhoto
+      ? await this.prisma.employeeAttendanceReferencePhoto.findFirst({
+      where: { employeeId: employee.id, status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE },
+      orderBy: { approvedAt: 'desc' },
+    })
+      : null;
+    if (!reference) {
+      return { status: AttendanceFaceVerificationStatus.PENDING, provider: 'MANUAL', referenceImageId: null, createReferenceCandidate: true };
+    }
+    return {
+      status: policy.requireFaceVerification
+        ? AttendanceFaceVerificationStatus.MANUAL_REVIEW_REQUIRED
+        : AttendanceFaceVerificationStatus.NOT_REQUIRED,
+      provider: policy.requireFaceVerification ? 'MANUAL' : null,
+      referenceImageId: reference.fileId,
+      createReferenceCandidate: false,
+    };
+  }
+
   private positiveInt(value: unknown, fallback: number) {
     const number = this.optionalNumber(value);
     if (number === undefined) return fallback;
     return Math.max(1, Math.round(number));
+  }
+
+  private optionalPositiveInt(value: unknown, field: string) {
+    if (value === undefined || value === null || value === '') return undefined;
+    const number = this.optionalNumber(value);
+    if (number === undefined || number <= 0) {
+      throw new BadRequestException(`${field} must be greater than zero.`);
+    }
+    return Math.round(number);
   }
 
   private nonNegativeInt(value: unknown, fallback: number) {

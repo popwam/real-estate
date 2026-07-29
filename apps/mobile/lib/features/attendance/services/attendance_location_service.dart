@@ -8,11 +8,13 @@ class AttendanceLocationEvidence {
     required this.latitude,
     required this.longitude,
     this.accuracyMeters,
+    required this.capturedAt,
   });
 
   final double latitude;
   final double longitude;
   final double? accuracyMeters;
+  final DateTime capturedAt;
 }
 
 class AttendanceLocationService {
@@ -42,6 +44,7 @@ class AttendanceLocationService {
       latitude: position.latitude,
       longitude: position.longitude,
       accuracyMeters: position.accuracy,
+      capturedAt: position.timestamp ?? DateTime.now(),
     );
   }
 }

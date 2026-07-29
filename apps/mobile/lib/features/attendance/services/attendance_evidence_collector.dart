@@ -43,24 +43,11 @@ class NativeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
     bool? usbDebuggingEnabled;
     double? latitude;
     double? longitude;
+    double? locationAccuracyMeters;
+    DateTime? locationCapturedAt;
     String? wifiSsid;
     String? wifiBssid;
     String? photoFileId;
-
-    try {
-      final capturedPhoto = await _photo.captureLivePhoto(context);
-      photoFileId = await _photo.uploadAttendancePhoto(
-        capturedPhoto,
-        purpose: purpose,
-      );
-    } on AttendanceEvidenceException catch (error) {
-      if (error.issue == AttendanceEvidenceIssue.photoUploadFailed ||
-          error.issue == AttendanceEvidenceIssue.cameraPermissionDenied ||
-          error.issue == AttendanceEvidenceIssue.photoCaptureCancelled) {
-        rethrow;
-      }
-      issues.add(error.issue);
-    }
 
     try {
       final integrity = await _deviceIntegrity.collect();
@@ -83,7 +70,24 @@ class NativeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
       final position = await _location.collect();
       latitude = position.latitude;
       longitude = position.longitude;
+      locationAccuracyMeters = position.accuracyMeters;
+      locationCapturedAt = position.capturedAt;
     } on AttendanceEvidenceException catch (error) {
+      issues.add(error.issue);
+    }
+
+    try {
+      final capturedPhoto = await _photo.captureLivePhoto(context);
+      photoFileId = await _photo.uploadAttendancePhoto(
+        capturedPhoto,
+        purpose: purpose,
+      );
+    } on AttendanceEvidenceException catch (error) {
+      if (error.issue == AttendanceEvidenceIssue.photoUploadFailed ||
+          error.issue == AttendanceEvidenceIssue.cameraPermissionDenied ||
+          error.issue == AttendanceEvidenceIssue.photoCaptureCancelled) {
+        rethrow;
+      }
       issues.add(error.issue);
     }
 
@@ -99,6 +103,8 @@ class NativeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
       payload: AttendanceVerificationPayload(
         latitude: latitude,
         longitude: longitude,
+        locationAccuracyMeters: locationAccuracyMeters,
+        locationCapturedAt: locationCapturedAt,
         wifiSsid: wifiSsid,
         wifiBssid: wifiBssid,
         photoFileId: photoFileId,

@@ -148,6 +148,45 @@ describe('OperationsService self attendance', () => {
     );
   });
 
+  it('rejects a non-positive GPS accuracy policy value', () => {
+    const { service } = setup();
+    expect(() => (service as any).attendanceSettingsData({ maxGpsAccuracyMeters: 0 }))
+      .toThrow('maxGpsAccuracyMeters must be greater than zero.');
+    expect(() => (service as any).attendanceSettingsData({ maxGpsAccuracyMeters: -10 }))
+      .toThrow('maxGpsAccuracyMeters must be greater than zero.');
+  });
+
+  it('allows at most one concurrent reference approval and surfaces the unique-index conflict', async () => {
+    const { prisma, service } = setup();
+    const reviewer = { ...user, permissions: ['hr.attendance.review'] };
+    prisma.employeeAttendanceReferencePhoto = {
+      findFirstOrThrow: jest.fn().mockResolvedValue({
+        id: 'reference_1', organizationId: 'org_1', employeeId: employee.id, fileId: 'file_1',
+      }),
+    };
+    const tx = {
+      employeeAttendanceReferencePhoto: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        update: jest.fn().mockResolvedValue({ id: 'reference_1', status: 'APPROVED_REFERENCE' }),
+      },
+      hrEmployee: { update: jest.fn().mockResolvedValue(employee) },
+    };
+    prisma.$transaction = jest
+      .fn()
+      .mockImplementationOnce((callback: any) => callback(tx))
+      .mockRejectedValueOnce({ code: 'P2002' });
+
+    const results = await Promise.allSettled([
+      service.reviewAttendanceReference('reference_1', { approve: true }, reviewer),
+      service.reviewAttendanceReference('reference_1', { approve: true }, reviewer),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')[0]).toMatchObject({
+      reason: expect.any(ConflictException),
+    });
+  });
+
   it('marks self check-in late when the configured schedule has already passed', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-07-10T23:59:00.000Z'));

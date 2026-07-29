@@ -710,6 +710,23 @@ enum AttendanceVerificationStatus {
   FAILED
 }
 
+enum AttendanceFaceVerificationStatus {
+  NOT_REQUIRED
+  PENDING
+  MATCHED
+  NOT_MATCHED
+  MANUAL_REVIEW_REQUIRED
+  APPROVED_MANUALLY
+  REJECTED
+}
+
+enum AttendanceReferencePhotoStatus {
+  PENDING_REFERENCE_APPROVAL
+  APPROVED_REFERENCE
+  REVOKED
+  REJECTED
+}
+
 enum DvrVerificationStatus {
   NOT_REQUIRED
   PENDING
@@ -1072,6 +1089,7 @@ model Organization {
   hrEmployeeTransferLogs      HrEmployeeTransferLog[]
   hrEmployeeTitleChangeLogs   HrEmployeeTitleChangeLog[]
   hrAttendanceRecords         HrAttendanceRecord[]
+  employeeAttendanceReferencePhotos EmployeeAttendanceReferencePhoto[]
   attendanceSettings          OrganizationAttendanceSettings?
   branches                    OrganizationBranch[]
   subscription                OrganizationSubscription?
@@ -1509,6 +1527,9 @@ model User {
   quickActionPreferences             UserQuickActionPreference[]
   createdOnboardingSessions          OrganizationOnboardingSession[] @relation("OnboardingCreatedBy")
   reviewedFieldEvidence              OrganizationFieldEvidence[]     @relation("FieldEvidenceReviewedBy")
+  approvedAttendanceReferencePhotos  EmployeeAttendanceReferencePhoto[] @relation("AttendanceReferenceApprovedBy")
+  revokedAttendanceReferencePhotos   EmployeeAttendanceReferencePhoto[] @relation("AttendanceReferenceRevokedBy")
+  reviewedAttendanceFaceVerifications HrAttendanceRecord[] @relation("AttendanceFaceVerificationReviewedBy")
 
   @@index([organizationId, userRole])
   @@map("users")
@@ -1607,6 +1628,9 @@ model UploadedFile {
   organizationOwnerProofFiles    OrganizationOwner[]              @relation("OrganizationOwnerProofFile")
   hrApplicantDocuments           HrApplicantDocument[]            @relation("HrApplicantDocumentFile")
   onboardingDocuments            OrganizationOnboardingDocument[]
+  attendanceReferencePhotoFiles  EmployeeAttendanceReferencePhoto[] @relation("AttendanceReferencePhotoFile")
+  attendanceReferenceImages      HrAttendanceRecord[] @relation("AttendanceRecordReferenceImage")
+  attendanceCapturedImages       HrAttendanceRecord[] @relation("AttendanceRecordCapturedImage")
 
   @@index([organizationId, createdAt])
   @@map("uploaded_files")
@@ -2856,8 +2880,10 @@ model HrEmployee {
   transferLogs                HrEmployeeTransferLog[]
   titleChangeLogs             HrEmployeeTitleChangeLog[]
   attendance                  HrAttendanceRecord[]
+  attendanceReferencePhotos   EmployeeAttendanceReferencePhoto[]
 
   @@unique([organizationId, employeeCode])
+  @@unique([id, organizationId])
   @@index([organizationId, status])
   @@index([departmentId, status])
   @@index([officeId])
@@ -3178,14 +3204,26 @@ model HrAttendanceRecord {
   note                       String?
   checkInLatitude            Float?
   checkInLongitude           Float?
+  checkInLocationAccuracyMeters Float?
+  checkInLocationCapturedAt  DateTime?
   checkOutLatitude           Float?
   checkOutLongitude          Float?
+  checkOutLocationAccuracyMeters Float?
+  checkOutLocationCapturedAt DateTime?
   checkInWifiSsid            String?
   checkInWifiBssid           String?
   checkOutWifiSsid           String?
   checkOutWifiBssid          String?
   checkInPhotoFileId         String?
   checkOutPhotoFileId        String?
+  referenceImageId           String?
+  capturedImageId            String?
+  faceVerificationProvider   String?
+  faceVerificationConfidence Float?
+  faceVerificationStatus     AttendanceFaceVerificationStatus @default(NOT_REQUIRED)
+  faceVerificationReviewedById String?
+  faceVerificationReviewedAt DateTime?
+  faceVerificationRejectionReason String?
   checkInDeviceId            String?
   checkOutDeviceId           String?
   branchId                   String?
@@ -3204,12 +3242,42 @@ model HrAttendanceRecord {
   organization               Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee                   HrEmployee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branch                     OrganizationBranch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  referenceImage             UploadedFile?                @relation("AttendanceRecordReferenceImage", fields: [referenceImageId], references: [id], onDelete: Restrict)
+  capturedImage              UploadedFile?                @relation("AttendanceRecordCapturedImage", fields: [capturedImageId], references: [id], onDelete: Restrict)
+  faceVerificationReviewedBy User?                         @relation("AttendanceFaceVerificationReviewedBy", fields: [faceVerificationReviewedById], references: [id], onDelete: SetNull)
+  attendanceReferenceSources EmployeeAttendanceReferencePhoto[] @relation("AttendanceReferenceSourceAttendance")
 
   @@index([organizationId, date])
   @@index([employeeId, date])
   @@index([branchId])
   @@index([organizationId, verificationStatus])
   @@map("hr_attendance_records")
+}
+
+model EmployeeAttendanceReferencePhoto {
+  id              String                         @id @default(cuid())
+  organizationId  String
+  employeeId      String
+  fileId          String
+  status          AttendanceReferencePhotoStatus @default(PENDING_REFERENCE_APPROVAL)
+  sourceAttendanceId String?
+  approvedById    String?
+  approvedAt      DateTime?
+  revokedById     String?
+  revokedAt       DateTime?
+  rejectionReason String?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  organization    Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee        HrEmployee                     @relation(fields: [employeeId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  file            UploadedFile                   @relation("AttendanceReferencePhotoFile", fields: [fileId], references: [id], onDelete: Restrict)
+  sourceAttendance HrAttendanceRecord?           @relation("AttendanceReferenceSourceAttendance", fields: [sourceAttendanceId], references: [id], onDelete: SetNull)
+  approvedBy      User?                          @relation("AttendanceReferenceApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  revokedBy       User?                          @relation("AttendanceReferenceRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, status])
+  @@index([organizationId, status])
+  @@map("employee_attendance_reference_photos")
 }
 
 model OrganizationAttendanceSettings {
@@ -3235,6 +3303,9 @@ model OrganizationAttendanceSettings {
   blockDeveloperOptions         Boolean               @default(true)
   blockUsbDebugging             Boolean               @default(true)
   requirePhoto                  Boolean               @default(false)
+  maxGpsAccuracyMeters          Int?
+  firstAttendancePhotoRequiresApproval Boolean        @default(true)
+  requireFaceVerification       Boolean               @default(false)
   requireDvrReview              Boolean               @default(false)
   allowWebCheckIn               Boolean               @default(true)
   allowMobileCheckIn            Boolean               @default(true)

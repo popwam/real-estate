@@ -1,4 +1,5 @@
 import 'package:camera/camera.dart';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,7 +37,12 @@ class AttendancePhotoService {
     final photo = await Navigator.of(context).push<XFile>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => _AttendanceCameraScreen(camera: cameras.first),
+        builder: (_) => _AttendanceCameraScreen(
+          camera: cameras.firstWhere(
+            (camera) => camera.lensDirection == CameraLensDirection.front,
+            orElse: () => cameras.first,
+          ),
+        ),
       ),
     );
 
@@ -101,6 +107,7 @@ class _AttendanceCameraScreenState extends State<_AttendanceCameraScreen> {
   late final CameraController _controller;
   late final Future<void> _initialize;
   bool _capturing = false;
+  XFile? _preview;
 
   @override
   void initState() {
@@ -125,7 +132,7 @@ class _AttendanceCameraScreenState extends State<_AttendanceCameraScreen> {
     try {
       await _initialize;
       final photo = await _controller.takePicture();
-      if (mounted) Navigator.of(context).pop(photo);
+      if (mounted) setState(() => _preview = photo);
     } catch (_) {
       if (mounted) Navigator.of(context).pop();
     } finally {
@@ -159,21 +166,35 @@ class _AttendanceCameraScreenState extends State<_AttendanceCameraScreen> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              CameraPreview(_controller),
+              if (_preview == null) CameraPreview(_controller) else Image.file(File(_preview!.path), fit: BoxFit.cover),
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 32,
                 child: Center(
-                  child: FilledButton(
-                    onPressed: _capturing ? null : _capture,
-                    child: _capturing
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.camera_alt),
-                  ),
+                  child: _preview == null
+                      ? FilledButton(
+                          onPressed: _capturing ? null : _capture,
+                          child: _capturing
+                              ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.camera_alt),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => setState(() => _preview = null),
+                              icon: const Icon(Icons.refresh),
+                              label: const Icon(Icons.camera_alt),
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton.icon(
+                              onPressed: () => Navigator.of(context).pop(_preview),
+                              icon: const Icon(Icons.check),
+                              label: const Icon(Icons.check_circle),
+                            ),
+                          ],
+                        ),
                 ),
               ),
             ],

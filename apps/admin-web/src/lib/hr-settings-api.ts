@@ -46,6 +46,9 @@ export type AttendanceSettings = {
   allowedWifiSsids: string[];
   allowedWifiBssids: string[];
   requirePhoto: boolean;
+  maxGpsAccuracyMeters?: number | null;
+  firstAttendancePhotoRequiresApproval: boolean;
+  requireFaceVerification: boolean;
   requireDvrReview: boolean;
   allowWebCheckIn: boolean;
   allowMobileCheckIn: boolean;
@@ -102,6 +105,10 @@ export type SelfAttendance = {
   status: string | null;
   verificationStatus: string | null;
   verificationFailureReasons: string[];
+  referenceImageId?: string | null;
+  capturedImageId?: string | null;
+  faceVerificationStatus?: string | null;
+  faceVerificationConfidence?: number | null;
   minutesLate?: number | null;
   lateLevel?: string | null;
   penaltyType?: string | null;
