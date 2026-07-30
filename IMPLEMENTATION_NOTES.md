@@ -506,6 +506,25 @@ The un-applied `20260729180000_attendance_reference_photo_verification` migratio
 
 The schema adds a composite `HrEmployee(id, organizationId)` unique key and uses it for the reference-photo employee relation, preventing employee/organization cross-tenant mismatches at the database layer. A partial unique index permits exactly one `APPROVED_REFERENCE` per employee. The review service still revokes the previous reference within its transaction and converts a concurrent unique violation into HTTP 409. `maxGpsAccuracyMeters` now has both a database CHECK (`NULL OR > 0`) and service validation. No confidence-range CHECK was added because no real biometric provider contract establishes a scale. No migration was applied.
 
+## Mobile location-first attendance preflight (2026-07-30)
+
+### Root cause and previous flow
+
+The Flutter collector opened the camera and uploaded its capture before the server had a chance to reject the location. The preview action row was a shrink-wrapped `Row` inside a `Center`/`Positioned` stack: Material buttons received unbounded horizontal constraints, causing `BoxConstraints forces an infinite width` after a successful capture.
+
+### New flow and enforcement
+
+`POST /hr/attendance/check-in/preflight` is a read-only, organization-scoped employee gate. It resolves the active employee and policy, calculates server-side distance/radius and GPS accuracy, and returns a decision without creating attendance, uploading a file, audit activity, or changing state. The mobile page obtains a fresh location, calls preflight, and only then enters the collector/camera path. A rejected preflight does not open the camera or upload a file. Final check-in continues to call the existing server-side verification, which recalculates location and now rejects supplied stale/future location timestamps; legacy clients without a timestamp remain compatible.
+
+The mobile screen has an explicit in-flight flow state and disables duplicate submission. Camera preview now uses `SafeArea` and a `Positioned(left: 16, right: 16)` bounded action bar with two `Expanded` buttons. The camera controller remains owned by the route and is disposed on accept, retake exit, or cancel.
+
+### Validation
+
+- API attendance service tests and API build passed.
+- `flutter analyze` completed with two existing warnings in `attendance_location_service.dart` about a non-null timestamp fallback.
+- Focused `flutter test test/widget_test.dart` passed.
+- No migration, database command, secret, deploy, commit, or push was performed. Device permission/camera E2E and an integration database preflight test remain required.
+
 ### Backend enforcement, admin, tests, and migration
 
 The existing backend checks remain active; evidence is never trusted from the frontend alone. Admin attendance columns now expose reference/captured image IDs and face status/confidence; protected file preview continues to use the existing authorization path. New HR APIs are permission-gated by `hr.attendance.review`/`hr.attendance.manage`.

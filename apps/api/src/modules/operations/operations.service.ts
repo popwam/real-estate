@@ -1012,6 +1012,26 @@ export class OperationsService {
     return this.selfAttendanceEnvelope(record);
   }
 
+  /** Read-only location gate used before the mobile client opens its camera. */
+  async preflightHrAttendanceCheckIn(input: any, user: AuthenticatedRequestUser) {
+    const employee = await this.resolveCurrentEmployee(user);
+    const policy = await this.attendancePolicy(employee.organizationId);
+    const decision = this.attendanceLocationDecision(input, policy);
+    return {
+      allowed: decision.blockingReasons.length === 0,
+      insideAllowedRadius: decision.mode === 'EXACT' || decision.mode === 'EXPANDED_REVIEW',
+      distanceMeters: decision.distanceMeters,
+      allowedRadiusMeters: decision.allowedRadiusMeters,
+      accuracyAccepted: !decision.blockingReasons.includes('GPS_ACCURACY_TOO_LOW'),
+      mode: decision.mode,
+      blockingReasons: decision.blockingReasons,
+      requiresPhoto: Boolean(policy.requirePhoto),
+      requiresWifi: Boolean(policy.requireWifi),
+      requiresDeviceIntegrity: Boolean(policy.blockDeveloperOptions || policy.blockUsbDebugging),
+      requiresDvrReview: Boolean(policy.requireDvrReview),
+    };
+  }
+
   async listEmployeeAttendanceReferences(employeeId: string, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
@@ -3437,38 +3457,8 @@ export class OperationsService {
     if (policy.allowWebCheckIn === false && isWeb) {
       reasons.push('WEB_CHECK_IN_NOT_ALLOWED');
     }
-    if (policy.requireLocation) {
-      if (latitude === undefined || longitude === undefined) {
-        reasons.push('LOCATION_REQUIRED');
-      } else if (
-        typeof policy.allowedLatitude !== 'number' ||
-        typeof policy.allowedLongitude !== 'number' ||
-        !(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters)
-      ) {
-        reasons.push('LOCATION_POLICY_NOT_CONFIGURED');
-      } else {
-        const distance = distanceMeters(
-          latitude,
-          longitude,
-          policy.allowedLatitude,
-          policy.allowedLongitude,
-        );
-        const exactRadius = Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30);
-        const expandedRadius = Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? exactRadius);
-        if (distance > expandedRadius) {
-          reasons.push('OUTSIDE_ALLOWED_LOCATION');
-        } else if (distance > exactRadius) {
-          if (policy.allowExpandedRadiusWithReview) {
-            reasons.push('EXPANDED_LOCATION_REVIEW');
-          } else {
-            reasons.push('OUTSIDE_ALLOWED_LOCATION');
-          }
-        }
-      }
-      if (policy.maxGpsAccuracyMeters && (locationAccuracyMeters === undefined || locationAccuracyMeters > policy.maxGpsAccuracyMeters)) {
-        reasons.push('GPS_ACCURACY_TOO_LOW');
-      }
-    }
+    const locationDecision = this.attendanceLocationDecision(input, policy);
+    reasons.push(...locationDecision.blockingReasons);
     if (policy.requireWifi) {
       if (isWeb) {
         if (policy.webWifiPolicy === WebWifiPolicy.BLOCK) {
@@ -3608,6 +3598,31 @@ export class OperationsService {
       if (Number.isFinite(number)) return number;
     }
     return undefined;
+  }
+
+  private attendanceLocationDecision(input: any, policy: any) {
+    const latitude = this.optionalNumber(input.latitude);
+    const longitude = this.optionalNumber(input.longitude);
+    const accuracy = this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters);
+    const capturedAt = this.safeDate(input.locationCapturedAt ?? input.capturedAt);
+    if (!policy.requireLocation) return { blockingReasons: [] as string[], distanceMeters: null, allowedRadiusMeters: null, mode: 'LOCATION_NOT_REQUIRED' };
+    const reasons: string[] = [];
+    if (latitude === undefined || longitude === undefined) reasons.push('LOCATION_REQUIRED');
+    // New mobile clients always send this evidence. Keep old clients compatible
+    // while rejecting any supplied timestamp that is stale or implausibly future.
+    if (capturedAt && (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 || capturedAt.getTime() - Date.now() > 60 * 1000)) reasons.push('LOCATION_STALE');
+    if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
+    if (typeof policy.allowedLatitude !== 'number' || typeof policy.allowedLongitude !== 'number' || !(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters)) {
+      reasons.push('LOCATION_POLICY_NOT_CONFIGURED');
+      return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: null, mode: 'OUTSIDE' };
+    }
+    if (latitude === undefined || longitude === undefined) return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters), mode: 'OUTSIDE' };
+    const distance = distanceMeters(latitude, longitude, policy.allowedLatitude, policy.allowedLongitude);
+    const exact = Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30);
+    const expanded = Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? exact);
+    if (distance > expanded || (distance > exact && !policy.allowExpandedRadiusWithReview)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
+    const mode = distance <= exact ? 'EXACT' : distance <= expanded ? 'EXPANDED_REVIEW' : 'OUTSIDE';
+    return { blockingReasons: [...new Set(reasons)], distanceMeters: Math.round(distance), allowedRadiusMeters: exact, mode };
   }
 
   private safeDate(value: unknown) {

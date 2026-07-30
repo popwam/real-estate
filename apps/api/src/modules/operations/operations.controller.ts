@@ -473,6 +473,17 @@ export class OperationsController {
       () => this.operations.checkInHrAttendance(body, user),
     );
   }
+  @Post('hr/attendance/check-in/preflight') preflightHrAttendanceCheckIn(
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res, req, user, 'hr-attendance-self-check-in-preflight',
+      () => this.operations.preflightHrAttendanceCheckIn(body, user),
+    );
+  }
   @Post('hr/attendance/check-out') checkOutHrAttendance(
     @Body() body: any,
     @CurrentUser() user: AuthenticatedRequestUser,

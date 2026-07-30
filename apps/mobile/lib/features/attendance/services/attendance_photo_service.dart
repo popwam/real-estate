@@ -163,41 +163,46 @@ class _AttendanceCameraScreenState extends State<_AttendanceCameraScreen> {
               ),
             );
           }
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              if (_preview == null) CameraPreview(_controller) else Image.file(File(_preview!.path), fit: BoxFit.cover),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 32,
-                child: Center(
+          return SafeArea(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (_preview == null) CameraPreview(_controller) else Image.file(File(_preview!.path), fit: BoxFit.cover),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 24,
                   child: _preview == null
-                      ? FilledButton(
-                          onPressed: _capturing ? null : _capture,
-                          child: _capturing
-                              ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.camera_alt),
+                      ? Center(
+                          child: FilledButton(
+                            onPressed: _capturing ? null : _capture,
+                            child: _capturing
+                                ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.camera_alt),
+                          ),
                         )
                       : Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            OutlinedButton.icon(
-                              onPressed: () => setState(() => _preview = null),
-                              icon: const Icon(Icons.refresh),
-                              label: const Icon(Icons.camera_alt),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _capturing ? null : () => setState(() => _preview = null),
+                                icon: const Icon(Icons.refresh),
+                                label: const Icon(Icons.camera_alt),
+                              ),
                             ),
                             const SizedBox(width: 12),
-                            FilledButton.icon(
-                              onPressed: () => Navigator.of(context).pop(_preview),
-                              icon: const Icon(Icons.check),
-                              label: const Icon(Icons.check_circle),
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: _capturing ? null : () => Navigator.of(context).pop(_preview),
+                                icon: const Icon(Icons.check),
+                                label: const Icon(Icons.check_circle),
+                              ),
                             ),
                           ],
                         ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

@@ -12,6 +12,7 @@ abstract class AttendanceEvidenceCollector {
   Future<AttendanceEvidenceResult> collect(
     BuildContext context, {
     required String purpose,
+    AttendanceLocationEvidence? locationEvidence,
   });
 }
 
@@ -35,6 +36,7 @@ class NativeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
   Future<AttendanceEvidenceResult> collect(
     BuildContext context, {
     required String purpose,
+    AttendanceLocationEvidence? locationEvidence,
   }) async {
     final issues = <AttendanceEvidenceIssue>[];
 
@@ -67,7 +69,7 @@ class NativeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
     }
 
     try {
-      final position = await _location.collect();
+      final position = locationEvidence ?? await _location.collect();
       latitude = position.latitude;
       longitude = position.longitude;
       locationAccuracyMeters = position.accuracyMeters;
@@ -77,6 +79,9 @@ class NativeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
     }
 
     try {
+      if (!context.mounted) {
+        throw AttendanceEvidenceException(AttendanceEvidenceIssue.photoCaptureCancelled);
+      }
       final capturedPhoto = await _photo.captureLivePhoto(context);
       photoFileId = await _photo.uploadAttendancePhoto(
         capturedPhoto,
