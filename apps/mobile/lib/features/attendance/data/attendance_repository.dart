@@ -33,6 +33,7 @@ class AttendanceRepository {
       '/hr/attendance/check-in',
       data: {
         ...payload.toJson(),
+        'clientPlatform': 'MOBILE',
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       },
     );
@@ -42,7 +43,7 @@ class AttendanceRepository {
   Future<AttendancePreflight> checkInPreflight(AttendanceVerificationPayload payload) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/hr/attendance/check-in/preflight',
-      data: payload.toJson(),
+      data: {...payload.toJson(), 'clientPlatform': 'MOBILE'},
     );
     return AttendancePreflight.fromJson(response.data ?? const {});
   }
@@ -56,6 +57,7 @@ class AttendanceRepository {
       '/hr/attendance/check-out',
       data: {
         ...payload.toJson(),
+        'clientPlatform': 'MOBILE',
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       },
     );

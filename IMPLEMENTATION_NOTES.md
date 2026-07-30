@@ -525,6 +525,14 @@ The mobile screen has an explicit in-flight flow state and disables duplicate su
 - Focused `flutter test test/widget_test.dart` passed.
 - No migration, database command, secret, deploy, commit, or push was performed. Device permission/camera E2E and an integration database preflight test remain required.
 
+## Attendance Location source correction (2026-07-30)
+
+`OrganizationAttendanceLocation` is now the primary source for both preflight and final check-in validation. The service loads active locations in the current organization, filters on `allowedForMobile` or `allowedForWeb`, optionally limits to a verified same-organization branch/office, calculates all distances, and selects the nearest valid location. Its exact/expanded radii and `requiresReviewOutsideExactRadius` control the decision. The response includes matched location metadata and both radii without exposing raw coordinates.
+
+The legacy `OrganizationAttendanceSettings.allowedLatitude`, `allowedLongitude`, and radius fields are explicitly retained only as a temporary fallback when no valid Attendance Locations exist. With neither valid locations nor legacy coordinates, the decision rejects with `ATTENDANCE_LOCATION_NOT_CONFIGURED`. No deletion or data migration was performed.
+
+Flutter continues to call `isLocationServiceEnabled` before any position read; it uses only fresh `getCurrentPosition` with high accuracy and a 20-second time limit, never `getLastKnownPosition`. Timestamp freshness is checked on device and again for supplied timestamps on the server. The mobile repository explicitly labels all attendance requests `clientPlatform: MOBILE` so backend location eligibility is unambiguous.
+
 ### Backend enforcement, admin, tests, and migration
 
 The existing backend checks remain active; evidence is never trusted from the frontend alone. Admin attendance columns now expose reference/captured image IDs and face status/confidence; protected file preview continues to use the existing authorization path. New HR APIs are permission-gated by `hr.attendance.review`/`hr.attendance.manage`.

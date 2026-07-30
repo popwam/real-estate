@@ -98,6 +98,12 @@ describe('OperationsService self attendance', () => {
       organizationAttendanceSettings: {
         findUnique: jest.fn().mockResolvedValue(null),
       },
+      organizationAttendanceLocation: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      organizationBranch: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
     };
 
     return {

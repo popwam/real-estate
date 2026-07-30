@@ -1016,12 +1016,16 @@ export class OperationsService {
   async preflightHrAttendanceCheckIn(input: any, user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
     const policy = await this.attendancePolicy(employee.organizationId);
-    const decision = this.attendanceLocationDecision(input, policy);
+    const decision = await this.attendanceLocationDecision(input, policy, employee.organizationId);
     return {
       allowed: decision.blockingReasons.length === 0,
       insideAllowedRadius: decision.mode === 'EXACT' || decision.mode === 'EXPANDED_REVIEW',
       distanceMeters: decision.distanceMeters,
       allowedRadiusMeters: decision.allowedRadiusMeters,
+      exactRadiusMeters: decision.exactRadiusMeters,
+      expandedRadiusMeters: decision.expandedRadiusMeters,
+      matchedLocationId: decision.matchedLocationId,
+      matchedLocationName: decision.matchedLocationName,
       accuracyAccepted: !decision.blockingReasons.includes('GPS_ACCURACY_TOO_LOW'),
       mode: decision.mode,
       blockingReasons: decision.blockingReasons,
@@ -3457,7 +3461,7 @@ export class OperationsService {
     if (policy.allowWebCheckIn === false && isWeb) {
       reasons.push('WEB_CHECK_IN_NOT_ALLOWED');
     }
-    const locationDecision = this.attendanceLocationDecision(input, policy);
+    const locationDecision = await this.attendanceLocationDecision(input, policy, user.organizationId!);
     reasons.push(...locationDecision.blockingReasons);
     if (policy.requireWifi) {
       if (isWeb) {
@@ -3600,29 +3604,42 @@ export class OperationsService {
     return undefined;
   }
 
-  private attendanceLocationDecision(input: any, policy: any) {
+  private async attendanceLocationDecision(input: any, policy: any, organizationId: string) {
     const latitude = this.optionalNumber(input.latitude);
     const longitude = this.optionalNumber(input.longitude);
     const accuracy = this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters);
     const capturedAt = this.safeDate(input.locationCapturedAt ?? input.capturedAt);
-    if (!policy.requireLocation) return { blockingReasons: [] as string[], distanceMeters: null, allowedRadiusMeters: null, mode: 'LOCATION_NOT_REQUIRED' };
+    if (!policy.requireLocation) return { blockingReasons: [] as string[], distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'LOCATION_NOT_REQUIRED' };
     const reasons: string[] = [];
     if (latitude === undefined || longitude === undefined) reasons.push('LOCATION_REQUIRED');
     // New mobile clients always send this evidence. Keep old clients compatible
     // while rejecting any supplied timestamp that is stale or implausibly future.
     if (capturedAt && (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 || capturedAt.getTime() - Date.now() > 60 * 1000)) reasons.push('LOCATION_STALE');
     if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
-    if (typeof policy.allowedLatitude !== 'number' || typeof policy.allowedLongitude !== 'number' || !(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters)) {
-      reasons.push('LOCATION_POLICY_NOT_CONFIGURED');
-      return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: null, mode: 'OUTSIDE' };
+    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB';
+    const branchId = this.optional(input.branchId);
+    if (branchId) {
+      const branch = await this.prisma.organizationBranch.findFirst({ where: { id: branchId, organizationId, isActive: true }, select: { id: true } });
+      if (!branch) reasons.push('BRANCH_NOT_ALLOWED');
     }
-    if (latitude === undefined || longitude === undefined) return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters), mode: 'OUTSIDE' };
-    const distance = distanceMeters(latitude, longitude, policy.allowedLatitude, policy.allowedLongitude);
-    const exact = Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30);
-    const expanded = Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? exact);
-    if (distance > expanded || (distance > exact && !policy.allowExpandedRadiusWithReview)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
-    const mode = distance <= exact ? 'EXACT' : distance <= expanded ? 'EXPANDED_REVIEW' : 'OUTSIDE';
-    return { blockingReasons: [...new Set(reasons)], distanceMeters: Math.round(distance), allowedRadiusMeters: exact, mode };
+    const locations = await this.prisma.organizationAttendanceLocation.findMany({
+      where: { organizationId, isActive: true, ...(isWeb ? { allowedForWeb: true } : { allowedForMobile: true }), ...(branchId && !reasons.includes('BRANCH_NOT_ALLOWED') ? { officeId: branchId } : {}) },
+      select: { id: true, name: true, latitude: true, longitude: true, exactRadiusMeters: true, expandedRadiusMeters: true, requiresReviewOutsideExactRadius: true },
+    });
+    // Deprecated organization settings are used only for tenants with no valid Attendance Location.
+    const candidates = locations.length ? locations : (typeof policy.allowedLatitude === 'number' && typeof policy.allowedLongitude === 'number'
+      ? [{ id: null, name: null, latitude: policy.allowedLatitude, longitude: policy.allowedLongitude, exactRadiusMeters: Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30), expandedRadiusMeters: Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? 1000), requiresReviewOutsideExactRadius: Boolean(policy.allowExpandedRadiusWithReview) }]
+      : []);
+    if (!candidates.length) {
+      reasons.push('ATTENDANCE_LOCATION_NOT_CONFIGURED');
+      return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+    }
+    if (latitude === undefined || longitude === undefined) return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+    const nearest = candidates.map((location) => ({ location, distance: distanceMeters(latitude, longitude, location.latitude, location.longitude) })).sort((a, b) => a.distance - b.distance)[0];
+    const { location, distance } = nearest;
+    if (distance > location.expandedRadiusMeters || (distance > location.exactRadiusMeters && !location.requiresReviewOutsideExactRadius)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
+    const mode = distance <= location.exactRadiusMeters ? 'EXACT' : distance <= location.expandedRadiusMeters ? 'EXPANDED_REVIEW' : 'OUTSIDE';
+    return { blockingReasons: [...new Set(reasons)], distanceMeters: Math.round(distance), allowedRadiusMeters: location.exactRadiusMeters, exactRadiusMeters: location.exactRadiusMeters, expandedRadiusMeters: location.expandedRadiusMeters, matchedLocationId: location.id, matchedLocationName: location.name, mode };
   }
 
   private safeDate(value: unknown) {
