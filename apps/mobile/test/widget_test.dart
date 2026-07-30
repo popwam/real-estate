@@ -12,6 +12,7 @@ import 'package:mobile/features/attendance/data/attendance_models.dart';
 import 'package:mobile/features/attendance/data/attendance_repository.dart';
 import 'package:mobile/features/attendance/services/attendance_evidence_collector.dart';
 import 'package:mobile/features/attendance/services/attendance_evidence_models.dart';
+import 'package:mobile/features/attendance/services/attendance_location_service.dart';
 import 'package:mobile/features/marketplace/data/marketplace_filters.dart';
 import 'package:mobile/features/marketplace/data/marketplace_models.dart';
 import 'package:mobile/features/marketplace/data/marketplace_repository.dart';
@@ -345,6 +346,7 @@ Widget _testApp({
   AuthRepository? authRepository,
   AttendanceRepository? attendanceRepository,
   AttendanceEvidenceCollector? evidenceCollector,
+  AttendanceLocationService? attendanceLocationService,
 }) {
   final storage = tokenStorage ?? _FakeTokenStorage();
   return ProviderScope(
@@ -361,6 +363,9 @@ Widget _testApp({
       ),
       attendanceEvidenceCollectorProvider.overrideWithValue(
         evidenceCollector ?? _FakeAttendanceEvidenceCollector(),
+      ),
+      attendanceLocationServiceProvider.overrideWithValue(
+        attendanceLocationService ?? _FakeAttendanceLocationService(),
       ),
     ],
     child: const PopwamMobileApp(),
@@ -450,6 +455,21 @@ class _FakeAttendanceRepository implements AttendanceRepository {
     }
     return _today;
   }
+
+  @override
+  Future<AttendancePreflight> checkInPreflight(AttendanceVerificationPayload payload) async {
+    return const AttendancePreflight(allowed: true);
+  }
+}
+
+class _FakeAttendanceLocationService extends AttendanceLocationService {
+  @override
+  Future<AttendanceLocationEvidence> collect() async => AttendanceLocationEvidence(
+    latitude: 30.0444,
+    longitude: 31.2357,
+    accuracyMeters: 5,
+    capturedAt: DateTime.now(),
+  );
 }
 
 class _FakeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
@@ -462,6 +482,7 @@ class _FakeAttendanceEvidenceCollector implements AttendanceEvidenceCollector {
   Future<AttendanceEvidenceResult> collect(
     BuildContext context, {
     required String purpose,
+    AttendanceLocationEvidence? locationEvidence,
   }) async {
     collectCount++;
     return AttendanceEvidenceResult(
@@ -490,6 +511,7 @@ class _FailingAttendanceEvidenceCollector
   Future<AttendanceEvidenceResult> collect(
     BuildContext context, {
     required String purpose,
+    AttendanceLocationEvidence? locationEvidence,
   }) async {
     throw AttendanceEvidenceException(issue);
   }

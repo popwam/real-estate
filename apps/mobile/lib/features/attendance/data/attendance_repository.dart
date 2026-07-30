@@ -39,6 +39,14 @@ class AttendanceRepository {
     return AttendanceRecord.fromJson(response.data ?? <String, dynamic>{});
   }
 
+  Future<AttendancePreflight> checkInPreflight(AttendanceVerificationPayload payload) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/hr/attendance/check-in/preflight',
+      data: payload.toJson(),
+    );
+    return AttendancePreflight.fromJson(response.data ?? const {});
+  }
+
   Future<AttendanceRecord> checkOut({
     String? note,
     AttendanceVerificationPayload payload =
@@ -53,6 +61,18 @@ class AttendanceRepository {
     );
     return AttendanceRecord.fromJson(response.data ?? <String, dynamic>{});
   }
+}
+
+class AttendancePreflight {
+  const AttendancePreflight({required this.allowed, this.blockingReasons = const []});
+  final bool allowed;
+  final List<String> blockingReasons;
+  factory AttendancePreflight.fromJson(Map<String, dynamic> json) => AttendancePreflight(
+    allowed: json['allowed'] == true,
+    blockingReasons: (json['blockingReasons'] as List? ?? const [])
+        .map<String>((value) => value.toString())
+        .toList(),
+  );
 }
 
 class AttendanceVerificationPayload {

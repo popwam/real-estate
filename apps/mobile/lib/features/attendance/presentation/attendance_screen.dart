@@ -9,6 +9,9 @@ import '../data/attendance_models.dart';
 import '../data/attendance_repository.dart';
 import '../services/attendance_evidence_collector.dart';
 import '../services/attendance_evidence_models.dart';
+import '../services/attendance_location_service.dart';
+
+enum _AttendanceFlowState { idle, requestingLocation, fetchingLocation, validatingLocation, openingCamera, uploadingPhoto, submitting, success, failure }
 
 class AttendanceScreen extends ConsumerStatefulWidget {
   const AttendanceScreen({super.key});
@@ -21,6 +24,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _isSubmitting = false;
   Object? _actionError;
   List<AttendanceEvidenceIssue> _evidenceIssues = const [];
+  _AttendanceFlowState _flowState = _AttendanceFlowState.idle;
 
   Future<void> _refresh() async {
     ref.invalidate(attendanceTodayProvider);
@@ -36,17 +40,42 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       _isSubmitting = true;
       _actionError = null;
       _evidenceIssues = const [];
+      _flowState = _AttendanceFlowState.requestingLocation;
     });
 
     try {
+      // Every attempt obtains a new native location before camera/upload.
+      if (mounted) setState(() => _flowState = _AttendanceFlowState.fetchingLocation);
+      final location = await ref.read(attendanceLocationServiceProvider).collect();
+      if (!mounted) return;
+      final locationPayload = AttendanceVerificationPayload(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        locationAccuracyMeters: location.accuracyMeters,
+        locationCapturedAt: location.capturedAt,
+      );
+      setState(() => _flowState = _AttendanceFlowState.validatingLocation);
+      final preflight = await ref.read(attendanceRepositoryProvider).checkInPreflight(locationPayload);
+      if (!mounted) return;
+      if (!preflight.allowed) {
+        setState(() {
+          _actionError = _AttendancePreflightException(preflight.blockingReasons);
+          _flowState = _AttendanceFlowState.failure;
+        });
+        return;
+      }
+      setState(() => _flowState = _AttendanceFlowState.openingCamera);
       final evidence = await ref
           .read(attendanceEvidenceCollectorProvider)
           .collect(
             context,
             purpose: checkIn ? 'ATTENDANCE_CHECK_IN' : 'ATTENDANCE_CHECK_OUT',
+            locationEvidence: location,
           );
       if (!mounted) return;
+      setState(() => _flowState = _AttendanceFlowState.uploadingPhoto);
       final repository = ref.read(attendanceRepositoryProvider);
+      setState(() => _flowState = _AttendanceFlowState.submitting);
       if (checkIn) {
         await repository.checkIn(payload: evidence.payload);
       } else {
@@ -54,6 +83,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       setState(() => _evidenceIssues = evidence.issues);
       await _refresh();
+      if (mounted) setState(() => _flowState = _AttendanceFlowState.success);
     } on DioException catch (error) {
       setState(() => _actionError = error);
     } on AttendanceEvidenceException catch (error) {
@@ -62,7 +92,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       setState(() => _actionError = error);
     } finally {
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        setState(() {
+          _isSubmitting = false;
+          if (_flowState != _AttendanceFlowState.success) _flowState = _AttendanceFlowState.idle;
+        });
       }
     }
   }
@@ -95,6 +128,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 isSubmitting: _isSubmitting,
                 actionError: _actionError,
                 evidenceIssues: _evidenceIssues,
+                flowState: _flowState,
                 onCheckIn: () => _submit(true),
                 onCheckOut: () => _submit(false),
               ),
@@ -172,6 +206,7 @@ class _TodayAttendanceCard extends StatelessWidget {
     required this.isSubmitting,
     required this.actionError,
     required this.evidenceIssues,
+    required this.flowState,
     required this.onCheckIn,
     required this.onCheckOut,
   });
@@ -180,6 +215,7 @@ class _TodayAttendanceCard extends StatelessWidget {
   final bool isSubmitting;
   final Object? actionError;
   final List<AttendanceEvidenceIssue> evidenceIssues;
+  final _AttendanceFlowState flowState;
   final VoidCallback onCheckIn;
   final VoidCallback onCheckOut;
 
@@ -243,6 +279,10 @@ class _TodayAttendanceCard extends StatelessWidget {
               _AttendanceRow(label: l10n.attendanceNote, value: record.note!),
             const SizedBox(height: 16),
             _SecureChecksNotice(),
+            if (isSubmitting) ...[
+              const SizedBox(height: 10),
+              LinearProgressIndicator(),
+            ],
             const SizedBox(height: 16),
             if (record.canCheckIn)
               FilledButton.icon(
@@ -273,7 +313,11 @@ class _TodayAttendanceCard extends StatelessWidget {
             if (actionError != null) ...[
               const SizedBox(height: 12),
               Text(
-                context.formatApiError(actionError!),
+                actionError is _AttendancePreflightException
+                    ? (actionError as _AttendancePreflightException).reasons
+                        .map((reason) => context.localizedAttendanceFailure(reason))
+                        .join(', ')
+                    : context.formatApiError(actionError!),
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
@@ -286,6 +330,13 @@ class _TodayAttendanceCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AttendancePreflightException implements Exception {
+  const _AttendancePreflightException(this.reasons);
+  final List<String> reasons;
+  @override
+  String toString() => reasons.join(', ');
 }
 
 class _EvidenceIssuesList extends StatelessWidget {
