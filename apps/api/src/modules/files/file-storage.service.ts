@@ -2,10 +2,11 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   GetObjectCommand,
   PutObjectCommand,
+  DeleteObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { createReadStream } from 'fs';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, unlink } from 'fs/promises';
 import { dirname, join, normalize, relative, resolve } from 'path';
 import type { Readable } from 'stream';
 
@@ -93,6 +94,23 @@ export class FileStorageService {
       throw new BadRequestException('Stored file body is unavailable.');
     }
     return { body: response.Body as Readable };
+  }
+
+  /** Best-effort compensation for a database write that fails after upload. */
+  async deleteObject(input: { bucket: string; objectKey: string; purpose?: FilePurpose }) {
+    this.assertSafeObjectKey(input.objectKey);
+    const purpose = this.normalizePurpose(input.purpose);
+    const config = this.config(purpose, input.bucket);
+    if (config.provider === 'local') {
+      await unlink(this.localPath(this.localRoot(), input.objectKey)).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error;
+      });
+      return;
+    }
+    await this.objectStorageClient(config).send(new DeleteObjectCommand({
+      Bucket: input.bucket || config.bucket,
+      Key: input.objectKey,
+    }));
   }
 
   validateConfiguration() {

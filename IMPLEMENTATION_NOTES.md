@@ -564,3 +564,21 @@ Both the backend and Flutter now reject invalid coordinate ranges and negative G
 - `apps/mobile/lib/features/attendance/services/attendance_location_service.dart`
 
 Validation passed: `pnpm --filter api test -- operations.service.spec.ts` (30 tests), `pnpm --filter api build`, `pnpm --filter admin-web build`, and `flutter analyze`. No migration, seed, database command, deploy, commit, or push was performed. Remaining manual E2E: verify Platform-only document buttons/API access with real roles, then test disabled GPS, expanded-radius review, and final check-in recalculation on a physical device/staging tenant.
+
+## Document verification P2022 database repair — 2026-08-02
+
+### Diagnosis and root cause
+
+The staging schema diagnostic, executed read-only through Railway, identified the exact Prisma mismatch: `UploadedFile` maps to `uploaded_files`, and Prisma writes `filePurpose` and `visibility` during `POST /files/organization-document`, but both columns were absent in the actual table. The associated `organization_documents`, `organization_owners`, and `organization_verifications` tables and reviewer/extraction/status columns were present. The same stale `UploadedFile` mapping can also break verification-queue includes/selects.
+
+`prisma migrate status` previously reported current because the historical migration ledger was marked applied; it validates migration history, not every column used by the current Prisma client. The relevant historical document/provisioning migrations were `20260711153000_platform_company_provisioning` and `20260717170000_platform_document_first_onboarding`; neither ledger row was changed.
+
+### Repair and staging result
+
+Created and deployed additive migration `20260802180000_repair_document_verification_schema`. It creates `FilePurpose`/`FileVisibility` only if absent and adds `uploaded_files.filePurpose` and `uploaded_files.visibility` with safe non-null defaults of `QUARANTINE` and `PRIVATE`. PostgreSQL fills existing rows from the defaults; no business data was deleted and no document was marked approved. Post-deploy schema diagnostics reported no missing expected columns and `platform:doctor` reported `Overall readiness: GO`.
+
+### Upload compensation and validation
+
+Organization-document upload now deletes the just-uploaded local/R2 object on a failed `UploadedFile` database insert, preserving the original database error if cleanup itself fails. This prevents a new orphan object caused by metadata-write failures.
+
+Validation passed: focused Files tests (13), full API suite (34 suites, 188 passed, 1 skipped), API build, Railway `prisma migrate deploy`, Railway Prisma generate, post-deploy schema diagnostic, and Railway platform doctor. The remaining manual staging check is an authenticated end-to-end upload/review request using a real company account and Platform reviewer; no credentials or document content were logged.

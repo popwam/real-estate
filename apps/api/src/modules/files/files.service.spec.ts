@@ -161,6 +161,20 @@ describe('FilesService attendance evidence photos', () => {
     );
   });
 
+  it('removes the stored company document when creating its metadata fails', async () => {
+    const { prisma, service } = setup();
+    prisma.uploadedFile.create.mockRejectedValueOnce(new Error('database unavailable'));
+
+    await expect(service.uploadOrganizationDocument(
+      { buffer: Buffer.from('pdf'), size: 3, mimetype: 'application/pdf', originalname: 'register.pdf' },
+      user.organizationId,
+      { ...user, permissions: ['platform.organizations.manage'], role: 'platform_admin', organizationType: 'PLATFORM' } as any,
+    )).rejects.toThrow('database unavailable');
+
+    const objectKey = prisma.uploadedFile.create.mock.calls[0][0].data.objectKey;
+    await expect(stat(join(storageRoot, objectKey))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('rejects non-image attendance uploads', async () => {
     const { service } = setup();
 
