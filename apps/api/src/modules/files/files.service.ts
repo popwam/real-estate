@@ -258,19 +258,27 @@ export class FilesService {
       mimeType,
     });
 
-    const record = await this.prisma.uploadedFile.create({
-      data: {
-        organizationId,
-        uploadedById: currentUser.userId,
-        filePurpose: 'COMPANY_DOCUMENT',
-        bucket: stored.bucket,
-        objectKey: stored.objectKey,
-        mimeType,
-        sizeBytes: file.size,
-        visibility: 'PRIVATE',
-        checksum: this.optionalString(file.originalname),
-      },
-    });
+    let record;
+    try {
+      record = await this.prisma.uploadedFile.create({
+        data: {
+          organizationId,
+          uploadedById: currentUser.userId,
+          filePurpose: 'COMPANY_DOCUMENT',
+          bucket: stored.bucket,
+          objectKey: stored.objectKey,
+          mimeType,
+          sizeBytes: file.size,
+          visibility: 'PRIVATE',
+          checksum: this.optionalString(file.originalname),
+        },
+      });
+    } catch (error) {
+      // Avoid leaving a private R2/local object behind when metadata cannot be
+      // persisted. Cleanup is best-effort and must not conceal the DB error.
+      await this.storage.deleteObject({ bucket: stored.bucket, objectKey: stored.objectKey, purpose: 'COMPANY_DOCUMENT' }).catch(() => undefined);
+      throw error;
+    }
 
     await this.auditLogs.record({
       action: 'organization.document_file_uploaded',

@@ -3,6 +3,7 @@ import '../data/attendance_repository.dart';
 enum AttendanceEvidenceIssue {
   locationPermissionDenied,
   locationServiceDisabled,
+  locationUnavailable,
   wifiUnavailable,
   wifiRestricted,
   developerOptionsEnabled,

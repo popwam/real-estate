@@ -525,8 +525,60 @@ The mobile screen has an explicit in-flight flow state and disables duplicate su
 - Focused `flutter test test/widget_test.dart` passed.
 - No migration, database command, secret, deploy, commit, or push was performed. Device permission/camera E2E and an integration database preflight test remain required.
 
+## Attendance Location source correction (2026-07-30)
+
+`OrganizationAttendanceLocation` is now the primary source for both preflight and final check-in validation. The service loads active locations in the current organization, filters on `allowedForMobile` or `allowedForWeb`, optionally limits to a verified same-organization branch/office, calculates all distances, and selects the nearest valid location. Its exact/expanded radii and `requiresReviewOutsideExactRadius` control the decision. The response includes matched location metadata and both radii without exposing raw coordinates.
+
+The legacy `OrganizationAttendanceSettings.allowedLatitude`, `allowedLongitude`, and radius fields are explicitly retained only as a temporary fallback when no valid Attendance Locations exist. With neither valid locations nor legacy coordinates, the decision rejects with `ATTENDANCE_LOCATION_NOT_CONFIGURED`. No deletion or data migration was performed.
+
+Flutter continues to call `isLocationServiceEnabled` before any position read; it uses only fresh `getCurrentPosition` with high accuracy and a 20-second time limit, never `getLastKnownPosition`. Timestamp freshness is checked on device and again for supplied timestamps on the server. The mobile repository explicitly labels all attendance requests `clientPlatform: MOBILE` so backend location eligibility is unambiguous.
+
 ### Backend enforcement, admin, tests, and migration
 
 The existing backend checks remain active; evidence is never trusted from the frontend alone. Admin attendance columns now expose reference/captured image IDs and face status/confidence; protected file preview continues to use the existing authorization path. New HR APIs are permission-gated by `hr.attendance.review`/`hr.attendance.manage`.
 
 The migration is additive and was created but **not applied**. Focused mobile widget tests passed, API attendance tests passed, and both `pnpm --filter api build` and `pnpm --filter admin-web build` passed. A real biometric provider, device E2E permission tests, and staged migration/E2E validation remain required before claiming automated face matching.
+
+## Verification and attendance hardening follow-up (2026-08-02)
+
+### Organization verification root cause and approval authority
+
+The organization-document review endpoint previously reused the organization-management authorization check. That allowed a company administrator with document-edit rights to set a document to `APPROVED`, which undermined the activation gate. Upload and review are now distinct: organization users can continue to upload or replace documents, but only a Platform user with the existing `platform.documents.review` permission can review them. The existing organization-verification workflow separately uses `organizations.verify` and already records reviewer, timestamp, rejection reason, and audit events.
+
+Uploads now start in `PENDING_REVIEW`; request bodies can no longer set a document's status to `APPROVED`. The existing document review API remains the real review API, validates organization/document ownership, requires a rejection reason, saves reviewer/timestamp, and writes an audit log. No RBAC seed was run; `platform.documents.review` already exists in the RBAC seed.
+
+### Activation gate
+
+The existing activation check remains server-derived: subscription, required approved documents, owner requirements/verification, office, and first administrator are re-evaluated before activation. Approval does not bypass the gate, and no migration was needed for this change.
+
+### Attendance root cause, source, and enforcement
+
+`OrganizationAttendanceLocation` remains the primary source. The backend filters active locations by organization and channel eligibility, chooses the nearest candidate, then applies exact/expanded radii. The preflight response now explicitly reports `source` as `ATTENDANCE_LOCATION` or `LEGACY_SETTINGS`; legacy settings are used only when no valid attendance location exists. A valid expanded-radius location now yields `EXPANDED_LOCATION_REVIEW`, producing review rather than an unqualified verified attendance record.
+
+Both the backend and Flutter now reject invalid coordinate ranges and negative GPS accuracy. Flutter still checks that location services are enabled before requesting a fresh high-accuracy position, never uses cached/last-known positions, and validates the returned position before preflight. The final check-in independently reruns the same backend location decision; the mobile client's preflight result is never trusted as final authorization.
+
+### Files changed, tests, and remaining E2E
+
+- `apps/api/src/modules/company-public/company-public.service.ts`
+- `apps/api/src/modules/operations/operations.service.ts`
+- `apps/mobile/lib/features/attendance/services/attendance_location_service.dart`
+
+Validation passed: `pnpm --filter api test -- operations.service.spec.ts` (30 tests), `pnpm --filter api build`, `pnpm --filter admin-web build`, and `flutter analyze`. No migration, seed, database command, deploy, commit, or push was performed. Remaining manual E2E: verify Platform-only document buttons/API access with real roles, then test disabled GPS, expanded-radius review, and final check-in recalculation on a physical device/staging tenant.
+
+## Document verification P2022 database repair — 2026-08-02
+
+### Diagnosis and root cause
+
+The staging schema diagnostic, executed read-only through Railway, identified the exact Prisma mismatch: `UploadedFile` maps to `uploaded_files`, and Prisma writes `filePurpose` and `visibility` during `POST /files/organization-document`, but both columns were absent in the actual table. The associated `organization_documents`, `organization_owners`, and `organization_verifications` tables and reviewer/extraction/status columns were present. The same stale `UploadedFile` mapping can also break verification-queue includes/selects.
+
+`prisma migrate status` previously reported current because the historical migration ledger was marked applied; it validates migration history, not every column used by the current Prisma client. The relevant historical document/provisioning migrations were `20260711153000_platform_company_provisioning` and `20260717170000_platform_document_first_onboarding`; neither ledger row was changed.
+
+### Repair and staging result
+
+Created and deployed additive migration `20260802180000_repair_document_verification_schema`. It creates `FilePurpose`/`FileVisibility` only if absent and adds `uploaded_files.filePurpose` and `uploaded_files.visibility` with safe non-null defaults of `QUARANTINE` and `PRIVATE`. PostgreSQL fills existing rows from the defaults; no business data was deleted and no document was marked approved. Post-deploy schema diagnostics reported no missing expected columns and `platform:doctor` reported `Overall readiness: GO`.
+
+### Upload compensation and validation
+
+Organization-document upload now deletes the just-uploaded local/R2 object on a failed `UploadedFile` database insert, preserving the original database error if cleanup itself fails. This prevents a new orphan object caused by metadata-write failures.
+
+Validation passed: focused Files tests (13), full API suite (34 suites, 188 passed, 1 skipped), API build, Railway `prisma migrate deploy`, Railway Prisma generate, post-deploy schema diagnostic, and Railway platform doctor. The remaining manual staging check is an authenticated end-to-end upload/review request using a real company account and Platform reviewer; no credentials or document content were logged.

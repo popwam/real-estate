@@ -480,6 +480,7 @@ String _localizedEvidenceIssue(
       l10n.attendanceLocationPermissionDenied,
     AttendanceEvidenceIssue.locationServiceDisabled =>
       l10n.attendanceLocationServiceDisabled,
+    AttendanceEvidenceIssue.locationUnavailable => l10n.attendanceUnavailable,
     AttendanceEvidenceIssue.wifiUnavailable => l10n.attendanceWifiUnavailable,
     AttendanceEvidenceIssue.wifiRestricted => l10n.attendanceWifiRestricted,
     AttendanceEvidenceIssue.developerOptionsEnabled =>

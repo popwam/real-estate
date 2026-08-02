@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:async';
 
 import 'attendance_evidence_models.dart';
 
@@ -37,14 +38,37 @@ class AttendanceLocationService {
       );
     }
 
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+    Position position;
+    try {
+      position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 20),
+        ),
+      );
+    } on TimeoutException {
+      throw AttendanceEvidenceException(AttendanceEvidenceIssue.locationUnavailable);
+    }
+    final capturedAt = position.timestamp;
+    final age = DateTime.now().difference(capturedAt);
+    if (age > const Duration(minutes: 2) || age < const Duration(minutes: -1)) {
+      throw AttendanceEvidenceException(AttendanceEvidenceIssue.locationUnavailable);
+    }
+    if (!position.latitude.isFinite ||
+        !position.longitude.isFinite ||
+        position.latitude < -90 ||
+        position.latitude > 90 ||
+        position.longitude < -180 ||
+        position.longitude > 180 ||
+        !position.accuracy.isFinite ||
+        position.accuracy < 0) {
+      throw AttendanceEvidenceException(AttendanceEvidenceIssue.locationUnavailable);
+    }
     return AttendanceLocationEvidence(
       latitude: position.latitude,
       longitude: position.longitude,
       accuracyMeters: position.accuracy,
-      capturedAt: position.timestamp ?? DateTime.now(),
+      capturedAt: capturedAt,
     );
   }
 }
