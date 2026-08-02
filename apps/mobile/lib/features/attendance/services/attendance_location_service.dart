@@ -54,6 +54,16 @@ class AttendanceLocationService {
     if (age > const Duration(minutes: 2) || age < const Duration(minutes: -1)) {
       throw AttendanceEvidenceException(AttendanceEvidenceIssue.locationUnavailable);
     }
+    if (!position.latitude.isFinite ||
+        !position.longitude.isFinite ||
+        position.latitude < -90 ||
+        position.latitude > 90 ||
+        position.longitude < -180 ||
+        position.longitude > 180 ||
+        !position.accuracy.isFinite ||
+        position.accuracy < 0) {
+      throw AttendanceEvidenceException(AttendanceEvidenceIssue.locationUnavailable);
+    }
     return AttendanceLocationEvidence(
       latitude: position.latitude,
       longitude: position.longitude,

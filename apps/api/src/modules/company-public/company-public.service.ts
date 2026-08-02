@@ -455,7 +455,10 @@ export class CompanyPublicService {
     dto: ReviewOrganizationDocumentDto,
     user: AuthenticatedRequestUser,
   ) {
-    await this.assertCanManageOrganization(organizationId, user, true);
+    // Review is deliberately separate from an organization's ability to
+    // upload or replace its documents.  Otherwise a company admin could
+    // approve its own activation evidence through this endpoint.
+    this.assertPlatformDocumentReviewer(user);
     await this.findDocument(organizationId, documentId);
     if (dto.status === OrganizationDocumentStatus.REJECTED && !this.string(dto.note)) {
       throw new BadRequestException('Document rejection requires a reason.');
@@ -840,11 +843,11 @@ export class CompanyPublicService {
         ? (dto.documentType ?? this.bad('documentType is required.'))
         : dto.documentType,
       fileId: dto.fileId === null ? null : this.string(dto.fileId),
-      status:
-        dto.status ??
-        (creating && dto.fileId
-          ? OrganizationDocumentStatus.UPLOADED
-          : undefined),
+      // Uploading a file never approves it.  Status changes are exclusively
+      // performed by the Platform reviewer endpoint.
+      status: creating && dto.fileId
+        ? OrganizationDocumentStatus.PENDING_REVIEW
+        : undefined,
       expiresAt: dto.expiresAt === null ? null : this.date(dto.expiresAt),
       issuedAt: dto.issuedAt === null ? null : this.date(dto.issuedAt),
       issuingAuthority:
@@ -942,6 +945,11 @@ export class CompanyPublicService {
       : ['company.settings.view', 'company.profile.view', 'company.settings.manage'];
     if (permissions.some((permission) => user.permissions.includes(permission))) return;
     throw new ForbiddenException(`Missing permission: ${permissions[0]}.`);
+  }
+
+  private assertPlatformDocumentReviewer(user: AuthenticatedRequestUser) {
+    if (isPlatformUser(user) && user.permissions.includes('platform.documents.review')) return;
+    throw new ForbiddenException('Platform document-review permission is required.');
   }
 
   private async assertFileInOrganization(

@@ -538,3 +538,29 @@ Flutter continues to call `isLocationServiceEnabled` before any position read; i
 The existing backend checks remain active; evidence is never trusted from the frontend alone. Admin attendance columns now expose reference/captured image IDs and face status/confidence; protected file preview continues to use the existing authorization path. New HR APIs are permission-gated by `hr.attendance.review`/`hr.attendance.manage`.
 
 The migration is additive and was created but **not applied**. Focused mobile widget tests passed, API attendance tests passed, and both `pnpm --filter api build` and `pnpm --filter admin-web build` passed. A real biometric provider, device E2E permission tests, and staged migration/E2E validation remain required before claiming automated face matching.
+
+## Verification and attendance hardening follow-up (2026-08-02)
+
+### Organization verification root cause and approval authority
+
+The organization-document review endpoint previously reused the organization-management authorization check. That allowed a company administrator with document-edit rights to set a document to `APPROVED`, which undermined the activation gate. Upload and review are now distinct: organization users can continue to upload or replace documents, but only a Platform user with the existing `platform.documents.review` permission can review them. The existing organization-verification workflow separately uses `organizations.verify` and already records reviewer, timestamp, rejection reason, and audit events.
+
+Uploads now start in `PENDING_REVIEW`; request bodies can no longer set a document's status to `APPROVED`. The existing document review API remains the real review API, validates organization/document ownership, requires a rejection reason, saves reviewer/timestamp, and writes an audit log. No RBAC seed was run; `platform.documents.review` already exists in the RBAC seed.
+
+### Activation gate
+
+The existing activation check remains server-derived: subscription, required approved documents, owner requirements/verification, office, and first administrator are re-evaluated before activation. Approval does not bypass the gate, and no migration was needed for this change.
+
+### Attendance root cause, source, and enforcement
+
+`OrganizationAttendanceLocation` remains the primary source. The backend filters active locations by organization and channel eligibility, chooses the nearest candidate, then applies exact/expanded radii. The preflight response now explicitly reports `source` as `ATTENDANCE_LOCATION` or `LEGACY_SETTINGS`; legacy settings are used only when no valid attendance location exists. A valid expanded-radius location now yields `EXPANDED_LOCATION_REVIEW`, producing review rather than an unqualified verified attendance record.
+
+Both the backend and Flutter now reject invalid coordinate ranges and negative GPS accuracy. Flutter still checks that location services are enabled before requesting a fresh high-accuracy position, never uses cached/last-known positions, and validates the returned position before preflight. The final check-in independently reruns the same backend location decision; the mobile client's preflight result is never trusted as final authorization.
+
+### Files changed, tests, and remaining E2E
+
+- `apps/api/src/modules/company-public/company-public.service.ts`
+- `apps/api/src/modules/operations/operations.service.ts`
+- `apps/mobile/lib/features/attendance/services/attendance_location_service.dart`
+
+Validation passed: `pnpm --filter api test -- operations.service.spec.ts` (30 tests), `pnpm --filter api build`, `pnpm --filter admin-web build`, and `flutter analyze`. No migration, seed, database command, deploy, commit, or push was performed. Remaining manual E2E: verify Platform-only document buttons/API access with real roles, then test disabled GPS, expanded-radius review, and final check-in recalculation on a physical device/staging tenant.

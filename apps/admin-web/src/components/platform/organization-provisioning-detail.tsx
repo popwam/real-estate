@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/i18n";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { hasPermission } from "@/lib/permissions";
 import { archivePlatformOrganizationApi, deleteDraftPlatformOrganizationApi, getOrganizationDeletionImpactApi, restorePlatformOrganizationApi, suspendPlatformOrganizationApi } from "@/lib/api";
 import { localizedApiError } from "@/lib/api-errors";
 import { firstAdminRoleTemplateOptions } from "@/lib/first-admin";
@@ -633,6 +635,8 @@ function OwnersTab({ id }: { id: string }) {
 
 function DocumentsTab({ id }: { id: string }) {
   const { t } = useI18n();
+  const currentUser = useCurrentUser();
+  const canReviewDocuments = hasPermission(currentUser.data, "platform.documents.review");
   const { data } = useOrganizationDocuments(id);
   const organization = usePlatformOrganization(id);
   const create = useCreateOrganizationDocument(id);
@@ -681,15 +685,17 @@ function DocumentsTab({ id }: { id: string }) {
                 <Button type="button" className="ui-button-secondary" onClick={() => extract.mutate(doc.id)} disabled={extract.isPending}>
                   {t("provisioning.extractData")}
                 </Button>
-                <Button type="button" onClick={() => review.mutate({ documentId: doc.id, input: { status: "APPROVED" } })} disabled={review.isPending}>
-                  {t("verification.approveDocument")}
-                </Button>
-                <Button type="button" className="ui-button-secondary" onClick={() => {
-                  const note = window.prompt(t("verification.rejectionReason"));
-                  if (note) review.mutate({ documentId: doc.id, input: { status: "REJECTED", note } });
-                }} disabled={review.isPending}>
-                  {t("verification.rejectDocument")}
-                </Button>
+                {canReviewDocuments && <>
+                  <Button type="button" onClick={() => review.mutate({ documentId: doc.id, input: { status: "APPROVED" } })} disabled={review.isPending}>
+                    {t("verification.approveDocument")}
+                  </Button>
+                  <Button type="button" className="ui-button-secondary" onClick={() => {
+                    const note = window.prompt(t("verification.rejectionReason"));
+                    if (note) review.mutate({ documentId: doc.id, input: { status: "REJECTED", note } });
+                  }} disabled={review.isPending}>
+                    {t("verification.rejectDocument")}
+                  </Button>
+                </>}
               </div>
             </div>
           )) : <p className="text-sm text-[var(--color-muted)]">{t("provisioning.noRecords")}</p>}

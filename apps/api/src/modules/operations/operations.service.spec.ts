@@ -162,6 +162,38 @@ describe('OperationsService self attendance', () => {
       .toThrow('maxGpsAccuracyMeters must be greater than zero.');
   });
 
+  it('uses the nearest active mobile attendance location as the primary source', async () => {
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([
+      { id: 'far', name: 'Far', latitude: 30.2, longitude: 31.2, exactRadiusMeters: 30, expandedRadiusMeters: 100, requiresReviewOutsideExactRadius: true },
+      { id: 'near', name: 'Near', latitude: 30.0444, longitude: 31.2357, exactRadiusMeters: 30, expandedRadiusMeters: 100, requiresReviewOutsideExactRadius: true },
+    ]);
+
+    const decision = await (service as any).attendanceLocationDecision(
+      { latitude: 30.0444, longitude: 31.2357, clientPlatform: 'MOBILE' },
+      attendanceSettings({ requireLocation: true }),
+      'org_1',
+    );
+
+    expect(decision).toMatchObject({ source: 'ATTENDANCE_LOCATION', matchedLocationId: 'near', mode: 'EXACT', blockingReasons: [] });
+  });
+
+  it('marks an expanded-radius location for review rather than verified acceptance', async () => {
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([
+      { id: 'location_1', name: 'Office', latitude: 30.0444, longitude: 31.2357, exactRadiusMeters: 1, expandedRadiusMeters: 500, requiresReviewOutsideExactRadius: true },
+    ]);
+
+    const decision = await (service as any).attendanceLocationDecision(
+      { latitude: 30.0448, longitude: 31.2357, clientPlatform: 'MOBILE' },
+      attendanceSettings({ requireLocation: true }),
+      'org_1',
+    );
+
+    expect(decision.mode).toBe('EXPANDED_REVIEW');
+    expect(decision.blockingReasons).toContain('EXPANDED_LOCATION_REVIEW');
+  });
+
   it('allows at most one concurrent reference approval and surfaces the unique-index conflict', async () => {
     const { prisma, service } = setup();
     const reviewer = { ...user, permissions: ['hr.attendance.review'] };

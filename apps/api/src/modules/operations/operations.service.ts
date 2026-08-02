@@ -1026,6 +1026,7 @@ export class OperationsService {
       expandedRadiusMeters: decision.expandedRadiusMeters,
       matchedLocationId: decision.matchedLocationId,
       matchedLocationName: decision.matchedLocationName,
+      source: decision.source,
       accuracyAccepted: !decision.blockingReasons.includes('GPS_ACCURACY_TOO_LOW'),
       mode: decision.mode,
       blockingReasons: decision.blockingReasons,
@@ -3609,12 +3610,13 @@ export class OperationsService {
     const longitude = this.optionalNumber(input.longitude);
     const accuracy = this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters);
     const capturedAt = this.safeDate(input.locationCapturedAt ?? input.capturedAt);
-    if (!policy.requireLocation) return { blockingReasons: [] as string[], distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'LOCATION_NOT_REQUIRED' };
+    if (!policy.requireLocation) return { blockingReasons: [] as string[], source: null, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'LOCATION_NOT_REQUIRED' };
     const reasons: string[] = [];
-    if (latitude === undefined || longitude === undefined) reasons.push('LOCATION_REQUIRED');
-    // New mobile clients always send this evidence. Keep old clients compatible
-    // while rejecting any supplied timestamp that is stale or implausibly future.
+    if (latitude === undefined || longitude === undefined || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) reasons.push('LOCATION_REQUIRED');
+    // Current clients always send this evidence.  Reject stale or implausibly
+    // future values while keeping older API clients compatible when absent.
     if (capturedAt && (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 || capturedAt.getTime() - Date.now() > 60 * 1000)) reasons.push('LOCATION_STALE');
+    if (accuracy !== undefined && accuracy < 0) reasons.push('GPS_ACCURACY_TOO_LOW');
     if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
     const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB';
     const branchId = this.optional(input.branchId);
@@ -3630,16 +3632,18 @@ export class OperationsService {
     const candidates = locations.length ? locations : (typeof policy.allowedLatitude === 'number' && typeof policy.allowedLongitude === 'number'
       ? [{ id: null, name: null, latitude: policy.allowedLatitude, longitude: policy.allowedLongitude, exactRadiusMeters: Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30), expandedRadiusMeters: Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? 1000), requiresReviewOutsideExactRadius: Boolean(policy.allowExpandedRadiusWithReview) }]
       : []);
+    const source = locations.length ? 'ATTENDANCE_LOCATION' : candidates.length ? 'LEGACY_SETTINGS' : null;
     if (!candidates.length) {
       reasons.push('ATTENDANCE_LOCATION_NOT_CONFIGURED');
-      return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+      return { blockingReasons: [...new Set(reasons)], source, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
     }
-    if (latitude === undefined || longitude === undefined) return { blockingReasons: [...new Set(reasons)], distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+    if (latitude === undefined || longitude === undefined || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return { blockingReasons: [...new Set(reasons)], source, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
     const nearest = candidates.map((location) => ({ location, distance: distanceMeters(latitude, longitude, location.latitude, location.longitude) })).sort((a, b) => a.distance - b.distance)[0];
     const { location, distance } = nearest;
     if (distance > location.expandedRadiusMeters || (distance > location.exactRadiusMeters && !location.requiresReviewOutsideExactRadius)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
+    if (distance > location.exactRadiusMeters && distance <= location.expandedRadiusMeters && location.requiresReviewOutsideExactRadius) reasons.push('EXPANDED_LOCATION_REVIEW');
     const mode = distance <= location.exactRadiusMeters ? 'EXACT' : distance <= location.expandedRadiusMeters ? 'EXPANDED_REVIEW' : 'OUTSIDE';
-    return { blockingReasons: [...new Set(reasons)], distanceMeters: Math.round(distance), allowedRadiusMeters: location.exactRadiusMeters, exactRadiusMeters: location.exactRadiusMeters, expandedRadiusMeters: location.expandedRadiusMeters, matchedLocationId: location.id, matchedLocationName: location.name, mode };
+    return { blockingReasons: [...new Set(reasons)], source, distanceMeters: Math.round(distance), allowedRadiusMeters: location.exactRadiusMeters, exactRadiusMeters: location.exactRadiusMeters, expandedRadiusMeters: location.expandedRadiusMeters, matchedLocationId: location.id, matchedLocationName: location.name, mode };
   }
 
   private safeDate(value: unknown) {
