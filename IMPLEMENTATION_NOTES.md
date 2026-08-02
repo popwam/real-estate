@@ -582,3 +582,7 @@ Created and deployed additive migration `20260802180000_repair_document_verifica
 Organization-document upload now deletes the just-uploaded local/R2 object on a failed `UploadedFile` database insert, preserving the original database error if cleanup itself fails. This prevents a new orphan object caused by metadata-write failures.
 
 Validation passed: focused Files tests (13), full API suite (34 suites, 188 passed, 1 skipped), API build, Railway `prisma migrate deploy`, Railway Prisma generate, post-deploy schema diagnostic, and Railway platform doctor. The remaining manual staging check is an authenticated end-to-end upload/review request using a real company account and Platform reviewer; no credentials or document content were logged.
+
+## Attendance rejected-attempt isolation — 2026-08-02
+
+Final self-service check-in rejection no longer creates an `HrAttendanceRecord`. It creates an `HrAttendanceAttempt` with safe diagnostic metadata and returns `ATTENDANCE_CHECK_IN_REJECTED` with no attendance record ID. Accepted check-ins alone create open attendance records. An additive partial unique index permits only one open, non-rejected record per organization/employee. The legacy repair script is dry-run-only by default and does not modify the existing rejected rows.

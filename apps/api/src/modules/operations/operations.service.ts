@@ -915,10 +915,18 @@ export class OperationsService {
       'checkIn',
       user,
     );
+    if (verification.reject) {
+      const attempt = await this.recordRejectedAttendanceAttempt(employee, input, verification, 'CHECK_IN');
+      throw new BadRequestException({
+        success: false,
+        code: 'ATTENDANCE_CHECK_IN_REJECTED',
+        reasons: verification.reasons,
+        attemptId: attempt.id,
+        attendanceRecordId: null,
+      });
+    }
     const photoFileId = this.optional(input.photoFileId ?? input.checkInPhotoFileId);
-    const face = verification.reject
-      ? { status: AttendanceFaceVerificationStatus.NOT_REQUIRED, provider: null, referenceImageId: null, createReferenceCandidate: false }
-      : await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
+    const face = await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
     const { start, end, date } = this.todayBounds();
     const openRecord = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
@@ -1002,12 +1010,6 @@ export class OperationsService {
       if (!policy.firstAttendancePhotoRequiresApproval) {
         await this.prisma.hrEmployee.update({ where: { id: employee.id }, data: { faceReferenceFileId: photoFileId } });
       }
-    }
-    if (verification.reject) {
-      throw new BadRequestException({
-        message: 'Attendance verification failed.',
-        reasons: verification.reasons,
-      });
     }
     return this.selfAttendanceEnvelope(record);
   }
@@ -1164,6 +1166,7 @@ export class OperationsService {
         organizationId: employee.organizationId,
         employeeId: employee.id,
         date: { gte: start, lt: end },
+        verificationStatus: { notIn: [AttendanceVerificationStatus.REJECTED, AttendanceVerificationStatus.FAILED] },
       },
       include: { employee: true },
       orderBy: [{ checkInAt: 'desc' }, { date: 'desc' }],
@@ -3240,6 +3243,25 @@ export class OperationsService {
     }
 
     return employee;
+  }
+
+  private async recordRejectedAttendanceAttempt(employee: any, input: any, verification: any, action: 'CHECK_IN' | 'CHECK_OUT') {
+    const location = await this.attendanceLocationDecision(input, await this.attendancePolicy(employee.organizationId), employee.organizationId);
+    return (this.prisma as any).hrAttendanceAttempt.create({
+      data: {
+        organizationId: employee.organizationId,
+        employeeId: employee.id,
+        action,
+        source: 'SELF_SERVICE',
+        decision: 'REJECTED',
+        failureReasons: verification.reasons,
+        matchedLocationId: location.matchedLocationId,
+        distanceMeters: location.distanceMeters,
+        gpsAccuracy: this.optionalNumber(input.locationAccuracyMeters),
+        deviceId: this.optional(input.deviceId),
+        requestId: this.optional(input.requestId ?? input.idempotencyKey),
+      },
+    });
   }
 
   private todayBounds(now = new Date()) {

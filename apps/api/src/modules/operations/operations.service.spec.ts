@@ -104,6 +104,9 @@ describe('OperationsService self attendance', () => {
       organizationBranch: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      hrAttendanceAttempt: {
+        create: jest.fn().mockResolvedValue({ id: 'attempt_1' }),
+      },
     };
 
     return {
@@ -352,13 +355,9 @@ describe('OperationsService self attendance', () => {
       }),
     });
 
-    expect(prisma.hrAttendanceRecord.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          verificationStatus: 'REJECTED',
-          verificationFailureReasons: ['OUTSIDE_ALLOWED_LOCATION'],
-        }),
-      }),
+    expect(prisma.hrAttendanceRecord.create).not.toHaveBeenCalled();
+    expect(prisma.hrAttendanceAttempt.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ decision: 'REJECTED' }) }),
     );
   });
 
