@@ -21,6 +21,7 @@ import {
   apiRequest,
   createOrganizationFirstAdminApi,
 } from "@/lib/api";
+import { getMyAttendancePolicyApi } from "@/lib/hr-settings-api";
 import { localizedApiError } from "@/lib/api-errors";
 
 describe("API authentication error handling", () => {
@@ -218,7 +219,38 @@ describe("API authentication error handling", () => {
           method: "POST",
           body: JSON.stringify(input),
         }),
-      );
-    },
+    );
+  },
   );
+
+  it("calls the limited self-service attendance policy endpoint", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ allowWebCheckIn: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await getMyAttendancePolicyApi();
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/hr\/attendance\/me\/policy$/),
+      expect.anything(),
+    );
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).not.toContain("/hr/attendance/settings");
+  });
+
+  it("does not refresh or retry an expired self-service policy request", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ message: "expired" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(getMyAttendancePolicyApi()).rejects.toMatchObject({ status: 401 });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(/\/hr\/attendance\/me\/policy$/);
+  });
 });

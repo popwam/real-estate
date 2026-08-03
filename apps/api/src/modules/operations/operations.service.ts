@@ -1195,6 +1195,36 @@ export class OperationsService {
     return this.selfAttendanceEnvelope(record, employee, date);
   }
 
+  /**
+   * Safe policy projection for self-service attendance. This deliberately does
+   * not reuse the administrative settings endpoint or disclose Wi-Fi lists.
+   */
+  async myAttendancePolicy(user: AuthenticatedRequestUser) {
+    const employee = await this.resolveCurrentEmployee(user);
+    const policy = await this.attendancePolicy(employee.organizationId);
+    const blockingReasons: string[] = [];
+    if (policy.allowWebCheckIn === false) {
+      blockingReasons.push('WEB_CHECK_IN_NOT_ALLOWED');
+    }
+    if (policy.requireWifi && policy.webWifiPolicy === WebWifiPolicy.BLOCK) {
+      blockingReasons.push('WEB_WIFI_NOT_AVAILABLE');
+    }
+
+    return {
+      allowWebCheckIn: policy.allowWebCheckIn !== false,
+      allowMobileCheckIn: policy.allowMobileCheckIn !== false,
+      requireLocation: Boolean(policy.requireLocation),
+      requirePhoto: Boolean(policy.requirePhoto),
+      requireWifi: Boolean(policy.requireWifi),
+      webWifiPolicy: policy.webWifiPolicy,
+      locationAccuracyThresholdMeters: policy.maxGpsAccuracyMeters ?? null,
+      // Kept in sync with locationDecision's stale-location guard.
+      locationFreshnessSeconds: 10 * 60,
+      canCheckIn: blockingReasons.length === 0,
+      blockingReasons,
+    };
+  }
+
   async myAttendanceHistory(user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
     const records = await this.prisma.hrAttendanceRecord.findMany({

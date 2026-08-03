@@ -58,6 +58,20 @@ export type AttendanceSettings = {
   workEndTime: string;
 };
 
+/** Deliberately limited projection returned to an employee's self-service UI. */
+export type SelfAttendancePolicy = {
+  allowWebCheckIn: boolean;
+  allowMobileCheckIn: boolean;
+  requireLocation: boolean;
+  requirePhoto: boolean;
+  requireWifi: boolean;
+  webWifiPolicy: "BLOCK" | "MANUAL_REVIEW" | "IGNORE_FOR_WEB";
+  locationAccuracyThresholdMeters: number | null;
+  locationFreshnessSeconds: number | null;
+  canCheckIn: boolean;
+  blockingReasons: string[];
+};
+
 export function listBranchesApi(organizationId?: string) {
   const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
   return apiRequest<OrganizationBranch[]>(`/hr/branches${query}`);
@@ -89,6 +103,10 @@ export function createCompanyAccessLevelApi(input: Partial<CompanyAccessLevel>) 
 
 export function getAttendanceSettingsApi() {
   return apiRequest<AttendanceSettings>("/hr/attendance/settings");
+}
+
+export function getMyAttendancePolicyApi() {
+  return apiRequest<SelfAttendancePolicy>("/hr/attendance/me/policy", { refreshOnUnauthorized: false });
 }
 
 export function updateAttendanceSettingsApi(input: Partial<AttendanceSettings>) {

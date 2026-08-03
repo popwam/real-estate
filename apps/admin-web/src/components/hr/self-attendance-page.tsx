@@ -14,9 +14,9 @@ import { eligibleWebAttendanceLocations, selectedAttendanceLocationId } from "@/
 import {
   checkInApi,
   checkOutApi,
-  getAttendanceSettingsApi,
   getMyAttendanceHistoryApi,
   getMyAttendanceTodayApi,
+  getMyAttendancePolicyApi,
   getMyWebAttendanceLocationsApi,
   preflightCheckInApi,
   uploadAttendanceEvidencePhotoApi,
@@ -42,6 +42,7 @@ export function SelfAttendanceSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const submittingRef = useRef(false);
+  const lastDebugStateRef = useRef("");
   const [attendanceLocationId, setAttendanceLocationId] = useState("");
   const [stage, setStage] = useState<CheckInStage>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function SelfAttendanceSection() {
   const today = useQuery({ queryKey: ["hr-attendance", "me", "today"], queryFn: getMyAttendanceTodayApi });
   const history = useQuery({ queryKey: ["hr-attendance", "me", "history"], queryFn: getMyAttendanceHistoryApi });
   const attendanceLocations = useQuery({ queryKey: ["hr-attendance", "me", "web-locations"], queryFn: getMyWebAttendanceLocationsApi });
-  const settings = useQuery({ queryKey: ["hr-attendance-settings", "self"], queryFn: getAttendanceSettingsApi });
+  const settings = useQuery({ queryKey: ["hr-attendance", "me", "policy"], queryFn: getMyAttendancePolicyApi });
   const eligibleAttendanceLocations = useMemo(() => eligibleWebAttendanceLocations(attendanceLocations.data), [attendanceLocations.data]);
   const selectedAttendanceLocation = eligibleAttendanceLocations.find((item) => item.id === attendanceLocationId) ?? null;
   const branchId = selectedAttendanceLocation?.branchId ?? "";
@@ -239,11 +240,12 @@ export function SelfAttendanceSection() {
   const canUseWebAttendance = employeeLinked && webCheckInAllowed && !webWifiBlocked;
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") console.debug("[attendance:self-service]", {
+    if (process.env.NODE_ENV === "production") return;
+    const debugState = {
       locationsLength: eligibleAttendanceLocations.length,
       selectedAttendanceLocationId: attendanceLocationId || null,
       selectedLocation: selectedAttendanceLocation ? { id: selectedAttendanceLocation.id } : null,
-      todayRecord,
+      todayRecord: todayRecord ? { id: todayRecord.id, checkInAt: todayRecord.checkInAt, checkOutAt: todayRecord.checkOutAt, status: todayRecord.status } : null,
       hasOpenAttendance,
       isLoading,
       isSubmitting: checkInInProgress || checkOut.isPending,
@@ -251,7 +253,11 @@ export function SelfAttendanceSection() {
       attendancePolicy: settings.data ? { allowWebCheckIn: settings.data.allowWebCheckIn, requireLocation: settings.data.requireLocation, requirePhoto: settings.data.requirePhoto, requireWifi: settings.data.requireWifi, webWifiPolicy: settings.data.webWifiPolicy } : null,
       canUseWebAttendance,
       finalActionState,
-    });
+    };
+    const debugKey = JSON.stringify(debugState);
+    if (debugKey === lastDebugStateRef.current) return;
+    lastDebugStateRef.current = debugKey;
+    console.debug("[attendance:self-service]", debugState);
   }, [attendanceLocationId, canUseWebAttendance, checkInInProgress, checkOut.isPending, eligibleAttendanceLocations.length, employeeLinked, finalActionState, hasOpenAttendance, isLoading, selectedAttendanceLocation?.id, session.isLoading, settings.data, todayRecord]);
 
   return (
@@ -321,7 +327,7 @@ async function getBrowserLocation(): Promise<LocationPayload> {
 }
 
 function preflightMessage(decision: AttendanceCheckInPreflight, t: (key: string, values?: Record<string, string | number>) => string) { return decision.blockingReasons.map((reason) => reasonMessage(reason, t)).join(" ") || t("attendance.self.preflightRejected"); }
-function attendanceErrorMessage(error: unknown, t: (key: string, values?: Record<string, string | number>) => string) { if (error instanceof ApiError) { const details = error.details as { reasons?: unknown } | undefined; const reasons = Array.isArray(details?.reasons) ? details.reasons.map(String) : []; return reasons.length ? reasons.map((reason) => reasonMessage(reason, t)).join(" ") : t("attendance.self.requestFailed", { requestId: error.requestId ?? "" }); } if (error instanceof DOMException) return error.name === "NotAllowedError" ? reasonMessage(error.name, t) : t("attendance.self.cameraUnavailable"); if (error instanceof Error) return reasonMessage(error.message, t); return t("attendance.self.requestFailed"); }
+function attendanceErrorMessage(error: unknown, t: (key: string, values?: Record<string, string | number>) => string) { if (error instanceof ApiError) { if (error.status === 401) return t("auth.sessionExpired"); const details = error.details as { reasons?: unknown } | undefined; const reasons = Array.isArray(details?.reasons) ? details.reasons.map(String) : []; return reasons.length ? reasons.map((reason) => reasonMessage(reason, t)).join(" ") : t("attendance.self.requestFailed", { requestId: error.requestId ?? "" }); } if (error instanceof DOMException) return error.name === "NotAllowedError" ? reasonMessage(error.name, t) : t("attendance.self.cameraUnavailable"); if (error instanceof Error) return reasonMessage(error.message, t); return t("attendance.self.requestFailed"); }
 function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "ATTENDANCE_LOCATION_NOT_ALLOWED", "OUTSIDE_ALLOWED_LOCATION", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
 function stageLabel(stage: CheckInStage, t: (key: string, values?: Record<string, string | number>) => string, fallback: string) { return ({ "checking-location": t("attendance.self.checkingLocation"), "verifying-location": t("attendance.self.verifyingLocation"), "starting-camera": t("attendance.self.startingCamera"), "uploading-photo": t("attendance.self.uploadingPhoto"), "recording-attendance": t("attendance.self.recordingAttendance") } as Partial<Record<CheckInStage, string>>)[stage] ?? fallback; }
 function formatDate(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(); }

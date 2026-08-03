@@ -415,6 +415,11 @@ export class OperationsController {
   ) {
     return this.operations.myAttendanceToday(user);
   }
+  @Get('hr/attendance/me/policy') myAttendancePolicy(
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.myAttendancePolicy(user);
+  }
   @Get('hr/attendance/me/history') myAttendanceHistory(
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
