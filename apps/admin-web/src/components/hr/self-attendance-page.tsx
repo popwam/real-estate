@@ -9,6 +9,7 @@ import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
+import { attendanceActionState } from "@/lib/attendance-action-state";
 import { eligibleWebAttendanceLocations, selectedAttendanceLocationId } from "@/lib/attendance-location-selection";
 import {
   checkInApi,
@@ -22,6 +23,7 @@ import {
   type AttendanceCheckInPreflight,
 } from "@/lib/hr-settings-api";
 import { useI18n } from "@/i18n";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 type LocationPayload = {
   latitude: number;
@@ -36,6 +38,7 @@ type CheckInStage = "idle" | "checking-location" | "verifying-location" | "start
 export function SelfAttendanceSection() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  const session = useCurrentUser();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const submittingRef = useRef(false);
@@ -56,7 +59,8 @@ export function SelfAttendanceSection() {
   const branchId = selectedAttendanceLocation?.branchId ?? "";
 
   useEffect(() => {
-    setAttendanceLocationId(selectedAttendanceLocationId(eligibleAttendanceLocations, attendanceLocationId));
+    const nextId = selectedAttendanceLocationId(eligibleAttendanceLocations, attendanceLocationId);
+    if (nextId !== attendanceLocationId) setAttendanceLocationId(nextId);
   }, [attendanceLocationId, eligibleAttendanceLocations]);
 
   const invalidate = useCallback(async () => {
@@ -220,10 +224,35 @@ export function SelfAttendanceSection() {
   });
 
   const record = today.data;
-  const hasOpenRecord = Boolean(record?.checkInAt && !record?.checkOutAt);
-  const isCompleted = Boolean(record?.checkInAt && record?.checkOutAt);
+  // The endpoint returns an envelope even when no database record exists.
+  const todayRecord = record?.id ? record : null;
+  const hasOpenAttendance = Boolean(todayRecord?.checkInAt && !todayRecord?.checkOutAt);
+  const isCompleted = Boolean(todayRecord?.checkInAt && todayRecord?.checkOutAt);
   const checkInInProgress = stage !== "idle" && stage !== "checking-out";
   const hasEligibleLocation = Boolean(selectedAttendanceLocation);
+  const employeeLinked = Boolean(session.data?.hrEmployee?.id && session.data.hrEmployee.status === "ACTIVE" && session.data.hrEmployee.attendanceEnabled);
+  const webCheckInAllowed = settings.data?.allowWebCheckIn !== false;
+  const webWifiBlocked = Boolean(settings.data?.requireWifi && settings.data.webWifiPolicy === "BLOCK");
+  const isLoading = session.isLoading || today.isLoading || attendanceLocations.isLoading || settings.isLoading;
+  const hasActionError = Boolean(session.error || today.error || attendanceLocations.error || settings.error);
+  const finalActionState = attendanceActionState({ isLoading, hasError: hasActionError, employeeLinked, hasOpenAttendance, isCompleted, webCheckInAllowed, webWifiBlocked, eligibleLocationCount: eligibleAttendanceLocations.length, hasSelectedLocation: hasEligibleLocation });
+  const canUseWebAttendance = employeeLinked && webCheckInAllowed && !webWifiBlocked;
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") console.debug("[attendance:self-service]", {
+      locationsLength: eligibleAttendanceLocations.length,
+      selectedAttendanceLocationId: attendanceLocationId || null,
+      selectedLocation: selectedAttendanceLocation ? { id: selectedAttendanceLocation.id } : null,
+      todayRecord,
+      hasOpenAttendance,
+      isLoading,
+      isSubmitting: checkInInProgress || checkOut.isPending,
+      employeeLinkStatus: session.isLoading ? "LOADING" : employeeLinked ? "ACTIVE_LINKED" : "NOT_LINKED_OR_INACTIVE",
+      attendancePolicy: settings.data ? { allowWebCheckIn: settings.data.allowWebCheckIn, requireLocation: settings.data.requireLocation, requirePhoto: settings.data.requirePhoto, requireWifi: settings.data.requireWifi, webWifiPolicy: settings.data.webWifiPolicy } : null,
+      canUseWebAttendance,
+      finalActionState,
+    });
+  }, [attendanceLocationId, canUseWebAttendance, checkInInProgress, checkOut.isPending, eligibleAttendanceLocations.length, employeeLinked, finalActionState, hasOpenAttendance, isLoading, selectedAttendanceLocation?.id, session.isLoading, settings.data, todayRecord]);
 
   return (
     <div className="space-y-5">
@@ -238,14 +267,21 @@ export function SelfAttendanceSection() {
         ) : null}
         {settings.data ? <p className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">{t("companySettings.browserWifiLimitation")}</p> : null}
         {attendanceLocations.isLoading ? <LoadingState label={t("attendance.self.loadingLocations")} /> : null}
-        {!attendanceLocations.isLoading && !hasOpenRecord && !isCompleted && !eligibleAttendanceLocations.length ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.locationSetupTitle")} description={t("attendance.self.locationSetupRequired")} /> : null}
         <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           {eligibleAttendanceLocations.length === 1 && selectedAttendanceLocation ? <div className="grid gap-1.5"><Label>{t("attendance.self.branch")}</Label><p className="flex h-10 items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-sm text-[var(--color-foreground)]">{selectedAttendanceLocation.branchName}</p></div> : null}
           {eligibleAttendanceLocations.length > 1 ? <div className="grid gap-1.5"><Label htmlFor="attendanceLocation">{t("attendance.self.branch")}</Label><select id="attendanceLocation" className="h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-foreground)]" value={attendanceLocationId} onChange={(event) => setAttendanceLocationId(event.target.value)} disabled={checkInInProgress || checkOut.isPending}><option value="">{t("attendance.self.selectAttendanceLocation")}</option>{eligibleAttendanceLocations.map((attendanceLocation) => <option key={attendanceLocation.id} value={attendanceLocation.id}>{attendanceLocation.branchName}</option>)}</select></div> : null}
-          {!today.isLoading && !record && !attendanceLocations.isLoading && hasEligibleLocation ? <Button type="button" onClick={beginCheckIn} disabled={checkInInProgress || checkOut.isPending}><LogIn className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkInAction"))}</Button> : null}
-          {!today.isLoading && hasOpenRecord ? <Button type="button" className="ui-button-secondary" onClick={() => checkOut.mutate()} disabled={checkInInProgress || checkOut.isPending}><LogOut className="h-4 w-4" aria-hidden="true" />{stage === "checking-out" ? t("attendance.self.recordingAttendance") : t("attendance.self.checkOutAction")}</Button> : null}
-          {isCompleted ? <p className="text-sm font-medium text-[var(--color-muted)]">{t("attendance.self.completedToday")}</p> : null}
+          {finalActionState === "check-in" ? <Button type="button" onClick={beginCheckIn} disabled={checkInInProgress || checkOut.isPending}><LogIn className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkInAction"))}</Button> : null}
+          {finalActionState === "check-out" ? <Button type="button" className="ui-button-secondary" onClick={() => checkOut.mutate()} disabled={checkInInProgress || checkOut.isPending}><LogOut className="h-4 w-4" aria-hidden="true" />{stage === "checking-out" ? t("attendance.self.recordingAttendance") : t("attendance.self.checkOutAction")}</Button> : null}
+          {finalActionState === "completed" ? <p className="text-sm font-medium text-[var(--color-muted)]">{t("attendance.self.completedToday")}</p> : null}
         </div>
+
+        {finalActionState === "loading" ? <LoadingState label={t("attendance.self.loadingAction")} /> : null}
+        {finalActionState === "employee-unlinked" ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.employeeLinkTitle")} description={t("attendance.self.employeeLinkDescription")} /> : null}
+        {finalActionState === "policy-web-disabled" ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.policyBlockedTitle")} description={t("attendance.self.policyWebDisabled")} /> : null}
+        {finalActionState === "policy-wifi-blocked" ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.policyBlockedTitle")} description={t("attendance.self.policyWifiBlocked")} /> : null}
+        {finalActionState === "location-setup-required" ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.locationSetupTitle")} description={t("attendance.self.locationSetupRequired")} /> : null}
+        {finalActionState === "location-selection-required" ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.locationSelectionTitle")} description={t("attendance.self.locationSelectionRequired")} /> : null}
+        {finalActionState === "error" ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.actionUnavailableTitle")} description={attendanceErrorMessage(session.error ?? today.error ?? attendanceLocations.error ?? settings.error, t)} /> : null}
 
         {stage === "starting-camera" || stage === "camera" ? <CameraPanel videoRef={videoRef} loading={stage === "starting-camera"} onCapture={capturePhoto} onCancel={cancelCheckIn} t={t} /> : null}
         {stage === "preview" && previewUrl ? <PhotoPreview previewUrl={previewUrl} busy={false} onUse={usePhoto} onRetake={retakePhoto} onCancel={cancelCheckIn} t={t} /> : null}
