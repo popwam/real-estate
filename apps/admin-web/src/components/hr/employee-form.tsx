@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Check, ChevronLeft, ChevronRight, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { DetailCard, DetailGrid } from "@/components/platform/detail-card";
@@ -11,9 +11,9 @@ import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 import { listOrganizationsApi } from "@/lib/api";
-import { listBranchesApi } from "@/lib/hr-settings-api";
-import type { HrEmployee, HrEmployeeInput } from "@/lib/hr-employees-api";
-import { employeePermissionKeys, uploadHrEmployeeImageApi, type HrEmployeeImagePurpose } from "@/lib/hr-employees-api";
+import { listAttendanceSchedulesApi, listBranchesApi } from "@/lib/hr-settings-api";
+import type { HrEmployee, HrEmployeeAttendanceOverride, HrEmployeeInput, HrAttendanceWeeklyRule } from "@/lib/hr-employees-api";
+import { createHrEmployeeAttendanceOverrideApi, employeePermissionKeys, getHrEmployeeAttendanceOverrideApi, updateHrEmployeeAttendanceOverrideApi, uploadHrEmployeeImageApi, type HrEmployeeImagePurpose } from "@/lib/hr-employees-api";
 import { isPlatformRole } from "@/lib/permissions";
 import {
   EMPLOYEE_PERMISSION_GROUPS,
@@ -24,7 +24,10 @@ import {
 export type EmployeeFormValues = HrEmployeeInput & {
   permissions: string[];
   identifiers?: Array<Record<string, unknown>>;
+  attendanceOverride?: AttendanceOverrideDraft;
 };
+
+export type AttendanceOverrideDraft = Omit<HrEmployeeAttendanceOverride, "id" | "isActive">;
 
 type StepId =
   | "personal"
@@ -71,6 +74,7 @@ export function EmployeeForm({
   const existingPermissions = useMemo(() => employeePermissionKeys(employee), [employee]);
   const [stepIndex, setStepIndex] = useState(0);
   const [permissionSearch, setPermissionSearch] = useState("");
+  const [scheduleError, setScheduleError] = useState("");
   const [values, setValues] = useState<EmployeeFormValues>(() => ({
     firstName: employee?.user?.firstName ?? firstNameFromName(employee?.name),
     lastName: employee?.user?.lastName ?? lastNameFromName(employee?.name),
@@ -127,6 +131,8 @@ export function EmployeeForm({
     accessLevel: "",
     workScheduleType: employee?.workScheduleType ?? "FIXED_OFFICE_HOURS",
     workScheduleId: employee?.workScheduleId ?? "",
+    attendanceScheduleMode: employee?.attendanceScheduleMode ?? "ORGANIZATION_DEFAULT",
+    attendanceScheduleId: employee?.attendanceScheduleId ?? "",
     shiftGroupId: employee?.shiftGroupId ?? "",
     attendanceProfileId: employee?.attendanceProfileId ?? "",
     leaveProfileId: employee?.leaveProfileId ?? "",
@@ -169,6 +175,15 @@ export function EmployeeForm({
     queryFn: () => listBranchesApi(branchOrganizationId || undefined),
     enabled: Boolean(branchOrganizationId),
   });
+  const attendanceSchedules = useQuery({ queryKey: ["hr-attendance-schedules", branchOrganizationId], queryFn: listAttendanceSchedulesApi, enabled: Boolean(branchOrganizationId) });
+  const attendanceOverride = useQuery({ queryKey: ["hr-employee-attendance-override", employee?.id], queryFn: () => getHrEmployeeAttendanceOverrideApi(employee!.id), enabled: mode === "edit" && Boolean(employee?.id) });
+  const [overrideDraft, setOverrideDraft] = useState<AttendanceOverrideDraft>(defaultAttendanceOverride(employee?.timezone));
+  const [overrideId, setOverrideId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!attendanceOverride.data) return;
+    setOverrideId(attendanceOverride.data.id);
+    setOverrideDraft({ effectiveFrom: dateInput(attendanceOverride.data.effectiveFrom), effectiveTo: dateInput(attendanceOverride.data.effectiveTo), timezone: attendanceOverride.data.timezone, weeklyRules: attendanceOverride.data.weeklyRules });
+  }, [attendanceOverride.data]);
   const roleOptions = EMPLOYEE_ROLE_OPTIONS.filter((role) => isPlatform || !role.startsWith("platform_"));
   const uploadOrganizationId = isPlatform ? values.organizationId || undefined : undefined;
   const visibleGroups = EMPLOYEE_PERMISSION_GROUPS.filter(
@@ -221,6 +236,32 @@ export function EmployeeForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    setScheduleError("");
+    if (values.attendanceScheduleMode === "ASSIGNED_SCHEDULE" && !values.attendanceScheduleId) {
+      setScheduleError("Select an active attendance schedule before saving.");
+      setStepIndex(steps.findIndex((step) => step.id === "schedule"));
+      return;
+    }
+    if (values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE") {
+      const error = validateAttendanceOverride(overrideDraft);
+      if (error) {
+        setScheduleError(error);
+        setStepIndex(steps.findIndex((step) => step.id === "schedule"));
+        return;
+      }
+      if (employee?.id) {
+        try {
+          const saved = overrideId
+            ? await updateHrEmployeeAttendanceOverrideApi(employee.id, overrideId, overrideDraft)
+            : await createHrEmployeeAttendanceOverrideApi(employee.id, overrideDraft);
+          setOverrideId(saved.id);
+        } catch (error) {
+          setScheduleError(error instanceof Error ? error.message : "Unable to save the attendance override.");
+          setStepIndex(steps.findIndex((step) => step.id === "schedule"));
+          return;
+        }
+      }
+    }
     const identifiers =
       values.employeeIdentifierValue
         ? [
@@ -244,6 +285,7 @@ export function EmployeeForm({
       organizationId: isPlatform ? values.organizationId || undefined : undefined,
       phoneCountry: values.phoneCountry || selectedOrganizationCountry,
       identifiers,
+      attendanceOverride: values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE" ? overrideDraft : undefined,
     });
   }
 
@@ -367,7 +409,11 @@ export function EmployeeForm({
         ) : null}
 
         {currentStep.id === "schedule" ? (
+          <div className="space-y-4">
           <FieldGrid>
+            <SelectField id="attendanceScheduleMode" label={t("hr360.attendanceScheduleMode")} value={values.attendanceScheduleMode} update={update} options={["ORGANIZATION_DEFAULT", "ASSIGNED_SCHEDULE", "EMPLOYEE_OVERRIDE"]} t={t} />
+            {values.attendanceScheduleMode === "ASSIGNED_SCHEDULE" ? <ScheduleSelectField id="attendanceScheduleId" label={t("hr360.attendanceSchedule")} value={values.attendanceScheduleId} schedules={attendanceSchedules.data ?? []} update={update} /> : null}
+            {values.attendanceScheduleMode === "ORGANIZATION_DEFAULT" ? <p className="text-sm text-[var(--color-muted)]">{t("hr360.option.ORGANIZATION_DEFAULT")}: {t("hr360.attendanceSchedule")}</p> : null}
             <SelectField id="workScheduleType" label={t("hr360.workMode")} value={values.workScheduleType} update={update} options={["FIXED_OFFICE_HOURS", "SHIFTS", "FLEXIBLE", "REMOTE", "HYBRID"]} t={t} />
             <TextField id="workScheduleId" label={t("hr360.workSchedule")} value={values.workScheduleId} update={update} />
             <TextField id="shiftGroupId" label={t("hr360.shiftGroup")} value={values.shiftGroupId} update={update} />
@@ -386,6 +432,9 @@ export function EmployeeForm({
             <CheckboxField id="remoteWorkAllowed" label={t("hr360.remoteWorkAllowed")} value={Boolean(values.remoteWorkAllowed)} update={update} />
             <TextField id="holidayWorkPolicy" label={t("hr360.holidayWorkPolicy")} value={values.holidayWorkPolicy} update={update} />
           </FieldGrid>
+          {values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE" ? <AttendanceOverrideEditor draft={overrideDraft} onChange={setOverrideDraft} hint={t("hr360.employeeScheduleOverrideHint")} t={t} /> : null}
+          {scheduleError ? <p className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">{scheduleError}</p> : null}
+          </div>
         ) : null}
 
         {currentStep.id === "payroll" ? (
@@ -521,6 +570,87 @@ export function EmployeeForm({
     </form>
   );
 }
+
+const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function defaultAttendanceOverride(timezone?: string | null): AttendanceOverrideDraft {
+  return {
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+    effectiveTo: "",
+    timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    weeklyRules: WEEK_DAYS.map((_, dayOfWeek) => ({ dayOfWeek, isWorkingDay: dayOfWeek > 0 && dayOfWeek < 6, startTime: "09:00", endTime: "17:00", lateUntilMinutes: 15, severeLateUntilMinutes: 60, absentAfterMinutes: 60, earlyLeaveGraceMinutes: 0, overnightShift: false })),
+  };
+}
+
+export function validateAttendanceOverride(draft: AttendanceOverrideDraft) {
+  if (!draft.timezone) return "Timezone is required.";
+  if (!draft.weeklyRules.length) return "At least one weekly rule is required.";
+  if (draft.effectiveTo && draft.effectiveTo < draft.effectiveFrom) return "Effective end date cannot be before the start date.";
+  const days = new Set<number>();
+  for (const rule of draft.weeklyRules) {
+    if (days.has(rule.dayOfWeek)) return "Each weekday can be configured only once.";
+    days.add(rule.dayOfWeek);
+    if (!rule.isWorkingDay) continue;
+    const late = Number(rule.lateUntilMinutes); const severe = Number(rule.severeLateUntilMinutes); const absent = Number(rule.absentAfterMinutes); const grace = Number(rule.earlyLeaveGraceMinutes);
+    if (!rule.startTime || !rule.endTime) return "Working days require a start and end time.";
+    if (![late, severe, absent, grace].every((value) => Number.isFinite(value) && value >= 0) || late >= severe || severe > absent) return "Thresholds must satisfy 0 ≤ late < severe late ≤ absent.";
+    if (rule.endTime <= rule.startTime && !rule.overnightShift) return "An end time before the start time requires Overnight shift.";
+  }
+  return "";
+}
+
+function AttendanceOverrideEditor({ draft, onChange, hint, t }: { draft: AttendanceOverrideDraft; onChange: (draft: AttendanceOverrideDraft) => void; hint: string; t: (key: string) => string }) {
+  function updateRule(dayOfWeek: number, key: keyof HrAttendanceWeeklyRule, value: unknown) {
+    onChange({ ...draft, weeklyRules: draft.weeklyRules.map((rule) => rule.dayOfWeek === dayOfWeek ? { ...rule, [key]: value } : rule) });
+  }
+  return <section className="space-y-4 rounded-lg border border-[var(--color-border)] p-4" aria-label="Employee attendance override">
+    <p className="text-sm text-[var(--color-muted)]">{hint}</p>
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Field label={t("hr360.override.effectiveFrom")} id="attendanceOverrideEffectiveFrom"><Input id="attendanceOverrideEffectiveFrom" type="date" value={draft.effectiveFrom} onChange={(event) => onChange({ ...draft, effectiveFrom: event.target.value })} /></Field>
+      <Field label={t("hr360.override.effectiveTo")} id="attendanceOverrideEffectiveTo"><Input id="attendanceOverrideEffectiveTo" type="date" value={draft.effectiveTo ?? ""} onChange={(event) => onChange({ ...draft, effectiveTo: event.target.value })} /></Field>
+      <Field label={t("hr360.override.timezone")} id="attendanceOverrideTimezone"><Input id="attendanceOverrideTimezone" value={draft.timezone} onChange={(event) => onChange({ ...draft, timezone: event.target.value })} /></Field>
+    </div>
+    <div className="space-y-3">
+      {draft.weeklyRules.map((rule) => <div key={rule.dayOfWeek} className="rounded-md border border-[var(--color-border)] p-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><strong className="text-sm">{WEEK_DAYS[rule.dayOfWeek]}</strong><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={rule.isWorkingDay} onChange={(event) => updateRule(rule.dayOfWeek, "isWorkingDay", event.target.checked)} /> {t("hr360.override.workingDay")}</label></div>
+        {rule.isWorkingDay ? <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label={t("hr360.override.start")} id={`schedule-start-${rule.dayOfWeek}`}><Input id={`schedule-start-${rule.dayOfWeek}`} type="time" value={rule.startTime ?? ""} onChange={(event) => updateRule(rule.dayOfWeek, "startTime", event.target.value)} /></Field>
+            <Field label={t("hr360.override.end")} id={`schedule-end-${rule.dayOfWeek}`}><Input id={`schedule-end-${rule.dayOfWeek}`} type="time" value={rule.endTime ?? ""} onChange={(event) => updateRule(rule.dayOfWeek, "endTime", event.target.value)} /></Field>
+            <NumberRuleField label={t("hr360.override.lateUntil")} value={rule.lateUntilMinutes} onChange={(value) => updateRule(rule.dayOfWeek, "lateUntilMinutes", value)} />
+            <NumberRuleField label={t("hr360.override.severeLateUntil")} value={rule.severeLateUntilMinutes} onChange={(value) => updateRule(rule.dayOfWeek, "severeLateUntilMinutes", value)} />
+            <NumberRuleField label={t("hr360.override.absentAfter")} value={rule.absentAfterMinutes} onChange={(value) => updateRule(rule.dayOfWeek, "absentAfterMinutes", value)} />
+            <NumberRuleField label={t("hr360.override.earlyLeaveGrace")} value={rule.earlyLeaveGraceMinutes} onChange={(value) => updateRule(rule.dayOfWeek, "earlyLeaveGraceMinutes", value)} />
+            <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(rule.overnightShift)} onChange={(event) => updateRule(rule.dayOfWeek, "overnightShift", event.target.checked)} /> {t("hr360.override.overnight")}</label>
+          </div>
+          <AttendanceThresholdPreview rule={rule} />
+        </> : <p className="text-sm text-[var(--color-muted)]">{t("hr360.override.noPlannedAttendance")}</p>}
+      </div>)}
+    </div>
+  </section>;
+}
+
+function NumberRuleField({ label, value, onChange }: { label: string; value: number | undefined; onChange: (value: number) => void }) {
+  return <Field label={label} id={label}><Input type="number" min="0" value={value ?? 0} onChange={(event) => onChange(Number(event.target.value))} /></Field>;
+}
+
+export function attendanceThresholdPreview(rule: HrAttendanceWeeklyRule) {
+  if (!rule.startTime) return null;
+  const start = timeToMinutes(rule.startTime); const late = start + Number(rule.lateUntilMinutes ?? 0); const severe = start + Number(rule.severeLateUntilMinutes ?? 0); const absent = start + Number(rule.absentAfterMinutes ?? 0);
+  return { onTimeUntil: minutesToTime(start), late: `${minutesToTime(start + 1)} – ${minutesToTime(late)}`, severeLate: `${minutesToTime(late + 1)} – ${minutesToTime(absent)}`, absent: `After ${minutesToTime(absent)}`, severeThreshold: severe === absent ? null : minutesToTime(severe) };
+}
+
+function AttendanceThresholdPreview({ rule }: { rule: HrAttendanceWeeklyRule }) {
+  const preview = attendanceThresholdPreview(rule);
+  if (!preview) return null;
+  return <div className="mt-3 grid gap-1 rounded bg-[var(--color-surface-muted)] p-3 text-xs sm:grid-cols-4">
+    <span><b>ON_TIME</b><br />Until {preview.onTimeUntil}</span><span><b>LATE</b><br />{preview.late}</span><span><b>SEVERE_LATE</b><br />{preview.severeLate}</span><span><b>ABSENT</b><br />{preview.absent}</span>
+    {preview.severeThreshold ? <span className="sm:col-span-4 text-[var(--color-muted)]">Severe threshold: {preview.severeThreshold}</span> : null}
+  </div>;
+}
+
+function timeToMinutes(value: string) { const [hour, minute] = value.split(":").map(Number); return hour * 60 + minute; }
+function minutesToTime(value: number) { const safe = ((value % 1440) + 1440) % 1440; return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`; }
 
 function FieldGrid({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>;
@@ -668,6 +798,10 @@ function SelectField({
 
 function BranchSelectField({ id, label, value, branches, update }: { id: string; label: string; value: unknown; branches: Array<{ id: string; name: string; isActive: boolean }>; update: (key: string, value: unknown) => void }) {
   return <Field label={label} id={id}><select id={id} className="ui-input" value={value == null ? "" : String(value)} onChange={(event) => update(id, event.target.value)}><option value="">—</option>{branches.filter((branch) => branch.isActive).map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></Field>;
+}
+
+function ScheduleSelectField({ id, label, value, schedules, update }: { id: string; label: string; value: unknown; schedules: Array<{ id: string; name: string; timezone?: string | null }>; update: (key: string, value: unknown) => void }) {
+  return <Field label={label} id={id}><select id={id} className="ui-input" value={value == null ? "" : String(value)} onChange={(event) => update(id, event.target.value)}><option value="">-</option>{schedules.map((schedule) => <option key={schedule.id} value={schedule.id}>{schedule.name}{schedule.timezone ? ` (${schedule.timezone})` : ""}</option>)}</select></Field>;
 }
 
 function CheckboxField({

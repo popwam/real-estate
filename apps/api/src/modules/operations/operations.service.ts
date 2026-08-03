@@ -13,6 +13,7 @@ import {
   AdsCampaignProvider,
   AdsCampaignStatus,
   AttendanceLateLevel,
+  AttendanceScheduleMode,
   AttendancePenaltyType,
   AttendanceSource,
   AttendanceFaceVerificationStatus,
@@ -304,6 +305,12 @@ export class OperationsService {
     return this.attendancePolicy(organizationId);
   }
 
+  async listAttendanceSchedules(user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    return this.prisma.hrAttendanceSchedule.findMany({ where: { organizationId: requireOperationOrganizationId(user), isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true, effectiveFrom: true, effectiveTo: true } });
+  }
+
   async updateAttendanceSettings(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['company.settings.manage', 'hr.manage']);
@@ -382,6 +389,11 @@ export class OperationsService {
       input.status ?? (input.isActive === false ? 'INACTIVE' : 'ACTIVE'),
       HrEmployeeStatus.ACTIVE,
     );
+    const attendanceSchedule = await this.employeeAttendanceScheduleSelection(
+      organizationId,
+      input,
+      { attendanceScheduleMode: AttendanceScheduleMode.ORGANIZATION_DEFAULT, attendanceScheduleId: null },
+    );
 
     const record = await this.prisma.$transaction(async (tx) => {
       const existingEmployee = await tx.hrEmployee.findFirst({
@@ -444,6 +456,8 @@ export class OperationsService {
           organizationId,
           userId: userRecord.id,
           departmentId: this.optional(input.departmentId),
+          attendanceScheduleMode: attendanceSchedule.mode,
+          attendanceScheduleId: attendanceSchedule.id,
           name,
           email,
           phone,
@@ -508,10 +522,13 @@ export class OperationsService {
       this.optional(input.phoneCountry) ?? organization?.country,
     );
     await this.assertEmployeePhoneAvailable(phone, existing.userId ?? undefined);
+    const attendanceSchedule = await this.employeeAttendanceScheduleSelection(existing.organizationId, input, existing);
     const record = await this.prisma.hrEmployee.update({
       where: { id },
       data: {
         departmentId: input.departmentId,
+        attendanceScheduleMode: attendanceSchedule.mode,
+        attendanceScheduleId: attendanceSchedule.id,
         name: input.name ?? this.employeeName(input, existing.name),
         email: this.optional(input.email),
         phone,
@@ -544,6 +561,72 @@ export class OperationsService {
     );
     await this.recordAudit(user, 'employee.updated', 'HrEmployee', record.id);
     return this.hrEmployeeResponse(record);
+  }
+
+  async getEmployeeAttendanceOverride(employeeId: string, user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user); requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    const employee = await this.assertExists('hrEmployee', employeeId, user);
+    // Return the currently effective override when one exists; otherwise retain
+    // the most recently configured active override so switching back to this
+    // mode restores the administrator's previous weekly rules.
+    const now = new Date();
+    return this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+      where: { employeeId, organizationId: employee.organizationId, isActive: true },
+      orderBy: [{ effectiveFrom: 'desc' }],
+    }).then(async (latest: any) => this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+      where: { employeeId, organizationId: employee.organizationId, isActive: true, effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] },
+      orderBy: { effectiveFrom: 'desc' },
+    }) ?? latest);
+  }
+  async createEmployeeAttendanceOverride(employeeId: string, input: any, user: AuthenticatedRequestUser) {
+    const employee = await this.overrideEmployee(employeeId, user);
+    const data = await this.validatedAttendanceOverride(employee, input);
+    return this.prisma.hrEmployeeAttendanceScheduleOverride.create({ data: { ...data, employeeId, organizationId: employee.organizationId } });
+  }
+  async updateEmployeeAttendanceOverride(employeeId: string, overrideId: string, input: any, user: AuthenticatedRequestUser) {
+    const employee = await this.overrideEmployee(employeeId, user);
+    const existing = await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { id: overrideId, employeeId, organizationId: employee.organizationId } });
+    if (!existing) throw new NotFoundException('Attendance override not found.');
+    const data = await this.validatedAttendanceOverride(employee, input, overrideId);
+    return this.prisma.hrEmployeeAttendanceScheduleOverride.update({ where: { id: overrideId }, data });
+  }
+  private async overrideEmployee(employeeId: string, user: AuthenticatedRequestUser) { this.assertHrWorkspace(user); requireOperationPermission(user, ['hr.employees.update', 'hr.manage']); return this.assertExists('hrEmployee', employeeId, user); }
+  private async validatedAttendanceOverride(employee: any, input: any, excludeId?: string) {
+    const rules = input?.weeklyRules;
+    if (!Array.isArray(rules) || !rules.length) throw new BadRequestException('weeklyRules is required.');
+    const days = new Set<number>();
+    for (const rule of rules) { const day = Number(rule.dayOfWeek); if (!Number.isInteger(day) || day < 0 || day > 6 || days.has(day)) throw new BadRequestException('weeklyRules contains an invalid or duplicate dayOfWeek.'); days.add(day); this.assertAttendanceRule(rule); }
+    const timezone = this.attendanceTimezone(input.timezone);
+    const effectiveFrom = new Date(input.effectiveFrom); const effectiveTo = input.effectiveTo ? new Date(input.effectiveTo) : null;
+    if (Number.isNaN(effectiveFrom.getTime()) || (effectiveTo && (Number.isNaN(effectiveTo.getTime()) || effectiveTo < effectiveFrom))) throw new BadRequestException('Invalid effective dates.');
+    const overlap = await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { employeeId: employee.id, organizationId: employee.organizationId, isActive: true, ...(excludeId ? { id: { not: excludeId } } : {}), effectiveFrom: { lte: effectiveTo ?? new Date('9999-12-31') }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveFrom } }] } });
+    if (overlap) throw new ConflictException('Attendance override effective dates overlap.');
+    // Boundaries are inclusive: an override ending at the same instant another
+    // one starts overlaps and is rejected. This is intentional and documented.
+    return { weeklyRules: rules, timezone, effectiveFrom, effectiveTo, isActive: input.isActive === false ? false : true };
+  }
+
+  private async employeeAttendanceScheduleSelection(organizationId: string, input: any, existing: any) {
+    const mode = input.attendanceScheduleMode === undefined
+      ? (existing.attendanceScheduleMode ?? AttendanceScheduleMode.ORGANIZATION_DEFAULT)
+      : this.enumValue(AttendanceScheduleMode, input.attendanceScheduleMode, AttendanceScheduleMode.ORGANIZATION_DEFAULT);
+    const requestedId = input.attendanceScheduleId === undefined ? existing.attendanceScheduleId : this.optional(input.attendanceScheduleId);
+    if (mode === AttendanceScheduleMode.ORGANIZATION_DEFAULT) return { mode, id: null };
+    if (mode === AttendanceScheduleMode.ASSIGNED_SCHEDULE) {
+      if (!requestedId) throw new BadRequestException('attendanceScheduleId is required for an assigned schedule.');
+      const schedule = await this.prisma.hrAttendanceSchedule.findFirst({ where: { id: requestedId, organizationId, isActive: true } });
+      if (!schedule) throw new BadRequestException('attendanceScheduleId must reference an active schedule in this organization.');
+      return { mode, id: requestedId };
+    }
+    // The mode is only valid after an override has been safely saved. This
+    // prevents a partial web save from leaving an employee in a silent void.
+    if (existing?.id) {
+      const override = await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { employeeId: existing.id, organizationId, isActive: true } });
+      if (!override) throw new BadRequestException('Create an employee attendance override before selecting EMPLOYEE_OVERRIDE mode.');
+    } else {
+      throw new BadRequestException('Create the employee override after the employee profile is created, then select EMPLOYEE_OVERRIDE mode.');
+    }
+    return { mode, id: null };
   }
 
   async bulkUpdateHrEmployeeStatus(input: any, user: AuthenticatedRequestUser) {
@@ -950,14 +1033,15 @@ export class OperationsService {
     }
 
     const now = new Date();
-    const late = this.calculateLatePenalty(date, now, policy);
+    const schedule = await this.resolveEffectiveAttendanceSchedule({ organizationId: employee.organizationId, employeeId: employee.id, attendanceDate: date, timezone: employee.timezone ?? undefined }, employee, policy);
+    const late = this.calculateScheduleLatePenalty(now, schedule, policy);
     const record = await this.prisma.hrAttendanceRecord.create({
       data: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
         date,
         checkInAt: now,
-        status: late.minutesLate > 0 ? HrAttendanceStatus.LATE : HrAttendanceStatus.PRESENT,
+        status: late.attendanceStatus,
         note: this.optional(input.note),
         attendanceSource: AttendanceSource.SELF_SERVICE,
         branchId: this.optional(input.branchId),
@@ -979,6 +1063,17 @@ export class OperationsService {
         requiresReview:
           late.requiresReview ||
           verification.status === AttendanceVerificationStatus.PENDING_REVIEW,
+        scheduleSource: schedule.source,
+        scheduleId: schedule.scheduleId,
+        scheduleTimezone: schedule.timezone,
+        plannedCheckInAt: schedule.plannedCheckIn,
+        plannedCheckOutAt: schedule.plannedCheckOut,
+        graceMinutes: schedule.graceMinutes,
+        expectedWorkMinutes: schedule.expectedWorkMinutes,
+        lateUntilAt: schedule.lateUntilAt,
+        severeLateUntilAt: schedule.severeLateUntilAt,
+        absentAfterAt: schedule.absentAfterAt,
+        attendanceStatusAtCheckIn: late.attendanceStatus,
       },
       include: { employee: true },
     });
@@ -1141,10 +1236,15 @@ export class OperationsService {
       throw new ConflictException('You must check in before checking out.');
     }
 
+    const checkedOutAt = new Date();
+    const earlyLeave = record.plannedCheckOutAt
+      ? Math.max(0, Math.round((new Date(record.plannedCheckOutAt).getTime() - checkedOutAt.getTime()) / 60000))
+      : 0;
     const updated = await this.prisma.hrAttendanceRecord.update({
       where: { id: record.id },
       data: {
-        checkOutAt: new Date(),
+        checkOutAt: checkedOutAt,
+        status: earlyLeave > Number(record.graceMinutes ?? 0) && record.status === HrAttendanceStatus.PRESENT ? HrAttendanceStatus.EARLY_LEAVE : record.status,
         note: this.mergeNote(record.note, input.note),
         ...this.attendanceEvidenceData(input, 'checkOut'),
         verificationStatus: this.mergeVerificationStatus(
@@ -3437,6 +3537,115 @@ export class OperationsService {
     const note = this.optional(next);
     if (!note) return existing;
     return existing ? `${existing}\n${note}`.slice(0, 2000) : note;
+  }
+
+  /** Central schedule resolver. Historical records use its saved snapshot, never a later schedule edit. */
+  async resolveEffectiveAttendanceSchedule(
+    input: { organizationId: string; employeeId: string; attendanceDate: Date; timezone?: string },
+    employee?: any,
+    policy?: any,
+  ) {
+    const currentEmployee = employee ?? await this.prisma.hrEmployee.findFirstOrThrow({ where: { id: input.employeeId, organizationId: input.organizationId } });
+    const effectiveAt = input.attendanceDate;
+    const mode = currentEmployee.attendanceScheduleMode ?? AttendanceScheduleMode.ORGANIZATION_DEFAULT;
+    const activePeriod = { isActive: true, effectiveFrom: { lte: effectiveAt }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveAt } }] };
+    const override = mode === AttendanceScheduleMode.EMPLOYEE_OVERRIDE && this.prisma.hrEmployeeAttendanceScheduleOverride
+      ? await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { organizationId: input.organizationId, employeeId: input.employeeId, ...activePeriod }, orderBy: { effectiveFrom: 'desc' } })
+      : null;
+    const assigned = !override && currentEmployee.attendanceScheduleId && this.prisma.hrAttendanceSchedule
+      ? await this.prisma.hrAttendanceSchedule.findFirst({ where: { id: currentEmployee.attendanceScheduleId, organizationId: input.organizationId, ...activePeriod } })
+      : null;
+    const schedule = override ?? assigned;
+    const scheduleSource = override ? AttendanceScheduleMode.EMPLOYEE_OVERRIDE : assigned ? AttendanceScheduleMode.ASSIGNED_SCHEDULE : AttendanceScheduleMode.ORGANIZATION_DEFAULT;
+    // An invalid/missing employee override deliberately falls back; callers can
+    // surface this warning without preventing a legitimate attendance action.
+    const configurationWarning = mode === AttendanceScheduleMode.EMPLOYEE_OVERRIDE && !override
+      ? 'EMPLOYEE_OVERRIDE_NOT_EFFECTIVE_FALLBACK_USED'
+      : mode === AttendanceScheduleMode.ASSIGNED_SCHEDULE && !assigned
+        ? 'ASSIGNED_SCHEDULE_NOT_EFFECTIVE_FALLBACK_USED'
+        : null;
+    const timezone = this.attendanceTimezone(schedule?.timezone ?? input.timezone ?? 'UTC');
+    const workDate = this.zonedWorkDate(input.attendanceDate, timezone);
+    const weekday = workDate.getUTCDay();
+    const storedRules: any = schedule?.weeklyRules;
+    const hasStoredRules = Array.isArray(storedRules) || Boolean(storedRules && typeof storedRules === 'object');
+    const rules: any = Array.isArray(storedRules)
+      ? Object.fromEntries(storedRules.map((rule: any) => [String(rule.dayOfWeek), rule]))
+      : storedRules ?? {};
+    const organizationDefaultRule = { isWorkingDay: true, startTime: policy?.workStartTime ?? '09:00', endTime: policy?.workEndTime ?? '17:00', lateUntilMinutes: Number(policy?.firstLateSliceMinutes ?? 15), severeLateUntilMinutes: Number(policy?.secondLateSliceMinutes ?? 60), absentAfterMinutes: Number(policy?.secondLateSliceMinutes ?? 60), earlyLeaveGraceMinutes: Number(policy?.gracePeriodMinutes ?? 0), overnightShift: false };
+    const rule = hasStoredRules ? (rules[String(weekday)] ?? rules[weekday] ?? null) : organizationDefaultRule;
+    if (!rule || rule.isWorkingDay === false) {
+      return { source: scheduleSource, scheduleSource, scheduleId: schedule?.id ?? null, timezone, workDate, plannedCheckIn: null, plannedCheckOut: null, plannedCheckInAt: null, plannedCheckOutAt: null, lateUntilAt: null, severeLateUntilAt: null, absentAfterAt: null, graceMinutes: 0, earlyLeaveMinutes: 0, isWorkingDay: false, overnightShift: false, expectedWorkMinutes: 0, configurationWarning };
+    }
+    // Organization defaults are the established attendance-policy fallback.
+    // They predate weekly-rule validation and may contain legacy overnight-like
+    // hours, so only persisted weekly rules are validated as strict schedules.
+    if (hasStoredRules) this.assertAttendanceRule(rule);
+    const start = String(rule.startTime);
+    const end = String(rule.endTime);
+    const overnightShift = Boolean(rule.overnightShift);
+    const plannedCheckIn = this.scheduleDateTime(workDate, start, 0, timezone);
+    const plannedCheckOut = this.scheduleDateTime(workDate, end, overnightShift ? 1 : 0, timezone);
+    const expectedWorkMinutes = Math.max(0, Math.round((plannedCheckOut.getTime() - plannedCheckIn.getTime()) / 60000) - Number(rule.breakMinutes ?? 0));
+    const lateUntilMinutes = Number(rule.lateUntilMinutes);
+    const severeLateUntilMinutes = Number(rule.severeLateUntilMinutes);
+    const absentAfterMinutes = Number(rule.absentAfterMinutes);
+    return { source: scheduleSource, scheduleSource, scheduleId: schedule?.id ?? null, timezone, workDate, plannedCheckIn, plannedCheckOut, plannedCheckInAt: plannedCheckIn, plannedCheckOutAt: plannedCheckOut, lateUntilAt: new Date(plannedCheckIn.getTime() + lateUntilMinutes * 60000), severeLateUntilAt: new Date(plannedCheckIn.getTime() + severeLateUntilMinutes * 60000), absentAfterAt: new Date(plannedCheckIn.getTime() + absentAfterMinutes * 60000), graceMinutes: Number(rule.earlyLeaveGraceMinutes ?? 0), earlyLeaveMinutes: Number(rule.earlyLeaveGraceMinutes ?? 0), isWorkingDay: true, overnightShift, expectedWorkMinutes, configurationWarning };
+  }
+
+  private scheduleDateTime(date: Date, time: string, dayOffset = 0, timezone = 'UTC') {
+    const [hours, minutes] = time.split(':').map(Number);
+    const local = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + dayOffset, hours || 0, minutes || 0, 0, 0);
+    let result = new Date(local);
+    // Two iterations account for the offset at the target instant (including DST).
+    for (let index = 0; index < 2; index += 1) result = new Date(local - this.timezoneOffsetMilliseconds(result, timezone));
+    return result;
+  }
+
+  private calculateScheduleLatePenalty(checkInAt: Date, schedule: any, policy: any) {
+    if (schedule.source === AttendanceScheduleMode.ORGANIZATION_DEFAULT) {
+      const legacy = this.calculateLatePenalty(schedule.plannedCheckIn, checkInAt, policy);
+      return { ...legacy, attendanceStatus: legacy.minutesLate > 0 ? HrAttendanceStatus.LATE : HrAttendanceStatus.PRESENT };
+    }
+    if (!schedule.isWorkingDay) return { minutesLate: 0, attendanceStatus: HrAttendanceStatus.PRESENT, lateLevel: AttendanceLateLevel.ON_TIME, penaltyType: AttendancePenaltyType.NONE, penaltyValue: null, requiresReview: false };
+    const minutesLate = Math.max(0, Math.round((checkInAt.getTime() - schedule.plannedCheckIn.getTime()) / 60000));
+    const attendanceStatus = minutesLate <= 0 ? HrAttendanceStatus.PRESENT : checkInAt.getTime() <= schedule.lateUntilAt.getTime() ? HrAttendanceStatus.LATE : checkInAt.getTime() <= schedule.absentAfterAt.getTime() ? HrAttendanceStatus.SEVERE_LATE : HrAttendanceStatus.ABSENT;
+    if (attendanceStatus === HrAttendanceStatus.PRESENT) return { minutesLate, attendanceStatus, lateLevel: minutesLate ? AttendanceLateLevel.GRACE : AttendanceLateLevel.ON_TIME, penaltyType: AttendancePenaltyType.NONE, penaltyValue: null, requiresReview: false };
+    const plannedStart = `${String(schedule.plannedCheckIn.getUTCHours()).padStart(2, '0')}:${String(schedule.plannedCheckIn.getUTCMinutes()).padStart(2, '0')}`;
+    return { ...this.calculateLatePenalty(schedule.plannedCheckIn, checkInAt, { ...policy, workStartTime: plannedStart, gracePeriodMinutes: 0 }), attendanceStatus };
+  }
+
+  private assertAttendanceRule(rule: any) {
+    if (rule.isWorkingDay === false) return;
+    if (typeof rule.startTime !== 'string' || typeof rule.endTime !== 'string') throw new BadRequestException('Working days require startTime and endTime.');
+    const values = ['lateUntilMinutes', 'severeLateUntilMinutes', 'absentAfterMinutes', 'earlyLeaveGraceMinutes'].map((key) => Number(rule[key]));
+    if (values.some((value) => !Number.isFinite(value) || value < 0) || values[0] >= values[1] || values[1] > values[2]) throw new BadRequestException('Attendance thresholds must satisfy 0 <= late < severe <= absent.');
+    const start = String(rule.startTime); const end = String(rule.endTime);
+    if (!this.isAttendanceTime(start) || !this.isAttendanceTime(end) || (end <= start && !rule.overnightShift)) throw new BadRequestException('Invalid attendance time range.');
+  }
+
+  private attendanceTimezone(value: unknown) {
+    const timezone = typeof value === 'string' && value.trim() ? value.trim() : null;
+    if (!timezone) throw new BadRequestException('timezone is required.');
+    try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(); } catch { throw new BadRequestException('timezone must be a valid IANA timezone.'); }
+    return timezone;
+  }
+
+  private isAttendanceTime(value: string) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return false;
+    return true;
+  }
+
+  private zonedWorkDate(value: Date, timezone: string) {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(value);
+    const part = (type: string) => Number(parts.find((item) => item.type === type)?.value);
+    return new Date(Date.UTC(part('year'), part('month') - 1, part('day')));
+  }
+
+  private timezoneOffsetMilliseconds(value: Date, timezone: string) {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(value);
+    const part = (type: string) => Number(parts.find((item) => item.type === type)?.value);
+    return Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'), part('second')) - value.getTime();
   }
 
   private calculateLatePenalty(date: Date, checkInAt: Date, policy: any) {

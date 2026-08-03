@@ -532,7 +532,15 @@ enum HrAttendanceStatus {
   PRESENT
   ABSENT
   LATE
+  SEVERE_LATE
   OFF
+  EARLY_LEAVE
+}
+
+enum AttendanceScheduleMode {
+  ORGANIZATION_DEFAULT
+  ASSIGNED_SCHEDULE
+  EMPLOYEE_OVERRIDE
 }
 
 enum HrTodayStatus {
@@ -1089,6 +1097,8 @@ model Organization {
   hrEmployeeTransferLogs      HrEmployeeTransferLog[]
   hrEmployeeTitleChangeLogs   HrEmployeeTitleChangeLog[]
   hrAttendanceRecords         HrAttendanceRecord[]
+  attendanceSchedules         HrAttendanceSchedule[]
+  employeeAttendanceScheduleOverrides HrEmployeeAttendanceScheduleOverride[]
   employeeAttendanceReferencePhotos EmployeeAttendanceReferencePhoto[]
   attendanceSettings          OrganizationAttendanceSettings?
   branches                    OrganizationBranch[]
@@ -2835,6 +2845,8 @@ model HrEmployee {
   jobTitle                    String?
   workScheduleType            HrWorkScheduleType?
   workScheduleId              String?
+  attendanceScheduleMode      AttendanceScheduleMode     @default(ORGANIZATION_DEFAULT)
+  attendanceScheduleId        String?
   shiftGroupId                String?
   attendanceProfileId         String?
   leaveProfileId              String?
@@ -2881,6 +2893,8 @@ model HrEmployee {
   titleChangeLogs             HrEmployeeTitleChangeLog[]
   attendance                  HrAttendanceRecord[]
   attendanceReferencePhotos   EmployeeAttendanceReferencePhoto[]
+  attendanceScheduleOverrides HrEmployeeAttendanceScheduleOverride[]
+  attendanceSchedule          HrAttendanceSchedule?      @relation(fields: [attendanceScheduleId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, employeeCode])
   @@unique([id, organizationId])
@@ -2890,7 +2904,45 @@ model HrEmployee {
   @@index([branchId])
   @@index([workGroupId])
   @@index([teamId])
+  @@index([attendanceScheduleId])
   @@map("hr_employees")
+}
+
+model HrAttendanceSchedule {
+  id            String    @id @default(cuid())
+  organizationId String
+  name          String
+  timezone      String
+  weeklyRules   Json
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees     HrEmployee[]
+
+  @@index([organizationId, isActive, effectiveFrom])
+  @@map("hr_attendance_schedules")
+}
+
+model HrEmployeeAttendanceScheduleOverride {
+  id            String    @id @default(cuid())
+  organizationId String
+  employeeId    String
+  weeklyRules   Json
+  timezone      String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee      HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, isActive, effectiveFrom])
+  @@index([organizationId, effectiveFrom])
+  @@map("hr_employee_attendance_schedule_overrides")
 }
 
 model EmployeeIdentifier {
@@ -3239,6 +3291,17 @@ model HrAttendanceRecord {
   penaltyValue               String?
   requiresReview             Boolean                      @default(false)
   attendanceSource           AttendanceSource             @default(MANUAL_ADMIN)
+  scheduleSource             AttendanceScheduleMode?
+  scheduleId                 String?
+  scheduleTimezone           String?
+  plannedCheckInAt           DateTime?
+  plannedCheckOutAt          DateTime?
+  graceMinutes               Int?
+  expectedWorkMinutes        Int?
+  lateUntilAt                DateTime?
+  severeLateUntilAt          DateTime?
+  absentAfterAt              DateTime?
+  attendanceStatusAtCheckIn  HrAttendanceStatus?
   organization               Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee                   HrEmployee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branch                     OrganizationBranch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
