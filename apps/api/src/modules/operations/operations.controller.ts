@@ -420,6 +420,11 @@ export class OperationsController {
   ) {
     return this.operations.myAttendanceHistory(user);
   }
+  @Get('hr/attendance/me/locations') myWebAttendanceLocations(
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.myWebAttendanceLocations(user);
+  }
   @Get('hr/employees/:employeeId/attendance-references') listEmployeeAttendanceReferences(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: AuthenticatedRequestUser,

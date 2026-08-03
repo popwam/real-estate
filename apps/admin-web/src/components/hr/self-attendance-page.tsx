@@ -2,21 +2,21 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Check, Clock, LogIn, LogOut, MapPin, RotateCcw, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
-import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
+import { eligibleWebAttendanceLocations, selectedAttendanceLocationId } from "@/lib/attendance-location-selection";
 import {
   checkInApi,
   checkOutApi,
   getAttendanceSettingsApi,
   getMyAttendanceHistoryApi,
   getMyAttendanceTodayApi,
-  listBranchesApi,
+  getMyWebAttendanceLocationsApi,
   preflightCheckInApi,
   uploadAttendanceEvidencePhotoApi,
   type AttendanceCheckInPreflight,
@@ -32,13 +32,14 @@ type LocationPayload = {
 
 type CheckInStage = "idle" | "checking-location" | "verifying-location" | "starting-camera" | "camera" | "preview" | "uploading-photo" | "recording-attendance" | "checking-out";
 
-export function SelfAttendancePage() {
+/** Embedded in the existing Attendance workspace; it deliberately owns no route or page header. */
+export function SelfAttendanceSection() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const submittingRef = useRef(false);
-  const [branchId, setBranchId] = useState("");
+  const [attendanceLocationId, setAttendanceLocationId] = useState("");
   const [stage, setStage] = useState<CheckInStage>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [preflight, setPreflight] = useState<AttendanceCheckInPreflight | null>(null);
@@ -48,8 +49,15 @@ export function SelfAttendancePage() {
 
   const today = useQuery({ queryKey: ["hr-attendance", "me", "today"], queryFn: getMyAttendanceTodayApi });
   const history = useQuery({ queryKey: ["hr-attendance", "me", "history"], queryFn: getMyAttendanceHistoryApi });
-  const branches = useQuery({ queryKey: ["hr-branches", "self"], queryFn: listBranchesApi });
+  const attendanceLocations = useQuery({ queryKey: ["hr-attendance", "me", "web-locations"], queryFn: getMyWebAttendanceLocationsApi });
   const settings = useQuery({ queryKey: ["hr-attendance-settings", "self"], queryFn: getAttendanceSettingsApi });
+  const eligibleAttendanceLocations = useMemo(() => eligibleWebAttendanceLocations(attendanceLocations.data), [attendanceLocations.data]);
+  const selectedAttendanceLocation = eligibleAttendanceLocations.find((item) => item.id === attendanceLocationId) ?? null;
+  const branchId = selectedAttendanceLocation?.branchId ?? "";
+
+  useEffect(() => {
+    setAttendanceLocationId(selectedAttendanceLocationId(eligibleAttendanceLocations, attendanceLocationId));
+  }, [attendanceLocationId, eligibleAttendanceLocations]);
 
   const invalidate = useCallback(async () => {
     await Promise.all([
@@ -117,7 +125,13 @@ export function SelfAttendancePage() {
       setLocation(capturedLocation);
 
       setStage("verifying-location");
-      const decision = await preflightCheckInApi({ ...capturedLocation, branchId: branchId || undefined });
+      if (!selectedAttendanceLocation) {
+        setFeedback(t("attendance.self.locationSetupRequired"));
+        setStage("idle");
+        submittingRef.current = false;
+        return;
+      }
+      const decision = await preflightCheckInApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation.id, branchId: selectedAttendanceLocation.branchId });
       setPreflight(decision);
       if (!decision.allowed) {
         setFeedback(preflightMessage(decision, t));
@@ -177,7 +191,8 @@ export function SelfAttendancePage() {
       setStage("recording-attendance");
       await checkInApi({
         ...location,
-        branchId: branchId || undefined,
+        attendanceLocationId: selectedAttendanceLocation?.id,
+        branchId: selectedAttendanceLocation?.branchId,
         photoFileId: uploaded.fileId,
       });
       await invalidate();
@@ -197,7 +212,7 @@ export function SelfAttendancePage() {
       setFeedback(null);
       setStage("checking-out");
       const capturedLocation = await getBrowserLocation();
-      return checkOutApi({ ...capturedLocation, branchId: branchId || undefined });
+      return checkOutApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation?.id, branchId: selectedAttendanceLocation?.branchId });
     },
     onSuccess: invalidate,
     onError: (error) => setFeedback(attendanceErrorMessage(error, t)),
@@ -208,10 +223,10 @@ export function SelfAttendancePage() {
   const hasOpenRecord = Boolean(record?.checkInAt && !record?.checkOutAt);
   const isCompleted = Boolean(record?.checkInAt && record?.checkOutAt);
   const checkInInProgress = stage !== "idle" && stage !== "checking-out";
+  const hasEligibleLocation = Boolean(selectedAttendanceLocation);
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t("attendance.self.title")} description={t("attendance.self.description")} />
       <DetailCard title={t("attendance.self.today")}>
         {today.isLoading ? <LoadingState label={t("attendance.self.loadingToday")} /> : null}
         {record ? (
@@ -222,15 +237,12 @@ export function SelfAttendancePage() {
           </div>
         ) : null}
         {settings.data ? <p className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">{t("companySettings.browserWifiLimitation")}</p> : null}
+        {attendanceLocations.isLoading ? <LoadingState label={t("attendance.self.loadingLocations")} /> : null}
+        {!attendanceLocations.isLoading && !hasOpenRecord && !isCompleted && !eligibleAttendanceLocations.length ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.locationSetupTitle")} description={t("attendance.self.locationSetupRequired")} /> : null}
         <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <div className="grid gap-1.5">
-            <Label htmlFor="attendanceBranch">{t("attendance.self.branch")}</Label>
-            <select id="attendanceBranch" className="h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-foreground)]" value={branchId} onChange={(event) => setBranchId(event.target.value)} disabled={checkInInProgress || checkOut.isPending}>
-              <option value="">{t("attendance.self.noBranch")}</option>
-              {branches.data?.filter((branch) => branch.isActive).map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-            </select>
-          </div>
-          {!today.isLoading && !record ? <Button type="button" onClick={beginCheckIn} disabled={checkInInProgress || checkOut.isPending}><LogIn className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkInAction"))}</Button> : null}
+          {eligibleAttendanceLocations.length === 1 && selectedAttendanceLocation ? <div className="grid gap-1.5"><Label>{t("attendance.self.branch")}</Label><p className="flex h-10 items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-sm text-[var(--color-foreground)]">{selectedAttendanceLocation.branchName}</p></div> : null}
+          {eligibleAttendanceLocations.length > 1 ? <div className="grid gap-1.5"><Label htmlFor="attendanceLocation">{t("attendance.self.branch")}</Label><select id="attendanceLocation" className="h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-foreground)]" value={attendanceLocationId} onChange={(event) => setAttendanceLocationId(event.target.value)} disabled={checkInInProgress || checkOut.isPending}><option value="">{t("attendance.self.selectAttendanceLocation")}</option>{eligibleAttendanceLocations.map((attendanceLocation) => <option key={attendanceLocation.id} value={attendanceLocation.id}>{attendanceLocation.branchName}</option>)}</select></div> : null}
+          {!today.isLoading && !record && !attendanceLocations.isLoading && hasEligibleLocation ? <Button type="button" onClick={beginCheckIn} disabled={checkInInProgress || checkOut.isPending}><LogIn className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkInAction"))}</Button> : null}
           {!today.isLoading && hasOpenRecord ? <Button type="button" className="ui-button-secondary" onClick={() => checkOut.mutate()} disabled={checkInInProgress || checkOut.isPending}><LogOut className="h-4 w-4" aria-hidden="true" />{stage === "checking-out" ? t("attendance.self.recordingAttendance") : t("attendance.self.checkOutAction")}</Button> : null}
           {isCompleted ? <p className="text-sm font-medium text-[var(--color-muted)]">{t("attendance.self.completedToday")}</p> : null}
         </div>
@@ -274,7 +286,7 @@ async function getBrowserLocation(): Promise<LocationPayload> {
 
 function preflightMessage(decision: AttendanceCheckInPreflight, t: (key: string, values?: Record<string, string | number>) => string) { return decision.blockingReasons.map((reason) => reasonMessage(reason, t)).join(" ") || t("attendance.self.preflightRejected"); }
 function attendanceErrorMessage(error: unknown, t: (key: string, values?: Record<string, string | number>) => string) { if (error instanceof ApiError) { const details = error.details as { reasons?: unknown } | undefined; const reasons = Array.isArray(details?.reasons) ? details.reasons.map(String) : []; return reasons.length ? reasons.map((reason) => reasonMessage(reason, t)).join(" ") : t("attendance.self.requestFailed", { requestId: error.requestId ?? "" }); } if (error instanceof DOMException) return error.name === "NotAllowedError" ? reasonMessage(error.name, t) : t("attendance.self.cameraUnavailable"); if (error instanceof Error) return reasonMessage(error.message, t); return t("attendance.self.requestFailed"); }
-function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "OUTSIDE_ALLOWED_LOCATION", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
+function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "ATTENDANCE_LOCATION_NOT_ALLOWED", "OUTSIDE_ALLOWED_LOCATION", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
 function stageLabel(stage: CheckInStage, t: (key: string, values?: Record<string, string | number>) => string, fallback: string) { return ({ "checking-location": t("attendance.self.checkingLocation"), "verifying-location": t("attendance.self.verifyingLocation"), "starting-camera": t("attendance.self.startingCamera"), "uploading-photo": t("attendance.self.uploadingPhoto"), "recording-attendance": t("attendance.self.recordingAttendance") } as Partial<Record<CheckInStage, string>>)[stage] ?? fallback; }
 function formatDate(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(); }
 function formatDateTime(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }
