@@ -10,12 +10,16 @@ async function main() {
   try {
     const records = await prisma.hrAttendanceRecord.findMany({
       where: { verificationStatus: 'REJECTED', checkInAt: { not: null }, checkOutAt: null },
-      select: { id: true }, take: 1000,
+      select: { id: true, organizationId: true, employeeId: true, checkInAt: true, verificationFailureReasons: true, attendanceSource: true }, take: 1000,
     });
     console.log(JSON.stringify({ dryRun: process.env.CONFIRM_ATTENDANCE_REPAIR !== 'true', count: records.length, ids: records.slice(0, 20).map((r) => `${r.id.slice(0, 8)}…`) }));
-    if (process.env.CONFIRM_ATTENDANCE_REPAIR === 'true') {
-      throw new Error('Confirmed repair is intentionally not automated: review the dry-run output and choose an archival policy first.');
-    }
+    if (process.env.CONFIRM_ATTENDANCE_REPAIR === 'true') await prisma.$transaction(async (tx) => {
+      for (const record of records) {
+        await (tx as any).hrAttendanceAttempt.create({ data: { organizationId: record.organizationId, employeeId: record.employeeId, attemptedAt: record.checkInAt!, action: 'CHECK_IN', source: record.attendanceSource, decision: 'REJECTED_LEGACY', failureReasons: record.verificationFailureReasons } });
+        await tx.hrAttendanceRecord.update({ where: { id: record.id }, data: { checkOutAt: record.checkInAt } });
+      }
+      console.log(JSON.stringify({ repaired: records.length }));
+    });
   } finally { await prisma.$disconnect(); }
 }
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });

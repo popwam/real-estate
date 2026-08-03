@@ -84,6 +84,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       setState(() => _evidenceIssues = evidence.issues);
       await _refresh();
       if (mounted) setState(() => _flowState = _AttendanceFlowState.success);
+    } on AttendanceException catch (error) {
+      await _refresh();
+      if (mounted) setState(() => _actionError = error);
     } on DioException catch (error) {
       setState(() => _actionError = error);
     } on AttendanceEvidenceException catch (error) {
@@ -313,7 +316,10 @@ class _TodayAttendanceCard extends StatelessWidget {
             if (actionError != null) ...[
               const SizedBox(height: 12),
               Text(
-                actionError is _AttendancePreflightException
+                actionError is AttendanceException
+                    ? ([...(actionError as AttendanceException).reasons, if ((actionError as AttendanceException).reasons.isEmpty) (actionError as AttendanceException).code]
+                        .map((reason) => context.localizedAttendanceFailure(reason)).join(', '))
+                    : actionError is _AttendancePreflightException
                     ? (actionError as _AttendancePreflightException).reasons
                         .map((reason) => context.localizedAttendanceFailure(reason))
                         .join(', ')
