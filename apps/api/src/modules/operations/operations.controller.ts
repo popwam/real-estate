@@ -420,6 +420,11 @@ export class OperationsController {
   ) {
     return this.operations.myAttendancePolicy(user);
   }
+  @Get('hr/attendance/schedules') listAttendanceSchedules(
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.listAttendanceSchedules(user);
+  }
   @Get('hr/attendance/me/history') myAttendanceHistory(
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {

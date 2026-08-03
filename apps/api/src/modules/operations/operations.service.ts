@@ -13,6 +13,7 @@ import {
   AdsCampaignProvider,
   AdsCampaignStatus,
   AttendanceLateLevel,
+  AttendanceScheduleMode,
   AttendancePenaltyType,
   AttendanceSource,
   AttendanceFaceVerificationStatus,
@@ -304,6 +305,12 @@ export class OperationsService {
     return this.attendancePolicy(organizationId);
   }
 
+  async listAttendanceSchedules(user: AuthenticatedRequestUser) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    return this.prisma.hrAttendanceSchedule.findMany({ where: { organizationId: requireOperationOrganizationId(user), isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true, effectiveFrom: true, effectiveTo: true } });
+  }
+
   async updateAttendanceSettings(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['company.settings.manage', 'hr.manage']);
@@ -444,6 +451,8 @@ export class OperationsService {
           organizationId,
           userId: userRecord.id,
           departmentId: this.optional(input.departmentId),
+          attendanceScheduleMode: this.enumValue(AttendanceScheduleMode, input.attendanceScheduleMode, AttendanceScheduleMode.ORGANIZATION_DEFAULT),
+          attendanceScheduleId: this.optional(input.attendanceScheduleId),
           name,
           email,
           phone,
@@ -512,6 +521,8 @@ export class OperationsService {
       where: { id },
       data: {
         departmentId: input.departmentId,
+        attendanceScheduleMode: input.attendanceScheduleMode ? this.enumValue(AttendanceScheduleMode, input.attendanceScheduleMode, AttendanceScheduleMode.ORGANIZATION_DEFAULT) : undefined,
+        attendanceScheduleId: input.attendanceScheduleId === undefined ? undefined : this.optional(input.attendanceScheduleId),
         name: input.name ?? this.employeeName(input, existing.name),
         email: this.optional(input.email),
         phone,
@@ -950,7 +961,8 @@ export class OperationsService {
     }
 
     const now = new Date();
-    const late = this.calculateLatePenalty(date, now, policy);
+    const schedule = await this.resolveEffectiveAttendanceSchedule({ organizationId: employee.organizationId, employeeId: employee.id, attendanceDate: date, timezone: employee.timezone ?? undefined }, employee, policy);
+    const late = this.calculateScheduleLatePenalty(now, schedule, policy);
     const record = await this.prisma.hrAttendanceRecord.create({
       data: {
         organizationId: employee.organizationId,
@@ -979,6 +991,13 @@ export class OperationsService {
         requiresReview:
           late.requiresReview ||
           verification.status === AttendanceVerificationStatus.PENDING_REVIEW,
+        scheduleSource: schedule.source,
+        scheduleId: schedule.scheduleId,
+        scheduleTimezone: schedule.timezone,
+        plannedCheckInAt: schedule.plannedCheckIn,
+        plannedCheckOutAt: schedule.plannedCheckOut,
+        graceMinutes: schedule.graceMinutes,
+        expectedWorkMinutes: schedule.expectedWorkMinutes,
       },
       include: { employee: true },
     });
@@ -1141,10 +1160,15 @@ export class OperationsService {
       throw new ConflictException('You must check in before checking out.');
     }
 
+    const checkedOutAt = new Date();
+    const earlyLeave = record.plannedCheckOutAt
+      ? Math.max(0, Math.round((new Date(record.plannedCheckOutAt).getTime() - checkedOutAt.getTime()) / 60000))
+      : 0;
     const updated = await this.prisma.hrAttendanceRecord.update({
       where: { id: record.id },
       data: {
-        checkOutAt: new Date(),
+        checkOutAt: checkedOutAt,
+        status: earlyLeave > Number(record.graceMinutes ?? 0) && record.status === HrAttendanceStatus.PRESENT ? HrAttendanceStatus.EARLY_LEAVE : record.status,
         note: this.mergeNote(record.note, input.note),
         ...this.attendanceEvidenceData(input, 'checkOut'),
         verificationStatus: this.mergeVerificationStatus(
@@ -3437,6 +3461,49 @@ export class OperationsService {
     const note = this.optional(next);
     if (!note) return existing;
     return existing ? `${existing}\n${note}`.slice(0, 2000) : note;
+  }
+
+  /** Central schedule resolver. Historical records use its saved snapshot, never a later schedule edit. */
+  async resolveEffectiveAttendanceSchedule(
+    input: { organizationId: string; employeeId: string; attendanceDate: Date; timezone?: string },
+    employee?: any,
+    policy?: any,
+  ) {
+    const currentEmployee = employee ?? await this.prisma.hrEmployee.findFirstOrThrow({ where: { id: input.employeeId, organizationId: input.organizationId } });
+    const effectiveAt = input.attendanceDate;
+    const override = this.prisma.hrEmployeeAttendanceScheduleOverride
+      ? await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { organizationId: input.organizationId, employeeId: input.employeeId, isActive: true, effectiveFrom: { lte: effectiveAt }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveAt } }] }, orderBy: { effectiveFrom: 'desc' } })
+      : null;
+    const assigned = !override && currentEmployee.attendanceScheduleMode === AttendanceScheduleMode.ASSIGNED_SCHEDULE && currentEmployee.attendanceScheduleId && this.prisma.hrAttendanceSchedule
+      ? await this.prisma.hrAttendanceSchedule.findFirst({ where: { id: currentEmployee.attendanceScheduleId, organizationId: input.organizationId, isActive: true, effectiveFrom: { lte: effectiveAt }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveAt } }] } })
+      : null;
+    const source = override ? AttendanceScheduleMode.EMPLOYEE_OVERRIDE : assigned ? AttendanceScheduleMode.ASSIGNED_SCHEDULE : AttendanceScheduleMode.ORGANIZATION_DEFAULT;
+    const timezone = override?.timezone ?? assigned?.timezone ?? input.timezone ?? 'UTC';
+    const rules: any = override?.weeklyRules ?? assigned?.weeklyRules ?? { [input.attendanceDate.getUTCDay()]: { isWorkingDay: true, startTime: policy?.workStartTime ?? '09:00', endTime: policy?.workEndTime ?? '17:00', graceMinutes: policy?.gracePeriodMinutes ?? 10 } };
+    const rule = rules[String(input.attendanceDate.getUTCDay())] ?? rules[input.attendanceDate.getUTCDay()] ?? { isWorkingDay: false };
+    const isWorkingDay = rule.isWorkingDay !== false;
+    const start = String(rule.startTime ?? policy?.workStartTime ?? '09:00');
+    const end = String(rule.endTime ?? policy?.workEndTime ?? '17:00');
+    const plannedCheckIn = this.scheduleDateTime(input.attendanceDate, start);
+    const overnightShift = Boolean(rule.overnightShift) || end <= start;
+    const plannedCheckOut = this.scheduleDateTime(input.attendanceDate, end, overnightShift ? 1 : 0);
+    const expectedWorkMinutes = isWorkingDay ? Math.max(0, Math.round((plannedCheckOut.getTime() - plannedCheckIn.getTime()) / 60000) - Number(rule.breakMinutes ?? 0)) : 0;
+    return { source, scheduleId: override?.id ?? assigned?.id ?? null, timezone, workDate: input.attendanceDate, plannedCheckIn, plannedCheckOut, graceMinutes: Number(rule.graceMinutes ?? policy?.gracePeriodMinutes ?? 10), earlyLeaveMinutes: Number(rule.earlyLeaveMinutes ?? 0), isWorkingDay, overnightShift, expectedWorkMinutes };
+  }
+
+  private scheduleDateTime(date: Date, time: string, dayOffset = 0) {
+    const [hours, minutes] = time.split(':').map(Number);
+    const value = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + dayOffset, hours || 0, minutes || 0, 0, 0));
+    return value;
+  }
+
+  private calculateScheduleLatePenalty(checkInAt: Date, schedule: any, policy: any) {
+    if (!schedule.isWorkingDay) return { minutesLate: 0, lateLevel: AttendanceLateLevel.ON_TIME, penaltyType: AttendancePenaltyType.NONE, penaltyValue: null, requiresReview: false };
+    const minutesLate = Math.max(0, Math.round((checkInAt.getTime() - schedule.plannedCheckIn.getTime()) / 60000));
+    const grace = schedule.graceMinutes;
+    if (minutesLate <= grace) return { minutesLate, lateLevel: minutesLate ? AttendanceLateLevel.GRACE : AttendanceLateLevel.ON_TIME, penaltyType: AttendancePenaltyType.NONE, penaltyValue: null, requiresReview: false };
+    const plannedStart = `${String(schedule.plannedCheckIn.getUTCHours()).padStart(2, '0')}:${String(schedule.plannedCheckIn.getUTCMinutes()).padStart(2, '0')}`;
+    return this.calculateLatePenalty(schedule.plannedCheckIn, checkInAt, { ...policy, workStartTime: plannedStart, gracePeriodMinutes: grace });
   }
 
   private calculateLatePenalty(date: Date, checkInAt: Date, policy: any) {

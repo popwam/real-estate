@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 import { listOrganizationsApi } from "@/lib/api";
-import { listBranchesApi } from "@/lib/hr-settings-api";
+import { listAttendanceSchedulesApi, listBranchesApi } from "@/lib/hr-settings-api";
 import type { HrEmployee, HrEmployeeInput } from "@/lib/hr-employees-api";
 import { employeePermissionKeys, uploadHrEmployeeImageApi, type HrEmployeeImagePurpose } from "@/lib/hr-employees-api";
 import { isPlatformRole } from "@/lib/permissions";
@@ -127,6 +127,8 @@ export function EmployeeForm({
     accessLevel: "",
     workScheduleType: employee?.workScheduleType ?? "FIXED_OFFICE_HOURS",
     workScheduleId: employee?.workScheduleId ?? "",
+    attendanceScheduleMode: employee?.attendanceScheduleMode ?? "ORGANIZATION_DEFAULT",
+    attendanceScheduleId: employee?.attendanceScheduleId ?? "",
     shiftGroupId: employee?.shiftGroupId ?? "",
     attendanceProfileId: employee?.attendanceProfileId ?? "",
     leaveProfileId: employee?.leaveProfileId ?? "",
@@ -169,6 +171,7 @@ export function EmployeeForm({
     queryFn: () => listBranchesApi(branchOrganizationId || undefined),
     enabled: Boolean(branchOrganizationId),
   });
+  const attendanceSchedules = useQuery({ queryKey: ["hr-attendance-schedules", branchOrganizationId], queryFn: listAttendanceSchedulesApi, enabled: Boolean(branchOrganizationId) });
   const roleOptions = EMPLOYEE_ROLE_OPTIONS.filter((role) => isPlatform || !role.startsWith("platform_"));
   const uploadOrganizationId = isPlatform ? values.organizationId || undefined : undefined;
   const visibleGroups = EMPLOYEE_PERMISSION_GROUPS.filter(
@@ -368,6 +371,9 @@ export function EmployeeForm({
 
         {currentStep.id === "schedule" ? (
           <FieldGrid>
+            <SelectField id="attendanceScheduleMode" label={t("hr360.attendanceScheduleMode")} value={values.attendanceScheduleMode} update={update} options={["ORGANIZATION_DEFAULT", "ASSIGNED_SCHEDULE", "EMPLOYEE_OVERRIDE"]} t={t} />
+            {values.attendanceScheduleMode === "ASSIGNED_SCHEDULE" ? <ScheduleSelectField id="attendanceScheduleId" label={t("hr360.attendanceSchedule")} value={values.attendanceScheduleId} schedules={attendanceSchedules.data ?? []} update={update} /> : null}
+            {values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE" ? <p className="text-sm text-[var(--color-muted)]">{t("hr360.employeeScheduleOverrideHint")}</p> : null}
             <SelectField id="workScheduleType" label={t("hr360.workMode")} value={values.workScheduleType} update={update} options={["FIXED_OFFICE_HOURS", "SHIFTS", "FLEXIBLE", "REMOTE", "HYBRID"]} t={t} />
             <TextField id="workScheduleId" label={t("hr360.workSchedule")} value={values.workScheduleId} update={update} />
             <TextField id="shiftGroupId" label={t("hr360.shiftGroup")} value={values.shiftGroupId} update={update} />
@@ -668,6 +674,10 @@ function SelectField({
 
 function BranchSelectField({ id, label, value, branches, update }: { id: string; label: string; value: unknown; branches: Array<{ id: string; name: string; isActive: boolean }>; update: (key: string, value: unknown) => void }) {
   return <Field label={label} id={id}><select id={id} className="ui-input" value={value == null ? "" : String(value)} onChange={(event) => update(id, event.target.value)}><option value="">—</option>{branches.filter((branch) => branch.isActive).map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></Field>;
+}
+
+function ScheduleSelectField({ id, label, value, schedules, update }: { id: string; label: string; value: unknown; schedules: Array<{ id: string; name: string; timezone?: string | null }>; update: (key: string, value: unknown) => void }) {
+  return <Field label={label} id={id}><select id={id} className="ui-input" value={value == null ? "" : String(value)} onChange={(event) => update(id, event.target.value)}><option value="">-</option>{schedules.map((schedule) => <option key={schedule.id} value={schedule.id}>{schedule.name}{schedule.timezone ? ` (${schedule.timezone})` : ""}</option>)}</select></Field>;
 }
 
 function CheckboxField({

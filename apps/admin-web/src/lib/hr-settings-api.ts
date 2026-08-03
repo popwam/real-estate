@@ -72,6 +72,8 @@ export type SelfAttendancePolicy = {
   blockingReasons: string[];
 };
 
+export type HrAttendanceScheduleOption = { id: string; name: string; timezone?: string | null; effectiveFrom: string; effectiveTo?: string | null };
+
 export function listBranchesApi(organizationId?: string) {
   const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
   return apiRequest<OrganizationBranch[]>(`/hr/branches${query}`);
@@ -107,6 +109,10 @@ export function getAttendanceSettingsApi() {
 
 export function getMyAttendancePolicyApi() {
   return apiRequest<SelfAttendancePolicy>("/hr/attendance/me/policy", { refreshOnUnauthorized: false });
+}
+
+export function listAttendanceSchedulesApi() {
+  return apiRequest<HrAttendanceScheduleOption[]>("/hr/attendance/schedules");
 }
 
 export function updateAttendanceSettingsApi(input: Partial<AttendanceSettings>) {

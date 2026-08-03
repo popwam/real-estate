@@ -621,6 +621,12 @@ Added role/default-tab coverage for employee, linked manager, unlinked manager, 
 
 ## Web attendance location selection — 2026-08-03
 
+## Employee attendance schedules — 2026-08-03
+
+Added the additive Prisma migration `20260803090000_employee_attendance_schedules`. It introduces active, effective-dated organization schedules, effective-dated employee weekly overrides, explicit employee schedule mode/assignment, and immutable schedule snapshot columns on new attendance records. Existing employees retain `ORGANIZATION_DEFAULT`; existing attendance rows are intentionally untouched.
+
+The centralized resolver chooses an active employee override first, then an active assigned schedule, then organization attendance settings. It stores source, schedule ID, timezone, planned check-in/out, grace minutes, and expected work minutes when a new self-service check-in is created. Overnight rules are represented by an explicit flag (or an end time before start time) and planned check-out moves to the next day. The employee Schedule step now exposes organization-default versus assigned schedule and uses a real active-schedule dropdown rather than a free schedule-ID input. The migration has not been applied to any database.
+
 ## Self-service attendance policy authorization
 
 The employee Attendance page had incorrectly requested the administrative `GET /hr/attendance/settings` endpoint. That endpoint correctly requires `company.settings.view` (or an HR administration permission), so an ordinary employee received a 403 and the UI fell into its generic unavailable action state. No employee permission was broadened.

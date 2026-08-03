@@ -70,6 +70,8 @@ export type HrEmployee = {
   teamId?: string | null;
   workScheduleType?: string | null;
   workScheduleId?: string | null;
+  attendanceScheduleMode?: "ORGANIZATION_DEFAULT" | "ASSIGNED_SCHEDULE" | "EMPLOYEE_OVERRIDE";
+  attendanceScheduleId?: string | null;
   shiftGroupId?: string | null;
   attendanceProfileId?: string | null;
   leaveProfileId?: string | null;
