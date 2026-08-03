@@ -639,6 +639,12 @@ The resolver honors the selected employee mode (`EMPLOYEE_OVERRIDE`, then active
 
 The employee editor now loads the retained active override, supplies all seven editable days, validates times/thresholds before save, shows live ON_TIME/LATE/SEVERE_LATE/ABSENT boundaries, uses an active schedule dropdown for assigned mode, and uses POST for new overrides/PATCH for saved overrides. It saves an override before enabling employee-override mode, so failed partial saves do not report success or leave that mode without a valid override. Switching away retains the override for later reuse. Team attendance displays available planned/actual/snapshot thresholds with safe fallbacks for legacy rows.
 
+### Staging schema-drift repair — 2026-08-03
+
+Staging recorded `20260803090000_employee_attendance_schedules` as applied at `2026-08-03T11:29:15.256Z`, but its recorded checksum differed from the local file checksum. Read-only `information_schema`, `pg_catalog`, and a Prisma read confirmed `HrAttendanceRecord.lateUntilAt` was the P2022 column (model `HrAttendanceRecord`); `severeLateUntilAt`, `absentAfterAt`, `attendanceStatusAtCheckIn`, and enum value `SEVERE_LATE` were also absent. The existing schedule tables, employee schedule fields, and earlier snapshot columns were present.
+
+Added and applied `20260803160000_repair_employee_attendance_schedule_schema`. It only uses `ADD VALUE IF NOT EXISTS` for `SEVERE_LATE` and nullable `ADD COLUMN IF NOT EXISTS` statements for the four missing snapshot fields; it neither updates nor recalculates historical attendance. The deployed API filter now emits bounded, once-per-minute P2022 metadata only (model and column-safe identifiers), preventing repetitive Railway logs. Post-deploy authenticated reads for the Platform Owner attendance list and an active employee's today/history endpoints returned HTTP 200; the two pre-existing records retain null snapshot values.
+
 ## Self-service attendance policy authorization
 
 The employee Attendance page had incorrectly requested the administrative `GET /hr/attendance/settings` endpoint. That endpoint correctly requires `company.settings.view` (or an HR administration permission), so an ordinary employee received a 403 and the UI fell into its generic unavailable action state. No employee permission was broadened.
