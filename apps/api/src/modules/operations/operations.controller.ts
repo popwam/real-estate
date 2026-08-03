@@ -425,6 +425,9 @@ export class OperationsController {
   ) {
     return this.operations.listAttendanceSchedules(user);
   }
+  @Get('hr/employees/:employeeId/attendance-override') getEmployeeAttendanceOverride(@Param('employeeId') employeeId: string, @CurrentUser() user: AuthenticatedRequestUser) { return this.operations.getEmployeeAttendanceOverride(employeeId, user); }
+  @Post('hr/employees/:employeeId/attendance-override') createEmployeeAttendanceOverride(@Param('employeeId') employeeId: string, @Body() body: any, @CurrentUser() user: AuthenticatedRequestUser) { return this.operations.createEmployeeAttendanceOverride(employeeId, body, user); }
+  @Patch('hr/employees/:employeeId/attendance-override/:overrideId') updateEmployeeAttendanceOverride(@Param('employeeId') employeeId: string, @Param('overrideId') overrideId: string, @Body() body: any, @CurrentUser() user: AuthenticatedRequestUser) { return this.operations.updateEmployeeAttendanceOverride(employeeId, overrideId, body, user); }
   @Get('hr/attendance/me/history') myAttendanceHistory(
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {

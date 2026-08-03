@@ -532,6 +532,7 @@ enum HrAttendanceStatus {
   PRESENT
   ABSENT
   LATE
+  SEVERE_LATE
   OFF
   EARLY_LEAVE
 }
@@ -2911,7 +2912,7 @@ model HrAttendanceSchedule {
   id            String    @id @default(cuid())
   organizationId String
   name          String
-  timezone      String?
+  timezone      String
   weeklyRules   Json
   effectiveFrom DateTime
   effectiveTo   DateTime?
@@ -2930,7 +2931,7 @@ model HrEmployeeAttendanceScheduleOverride {
   organizationId String
   employeeId    String
   weeklyRules   Json
-  timezone      String?
+  timezone      String
   effectiveFrom DateTime
   effectiveTo   DateTime?
   isActive      Boolean   @default(true)
@@ -3297,6 +3298,10 @@ model HrAttendanceRecord {
   plannedCheckOutAt          DateTime?
   graceMinutes               Int?
   expectedWorkMinutes        Int?
+  lateUntilAt                DateTime?
+  severeLateUntilAt          DateTime?
+  absentAfterAt              DateTime?
+  attendanceStatusAtCheckIn  HrAttendanceStatus?
   organization               Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee                   HrEmployee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branch                     OrganizationBranch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)

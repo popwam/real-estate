@@ -717,6 +717,106 @@ describe('OperationsService self attendance', () => {
   });
 });
 
+describe('Employee attendance schedule overrides', () => {
+  const manager = {
+    userId: 'manager_1', organizationId: 'org_1', role: 'developer_admin',
+    permissions: ['hr.employees.view', 'hr.employees.update'],
+  } as unknown as AuthenticatedRequestUser;
+  const employee = { id: 'employee_1', organizationId: 'org_1', attendanceScheduleMode: 'EMPLOYEE_OVERRIDE', attendanceScheduleId: 'schedule_1' };
+  const validRule = { dayOfWeek: 1, isWorkingDay: true, startTime: '09:00', endTime: '17:00', lateUntilMinutes: 15, severeLateUntilMinutes: 60, absentAfterMinutes: 60, earlyLeaveGraceMinutes: 0, overnightShift: false };
+  const validInput = { effectiveFrom: '2026-08-03', effectiveTo: null, timezone: 'Europe/Chisinau', weeklyRules: [validRule] };
+
+  function setup(overrides: any[] = []) {
+    const prisma = {
+      hrEmployeeAttendanceScheduleOverride: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'override_1', ...data })),
+        update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'override_1', ...data })),
+      },
+      hrAttendanceSchedule: { findFirst: jest.fn().mockResolvedValue(null) },
+      hrEmployee: { findFirstOrThrow: jest.fn().mockResolvedValue(employee) },
+    };
+    return { prisma, service: new OperationsService(prisma as any) };
+  }
+
+  it('GET returns null when no scoped override exists', async () => {
+    const { prisma, service } = setup();
+    jest.spyOn(service as any, 'assertExists').mockResolvedValue(employee);
+    await expect(service.getEmployeeAttendanceOverride(employee.id, manager)).resolves.toBeNull();
+    expect(prisma.hrEmployeeAttendanceScheduleOverride.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ employeeId: employee.id, organizationId: 'org_1' }) }));
+  });
+
+  it('POST creates and GET reloads a valid override', async () => {
+    const { prisma, service } = setup();
+    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
+    const created = await service.createEmployeeAttendanceOverride(employee.id, validInput, manager);
+    expect(created).toMatchObject({ employeeId: employee.id, organizationId: 'org_1', timezone: 'Europe/Chisinau' });
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(created).mockResolvedValueOnce(created);
+    jest.spyOn(service as any, 'assertExists').mockResolvedValue(employee);
+    await expect(service.getEmployeeAttendanceOverride(employee.id, manager)).resolves.toMatchObject({ id: 'override_1', weeklyRules: [validRule] });
+  });
+
+  it('PATCH updates a scoped override and excludes itself from overlap validation', async () => {
+    const { prisma, service } = setup();
+    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'override_1' }).mockResolvedValueOnce(null);
+    await expect(service.updateEmployeeAttendanceOverride(employee.id, 'override_1', { ...validInput, weeklyRules: [{ ...validRule, lateUntilMinutes: 10 }] }, manager)).resolves.toMatchObject({ id: 'override_1' });
+    expect(prisma.hrEmployeeAttendanceScheduleOverride.findFirst).toHaveBeenLastCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { not: 'override_1' } }) }));
+  });
+
+  it.each([
+    ['empty weekly rules', { ...validInput, weeklyRules: [] }],
+    ['duplicate weekdays', { ...validInput, weeklyRules: [validRule, validRule] }],
+    ['invalid threshold order', { ...validInput, weeklyRules: [{ ...validRule, lateUntilMinutes: 60, severeLateUntilMinutes: 15 }] }],
+    ['negative threshold', { ...validInput, weeklyRules: [{ ...validRule, absentAfterMinutes: -1 }] }],
+    ['missing working-day time', { ...validInput, weeklyRules: [{ ...validRule, startTime: undefined }] }],
+    ['end before start without overnight', { ...validInput, weeklyRules: [{ ...validRule, startTime: '17:00', endTime: '09:00' }] }],
+    ['effective dates reversed', { ...validInput, effectiveTo: '2026-08-02' }],
+    ['invalid timezone', { ...validInput, timezone: 'Invalid/Timezone' }],
+  ])('rejects %s', async (_name, input) => {
+    const { service } = setup();
+    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
+    await expect(service.createEmployeeAttendanceOverride(employee.id, input, manager)).rejects.toBeDefined();
+  });
+
+  it('allows a non-working day without times and an overnight working day', async () => {
+    const { service } = setup();
+    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
+    await expect(service.createEmployeeAttendanceOverride(employee.id, { ...validInput, weeklyRules: [{ dayOfWeek: 0, isWorkingDay: false }, { ...validRule, dayOfWeek: 1, startTime: '22:00', endTime: '06:00', overnightShift: true }] }, manager)).resolves.toMatchObject({ id: 'override_1' });
+  });
+
+  it('rejects inclusive touching effective-date boundaries and accepts different employees', async () => {
+    const { prisma, service } = setup();
+    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'other' });
+    await expect(service.createEmployeeAttendanceOverride(employee.id, validInput, manager)).rejects.toBeInstanceOf(ConflictException);
+    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue({ ...employee, id: 'employee_2' });
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(null);
+    await expect(service.createEmployeeAttendanceOverride('employee_2', validInput, manager)).resolves.toMatchObject({ employeeId: 'employee_2' });
+  });
+
+  it('resolves override before assigned, returns no fake times for a non-working day, and supports overnight checkout', async () => {
+    const { prisma, service } = setup();
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'override_1', timezone: 'UTC', weeklyRules: [{ ...validRule, dayOfWeek: 1, startTime: '22:00', endTime: '06:00', overnightShift: true }] });
+    const resolved = await service.resolveEffectiveAttendanceSchedule({ organizationId: 'org_1', employeeId: employee.id, attendanceDate: new Date('2026-08-03T12:00:00Z') }, employee, {});
+    expect(resolved.scheduleSource).toBe('EMPLOYEE_OVERRIDE');
+    expect(resolved.plannedCheckOutAt.getTime()).toBeGreaterThan(resolved.plannedCheckInAt.getTime());
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'override_1', timezone: 'UTC', weeklyRules: [{ dayOfWeek: 1, isWorkingDay: false }] });
+    const nonWorking = await service.resolveEffectiveAttendanceSchedule({ organizationId: 'org_1', employeeId: employee.id, attendanceDate: new Date('2026-08-03T12:00:00Z') }, employee, {});
+    expect(nonWorking).toMatchObject({ isWorkingDay: false, plannedCheckInAt: null, lateUntilAt: null });
+  });
+
+  it('calculates all lateness tiers without blocking an absent check-in', () => {
+    const { service } = setup();
+    const base = new Date('2026-08-03T09:00:00Z');
+    const schedule = { source: 'EMPLOYEE_OVERRIDE', isWorkingDay: true, plannedCheckIn: base, lateUntilAt: new Date(base.getTime() + 15 * 60000), severeLateUntilAt: new Date(base.getTime() + 60 * 60000), absentAfterAt: new Date(base.getTime() + 60 * 60000) };
+    expect((service as any).calculateScheduleLatePenalty(base, schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.PRESENT);
+    expect((service as any).calculateScheduleLatePenalty(new Date(base.getTime() + 10 * 60000), schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.LATE);
+    expect((service as any).calculateScheduleLatePenalty(new Date(base.getTime() + 20 * 60000), schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.SEVERE_LATE);
+    expect((service as any).calculateScheduleLatePenalty(new Date(base.getTime() + 61 * 60000), schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.ABSENT);
+  });
+});
+
 describe('OperationsService employee access management', () => {
   const companyAdmin = {
     userId: 'admin_1',

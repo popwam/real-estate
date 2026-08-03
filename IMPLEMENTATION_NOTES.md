@@ -627,6 +627,18 @@ Added the additive Prisma migration `20260803090000_employee_attendance_schedule
 
 The centralized resolver chooses an active employee override first, then an active assigned schedule, then organization attendance settings. It stores source, schedule ID, timezone, planned check-in/out, grace minutes, and expected work minutes when a new self-service check-in is created. Overnight rules are represented by an explicit flag (or an end time before start time) and planned check-out moves to the next day. The employee Schedule step now exposes organization-default versus assigned schedule and uses a real active-schedule dropdown rather than a free schedule-ID input. The migration has not been applied to any database.
 
+The un-applied migration and schema now also preserve late/severe-late/absent threshold timestamps and the check-in attendance status snapshot. Threshold rules are validated server-side as non-negative and ordered `late < severe <= absent`; an arrival after the absent threshold still records its actual check-in while retaining `ABSENT` as the attendance status. Verification and penalty fields remain independent from this status.
+
+The employee override API is organization-scoped through the employee resolved from the authenticated user: GET returns the current active override or null, POST creates a real override, and PATCH updates only that employee's override. The server ignores organization IDs from clients, rejects empty rules, duplicate weekdays, invalid dates/times/thresholds, and effective-date overlaps (while excluding the current record on update). No attendance records are read or changed by these endpoints.
+
+## Employee attendance schedules and lateness tiers — 2026-08-03
+
+The un-applied additive schedule migration now defines required IANA timezones for organization schedules and employee overrides, inclusive effective-date checks, schedule and employee indexes, `SEVERE_LATE`, and immutable attendance snapshots. It does not touch historical attendance rows. Effective-date boundaries are intentionally inclusive: an override ending at the same instant another begins overlaps and is rejected.
+
+The resolver honors the selected employee mode (`EMPLOYEE_OVERRIDE`, then active assigned schedule, then the organization policy), validates weekly schedule rules, handles IANA timezone calendar dates and overnight checkout, and returns no planned timestamps for non-working or missing-weekday rules. A selected but unavailable override/schedule returns an explicit configuration warning while safely falling back. New check-ins snapshot every resolved schedule field; arrival after `absentAfterAt` is still persisted with `ABSENT`, independently of verification and review state.
+
+The employee editor now loads the retained active override, supplies all seven editable days, validates times/thresholds before save, shows live ON_TIME/LATE/SEVERE_LATE/ABSENT boundaries, uses an active schedule dropdown for assigned mode, and uses POST for new overrides/PATCH for saved overrides. It saves an override before enabling employee-override mode, so failed partial saves do not report success or leave that mode without a valid override. Switching away retains the override for later reuse. Team attendance displays available planned/actual/snapshot thresholds with safe fallbacks for legacy rows.
+
 ## Self-service attendance policy authorization
 
 The employee Attendance page had incorrectly requested the administrative `GET /hr/attendance/settings` endpoint. That endpoint correctly requires `company.settings.view` (or an HR administration permission), so an ordinary employee received a 403 and the UI fell into its generic unavailable action state. No employee permission was broadened.

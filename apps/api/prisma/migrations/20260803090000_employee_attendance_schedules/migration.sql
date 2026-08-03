@@ -2,12 +2,13 @@
 -- organization default and existing attendance rows keep their original values.
 CREATE TYPE "AttendanceScheduleMode" AS ENUM ('ORGANIZATION_DEFAULT', 'ASSIGNED_SCHEDULE', 'EMPLOYEE_OVERRIDE');
 ALTER TYPE "HrAttendanceStatus" ADD VALUE IF NOT EXISTS 'EARLY_LEAVE';
+ALTER TYPE "HrAttendanceStatus" ADD VALUE IF NOT EXISTS 'SEVERE_LATE';
 
 CREATE TABLE "hr_attendance_schedules" (
   "id" TEXT NOT NULL,
   "organizationId" TEXT NOT NULL,
   "name" TEXT NOT NULL,
-  "timezone" TEXT,
+  "timezone" TEXT NOT NULL,
   "weeklyRules" JSONB NOT NULL,
   "effectiveFrom" TIMESTAMP(3) NOT NULL,
   "effectiveTo" TIMESTAMP(3),
@@ -15,6 +16,7 @@ CREATE TABLE "hr_attendance_schedules" (
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "hr_attendance_schedules_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "hr_attendance_schedules_effective_dates_check" CHECK ("effectiveTo" IS NULL OR "effectiveTo" >= "effectiveFrom"),
   CONSTRAINT "hr_attendance_schedules_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 CREATE INDEX "hr_attendance_schedules_organizationId_isActive_effectiveFrom_idx" ON "hr_attendance_schedules"("organizationId", "isActive", "effectiveFrom");
@@ -24,13 +26,16 @@ CREATE TABLE "hr_employee_attendance_schedule_overrides" (
   "organizationId" TEXT NOT NULL,
   "employeeId" TEXT NOT NULL,
   "weeklyRules" JSONB NOT NULL,
-  "timezone" TEXT,
+  "timezone" TEXT NOT NULL,
   "effectiveFrom" TIMESTAMP(3) NOT NULL,
   "effectiveTo" TIMESTAMP(3),
   "isActive" BOOLEAN NOT NULL DEFAULT true,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "hr_employee_attendance_schedule_overrides_pkey" PRIMARY KEY ("id"),
+  -- Effective-date boundaries are inclusive. A period ending on a date overlaps
+  -- another period starting on that same date, which keeps the API rule stable.
+  CONSTRAINT "hr_employee_attendance_schedule_overrides_effective_dates_check" CHECK ("effectiveTo" IS NULL OR "effectiveTo" >= "effectiveFrom"),
   CONSTRAINT "hr_employee_attendance_schedule_overrides_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT "hr_employee_attendance_schedule_overrides_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "hr_employees"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -49,4 +54,8 @@ ALTER TABLE "hr_attendance_records"
   ADD COLUMN "plannedCheckInAt" TIMESTAMP(3),
   ADD COLUMN "plannedCheckOutAt" TIMESTAMP(3),
   ADD COLUMN "graceMinutes" INTEGER,
-  ADD COLUMN "expectedWorkMinutes" INTEGER;
+  ADD COLUMN "expectedWorkMinutes" INTEGER,
+  ADD COLUMN "lateUntilAt" TIMESTAMP(3),
+  ADD COLUMN "severeLateUntilAt" TIMESTAMP(3),
+  ADD COLUMN "absentAfterAt" TIMESTAMP(3),
+  ADD COLUMN "attendanceStatusAtCheckIn" "HrAttendanceStatus";

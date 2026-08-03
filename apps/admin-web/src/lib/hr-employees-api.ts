@@ -166,6 +166,27 @@ export type HrEmployeeInput = {
   [key: string]: unknown;
 };
 
+export type HrAttendanceWeeklyRule = {
+  dayOfWeek: number;
+  isWorkingDay: boolean;
+  startTime?: string;
+  endTime?: string;
+  lateUntilMinutes?: number;
+  severeLateUntilMinutes?: number;
+  absentAfterMinutes?: number;
+  earlyLeaveGraceMinutes?: number;
+  overnightShift?: boolean;
+};
+
+export type HrEmployeeAttendanceOverride = {
+  id: string;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  timezone: string;
+  weeklyRules: HrAttendanceWeeklyRule[];
+  isActive: boolean;
+};
+
 export type HrEmployeeListResponse = {
   items: HrEmployee[];
   total: number;
@@ -206,6 +227,24 @@ export function createHrEmployeeApi(input: HrEmployeeInput) {
 
 export function updateHrEmployeeApi(id: string, input: HrEmployeeInput) {
   return apiRequest<HrEmployee>(`/hr/employees/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getHrEmployeeAttendanceOverrideApi(employeeId: string) {
+  return apiRequest<HrEmployeeAttendanceOverride | null>(`/hr/employees/${encodeURIComponent(employeeId)}/attendance-override`);
+}
+
+export function createHrEmployeeAttendanceOverrideApi(employeeId: string, input: Omit<HrEmployeeAttendanceOverride, "id" | "isActive">) {
+  return apiRequest<HrEmployeeAttendanceOverride>(`/hr/employees/${encodeURIComponent(employeeId)}/attendance-override`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateHrEmployeeAttendanceOverrideApi(employeeId: string, overrideId: string, input: Omit<HrEmployeeAttendanceOverride, "id" | "isActive">) {
+  return apiRequest<HrEmployeeAttendanceOverride>(`/hr/employees/${encodeURIComponent(employeeId)}/attendance-override/${encodeURIComponent(overrideId)}`, {
     method: "PATCH",
     body: JSON.stringify(input),
   });

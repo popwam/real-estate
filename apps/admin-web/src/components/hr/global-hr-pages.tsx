@@ -24,6 +24,7 @@ import { useI18n } from "@/i18n";
 import { listOrganizationsApi } from "@/lib/api";
 import {
   applyHrEmployeeActionApi,
+  createHrEmployeeAttendanceOverrideApi,
   createHrEmployeeApi,
   getHrEmployeeApi,
   getHrOrgChartApi,
@@ -257,7 +258,22 @@ export function NewHrEmployeePage() {
   const queryClient = useQueryClient();
   const [createdEmployee, setCreatedEmployee] = useState<HrEmployeeCreateResult | null>(null);
   const create = useMutation({
-    mutationFn: createHrEmployeeApi,
+    mutationFn: async (values: EmployeeFormValues) => {
+      const { attendanceOverride, ...employeeInput } = values;
+      const employee = await createHrEmployeeApi({
+        ...employeeInput,
+        // A new employee has no ID for the override endpoint yet. Keep the
+        // first write safe on the organization default, then enable the mode
+        // only after the override POST succeeds.
+        attendanceScheduleMode: values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE" ? "ORGANIZATION_DEFAULT" : values.attendanceScheduleMode,
+        attendanceScheduleId: values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE" ? undefined : values.attendanceScheduleId,
+      });
+      if (values.attendanceScheduleMode === "EMPLOYEE_OVERRIDE" && attendanceOverride) {
+        await createHrEmployeeAttendanceOverrideApi(employee.id, attendanceOverride);
+        await updateHrEmployeeApi(employee.id, { attendanceScheduleMode: "EMPLOYEE_OVERRIDE", attendanceScheduleId: undefined });
+      }
+      return employee;
+    },
     onSuccess: async (employee) => {
       await queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
       setCreatedEmployee(employee);
