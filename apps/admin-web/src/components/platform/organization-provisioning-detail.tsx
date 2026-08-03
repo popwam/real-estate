@@ -55,6 +55,7 @@ import {
   useReviewOrganizationDocument,
   useReviewOrganizationDocumentFields,
   useUploadOrganizationDocument,
+  useUpdateOrganizationAttendanceLocation,
   useUpdatePlatformOrganization,
   useUpdatePlatformOrganizationLimits,
   useUpdatePlatformOrganizationSubscription,
@@ -427,14 +428,18 @@ function OfficesTab({ id }: { id: string }) {
 function AttendanceTab({ id }: { id: string }) {
   const { t } = useI18n();
   const { data = [] } = useOrganizationAttendanceLocations(id);
+  const { data: offices = [] } = useOrganizationOffices(id);
   const create = useCreateOrganizationAttendanceLocation(id);
+  const update = useUpdateOrganizationAttendanceLocation(id);
+  const [officeByLocation, setOfficeByLocation] = useState<Record<string, string>>({});
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    create.mutate({ name: optional(form, "name"), latitude: numberValue(form, "latitude"), longitude: numberValue(form, "longitude"), exactRadiusMeters: numberValue(form, "exactRadiusMeters"), expandedRadiusMeters: numberValue(form, "expandedRadiusMeters"), allowedForWeb: checked(form, "allowedForWeb"), allowedForMobile: checked(form, "allowedForMobile"), requiresReviewOutsideExactRadius: checked(form, "requiresReviewOutsideExactRadius") });
+    create.mutate({ officeId: required(form, "officeId"), name: optional(form, "name"), latitude: numberValue(form, "latitude"), longitude: numberValue(form, "longitude"), exactRadiusMeters: numberValue(form, "exactRadiusMeters"), expandedRadiusMeters: numberValue(form, "expandedRadiusMeters"), allowedForWeb: checked(form, "allowedForWeb"), allowedForMobile: checked(form, "allowedForMobile"), requiresReviewOutsideExactRadius: checked(form, "requiresReviewOutsideExactRadius") });
     event.currentTarget.reset();
   }
-  return <CollectionTab title={t("provisioning.attendanceLocations")} rows={data.map((item) => [item.name, `${item.latitude}, ${item.longitude}`, `${item.exactRadiusMeters}m / ${item.expandedRadiusMeters}m`])} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><TextField label={t("provisioning.locationName")} name="name" /><MapPicker addressName="address" latitudeName="latitude" longitudeName="longitude" exactRadiusName="exactRadiusMeters" expandedRadiusName="expandedRadiusMeters" /><CheckBox label={t("provisioning.allowedForWeb")} name="allowedForWeb" defaultChecked /><CheckBox label={t("provisioning.allowedForMobile")} name="allowedForMobile" defaultChecked /><CheckBox label={t("provisioning.reviewOutsideExact")} name="requiresReviewOutsideExactRadius" defaultChecked /></>} />;
+  const unlinked = data.filter((location) => !location.officeId);
+  return <div className="space-y-5"><CollectionTab title={t("provisioning.attendanceLocations")} rows={data.map((item) => [item.name, offices.find((office) => office.id === item.officeId)?.name ?? t("provisioning.unlinkedBranch"), `${item.latitude}, ${item.longitude}`, `${item.exactRadiusMeters}m / ${item.expandedRadiusMeters}m`])} onSubmit={submit} pending={create.isPending} error={create.error?.message} fields={<><OfficeSelect label={t("provisioning.attendanceOfficeBranch")} name="officeId" offices={offices} required /><TextField label={t("provisioning.locationName")} name="name" /><MapPicker addressName="address" latitudeName="latitude" longitudeName="longitude" exactRadiusName="exactRadiusMeters" expandedRadiusName="expandedRadiusMeters" /><CheckBox label={t("provisioning.allowedForWeb")} name="allowedForWeb" defaultChecked /><CheckBox label={t("provisioning.allowedForMobile")} name="allowedForMobile" defaultChecked /><CheckBox label={t("provisioning.reviewOutsideExact")} name="requiresReviewOutsideExactRadius" defaultChecked /></>} />{unlinked.length ? <DetailCard title={t("provisioning.unlinkedAttendanceLocations")}>{unlinked.map((location) => <div key={location.id} className="mb-3 grid gap-2 rounded-md border border-[var(--color-border)] p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"><p className="text-sm font-medium">{location.name} <span className="font-normal text-[var(--color-muted)]">({t("provisioning.unlinkedBranch")})</span></p><OfficeSelect label={t("provisioning.attendanceOfficeBranch")} name={`link-${location.id}`} offices={offices} value={officeByLocation[location.id] ?? ""} onChange={(officeId) => setOfficeByLocation((current) => ({ ...current, [location.id]: officeId }))} /><Button type="button" disabled={!officeByLocation[location.id] || update.isPending} onClick={() => update.mutate({ locationId: location.id, input: { officeId: officeByLocation[location.id] } })}>{t("common.save")}</Button></div>)}</DetailCard> : null}</div>;
 }
 
 function WifiTab({ id }: { id: string }) {
@@ -945,6 +950,10 @@ function TextField({ label, name, ...props }: InputHTMLAttributes<HTMLInputEleme
       <Input id={`detail-${name}`} name={name} {...props} />
     </label>
   );
+}
+
+function OfficeSelect({ label, name, offices, value, onChange, required = false }: { label: string; name: string; offices: Array<{ id: string; name: string; isActive: boolean }>; value?: string; onChange?: (value: string) => void; required?: boolean }) {
+  return <label className="space-y-2"><Label htmlFor={`detail-${name}`}>{label}</Label><select id={`detail-${name}`} name={name} className="ui-input" value={value} defaultValue={value === undefined ? "" : undefined} required={required} onChange={(event) => onChange?.(event.target.value)}><option value="">{label}</option>{offices.filter((office) => office.isActive).map((office) => <option key={office.id} value={office.id}>{office.name}</option>)}</select></label>;
 }
 
 function SelectField({ label, name, options, defaultValue }: { label: string; name: string; options: string[]; defaultValue?: string }) {

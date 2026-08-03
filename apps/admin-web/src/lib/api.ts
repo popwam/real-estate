@@ -40,9 +40,11 @@ const API_BASE_URL =
 type ApiOptions = RequestInit & {
   auth?: boolean;
   authRetried?: boolean;
+  refreshOnUnauthorized?: boolean;
 };
 
 let refreshPromise: Promise<AuthSession | null> | null = null;
+const reportedDiagnosticKeys = new Set<string>();
 
 export class ApiError extends Error {
   status: number;
@@ -116,7 +118,7 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
     );
   }
 
-  if (response.status === 401 && options.auth !== false && path !== "/auth/refresh" && !options.authRetried) {
+  if (response.status === 401 && options.refreshOnUnauthorized !== false && options.auth !== false && path !== "/auth/refresh" && !options.authRetried) {
     const refreshed = await refreshActiveSessionOnce();
     if (refreshed) {
       const retryHeaders = new Headers(options.headers);
@@ -160,6 +162,10 @@ function logApiErrorDiagnostic(input: {
   requestId: string;
   message: string;
 }) {
+  if (process.env.NODE_ENV === "production") return;
+  const key = `${input.status}:${input.method}:${sanitizeDiagnosticPath(input.path)}:${input.message}`;
+  if (reportedDiagnosticKeys.has(key)) return;
+  reportedDiagnosticKeys.add(key);
   console.error("[api]", {
     status: input.status,
     method: input.method,

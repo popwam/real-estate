@@ -390,6 +390,67 @@ describe('OperationsService self attendance', () => {
     );
   });
 
+  it('returns only the safe self-service policy for the current employee organization', async () => {
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
+      attendanceSettings({
+        allowWebCheckIn: true,
+        requireLocation: true,
+        requirePhoto: true,
+        requireWifi: true,
+        webWifiPolicy: 'MANUAL_REVIEW',
+        maxGpsAccuracyMeters: 25,
+        allowedWifiSsids: ['private-office-network'],
+        allowedWifiBssids: ['00:11:22:33:44:55'],
+      }),
+    );
+
+    const result = await service.myAttendancePolicy(user);
+
+    expect(prisma.organizationAttendanceSettings.findUnique).toHaveBeenCalledWith({
+      where: { organizationId: employee.organizationId },
+    });
+    expect(result).toEqual({
+      allowWebCheckIn: true,
+      allowMobileCheckIn: true,
+      requireLocation: true,
+      requirePhoto: true,
+      requireWifi: true,
+      webWifiPolicy: 'MANUAL_REVIEW',
+      locationAccuracyThresholdMeters: 25,
+      locationFreshnessSeconds: 600,
+      canCheckIn: true,
+      blockingReasons: [],
+    });
+    expect(result).not.toHaveProperty('allowedWifiSsids');
+    expect(result).not.toHaveProperty('allowedWifiBssids');
+  });
+
+  it('reports explicit self-service policy blocks without exposing admin settings', async () => {
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
+      attendanceSettings({ allowWebCheckIn: false, requireWifi: true, webWifiPolicy: 'BLOCK' }),
+    );
+
+    await expect(service.myAttendancePolicy(user)).resolves.toMatchObject({
+      canCheckIn: false,
+      blockingReasons: ['WEB_CHECK_IN_NOT_ALLOWED', 'WEB_WIFI_NOT_AVAILABLE'],
+    });
+  });
+
+  it('rejects unlinked or inactive users clearly for the self-service policy', async () => {
+    const { prisma, service } = setup();
+    prisma.hrEmployee.findFirst.mockResolvedValueOnce(null);
+
+    await expect(service.myAttendancePolicy(user)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('keeps the administrative attendance settings endpoint permission-gated', async () => {
+    const { service } = setup();
+
+    await expect(service.getAttendanceSettings({}, user)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
   it('returns only active web-enabled attendance locations linked to an active branch', async () => {
     const { prisma, service } = setup();
     prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([

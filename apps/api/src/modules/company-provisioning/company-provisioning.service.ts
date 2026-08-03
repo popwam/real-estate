@@ -2075,7 +2075,11 @@ export class CompanyProvisioningService {
     creating: boolean,
     prisma: Pick<Tx, 'organizationBranch'> | PrismaService = this.prisma,
   ) {
-    if (dto.officeId) await this.findOffice(organizationId, dto.officeId, prisma);
+    const officeId = this.string(dto.officeId);
+    if (creating && !officeId) {
+      throw new BadRequestException('officeId is required for an attendance location.');
+    }
+    if (officeId) await this.findOffice(organizationId, officeId, prisma);
     const exact = this.radius(dto.exactRadiusMeters, 'exactRadiusMeters', 1, 50000) ?? (creating ? 30 : undefined);
     const expanded = this.radius(dto.expandedRadiusMeters, 'expandedRadiusMeters', 1, 100000) ?? (creating ? 1000 : undefined);
     if (exact && expanded && expanded < exact) {
@@ -2083,7 +2087,7 @@ export class CompanyProvisioningService {
     }
     return {
       organizationId,
-      officeId: this.string(dto.officeId),
+      officeId,
       name: creating ? this.requiredString(dto.name, 'name') : this.string(dto.name),
       latitude: creating ? this.requiredLatitude(dto.latitude) : this.latitude(dto.latitude),
       longitude: creating ? this.requiredLongitude(dto.longitude) : this.longitude(dto.longitude),

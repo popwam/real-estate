@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 import { listOrganizationsApi } from "@/lib/api";
+import { listBranchesApi } from "@/lib/hr-settings-api";
 import type { HrEmployee, HrEmployeeInput } from "@/lib/hr-employees-api";
 import { employeePermissionKeys, uploadHrEmployeeImageApi, type HrEmployeeImagePurpose } from "@/lib/hr-employees-api";
 import { isPlatformRole } from "@/lib/permissions";
@@ -162,6 +163,12 @@ export function EmployeeForm({
     organizations.data?.find((organization) => organization.id === values.organizationId)?.country ??
     data?.organization?.country ??
     "";
+  const branchOrganizationId = isPlatform ? values.organizationId : data?.organization?.id;
+  const branches = useQuery({
+    queryKey: ["hr-branches", "employee-form", branchOrganizationId],
+    queryFn: () => listBranchesApi(branchOrganizationId || undefined),
+    enabled: Boolean(branchOrganizationId),
+  });
   const roleOptions = EMPLOYEE_ROLE_OPTIONS.filter((role) => isPlatform || !role.startsWith("platform_"));
   const uploadOrganizationId = isPlatform ? values.organizationId || undefined : undefined;
   const visibleGroups = EMPLOYEE_PERMISSION_GROUPS.filter(
@@ -341,8 +348,8 @@ export function EmployeeForm({
 
         {currentStep.id === "job" ? (
           <FieldGrid>
-            <TextField id="officeId" label={t("hr360.office")} value={values.officeId} update={update} />
-            <TextField id="branchId" label={t("hr360.branch")} value={values.branchId} update={update} />
+            <BranchSelectField id="officeId" label={t("hr360.office")} value={values.officeId} branches={branches.data ?? []} update={update} />
+            <BranchSelectField id="branchId" label={t("hr360.branch")} value={values.branchId} branches={branches.data ?? []} update={update} />
             <TextField id="departmentId" label={t("employeeAccess.department")} value={values.departmentId} update={update} />
             <TextField id="positionId" label={t("hr360.position")} value={values.positionId} update={update} />
             <TextField id="jobTitle" label={t("employeeAccess.jobTitle")} value={values.jobTitle} update={update} />
@@ -657,6 +664,10 @@ function SelectField({
       </select>
     </Field>
   );
+}
+
+function BranchSelectField({ id, label, value, branches, update }: { id: string; label: string; value: unknown; branches: Array<{ id: string; name: string; isActive: boolean }>; update: (key: string, value: unknown) => void }) {
+  return <Field label={label} id={id}><select id={id} className="ui-input" value={value == null ? "" : String(value)} onChange={(event) => update(id, event.target.value)}><option value="">—</option>{branches.filter((branch) => branch.isActive).map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></Field>;
 }
 
 function CheckboxField({
