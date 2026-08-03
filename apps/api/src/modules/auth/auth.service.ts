@@ -402,6 +402,7 @@ export class AuthService {
       type: organization?.type ?? null,
       status: organization?.status ?? null,
       country: organization?.country ?? null,
+      timezone: organization?.timezone ?? null,
     };
   }
 

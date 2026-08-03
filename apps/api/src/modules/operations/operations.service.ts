@@ -870,11 +870,29 @@ export class OperationsService {
     return this.getHrEmployee(id, user);
   }
 
-  listHrAttendance(user: AuthenticatedRequestUser) {
+  async listHrAttendance(user: AuthenticatedRequestUser, input: Record<string, unknown> = {}) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
+    const organizationId = requireOperationOrganizationId(user);
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    const timezone = this.organizationTimezone(organization?.timezone);
+    const date = this.attendanceListDate(input.date, timezone);
+    const { start, end } = this.attendanceDayBounds(date, timezone);
     return this.prisma.hrAttendanceRecord.findMany({
-      where: operationOrganizationWhere(user),
+      where: {
+        ...operationOrganizationWhere(user),
+        // A work record belongs to its check-in's organization-local day. An
+        // overnight shift therefore appears once—on its work/check-in day—not
+        // again when it checks out the following day. Manual rows without a
+        // check-in retain their existing work-date behavior.
+        OR: [
+          { checkInAt: { gte: start, lt: end } },
+          { checkInAt: null, date: { gte: start, lt: end } },
+        ],
+      },
       include: { employee: true },
       orderBy: { date: 'desc' },
     });
@@ -3629,6 +3647,34 @@ export class OperationsService {
     if (!timezone) throw new BadRequestException('timezone is required.');
     try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(); } catch { throw new BadRequestException('timezone must be a valid IANA timezone.'); }
     return timezone;
+  }
+
+  private organizationTimezone(value: unknown) {
+    if (typeof value !== 'string' || !value.trim()) return 'UTC';
+    try { return this.attendanceTimezone(value); } catch { return 'UTC'; }
+  }
+
+  private attendanceListDate(value: unknown, timezone: string) {
+    if (value === undefined || value === null || value === '') return this.organizationLocalDate(new Date(), timezone);
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new BadRequestException('date must be YYYY-MM-DD.');
+    const [year, month, day] = value.split('-').map(Number);
+    const candidate = new Date(Date.UTC(year, month - 1, day));
+    if (candidate.getUTCFullYear() !== year || candidate.getUTCMonth() !== month - 1 || candidate.getUTCDate() !== day) throw new BadRequestException('date must be a valid calendar date.');
+    return value;
+  }
+
+  private organizationLocalDate(value: Date, timezone: string) {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(value);
+    const item = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    return `${item('year')}-${item('month')}-${item('day')}`;
+  }
+
+  private attendanceDayBounds(date: string, timezone: string) {
+    const [year, month, day] = date.split('-').map(Number);
+    const localDate = new Date(Date.UTC(year, month - 1, day));
+    const start = this.scheduleDateTime(localDate, '00:00', 0, timezone);
+    const end = this.scheduleDateTime(localDate, '00:00', 1, timezone);
+    return { start, end };
   }
 
   private isAttendanceTime(value: string) {

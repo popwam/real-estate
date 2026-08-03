@@ -1,16 +1,43 @@
 "use client";
 
+import { useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { OperationsPage } from "@/components/admin-operations/operations-page";
+import { Button } from "@/components/ui/button";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useI18n } from "@/i18n";
 
 export function TeamAttendanceSection({ queryKey, detailBasePath }: { queryKey: string; detailBasePath?: string }) {
   const { t } = useI18n();
+  const session = useCurrentUser();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const timezone = session.data?.organization?.timezone || "UTC";
+  const today = organizationDate(new Date(), timezone);
+  const requestedDate = searchParams.get("date");
+  const selectedDate = isDateOnly(requestedDate) ? requestedDate : today;
+
+  function setDate(nextDate: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("date", nextDate);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  useEffect(() => {
+    if (!isDateOnly(requestedDate)) setDate(today);
+  // The invalid/missing URL is normalized once after the organization timezone loads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedDate, timezone]);
+
   return <OperationsPage
     showHeader={false}
     title={t("adminSweep.hr.attendance.c2fcb0b7")}
     description={t("attendance.admin.description")}
-    listPath="/hr/attendance"
-    queryKey={queryKey}
+    listPath={`/hr/attendance?date=${encodeURIComponent(selectedDate)}`}
+    queryKey={`${queryKey}:date:${selectedDate}`}
+    filterPrefix={<label className="grid gap-1 text-sm"><span className="font-medium text-zinc-700">{t("attendance.admin.date")}</span><div className="flex flex-wrap items-center gap-2"><InputDate value={selectedDate} onChange={(value) => isDateOnly(value) && setDate(value)} /><Button type="button" className="ui-button-secondary" onClick={() => setDate(addDays(selectedDate, -1))}>{t("attendance.admin.previousDay")}</Button><Button type="button" className="ui-button-secondary" onClick={() => setDate(today)}>{t("attendance.admin.today")}</Button><Button type="button" className="ui-button-secondary" onClick={() => setDate(addDays(selectedDate, 1))}>{t("attendance.admin.nextDay")}</Button></div></label>}
+    emptyMessage={t("attendance.admin.emptyForDate")}
     fields={[
       { name: "employeeId", label: t("attendance.admin.employeeId") },
       { name: "date", label: t("attendance.admin.date"), type: "date" },
@@ -49,6 +76,24 @@ export function TeamAttendanceSection({ queryKey, detailBasePath }: { queryKey: 
     detailBasePath={detailBasePath}
   />;
 }
+
+function InputDate({ value, onChange }: { value: string; onChange: (value: string) => void }) { return <input aria-label="Attendance date" className="h-10 rounded-md border border-zinc-300 px-3" type="date" value={value} onChange={(event) => onChange(event.target.value)} />; }
+
+export function organizationDate(value: Date, timezone: string) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
+    const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+    return `${part("year")}-${part("month")}-${part("day")}`;
+  } catch { return organizationDate(value, "UTC"); }
+}
+
+export function isDateOnly(value: string | null): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number); const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+export function addDays(date: string, amount: number) { const [year, month, day] = date.split("-").map(Number); const next = new Date(Date.UTC(year, month - 1, day + amount)); return next.toISOString().slice(0, 10); }
 
 function formatReasons(value: unknown) { return Array.isArray(value) && value.length ? value.map(String).join(", ") : "-"; }
 function employeeName(row: Record<string, unknown>) { const employee = row.employee; if (employee && typeof employee === "object" && "name" in employee) { const name = (employee as { name?: unknown }).name; if (typeof name === "string" && name.trim()) return name; } return String(row.employeeId ?? "-"); }

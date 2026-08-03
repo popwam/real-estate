@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -32,6 +32,8 @@ export function OperationsPage({
   note,
   detailBasePath,
   showHeader = true,
+  filterPrefix,
+  emptyMessage,
 }: {
   title: string;
   description: string;
@@ -43,16 +45,21 @@ export function OperationsPage({
   note?: string;
   detailBasePath?: string;
   showHeader?: boolean;
+  filterPrefix?: ReactNode;
+  emptyMessage?: string;
 }) {
   const { t } = useI18n();
-  const { data = [], isLoading, error } = useOperationList(queryKey, listPath);
-  const create = useCreateOperation(queryKey, createPath);
-  const patch = usePatchOperation(queryKey);
   const [form, setForm] = useState<Record<string, string>>({});
   const [editId, setEditId] = useState("");
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => { const timeout = window.setTimeout(() => setDebouncedSearch(search), 250); return () => window.clearTimeout(timeout); }, [search]);
+  const filterIdentity = useMemo(() => JSON.stringify(filters), [filters]);
+  const { data = [], isLoading, error } = useOperationList([queryKey, listPath, debouncedSearch, filterIdentity], listPath);
+  const create = useCreateOperation(queryKey, createPath);
+  const patch = usePatchOperation(queryKey);
 
   const filterFields = fields.filter((field) => field.type === "select");
   const filteredData = useMemo(() => {
@@ -99,6 +106,7 @@ export function OperationsPage({
       <div className="space-y-6">
         <DetailCard title={t("operations.filters")}>
           <div className="grid gap-3 md:grid-cols-3">
+            {filterPrefix}
             <label className="grid gap-1 text-sm">
               <span className="font-medium text-zinc-700">{t("common.search")}</span>
               <input
@@ -231,7 +239,7 @@ export function OperationsPage({
                       </td>
                     </tr>
                   ))}
-                  {!filteredData.length ? <tr><td className="px-3 py-6 text-zinc-500" colSpan={columns.length + 1}>{t("operations.empty")}</td></tr> : null}
+                  {!filteredData.length ? <tr><td className="px-3 py-6 text-zinc-500" colSpan={columns.length + 1}>{emptyMessage ?? t("operations.empty")}</td></tr> : null}
                 </tbody>
               </table>
             </div>

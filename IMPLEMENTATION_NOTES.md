@@ -645,6 +645,12 @@ Staging recorded `20260803090000_employee_attendance_schedules` as applied at `2
 
 Added and applied `20260803160000_repair_employee_attendance_schedule_schema`. It only uses `ADD VALUE IF NOT EXISTS` for `SEVERE_LATE` and nullable `ADD COLUMN IF NOT EXISTS` statements for the four missing snapshot fields; it neither updates nor recalculates historical attendance. The deployed API filter now emits bounded, once-per-minute P2022 metadata only (model and column-safe identifiers), preventing repetitive Railway logs. Post-deploy authenticated reads for the Platform Owner attendance list and an active employee's today/history endpoints returned HTTP 200; the two pre-existing records retain null snapshot values.
 
+### HR Attendance organization-local date filter — 2026-08-03
+
+`GET /hr/attendance` now accepts `date=YYYY-MM-DD`. The service resolves the current organization timezone, converts the selected local calendar day to DST-aware `[start, end)` instants, and filters by check-in timestamp. Manual rows with no check-in retain their work-date fallback. This places an overnight record only on its check-in/work day, never on both days. Invalid date strings and impossible calendar dates are rejected safely.
+
+The Team Attendance filter bar now begins with Date and Previous day/Today/Next day controls. Its default comes from the authenticated organization timezone exposed in the session response, never from browser-local time or `toISOString()`. The date is normalized into `?date=YYYY-MM-DD`, survives refresh/share, resets safely to organization-local today when invalid, and participates with the existing search/status/verification filters in the stable debounced attendance query identity. Empty selected days show a date-specific message. English, Arabic, and French labels are included. No migration or database/data changes were made for this feature.
+
 ## Self-service attendance policy authorization
 
 The employee Attendance page had incorrectly requested the administrative `GET /hr/attendance/settings` endpoint. That endpoint correctly requires `company.settings.view` (or an HR administration permission), so an ordinary employee received a 403 and the UI fell into its generic unavailable action state. No employee permission was broadened.

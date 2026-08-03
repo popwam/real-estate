@@ -817,6 +817,48 @@ describe('Employee attendance schedule overrides', () => {
   });
 });
 
+describe('HR attendance date filtering', () => {
+  const manager = { userId: 'manager_1', organizationId: 'org_1', role: 'developer_admin', permissions: ['hr.view'] } as unknown as AuthenticatedRequestUser;
+
+  function setup(timezone = 'Europe/Chisinau') {
+    const prisma = {
+      organization: { findUnique: jest.fn().mockResolvedValue({ timezone }) },
+      hrAttendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    return { prisma, service: new OperationsService(prisma as any) };
+  }
+
+  it('filters a selected date using organization-local day boundaries, not UTC midnight', async () => {
+    const { prisma, service } = setup('Europe/Chisinau');
+    await service.listHrAttendance(manager, { date: '2026-08-03' });
+    expect(prisma.hrAttendanceRecord.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        organizationId: 'org_1',
+        OR: [
+          { checkInAt: { gte: new Date('2026-08-02T21:00:00.000Z'), lt: new Date('2026-08-03T21:00:00.000Z') } },
+          { checkInAt: null, date: { gte: new Date('2026-08-02T21:00:00.000Z'), lt: new Date('2026-08-03T21:00:00.000Z') } },
+        ],
+      }),
+    }));
+  });
+
+  it('uses exactly one check-in day range so overnight attendance cannot be duplicated', async () => {
+    const { prisma, service } = setup('UTC');
+    await service.listHrAttendance(manager, { date: '2026-08-03' });
+    const where = prisma.hrAttendanceRecord.findMany.mock.calls[0][0].where;
+    expect(where.OR).toEqual([
+      { checkInAt: { gte: new Date('2026-08-03T00:00:00.000Z'), lt: new Date('2026-08-04T00:00:00.000Z') } },
+      { checkInAt: null, date: { gte: new Date('2026-08-03T00:00:00.000Z'), lt: new Date('2026-08-04T00:00:00.000Z') } },
+    ]);
+  });
+
+  it('rejects invalid date values safely', async () => {
+    const { service } = setup();
+    await expect(service.listHrAttendance(manager, { date: '2026-02-30' })).rejects.toThrow('valid calendar date');
+    await expect(service.listHrAttendance(manager, { date: '03-08-2026' })).rejects.toThrow('YYYY-MM-DD');
+  });
+});
+
 describe('OperationsService employee access management', () => {
   const companyAdmin = {
     userId: 'admin_1',

@@ -406,9 +406,10 @@ export class OperationsController {
   }
 
   @Get('hr/attendance') listHrAttendance(
+    @Query() query: Record<string, unknown>,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
-    return this.operations.listHrAttendance(user);
+    return this.operations.listHrAttendance(user, query);
   }
   @Get('hr/attendance/me/today') myAttendanceToday(
     @CurrentUser() user: AuthenticatedRequestUser,
