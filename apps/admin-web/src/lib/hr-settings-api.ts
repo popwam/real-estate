@@ -144,12 +144,31 @@ export type AttendanceEvidencePhoto = {
   createdAt: string;
 };
 
+export type WebAttendanceLocation = {
+  id: string;
+  organizationId: string;
+  branchId: string;
+  branchName: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  exactRadiusMeters: number;
+  expandedRadiusMeters: number;
+  isActive: boolean;
+  allowedForWeb: boolean;
+};
+
 export function getMyAttendanceTodayApi() {
   return apiRequest<SelfAttendance>("/hr/attendance/me/today");
 }
 
 export function getMyAttendanceHistoryApi() {
   return apiRequest<SelfAttendance[]>("/hr/attendance/me/history");
+}
+
+export function getMyWebAttendanceLocationsApi() {
+  return apiRequest<WebAttendanceLocation[]>("/hr/attendance/me/locations");
 }
 
 export function preflightCheckInApi(input: Record<string, unknown>) {

@@ -1211,6 +1211,44 @@ export class OperationsService {
     );
   }
 
+  /** The browser may choose only configured, active web attendance locations.
+   * Organization branches alone are not attendance evidence. */
+  async myWebAttendanceLocations(user: AuthenticatedRequestUser) {
+    const employee = await this.resolveCurrentEmployee(user);
+    const locations = await this.prisma.organizationAttendanceLocation.findMany({
+      where: {
+        organizationId: employee.organizationId,
+        isActive: true,
+        allowedForWeb: true,
+        officeId: { not: null },
+        office: { is: { organizationId: employee.organizationId, isActive: true } },
+      },
+      include: {
+        office: {
+          select: { id: true, name: true, isActive: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return locations
+      .filter((location) => location.office?.isActive)
+      .map((location) => ({
+        id: location.id,
+        organizationId: location.organizationId,
+        branchId: location.officeId!,
+        branchName: location.office!.name,
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        radiusMeters: location.exactRadiusMeters,
+        exactRadiusMeters: location.exactRadiusMeters,
+        expandedRadiusMeters: location.expandedRadiusMeters,
+        isActive: location.isActive,
+        allowedForWeb: location.allowedForWeb,
+      }));
+  }
+
   async uploadAttendanceEvidencePhoto(
     file: any,
     purpose: unknown,
@@ -3662,14 +3700,19 @@ export class OperationsService {
     if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
     const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
     const branchId = this.optional(input.branchId);
+    const attendanceLocationId = this.optional(input.attendanceLocationId);
     if (branchId) {
       const branch = await this.prisma.organizationBranch.findFirst({ where: { id: branchId, organizationId, isActive: true }, select: { id: true } });
       if (!branch) reasons.push('BRANCH_NOT_ALLOWED');
     }
     const locations = await this.prisma.organizationAttendanceLocation.findMany({
-      where: { organizationId, isActive: true, ...(isWeb ? { allowedForWeb: true } : { allowedForMobile: true }), ...(branchId && !reasons.includes('BRANCH_NOT_ALLOWED') ? { officeId: branchId } : {}) },
+      where: { organizationId, isActive: true, ...(isWeb ? { allowedForWeb: true } : { allowedForMobile: true }), ...(attendanceLocationId ? { id: attendanceLocationId } : {}), ...(branchId && !reasons.includes('BRANCH_NOT_ALLOWED') ? { officeId: branchId } : {}) },
       select: { id: true, name: true, latitude: true, longitude: true, exactRadiusMeters: true, expandedRadiusMeters: true, requiresReviewOutsideExactRadius: true },
     });
+    if (attendanceLocationId && !locations.length) {
+      reasons.push('ATTENDANCE_LOCATION_NOT_ALLOWED');
+      return { blockingReasons: [...new Set(reasons)], source: 'ATTENDANCE_LOCATION', distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+    }
     // Deprecated organization settings are used only for tenants with no valid Attendance Location.
     const candidates = locations.length ? locations : (typeof policy.allowedLatitude === 'number' && typeof policy.allowedLongitude === 'number'
       ? [{ id: null, name: null, latitude: policy.allowedLatitude, longitude: policy.allowedLongitude, exactRadiusMeters: Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30), expandedRadiusMeters: Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? 1000), requiresReviewOutsideExactRadius: Boolean(policy.allowExpandedRadiusWithReview) }]

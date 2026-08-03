@@ -390,6 +390,29 @@ describe('OperationsService self attendance', () => {
     );
   });
 
+  it('returns only active web-enabled attendance locations linked to an active branch', async () => {
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([
+      {
+        id: 'location_1', organizationId: employee.organizationId, officeId: 'branch_1', name: 'Head office', latitude: 30.0444, longitude: 31.2357,
+        exactRadiusMeters: 30, expandedRadiusMeters: 100, isActive: true, allowedForWeb: true,
+        office: { id: 'branch_1', name: 'Head office', isActive: true },
+      },
+      {
+        id: 'location_2', organizationId: employee.organizationId, officeId: 'branch_2', name: 'Inactive branch', latitude: 30.0444, longitude: 31.2357,
+        exactRadiusMeters: 30, expandedRadiusMeters: 100, isActive: true, allowedForWeb: true,
+        office: { id: 'branch_2', name: 'Inactive branch', isActive: false },
+      },
+    ]);
+
+    await expect(service.myWebAttendanceLocations(user)).resolves.toEqual([
+      expect.objectContaining({ id: 'location_1', branchId: 'branch_1', radiusMeters: 30, allowedForWeb: true }),
+    ]);
+    expect(prisma.organizationAttendanceLocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ organizationId: employee.organizationId, isActive: true, allowedForWeb: true, officeId: { not: null }, office: { is: { organizationId: employee.organizationId, isActive: true } } }) }),
+    );
+  });
+
   it('stores a rejected attempt and fails outside the configured geofence', async () => {
     const { prisma, service } = setup();
     prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce({
