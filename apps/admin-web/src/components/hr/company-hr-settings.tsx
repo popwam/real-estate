@@ -26,7 +26,7 @@ import {
 export function CompanyHrSettings() {
   const { t } = useI18n();
   const qc = useQueryClient();
-  const branches = useQuery({ queryKey: ["hr-branches"], queryFn: listBranchesApi });
+  const branches = useQuery({ queryKey: ["hr-branches"], queryFn: () => listBranchesApi() });
   const settings = useQuery({ queryKey: ["hr-attendance-settings"], queryFn: getAttendanceSettingsApi });
   const accessLevels = useQuery({ queryKey: ["company-access-levels"], queryFn: listCompanyAccessLevelsApi });
   const saveBranch = useMutation({

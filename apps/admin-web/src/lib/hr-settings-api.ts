@@ -58,8 +58,9 @@ export type AttendanceSettings = {
   workEndTime: string;
 };
 
-export function listBranchesApi() {
-  return apiRequest<OrganizationBranch[]>("/hr/branches");
+export function listBranchesApi(organizationId?: string) {
+  const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
+  return apiRequest<OrganizationBranch[]>(`/hr/branches${query}`);
 }
 
 export function saveBranchApi(input: Partial<OrganizationBranch>) {
