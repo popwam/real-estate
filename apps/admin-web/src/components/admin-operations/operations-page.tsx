@@ -31,6 +31,7 @@ export function OperationsPage({
   columns,
   note,
   detailBasePath,
+  showHeader = true,
 }: {
   title: string;
   description: string;
@@ -41,6 +42,7 @@ export function OperationsPage({
   columns: Column[];
   note?: string;
   detailBasePath?: string;
+  showHeader?: boolean;
 }) {
   const { t } = useI18n();
   const { data = [], isLoading, error } = useOperationList(queryKey, listPath);
@@ -93,7 +95,7 @@ export function OperationsPage({
 
   return (
     <>
-      <PageHeader title={title} description={description} />
+      {showHeader ? <PageHeader title={title} description={description} /> : null}
       <div className="space-y-6">
         <DetailCard title={t("operations.filters")}>
           <div className="grid gap-3 md:grid-cols-3">

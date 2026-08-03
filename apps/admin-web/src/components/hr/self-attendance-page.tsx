@@ -5,7 +5,6 @@ import { Camera, Check, Clock, LogIn, LogOut, MapPin, RotateCcw, X } from "lucid
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { FeedbackState } from "@/components/feedback-state";
 import { LoadingState } from "@/components/loading-state";
-import { PageHeader } from "@/components/layout/page-header";
 import { DetailCard } from "@/components/platform/detail-card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -32,7 +31,8 @@ type LocationPayload = {
 
 type CheckInStage = "idle" | "checking-location" | "verifying-location" | "starting-camera" | "camera" | "preview" | "uploading-photo" | "recording-attendance" | "checking-out";
 
-export function SelfAttendancePage() {
+/** Embedded in the existing Attendance workspace; it deliberately owns no route or page header. */
+export function SelfAttendanceSection() {
   const { t } = useI18n();
   const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -211,7 +211,6 @@ export function SelfAttendancePage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t("attendance.self.title")} description={t("attendance.self.description")} />
       <DetailCard title={t("attendance.self.today")}>
         {today.isLoading ? <LoadingState label={t("attendance.self.loadingToday")} /> : null}
         {record ? (
