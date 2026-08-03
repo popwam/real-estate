@@ -104,6 +104,9 @@ describe('OperationsService self attendance', () => {
       organizationBranch: {
         findFirst: jest.fn().mockResolvedValue(null),
       },
+      hrAttendanceAttempt: {
+        create: jest.fn().mockResolvedValue({ id: 'attempt_1' }),
+      },
     };
 
     return {
@@ -129,7 +132,7 @@ describe('OperationsService self attendance', () => {
     );
 
     const result = await service.checkInHrAttendance(
-      { employeeId: 'employee_2', note: 'Arrived' },
+      { employeeId: 'employee_2', organizationId: 'org_2', note: 'Arrived' },
       user,
     );
 
@@ -152,6 +155,14 @@ describe('OperationsService self attendance', () => {
         }),
       }),
     );
+  });
+
+  it('keeps manual attendance restricted to attendance managers', async () => {
+    const { service } = setup();
+
+    await expect(
+      service.createHrAttendance({ employeeId: employee.id }, user),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('rejects a non-positive GPS accuracy policy value', () => {
@@ -192,6 +203,57 @@ describe('OperationsService self attendance', () => {
 
     expect(decision.mode).toBe('EXPANDED_REVIEW');
     expect(decision.blockingReasons).toContain('EXPANDED_LOCATION_REVIEW');
+  });
+
+  it('uses the web location policy in preflight and permits only review-only outcomes', async () => {
+    const { prisma, service } = setup();
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
+      attendanceSettings({ requireLocation: false, allowWebCheckIn: false }),
+    );
+
+    const denied = await service.preflightHrAttendanceCheckIn(
+      { clientPlatform: 'WEB' },
+      user,
+    );
+
+    expect(denied.allowed).toBe(false);
+    expect(denied.blockingReasons).toContain('WEB_CHECK_IN_NOT_ALLOWED');
+
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
+      attendanceSettings({ requireLocation: false, requireWifi: true, webWifiPolicy: 'MANUAL_REVIEW' }),
+    );
+    const review = await service.preflightHrAttendanceCheckIn(
+      { clientPlatform: 'WEB' },
+      user,
+    );
+
+    expect(review.allowed).toBe(true);
+    expect(review.blockingReasons).toContain('WEB_WIFI_MANUAL_REVIEW');
+  });
+
+  it('re-evaluates the final web check-in after a successful preflight', async () => {
+    const { prisma, service } = setup();
+    const policy = attendanceSettings({ requireLocation: true });
+    prisma.organizationAttendanceSettings.findUnique.mockResolvedValue(policy);
+    prisma.organizationAttendanceLocation.findMany.mockResolvedValue([
+      { id: 'web-office', name: 'Web office', latitude: 30.0444, longitude: 31.2357, exactRadiusMeters: 30, expandedRadiusMeters: 50, requiresReviewOutsideExactRadius: false },
+    ]);
+
+    const preflight = await service.preflightHrAttendanceCheckIn(
+      { latitude: 30.0444, longitude: 31.2357, locationAccuracyMeters: 5, locationCapturedAt: new Date().toISOString(), clientPlatform: 'WEB' },
+      user,
+    );
+    expect(preflight.allowed).toBe(true);
+
+    await expect(
+      service.checkInHrAttendance({ latitude: 31.2, longitude: 29.9, locationAccuracyMeters: 5, locationCapturedAt: new Date().toISOString(), clientPlatform: 'WEB' }, user),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ reasons: expect.arrayContaining(['OUTSIDE_ALLOWED_LOCATION']) }),
+    });
+    expect(prisma.hrAttendanceRecord.create).not.toHaveBeenCalled();
+    expect(prisma.organizationAttendanceLocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ allowedForWeb: true }) }),
+    );
   });
 
   it('allows at most one concurrent reference approval and surfaces the unique-index conflict', async () => {
@@ -352,13 +414,9 @@ describe('OperationsService self attendance', () => {
       }),
     });
 
-    expect(prisma.hrAttendanceRecord.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          verificationStatus: 'REJECTED',
-          verificationFailureReasons: ['OUTSIDE_ALLOWED_LOCATION'],
-        }),
-      }),
+    expect(prisma.hrAttendanceRecord.create).not.toHaveBeenCalled();
+    expect(prisma.hrAttendanceAttempt.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ decision: 'REJECTED' }) }),
     );
   });
 

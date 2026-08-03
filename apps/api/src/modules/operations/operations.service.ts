@@ -915,10 +915,18 @@ export class OperationsService {
       'checkIn',
       user,
     );
+    if (verification.reject) {
+      const attempt = await this.recordRejectedAttendanceAttempt(employee, input, verification, 'CHECK_IN');
+      throw new BadRequestException({
+        success: false,
+        code: 'ATTENDANCE_CHECK_IN_REJECTED',
+        reasons: verification.reasons,
+        attemptId: attempt.id,
+        attendanceRecordId: null,
+      });
+    }
     const photoFileId = this.optional(input.photoFileId ?? input.checkInPhotoFileId);
-    const face = verification.reject
-      ? { status: AttendanceFaceVerificationStatus.NOT_REQUIRED, provider: null, referenceImageId: null, createReferenceCandidate: false }
-      : await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
+    const face = await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
     const { start, end, date } = this.todayBounds();
     const openRecord = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
@@ -1003,12 +1011,6 @@ export class OperationsService {
         await this.prisma.hrEmployee.update({ where: { id: employee.id }, data: { faceReferenceFileId: photoFileId } });
       }
     }
-    if (verification.reject) {
-      throw new BadRequestException({
-        message: 'Attendance verification failed.',
-        reasons: verification.reasons,
-      });
-    }
     return this.selfAttendanceEnvelope(record);
   }
 
@@ -1017,8 +1019,24 @@ export class OperationsService {
     const employee = await this.resolveCurrentEmployee(user);
     const policy = await this.attendancePolicy(employee.organizationId);
     const decision = await this.attendanceLocationDecision(input, policy, employee.organizationId);
+    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
+    const blockingReasons = [...decision.blockingReasons];
+    if (isWeb && policy.allowWebCheckIn === false) {
+      blockingReasons.push('WEB_CHECK_IN_NOT_ALLOWED');
+    }
+    if (isWeb && policy.requireWifi) {
+      if (policy.webWifiPolicy === WebWifiPolicy.BLOCK) {
+        blockingReasons.push('WEB_WIFI_NOT_AVAILABLE');
+      } else if (policy.webWifiPolicy === WebWifiPolicy.MANUAL_REVIEW) {
+        blockingReasons.push('WEB_WIFI_MANUAL_REVIEW');
+      }
+    }
+    const reasons = [...new Set(blockingReasons)];
+    const reviewReasons = new Set(['EXPANDED_LOCATION_REVIEW', 'WEB_WIFI_MANUAL_REVIEW']);
     return {
-      allowed: decision.blockingReasons.length === 0,
+      // A review-only outcome can proceed to the live-photo step; the final
+      // check-in remains PENDING_REVIEW and re-runs every verification.
+      allowed: reasons.every((reason) => reviewReasons.has(reason)),
       insideAllowedRadius: decision.mode === 'EXACT' || decision.mode === 'EXPANDED_REVIEW',
       distanceMeters: decision.distanceMeters,
       allowedRadiusMeters: decision.allowedRadiusMeters,
@@ -1027,9 +1045,10 @@ export class OperationsService {
       matchedLocationId: decision.matchedLocationId,
       matchedLocationName: decision.matchedLocationName,
       source: decision.source,
-      accuracyAccepted: !decision.blockingReasons.includes('GPS_ACCURACY_TOO_LOW'),
+      accuracyMeters: this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters) ?? null,
+      accuracyAccepted: !reasons.includes('GPS_ACCURACY_TOO_LOW'),
       mode: decision.mode,
-      blockingReasons: decision.blockingReasons,
+      blockingReasons: reasons,
       requiresPhoto: Boolean(policy.requirePhoto),
       requiresWifi: Boolean(policy.requireWifi),
       requiresDeviceIntegrity: Boolean(policy.blockDeveloperOptions || policy.blockUsbDebugging),
@@ -1090,6 +1109,15 @@ export class OperationsService {
       'checkOut',
       user,
     );
+    if (verification.reject) {
+      const attempt = await this.recordRejectedAttendanceAttempt(employee, input, verification, 'CHECK_OUT');
+      throw new BadRequestException({
+        success: false,
+        code: 'ATTENDANCE_CHECK_OUT_REJECTED',
+        reasons: verification.reasons,
+        attemptId: attempt.id,
+      });
+    }
     const { start, end } = this.todayBounds();
     const record = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
@@ -1147,12 +1175,6 @@ export class OperationsService {
       employee.name,
       this.attendanceMetadata(input, verification),
     );
-    if (verification.reject) {
-      throw new BadRequestException({
-        message: 'Attendance verification failed.',
-        reasons: verification.reasons,
-      });
-    }
     return this.selfAttendanceEnvelope(updated);
   }
 
@@ -1164,6 +1186,7 @@ export class OperationsService {
         organizationId: employee.organizationId,
         employeeId: employee.id,
         date: { gte: start, lt: end },
+        verificationStatus: { notIn: [AttendanceVerificationStatus.REJECTED, AttendanceVerificationStatus.FAILED] },
       },
       include: { employee: true },
       orderBy: [{ checkInAt: 'desc' }, { date: 'desc' }],
@@ -3242,6 +3265,25 @@ export class OperationsService {
     return employee;
   }
 
+  private async recordRejectedAttendanceAttempt(employee: any, input: any, verification: any, action: 'CHECK_IN' | 'CHECK_OUT') {
+    const location = await this.attendanceLocationDecision(input, await this.attendancePolicy(employee.organizationId), employee.organizationId);
+    return (this.prisma as any).hrAttendanceAttempt.create({
+      data: {
+        organizationId: employee.organizationId,
+        employeeId: employee.id,
+        action,
+        source: 'SELF_SERVICE',
+        decision: 'REJECTED',
+        failureReasons: verification.reasons,
+        matchedLocationId: location.matchedLocationId,
+        distanceMeters: location.distanceMeters,
+        gpsAccuracy: this.optionalNumber(input.locationAccuracyMeters),
+        deviceId: this.optional(input.deviceId),
+        requestId: this.optional(input.requestId ?? input.idempotencyKey),
+      },
+    });
+  }
+
   private todayBounds(now = new Date()) {
     const start = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
@@ -3618,7 +3660,7 @@ export class OperationsService {
     if (capturedAt && (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 || capturedAt.getTime() - Date.now() > 60 * 1000)) reasons.push('LOCATION_STALE');
     if (accuracy !== undefined && accuracy < 0) reasons.push('GPS_ACCURACY_TOO_LOW');
     if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
-    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB';
+    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
     const branchId = this.optional(input.branchId);
     if (branchId) {
       const branch = await this.prisma.organizationBranch.findFirst({ where: { id: branchId, organizationId, isActive: true }, select: { id: true } });

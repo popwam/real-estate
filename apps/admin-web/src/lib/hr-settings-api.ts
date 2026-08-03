@@ -118,12 +118,55 @@ export type SelfAttendance = {
   canCheckOut: boolean;
 };
 
+export type AttendanceCheckInPreflight = {
+  allowed: boolean;
+  insideAllowedRadius: boolean;
+  distanceMeters: number | null;
+  allowedRadiusMeters: number | null;
+  exactRadiusMeters: number | null;
+  expandedRadiusMeters: number | null;
+  matchedLocationId: string | null;
+  matchedLocationName: string | null;
+  source: string | null;
+  accuracyMeters: number | null;
+  accuracyAccepted: boolean;
+  mode: string;
+  blockingReasons: string[];
+  requiresPhoto: boolean;
+  requiresWifi: boolean;
+};
+
+export type AttendanceEvidencePhoto = {
+  fileId: string;
+  purpose: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+};
+
 export function getMyAttendanceTodayApi() {
   return apiRequest<SelfAttendance>("/hr/attendance/me/today");
 }
 
 export function getMyAttendanceHistoryApi() {
   return apiRequest<SelfAttendance[]>("/hr/attendance/me/history");
+}
+
+export function preflightCheckInApi(input: Record<string, unknown>) {
+  return apiRequest<AttendanceCheckInPreflight>("/hr/attendance/check-in/preflight", {
+    method: "POST",
+    body: JSON.stringify({ ...input, clientPlatform: "WEB" }),
+  });
+}
+
+export function uploadAttendanceEvidencePhotoApi(file: File) {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("purpose", "CHECK_IN");
+  return apiRequest<AttendanceEvidencePhoto>("/hr/attendance/evidence-photo", {
+    method: "POST",
+    body,
+  });
 }
 
 export function checkInApi(input: Record<string, unknown>) {

@@ -3254,6 +3254,27 @@ model HrAttendanceRecord {
   @@map("hr_attendance_records")
 }
 
+model HrAttendanceAttempt {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  employeeId         String
+  attemptedAt        DateTime @default(now())
+  action             String
+  source             String
+  decision           String
+  failureReasons     Json?
+  matchedLocationId  String?
+  distanceMeters     Int?
+  gpsAccuracy        Float?
+  deviceId           String?
+  requestId          String?
+  createdAt          DateTime @default(now())
+
+  @@index([organizationId, employeeId, attemptedAt])
+  @@index([employeeId, requestId])
+  @@map("hr_attendance_attempts")
+}
+
 model EmployeeAttendanceReferencePhoto {
   id              String                         @id @default(cuid())
   organizationId  String

@@ -582,3 +582,31 @@ Created and deployed additive migration `20260802180000_repair_document_verifica
 Organization-document upload now deletes the just-uploaded local/R2 object on a failed `UploadedFile` database insert, preserving the original database error if cleanup itself fails. This prevents a new orphan object caused by metadata-write failures.
 
 Validation passed: focused Files tests (13), full API suite (34 suites, 188 passed, 1 skipped), API build, Railway `prisma migrate deploy`, Railway Prisma generate, post-deploy schema diagnostic, and Railway platform doctor. The remaining manual staging check is an authenticated end-to-end upload/review request using a real company account and Platform reviewer; no credentials or document content were logged.
+
+## Attendance rejected-attempt isolation — 2026-08-02
+
+Final self-service check-in rejection no longer creates an `HrAttendanceRecord`. It creates an `HrAttendanceAttempt` with safe diagnostic metadata and returns `ATTENDANCE_CHECK_IN_REJECTED` with no attendance record ID. Accepted check-ins alone create open attendance records. An additive partial unique index permits only one open, non-rejected record per organization/employee. The legacy repair script is dry-run-only by default and does not modify the existing rejected rows.
+
+### Flutter rejection handling follow-up
+
+Flutter now converts structured Dio error bodies into `AttendanceException`, filters legacy `REJECTED`/`FAILED` rows from history, and refreshes today/history after a rejected final check-in. Debug-only logs contain only HTTP status, code, reasons, and request ID. The staging legacy repair dry-run found four rejected open records; confirmed repair copied diagnostic attempts and closed only those four legacy rows without deleting evidence or changing accepted attendance.
+
+## Web self-service attendance — 2026-08-03
+
+### Why web attendance failed
+
+The web screen called the self-service check-in endpoint directly without a location preflight, live camera capture, or evidence-photo upload. It therefore could not follow the same evidence sequence as mobile. The separate `POST /hr/attendance` manual endpoint remains reserved for HR attendance management and is not used by the self-service component.
+
+### Web self-service flow and enforcement
+
+`My attendance` now captures a fresh high-accuracy browser position (`maximumAge: 0`, `timeout: 20 seconds`), submits `latitude`, `longitude`, accuracy, timestamp, branch, and `clientPlatform: WEB` to preflight, and opens the user-facing camera only when the result is allowed. It captures a JPEG from the live stream, presents use/retake/cancel controls, uploads multipart evidence to `/hr/attendance/evidence-photo`, then sends only `photoFileId` to final check-in. It never sends `employeeId`, `organizationId`, base64 data, or a public URL.
+
+Preflight now also applies web eligibility and the browser Wi-Fi policy. Review-only outcomes can proceed, while the final endpoint independently reselects the eligible web location, recalculates distance, validates timestamp/accuracy/photo/open attendance and current employee/organization state, and enforces the Wi-Fi and photo policies again. A rejected check-out is also stopped before it can mutate an attendance record.
+
+### UX, state, and browser limitations
+
+The action is derived from `/hr/attendance/me/today`: no record shows Check in, an open record shows Check out, and a completed record is informational. Successful mutations invalidate and await refetch of today/history; in-flight and camera states prevent duplicate requests. Location/camera/API codes and preflight reasons are localized in English, Arabic, and French, with preflight distance/radius/accuracy shown when supplied. Browsers cannot reliably expose SSID/BSSID, so no Wi-Fi data is invented; the configured `BLOCK`, `MANUAL_REVIEW`, or `IGNORE_FOR_WEB` policy decides the outcome.
+
+### Validation and remaining E2E
+
+Added backend coverage for web preflight policy, final revalidation, linked employee/organization authority, and manual-endpoint permission, plus admin-web API tests for preflight, multipart evidence, and final `photoFileId`. Passed: focused admin-web tests (3), full API suite (34 suites, 191 passed, 1 skipped), and API build. Admin-web production compilation, TypeScript, and static-page generation completed successfully; the outer command timed out while finalizing after the route report. No database command, cleanup, deletion, deployment, commit, or push was performed. Remaining manual staging E2E: Chrome/Edge location and camera permission, exact/expanded/denied geofence cases, each Wi-Fi policy, photo retake, and a full check-in/check-out with a real employee account.
