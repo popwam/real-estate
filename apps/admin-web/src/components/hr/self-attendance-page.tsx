@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
 import { attendanceActionState } from "@/lib/attendance-action-state";
+import { getBrowserLocation, isBrowserLocationError, type LocationPayload } from "@/lib/attendance-geolocation";
 import { eligibleWebAttendanceLocations, selectedAttendanceLocationId } from "@/lib/attendance-location-selection";
 import {
   checkInApi,
@@ -24,13 +25,6 @@ import {
 } from "@/lib/hr-settings-api";
 import { useI18n } from "@/i18n";
 import { useCurrentUser } from "@/hooks/use-current-user";
-
-type LocationPayload = {
-  latitude: number;
-  longitude: number;
-  locationAccuracyMeters: number;
-  locationCapturedAt: string;
-};
 
 type CheckInStage = "idle" | "checking-location" | "verifying-location" | "starting-camera" | "camera" | "preview" | "uploading-photo" | "recording-attendance" | "checking-out";
 
@@ -50,6 +44,7 @@ export function SelfAttendanceSection() {
   const [location, setLocation] = useState<LocationPayload | null>(null);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [retryLocationAction, setRetryLocationAction] = useState<"check-in" | "check-out" | null>(null);
 
   const today = useQuery({ queryKey: ["hr-attendance", "me", "today"], queryFn: getMyAttendanceTodayApi });
   const history = useQuery({ queryKey: ["hr-attendance", "me", "history"], queryFn: getMyAttendanceHistoryApi });
@@ -114,6 +109,7 @@ export function SelfAttendanceSection() {
     setLocation(null);
     setPreflight(null);
     setFeedback(null);
+    setRetryLocationAction(null);
     setStage("idle");
     submittingRef.current = false;
   }, [clearPreview, stopCamera]);
@@ -123,10 +119,13 @@ export function SelfAttendanceSection() {
     submittingRef.current = true;
     setFeedback(null);
     setPreflight(null);
+    setRetryLocationAction(null);
     clearPreview();
     try {
       setStage("checking-location");
-      const capturedLocation = await getBrowserLocation();
+      // Call directly from this button handler. Do not move this behind an
+      // effect or camera request: Safari associates this with the user gesture.
+      const capturedLocation = await getBrowserLocation(selectedAttendanceLocation?.id ?? null);
       setLocation(capturedLocation);
 
       setStage("verifying-location");
@@ -146,6 +145,7 @@ export function SelfAttendanceSection() {
       }
       await startCamera();
     } catch (error) {
+      if (isBrowserLocationError(error)) setRetryLocationAction("check-in");
       setFeedback(attendanceErrorMessage(error, t));
       setStage("idle");
       submittingRef.current = false;
@@ -216,13 +216,25 @@ export function SelfAttendanceSection() {
     mutationFn: async () => {
       setFeedback(null);
       setStage("checking-out");
-      const capturedLocation = await getBrowserLocation();
+      const capturedLocation = await getBrowserLocation(selectedAttendanceLocation?.id ?? null);
       return checkOutApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation?.id, branchId: selectedAttendanceLocation?.branchId });
     },
     onSuccess: invalidate,
-    onError: (error) => setFeedback(attendanceErrorMessage(error, t)),
+    onError: (error) => {
+      if (isBrowserLocationError(error)) setRetryLocationAction("check-out");
+      setFeedback(attendanceErrorMessage(error, t));
+    },
     onSettled: () => setStage("idle"),
   });
+
+  const retryLocation = () => {
+    if (retryLocationAction === "check-out") {
+      setRetryLocationAction(null);
+      checkOut.mutate();
+      return;
+    }
+    void beginCheckIn();
+  };
 
   const record = today.data;
   // The endpoint returns an envelope even when no database record exists.
@@ -292,9 +304,10 @@ export function SelfAttendanceSection() {
         {stage === "starting-camera" || stage === "camera" ? <CameraPanel videoRef={videoRef} loading={stage === "starting-camera"} onCapture={capturePhoto} onCancel={cancelCheckIn} t={t} /> : null}
         {stage === "preview" && previewUrl ? <PhotoPreview previewUrl={previewUrl} busy={false} onUse={usePhoto} onRetake={retakePhoto} onCancel={cancelCheckIn} t={t} /> : null}
         {stage === "uploading-photo" || stage === "recording-attendance" ? <LoadingState label={stageLabel(stage, t, t("common.saving"))} /> : null}
-        {preflight && !preflight.allowed ? <PreflightDetails decision={preflight} t={t} /> : null}
+        {preflight && !preflight.allowed ? <PreflightDetails decision={preflight} accuracyThresholdMeters={settings.data?.locationAccuracyThresholdMeters ?? null} t={t} /> : null}
         {record?.minutesLate ? <FeedbackState className="mt-4" tone="success" title={t("attendance.self.latePenalty")} description={t("attendance.self.latePenaltyDescription", { minutes: record.minutesLate, penalty: record.penaltyType ?? t("common.notSet") })} /> : null}
         {feedback ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.checkInError")} description={feedback} /> : null}
+        {retryLocationAction ? <Button type="button" className="ui-button-secondary mt-3" onClick={retryLocation} disabled={checkInInProgress || checkOut.isPending}><RotateCcw className="h-4 w-4" aria-hidden="true" />{t("attendance.self.retryLocation")}</Button> : null}
       </DetailCard>
 
       <DetailCard title={t("attendance.self.history")}>
@@ -313,22 +326,18 @@ function PhotoPreview({ previewUrl, busy, onUse, onRetake, onCancel, t }: { prev
   return <div className="mt-5 space-y-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-4"><p className="text-sm font-medium">{t("attendance.self.photoPreview")}</p><img src={previewUrl} alt={t("attendance.self.photoPreview")} className="aspect-video w-full rounded-[var(--radius-md)] object-cover" /><div className="flex flex-wrap gap-2"><Button type="button" onClick={onUse} disabled={busy}><Check className="h-4 w-4" />{t("attendance.self.usePhoto")}</Button><Button type="button" className="ui-button-secondary" onClick={onRetake} disabled={busy}><RotateCcw className="h-4 w-4" />{t("attendance.self.retakePhoto")}</Button><Button type="button" className="ui-button-secondary" onClick={onCancel} disabled={busy}><X className="h-4 w-4" />{t("common.cancel")}</Button></div></div>;
 }
 
-function PreflightDetails({ decision, t }: { decision: AttendanceCheckInPreflight; t: (key: string, values?: Record<string, string | number>) => string }) {
+function PreflightDetails({ decision, accuracyThresholdMeters, t }: { decision: AttendanceCheckInPreflight; accuracyThresholdMeters: number | null; t: (key: string, values?: Record<string, string | number>) => string }) {
   const accuracy = decision.accuracyMeters === null ? (decision.accuracyAccepted ? t("attendance.self.accuracyAccepted") : t("attendance.self.accuracyRejected")) : `${decision.accuracyMeters} m (${decision.accuracyAccepted ? t("attendance.self.accuracyAccepted") : t("attendance.self.accuracyRejected")})`;
   const details = [[t("attendance.self.distance"), decision.distanceMeters], [t("attendance.self.radius"), decision.allowedRadiusMeters], [t("attendance.self.accuracy"), accuracy]].filter(([, value]) => value !== null && value !== undefined);
-  return <div className="mt-4 rounded-[var(--radius-md)] border border-red-300 bg-red-50 p-3 text-sm text-red-900"><p className="font-medium">{preflightMessage(decision, t)}</p>{details.length ? <dl className="mt-2 grid gap-1 sm:grid-cols-3">{details.map(([label, value]) => <div key={label}><dt className="text-xs font-semibold">{label}</dt><dd>{typeof value === "number" ? `${value} m` : value}</dd></div>)}</dl> : null}</div>;
+  const accuracyTooLow = decision.blockingReasons.includes("GPS_ACCURACY_TOO_LOW");
+  return <div className="mt-4 rounded-[var(--radius-md)] border border-red-300 bg-red-50 p-3 text-sm text-red-900"><p className="font-medium">{preflightMessage(decision, t)}</p>{accuracyTooLow && decision.accuracyMeters !== null && accuracyThresholdMeters !== null ? <p className="mt-2">{t("attendance.self.accuracyTooLowDetails", { current: decision.accuracyMeters, required: accuracyThresholdMeters })}</p> : null}{details.length ? <dl className="mt-2 grid gap-1 sm:grid-cols-3">{details.map(([label, value]) => <div key={label}><dt className="text-xs font-semibold">{label}</dt><dd>{typeof value === "number" ? `${value} m` : value}</dd></div>)}</dl> : null}</div>;
 }
 
 function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) { return <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3"><div className="flex items-center gap-2 text-xs font-semibold uppercase text-[var(--color-muted)]">{icon}{label}</div><p className="mt-2 text-sm font-semibold text-[var(--color-foreground)]">{value}</p></div>; }
 
-async function getBrowserLocation(): Promise<LocationPayload> {
-  if (typeof navigator === "undefined" || !navigator.geolocation) throw new Error("LOCATION_NOT_AVAILABLE");
-  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition((position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, locationAccuracyMeters: position.coords.accuracy, locationCapturedAt: new Date(position.timestamp).toISOString() }), (error) => reject(new Error(error.code === error.PERMISSION_DENIED ? "LOCATION_PERMISSION_DENIED" : "LOCATION_NOT_AVAILABLE")), { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }));
-}
-
 function preflightMessage(decision: AttendanceCheckInPreflight, t: (key: string, values?: Record<string, string | number>) => string) { return decision.blockingReasons.map((reason) => reasonMessage(reason, t)).join(" ") || t("attendance.self.preflightRejected"); }
 function attendanceErrorMessage(error: unknown, t: (key: string, values?: Record<string, string | number>) => string) { if (error instanceof ApiError) { if (error.status === 401) return t("auth.sessionExpired"); const details = error.details as { reasons?: unknown } | undefined; const reasons = Array.isArray(details?.reasons) ? details.reasons.map(String) : []; return reasons.length ? reasons.map((reason) => reasonMessage(reason, t)).join(" ") : t("attendance.self.requestFailed", { requestId: error.requestId ?? "" }); } if (error instanceof DOMException) return error.name === "NotAllowedError" ? reasonMessage(error.name, t) : t("attendance.self.cameraUnavailable"); if (error instanceof Error) return reasonMessage(error.message, t); return t("attendance.self.requestFailed"); }
-function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "ATTENDANCE_LOCATION_NOT_ALLOWED", "OUTSIDE_ALLOWED_LOCATION", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
+function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_POSITION_UNAVAILABLE", "LOCATION_TIMEOUT", "LOCATION_INSECURE_CONTEXT", "LOCATION_PERMISSION_POLICY_BLOCKED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "ATTENDANCE_LOCATION_NOT_ALLOWED", "OUTSIDE_ALLOWED_LOCATION", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
 function stageLabel(stage: CheckInStage, t: (key: string, values?: Record<string, string | number>) => string, fallback: string) { return ({ "checking-location": t("attendance.self.checkingLocation"), "verifying-location": t("attendance.self.verifyingLocation"), "starting-camera": t("attendance.self.startingCamera"), "uploading-photo": t("attendance.self.uploadingPhoto"), "recording-attendance": t("attendance.self.recordingAttendance") } as Partial<Record<CheckInStage, string>>)[stage] ?? fallback; }
 function formatDate(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(); }
 function formatDateTime(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }
