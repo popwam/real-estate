@@ -13,6 +13,8 @@ import {
   AdsCampaignProvider,
   AdsCampaignStatus,
   AttendanceLateLevel,
+  AttendanceEntryChannel,
+  AutoCloseReason,
   AttendanceScheduleMode,
   AttendancePenaltyType,
   AttendanceSource,
@@ -22,6 +24,9 @@ import {
   CameraDeviceProvider,
   CameraDeviceStatus,
   DvrVerificationStatus,
+  CheckOutMethod,
+  CheckOutOutsideLocationPolicy,
+  CheckOutVerificationStatus,
   HrAttendanceStatus,
   HrEmployeeStatus,
   LegalCaseStatus,
@@ -29,6 +34,8 @@ import {
   LegalDocumentType,
   OperationsModule,
   Prisma,
+  RegularShiftAutoCloseMode,
+  MissingAttendanceDisposition,
   UserRole,
   WebWifiPolicy,
 } from '@prisma/client';
@@ -85,6 +92,12 @@ const PLATFORM_PERMISSION_KEYS = new Set([
   'users.impersonate',
   'exports.platform_data',
 ]);
+
+/** A missing overnight snapshot is never guessed.  It remains open until this
+ * bounded safety limit, then is auto-closed for manual review only. */
+const STALE_OPEN_ATTENDANCE_MAX_HOURS = 36;
+const AUTO_CLOSE_BATCH_SIZE = 100;
+const AUTO_CLOSE_WARNING_MINUTES = 30;
 
 const ROLE_LABELS: Record<string, string> = {
   platform_support: 'Platform support',
@@ -873,7 +886,7 @@ export class OperationsService {
   async listHrAttendance(user: AuthenticatedRequestUser, input: Record<string, unknown> = {}) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
-    const organizationId = requireOperationOrganizationId(user);
+    const organizationId = this.resolveScopedOrganizationId(input, user);
     const organization = await this.prisma.organization.findUnique({
       where: { id: organizationId },
       select: { timezone: true },
@@ -881,7 +894,7 @@ export class OperationsService {
     const timezone = this.organizationTimezone(organization?.timezone);
     const date = this.attendanceListDate(input.date, timezone);
     const { start, end } = this.attendanceDayBounds(date, timezone);
-    return this.prisma.hrAttendanceRecord.findMany({
+    const records = await this.prisma.hrAttendanceRecord.findMany({
       where: {
         ...operationOrganizationWhere(user),
         // A work record belongs to its check-in's organization-local day. An
@@ -893,8 +906,43 @@ export class OperationsService {
           { checkInAt: null, date: { gte: start, lt: end } },
         ],
       },
-      include: { employee: true },
+      include: { employee: true, branch: true },
       orderBy: { date: 'desc' },
+    });
+    const [year, month] = date.split('-').map(Number);
+    const monthStartDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01`;
+    const monthStart = this.attendanceDayBounds(monthStartDate, timezone).start;
+    const [policy, lateRecords] = await Promise.all([
+      this.attendancePolicy(organizationId),
+      this.prisma.hrAttendanceRecord.findMany({
+        where: {
+          organizationId,
+          date: { gte: monthStart, lt: end },
+          minutesLate: { gt: 0 },
+        },
+        select: { employeeId: true, date: true },
+      }),
+    ]);
+    const lateDaysByEmployee = new Map<string, Set<string>>();
+    for (const lateRecord of lateRecords) {
+      const days = lateDaysByEmployee.get(lateRecord.employeeId) ?? new Set<string>();
+      days.add(this.dateOnly(lateRecord.date));
+      lateDaysByEmployee.set(lateRecord.employeeId, days);
+    }
+    const allowanceMinutes = Math.max(0, Number(policy.monthlyLateAllowanceHours ?? 4)) * 60;
+    const chargeMinutes = Math.max(1, Number(policy.lateAllowanceChargeHoursPerDay ?? 1)) * 60;
+    return records.map((record) => {
+      const lateDays = lateDaysByEmployee.get(record.employeeId)?.size ?? 0;
+      const usedMinutes = Math.min(allowanceMinutes, lateDays * chargeMinutes);
+      const chargedToday = Number(record.minutesLate ?? 0) > 0
+        ? Math.min(chargeMinutes, Math.max(0, allowanceMinutes - Math.max(0, lateDays - 1) * chargeMinutes))
+        : 0;
+      return {
+        ...record,
+        lateAllowanceChargedMinutes: chargedToday,
+        lateAllowanceUsedMinutes: usedMinutes,
+        lateAllowanceRemainingMinutes: Math.max(0, allowanceMinutes - usedMinutes),
+      };
     });
   }
 
@@ -912,6 +960,18 @@ export class OperationsService {
         checkOutAt: input.checkOutAt
           ? new Date(String(input.checkOutAt))
           : undefined,
+        actualCheckInAt: input.checkInAt
+          ? new Date(String(input.checkInAt))
+          : undefined,
+        actualCheckOutAt: input.checkOutAt
+          ? new Date(String(input.checkOutAt))
+          : undefined,
+        checkOutMethod: input.checkOutAt
+          ? CheckOutMethod.ADMIN_MANUAL
+          : undefined,
+        checkOutVerificationStatus: input.checkOutAt
+          ? CheckOutVerificationStatus.NOT_VERIFIED
+          : undefined,
         status: this.enumValue(
           HrAttendanceStatus,
           input.status,
@@ -919,6 +979,7 @@ export class OperationsService {
         ),
         note: this.optional(input.note),
         attendanceSource: AttendanceSource.MANUAL_ADMIN,
+        entryChannel: AttendanceEntryChannel.MANUAL_ADMIN,
         verificationStatus: this.enumValue(
           AttendanceVerificationStatus,
           input.verificationStatus,
@@ -971,6 +1032,18 @@ export class OperationsService {
         checkOutAt: input.checkOutAt
           ? new Date(String(input.checkOutAt))
           : undefined,
+        actualCheckInAt: input.checkInAt
+          ? new Date(String(input.checkInAt))
+          : undefined,
+        actualCheckOutAt: input.checkOutAt
+          ? new Date(String(input.checkOutAt))
+          : undefined,
+        checkOutMethod: input.checkOutAt
+          ? CheckOutMethod.ADMIN_MANUAL
+          : undefined,
+        checkOutVerificationStatus: input.checkOutAt
+          ? CheckOutVerificationStatus.NOT_VERIFIED
+          : undefined,
         status: input.status,
         note: input.note,
         verificationStatus: input.verificationStatus,
@@ -1010,6 +1083,11 @@ export class OperationsService {
   async checkInHrAttendance(input: any, user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
     const policy = await this.attendancePolicy(employee.organizationId);
+    const now = new Date();
+    // The partial unique index protects integrity, but this synchronous
+    // fallback prevents a delayed worker from blocking the employee's next
+    // check-in. The conditional update used by the helper is idempotent.
+    await this.autoCloseDueOpenRecordForEmployee(employee, policy, now);
     const verification = await this.evaluateAttendanceVerification(
       input,
       policy,
@@ -1028,12 +1106,12 @@ export class OperationsService {
     }
     const photoFileId = this.optional(input.photoFileId ?? input.checkInPhotoFileId);
     const face = await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
-    const { start, end, date } = this.todayBounds();
+    const timezone = await this.organizationTimezoneFor(employee.organizationId);
+    const date = this.zonedWorkDate(now, timezone);
     const openRecord = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
-        date: { gte: start, lt: end },
         checkInAt: { not: null },
         checkOutAt: null,
         verificationStatus: {
@@ -1047,11 +1125,14 @@ export class OperationsService {
     });
 
     if (openRecord) {
-      throw new ConflictException('You are already checked in.');
+      throw new ConflictException({
+        code: 'ATTENDANCE_ALREADY_CHECKED_IN',
+        nextAction: 'CHECK_OUT',
+        attendanceRecordId: openRecord.id,
+      });
     }
 
-    const now = new Date();
-    const schedule = await this.resolveEffectiveAttendanceSchedule({ organizationId: employee.organizationId, employeeId: employee.id, attendanceDate: date, timezone: employee.timezone ?? undefined }, employee, policy);
+    const schedule = await this.resolveEffectiveAttendanceSchedule({ organizationId: employee.organizationId, employeeId: employee.id, attendanceDate: date, timezone }, employee, policy);
     const late = this.calculateScheduleLatePenalty(now, schedule, policy);
     const record = await this.prisma.hrAttendanceRecord.create({
       data: {
@@ -1059,9 +1140,15 @@ export class OperationsService {
         employeeId: employee.id,
         date,
         checkInAt: now,
+        actualCheckInAt: now,
+        autoClosed: false,
         status: late.attendanceStatus,
         note: this.optional(input.note),
         attendanceSource: AttendanceSource.SELF_SERVICE,
+        entryChannel:
+          this.optional(input.clientPlatform)?.toUpperCase() === 'MOBILE'
+            ? AttendanceEntryChannel.MOBILE_APP
+            : AttendanceEntryChannel.WEB,
         branchId: this.optional(input.branchId),
         ...this.attendanceEvidenceData(input, 'checkIn'),
         verificationStatus: verification.status,
@@ -1084,6 +1171,7 @@ export class OperationsService {
         scheduleSource: schedule.source,
         scheduleId: schedule.scheduleId,
         scheduleTimezone: schedule.timezone,
+        overnightShift: schedule.overnightShift,
         plannedCheckInAt: schedule.plannedCheckIn,
         plannedCheckOutAt: schedule.plannedCheckOut,
         graceMinutes: schedule.graceMinutes,
@@ -1129,9 +1217,23 @@ export class OperationsService {
 
   /** Read-only location gate used before the mobile client opens its camera. */
   async preflightHrAttendanceCheckIn(input: any, user: AuthenticatedRequestUser) {
+    return this.preflightSelfAttendance(input, user, 'checkIn');
+  }
+
+  /** Check-out has an independent outside-location policy and therefore must
+   * not reuse a check-in preflight result. */
+  async preflightHrAttendanceCheckOut(input: any, user: AuthenticatedRequestUser) {
+    return this.preflightSelfAttendance(input, user, 'checkOut');
+  }
+
+  private async preflightSelfAttendance(
+    input: any,
+    user: AuthenticatedRequestUser,
+    phase: 'checkIn' | 'checkOut',
+  ) {
     const employee = await this.resolveCurrentEmployee(user);
     const policy = await this.attendancePolicy(employee.organizationId);
-    const decision = await this.attendanceLocationDecision(input, policy, employee.organizationId);
+    const decision = await this.attendanceLocationDecision(input, policy, employee.organizationId, phase);
     const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
     const blockingReasons = [...decision.blockingReasons];
     if (isWeb && policy.allowWebCheckIn === false) {
@@ -1145,7 +1247,22 @@ export class OperationsService {
       }
     }
     const reasons = [...new Set(blockingReasons)];
-    const reviewReasons = new Set(['EXPANDED_LOCATION_REVIEW', 'WEB_WIFI_MANUAL_REVIEW']);
+    if (phase === 'checkOut' && decision.mode !== 'EXACT' && decision.mode !== 'LOCATION_NOT_REQUIRED') {
+      const outsidePolicy = policy.checkOutOutsideLocationPolicy ?? CheckOutOutsideLocationPolicy.BLOCK;
+      if (outsidePolicy === CheckOutOutsideLocationPolicy.BLOCK) {
+        blockingReasons.push('OUTSIDE_ALLOWED_LOCATION');
+      } else if (outsidePolicy === CheckOutOutsideLocationPolicy.MANUAL_REVIEW) {
+        blockingReasons.push('CHECK_OUT_OUTSIDE_LOCATION_REVIEW');
+      } else {
+        blockingReasons.push('CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE');
+      }
+    }
+    const reviewReasons = new Set([
+      'EXPANDED_LOCATION_REVIEW',
+      'WEB_WIFI_MANUAL_REVIEW',
+      'CHECK_OUT_OUTSIDE_LOCATION_REVIEW',
+      'CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE',
+    ]);
     return {
       // A review-only outcome can proceed to the live-photo step; the final
       // check-in remains PENDING_REVIEW and re-runs every verification.
@@ -1162,7 +1279,13 @@ export class OperationsService {
       accuracyAccepted: !reasons.includes('GPS_ACCURACY_TOO_LOW'),
       mode: decision.mode,
       blockingReasons: reasons,
-      requiresPhoto: Boolean(policy.requirePhoto),
+      requiresPhoto:
+        Boolean(policy.requirePhoto) ||
+        (phase === 'checkOut' &&
+          decision.mode !== 'EXACT' &&
+          decision.mode !== 'LOCATION_NOT_REQUIRED' &&
+          policy.checkOutOutsideLocationPolicy ===
+            CheckOutOutsideLocationPolicy.ALLOW_WITH_EVIDENCE),
       requiresWifi: Boolean(policy.requireWifi),
       requiresDeviceIntegrity: Boolean(policy.blockDeveloperOptions || policy.blockUsbDebugging),
       requiresDvrReview: Boolean(policy.requireDvrReview),
@@ -1216,27 +1339,12 @@ export class OperationsService {
   async checkOutHrAttendance(input: any, user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
     const policy = await this.attendancePolicy(employee.organizationId);
-    const verification = await this.evaluateAttendanceVerification(
-      input,
-      policy,
-      'checkOut',
-      user,
-    );
-    if (verification.reject) {
-      const attempt = await this.recordRejectedAttendanceAttempt(employee, input, verification, 'CHECK_OUT');
-      throw new BadRequestException({
-        success: false,
-        code: 'ATTENDANCE_CHECK_OUT_REJECTED',
-        reasons: verification.reasons,
-        attemptId: attempt.id,
-      });
-    }
-    const { start, end } = this.todayBounds();
-    const record = await this.prisma.hrAttendanceRecord.findFirst({
+    const attendanceRecordId = this.optional(input.attendanceRecordId);
+    let record = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
-        date: { gte: start, lt: end },
+        ...(attendanceRecordId ? { id: attendanceRecordId } : {}),
         checkInAt: { not: null },
         checkOutAt: null,
         verificationStatus: {
@@ -1250,18 +1358,75 @@ export class OperationsService {
       orderBy: { checkInAt: 'desc' },
     });
 
+    // Retried final requests are harmless.  The original closed record is
+    // returned rather than overwriting its checkout evidence.
+    if (!record && attendanceRecordId) {
+      const completed = await this.prisma.hrAttendanceRecord.findFirst({
+        where: {
+          id: attendanceRecordId,
+          organizationId: employee.organizationId,
+          employeeId: employee.id,
+          checkOutAt: { not: null },
+        },
+        include: { employee: true },
+      });
+      if (completed) return this.selfAttendanceEnvelope(completed);
+    }
     if (!record) {
-      throw new ConflictException('You must check in before checking out.');
+      throw new ConflictException({
+        code: 'ATTENDANCE_CHECK_OUT_NOT_OPEN',
+        nextAction: 'CHECK_IN',
+      });
+    }
+
+    const verification = await this.evaluateAttendanceVerification(
+      input,
+      policy,
+      'checkOut',
+      user,
+    );
+    if (verification.reject) {
+      const attempt = await this.recordRejectedAttendanceAttempt(
+        employee,
+        input,
+        verification,
+        'CHECK_OUT',
+        record.id,
+      );
+      throw new BadRequestException({
+        success: false,
+        code: 'ATTENDANCE_CHECK_OUT_REJECTED',
+        reasons: verification.reasons,
+        attemptId: attempt.id,
+      });
     }
 
     const checkedOutAt = new Date();
     const earlyLeave = record.plannedCheckOutAt
       ? Math.max(0, Math.round((new Date(record.plannedCheckOutAt).getTime() - checkedOutAt.getTime()) / 60000))
       : 0;
-    const updated = await this.prisma.hrAttendanceRecord.update({
-      where: { id: record.id },
+    const calculatedWorkMinutes = this.durationMinutes(
+      record.actualCheckInAt ?? record.checkInAt,
+      checkedOutAt,
+    );
+    const reviewReason = verification.reasons.length
+      ? verification.reasons.join(',').slice(0, 1000)
+      : null;
+    const update = await this.prisma.hrAttendanceRecord.updateMany({
+      where: { id: record.id, checkOutAt: null },
       data: {
         checkOutAt: checkedOutAt,
+        actualCheckOutAt: checkedOutAt,
+        calculatedWorkMinutes,
+        checkOutMethod: CheckOutMethod.SELF_SERVICE,
+        checkOutVerificationStatus:
+          verification.status === AttendanceVerificationStatus.VERIFIED
+            ? CheckOutVerificationStatus.VERIFIED
+            : CheckOutVerificationStatus.PENDING_REVIEW,
+        autoClosed: false,
+        requiresManualReview:
+          verification.status === AttendanceVerificationStatus.PENDING_REVIEW,
+        reviewReason,
         status: earlyLeave > Number(record.graceMinutes ?? 0) && record.status === HrAttendanceStatus.PRESENT ? HrAttendanceStatus.EARLY_LEAVE : record.status,
         note: this.mergeNote(record.note, input.note),
         ...this.attendanceEvidenceData(input, 'checkOut'),
@@ -1280,6 +1445,22 @@ export class OperationsService {
         dvrReferenceId:
           this.optional(input.dvrReferenceId) ?? record.dvrReferenceId,
       },
+    });
+    if (!update.count) {
+      const completed = await this.prisma.hrAttendanceRecord.findFirst({
+        where: {
+          id: record.id,
+          organizationId: employee.organizationId,
+          employeeId: employee.id,
+          checkOutAt: { not: null },
+        },
+        include: { employee: true },
+      });
+      if (completed) return this.selfAttendanceEnvelope(completed);
+      throw new ConflictException({ code: 'ATTENDANCE_CHECK_OUT_NOT_OPEN', nextAction: 'CHECK_IN' });
+    }
+    const updated = await this.prisma.hrAttendanceRecord.findUniqueOrThrow({
+      where: { id: record.id },
       include: { employee: true },
     });
 
@@ -1298,13 +1479,20 @@ export class OperationsService {
 
   async myAttendanceToday(user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
-    const { start, end, date } = this.todayBounds();
+    const timezone = await this.organizationTimezoneFor(employee.organizationId);
+    const localDate = this.organizationLocalDate(new Date(), timezone);
+    const { start, end } = this.attendanceDayBounds(localDate, timezone);
+    const date = this.zonedWorkDate(new Date(), timezone);
     const record = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
-        date: { gte: start, lt: end },
         verificationStatus: { notIn: [AttendanceVerificationStatus.REJECTED, AttendanceVerificationStatus.FAILED] },
+        OR: [
+          { checkInAt: { gte: start, lt: end } },
+          { checkInAt: null, date: { gte: start, lt: end } },
+          { checkInAt: { not: null }, checkOutAt: null },
+        ],
       },
       include: { employee: true },
       orderBy: [{ checkInAt: 'desc' }, { date: 'desc' }],
@@ -2793,9 +2981,33 @@ export class OperationsService {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
     requireOperationPermission(user, [
+      'hr.attendance.export',
+      'hr.manage',
       'exports.organization_data',
       'exports.platform_data',
     ]);
+    const organizationId = requireOperationOrganizationId(user);
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    const timezone = this.organizationTimezone(organization?.timezone);
+    const requestedDate = input.date ?? (
+      input.dateFrom && input.dateFrom === input.dateTo ? input.dateFrom : null
+    );
+    if (requestedDate) {
+      const date = this.attendanceListDate(requestedDate, timezone);
+      const policy = await this.attendancePolicy(organizationId);
+      let items = await this.dailyAttendanceRoster(
+        organizationId,
+        date,
+        timezone,
+        policy,
+      );
+      const status = this.optional(input.status);
+      if (status) items = items.filter((item) => item.status === status);
+      return this.exportEnvelope('hr.attendance', input, items);
+    }
     const where: Prisma.HrAttendanceRecordWhereInput = {
       ...operationOrganizationWhere(user, this.optional(input.organizationId)),
       status: this.optionalEnum(HrAttendanceStatus, input.status),
@@ -2810,6 +3022,11 @@ export class OperationsService {
         date: true,
         checkInAt: true,
         checkOutAt: true,
+        plannedCheckInAt: true,
+        plannedCheckOutAt: true,
+        minutesLate: true,
+        entryChannel: true,
+        attendanceSource: true,
         status: true,
         note: true,
       },
@@ -2817,6 +3034,95 @@ export class OperationsService {
       take: this.exportLimit(input),
     });
     return this.exportEnvelope('hr.attendance', input, items);
+  }
+
+  private async dailyAttendanceRoster(
+    organizationId: string,
+    date: string,
+    timezone: string,
+    policy: any,
+  ): Promise<Record<string, unknown>[]> {
+    const { start, end } = this.attendanceDayBounds(date, timezone);
+    const [year, month] = date.split('-').map(Number);
+    const monthDate = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01`;
+    const monthStart = this.attendanceDayBounds(monthDate, timezone).start;
+    const [employees, records, lateRecords] = await Promise.all([
+      this.prisma.hrEmployee.findMany({
+        where: { organizationId, status: HrEmployeeStatus.ACTIVE },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.hrAttendanceRecord.findMany({
+        where: {
+          organizationId,
+          OR: [
+            { checkInAt: { gte: start, lt: end } },
+            { checkInAt: null, date: { gte: start, lt: end } },
+          ],
+        },
+        orderBy: { id: 'asc' },
+      }),
+      this.prisma.hrAttendanceRecord.findMany({
+        where: {
+          organizationId,
+          date: { gte: monthStart, lt: end },
+          minutesLate: { gt: 0 },
+        },
+        select: { employeeId: true, date: true },
+      }),
+    ]);
+    const recordByEmployee = new Map(records.map((record: any) => [record.employeeId, record]));
+    const lateDaysByEmployee = new Map<string, Set<string>>();
+    for (const record of lateRecords) {
+      const days = lateDaysByEmployee.get(record.employeeId) ?? new Set<string>();
+      days.add(this.dateOnly(record.date));
+      lateDaysByEmployee.set(record.employeeId, days);
+    }
+    const allowanceMinutes = Math.max(0, Number(policy.monthlyLateAllowanceHours ?? 4)) * 60;
+    const chargeMinutes = Math.max(1, Number(policy.lateAllowanceChargeHoursPerDay ?? 1)) * 60;
+    const now = new Date();
+    const rows: Record<string, unknown>[] = [];
+
+    for (const employee of employees) {
+      const employmentStart = employee.workStartDate ?? employee.hireDate;
+      if (employmentStart && new Date(employmentStart).getTime() >= end.getTime()) continue;
+      const record = recordByEmployee.get(employee.id) as any | undefined;
+      const schedule = record
+        ? null
+        : await this.resolveEffectiveAttendanceSchedule(
+            { organizationId, employeeId: employee.id, attendanceDate: start, timezone },
+            employee,
+            policy,
+          );
+      const lateDays = lateDaysByEmployee.get(employee.id)?.size ?? 0;
+      const usedMinutes = Math.min(allowanceMinutes, lateDays * chargeMinutes);
+      const chargedToday = record?.minutesLate > 0
+        ? Math.min(chargeMinutes, Math.max(0, allowanceMinutes - Math.max(0, lateDays - 1) * chargeMinutes))
+        : 0;
+      const missingStatus = schedule?.isWorkingDay === false
+        ? HrAttendanceStatus.OFF
+        : schedule?.plannedCheckOut && now.getTime() < schedule.plannedCheckOut.getTime()
+          ? 'NOT_RECORDED'
+          : policy.missingAttendanceDisposition ?? MissingAttendanceDisposition.ABSENT;
+      rows.push({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        employeeCode: employee.employeeCode ?? null,
+        date,
+        plannedCheckInAt: record?.plannedCheckInAt ?? schedule?.plannedCheckInAt ?? null,
+        checkInAt: record?.checkInAt ?? null,
+        plannedCheckOutAt: record?.plannedCheckOutAt ?? schedule?.plannedCheckOutAt ?? null,
+        checkOutAt: record?.checkOutAt ?? null,
+        status: record?.status ?? missingStatus,
+        entryChannel: record?.entryChannel ?? AttendanceEntryChannel.AUTO,
+        attendanceSource: record?.attendanceSource ?? AttendanceSource.AUTO_GENERATED,
+        minutesLate: record?.minutesLate ?? 0,
+        lateAllowanceChargedMinutes: chargedToday,
+        lateAllowanceUsedMinutes: usedMinutes,
+        lateAllowanceRemainingMinutes: Math.max(0, allowanceMinutes - usedMinutes),
+        note: record?.note ?? null,
+      });
+    }
+    return rows;
   }
 
   async exportAccountingTransactions(
@@ -3143,8 +3449,43 @@ export class OperationsService {
         input.webWifiPolicy,
         WebWifiPolicy.MANUAL_REVIEW,
       ),
-      workStartTime: this.timeValue(input.workStartTime, '09:00'),
-      workEndTime: this.timeValue(input.workEndTime, '17:00'),
+      workStartTime: this.timeValue(input.workStartTime, '11:15'),
+      workEndTime: this.timeValue(input.workEndTime, '19:00'),
+      monthlyLateAllowanceHours: this.nonNegativeInt(
+        input.monthlyLateAllowanceHours,
+        4,
+      ),
+      lateAllowanceChargeHoursPerDay: this.positiveInt(
+        input.lateAllowanceChargeHoursPerDay,
+        1,
+      ),
+      missingAttendanceDisposition: this.enumValue(
+        MissingAttendanceDisposition,
+        input.missingAttendanceDisposition,
+        MissingAttendanceDisposition.ABSENT,
+      ),
+      autoCloseOpenAttendance:
+        input.autoCloseOpenAttendance === undefined
+          ? true
+          : Boolean(input.autoCloseOpenAttendance),
+      regularShiftAutoCloseMode: this.enumValue(
+        RegularShiftAutoCloseMode,
+        input.regularShiftAutoCloseMode,
+        RegularShiftAutoCloseMode.END_OF_WORK_DAY,
+      ),
+      autoCloseGraceMinutes: this.nonNegativeInt(
+        input.autoCloseGraceMinutes,
+        60,
+      ),
+      autoCloseAtLocalMidnight:
+        input.autoCloseAtLocalMidnight === undefined
+          ? true
+          : Boolean(input.autoCloseAtLocalMidnight),
+      checkOutOutsideLocationPolicy: this.enumValue(
+        CheckOutOutsideLocationPolicy,
+        input.checkOutOutsideLocationPolicy,
+        CheckOutOutsideLocationPolicy.BLOCK,
+      ),
     };
   }
 
@@ -3451,32 +3792,394 @@ export class OperationsService {
     return employee;
   }
 
-  private async recordRejectedAttendanceAttempt(employee: any, input: any, verification: any, action: 'CHECK_IN' | 'CHECK_OUT') {
-    const location = await this.attendanceLocationDecision(input, await this.attendancePolicy(employee.organizationId), employee.organizationId);
+  private async recordRejectedAttendanceAttempt(
+    employee: any,
+    input: any,
+    verification: any,
+    action: 'CHECK_IN' | 'CHECK_OUT',
+    attendanceRecordId?: string,
+  ) {
+    const location = await this.attendanceLocationDecision(
+      input,
+      await this.attendancePolicy(employee.organizationId),
+      employee.organizationId,
+      action === 'CHECK_OUT' ? 'checkOut' : 'checkIn',
+    );
     return (this.prisma as any).hrAttendanceAttempt.create({
       data: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
+        attendanceRecordId,
         action,
+        actionType: action,
         source: 'SELF_SERVICE',
         decision: 'REJECTED',
+        result: 'REJECTED',
         failureReasons: verification.reasons,
         matchedLocationId: location.matchedLocationId,
         distanceMeters: location.distanceMeters,
-        gpsAccuracy: this.optionalNumber(input.locationAccuracyMeters),
+        gpsAccuracy: this.optionalNumber(
+          input.locationAccuracyMeters ?? input.accuracy,
+        ),
         deviceId: this.optional(input.deviceId),
         requestId: this.optional(input.requestId ?? input.idempotencyKey),
       },
     });
   }
 
-  private todayBounds(now = new Date()) {
-    const start = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  /**
+   * Called by the dedicated worker/cron and by the check-in fallback.  The
+   * update predicate includes `checkOutAt: null`, so concurrent executions are
+   * safe and a record can never be auto-closed twice.
+   */
+  async autoCloseOpenAttendanceRecords(now = new Date()) {
+    const organizations = await this.prisma.organization.findMany({
+      where: { status: { in: ['ACTIVE', 'APPROVED'] } },
+      select: { id: true, timezone: true },
+    });
+    let checked = 0;
+    let closed = 0;
+    let warnings = 0;
+
+    for (const organization of organizations) {
+      const policy = await this.attendancePolicy(organization.id);
+      if (!policy.autoCloseOpenAttendance) continue;
+      const timezone = this.organizationTimezone(organization.timezone);
+      let cursorId: string | undefined;
+      while (true) {
+        const records = await this.prisma.hrAttendanceRecord.findMany({
+          where: {
+            organizationId: organization.id,
+            checkInAt: { not: null },
+            checkOutAt: null,
+            verificationStatus: {
+              notIn: [
+                AttendanceVerificationStatus.REJECTED,
+                AttendanceVerificationStatus.FAILED,
+              ],
+            },
+          },
+          include: { employee: { select: { userId: true } } },
+          orderBy: [{ checkInAt: 'asc' }, { id: 'asc' }],
+          ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+          take: AUTO_CLOSE_BATCH_SIZE,
+        });
+        if (!records.length) break;
+        cursorId = records[records.length - 1].id;
+        for (const record of records) {
+          checked += 1;
+          const result = await this.autoCloseRecordIfDue(
+            record,
+            policy,
+            timezone,
+            now,
+          );
+          if (result.warningQueued) warnings += 1;
+          if (result.closed) closed += 1;
+        }
+        if (records.length < AUTO_CLOSE_BATCH_SIZE) break;
+      }
+      // IDs are deliberately shortened: no location, photo, or PII is logged.
+      console.info('[attendance:auto-close]', {
+        organizationId: this.shortId(organization.id),
+        checked,
+        closed,
+        warnings,
+      });
+    }
+    return { organizations: organizations.length, checked, closed, warnings };
+  }
+
+  /** Creates one auditable row for each active employee who had no attendance
+   * on the previous organization-local working day. */
+  async reconcileMissingAttendanceRecords(now = new Date()) {
+    const organizations = await this.prisma.organization.findMany({
+      where: { status: { in: ['ACTIVE', 'APPROVED'] } },
+      select: { id: true, timezone: true },
+    });
+    let created = 0;
+    let skipped = 0;
+
+    for (const organization of organizations) {
+      const timezone = this.organizationTimezone(organization.timezone);
+      const currentDate = this.organizationLocalDate(now, timezone);
+      const targetDate = this.previousDate(currentDate);
+      const workDate = new Date(`${targetDate}T00:00:00.000Z`);
+      const { start, end } = this.attendanceDayBounds(targetDate, timezone);
+      const policy = await this.attendancePolicy(organization.id);
+      const employees = await this.prisma.hrEmployee.findMany({
+        where: { organizationId: organization.id, status: HrEmployeeStatus.ACTIVE },
+      });
+
+      for (const employee of employees) {
+        const employmentStart = employee.workStartDate ?? employee.hireDate;
+        if (employmentStart && new Date(employmentStart).getTime() >= end.getTime()) {
+          skipped += 1;
+          continue;
+        }
+        const existing = await this.prisma.hrAttendanceRecord.findFirst({
+          where: {
+            organizationId: organization.id,
+            employeeId: employee.id,
+            OR: [
+              { checkInAt: { gte: start, lt: end } },
+              { checkInAt: null, date: { gte: start, lt: end } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (existing) {
+          skipped += 1;
+          continue;
+        }
+        const schedule = await this.resolveEffectiveAttendanceSchedule(
+          { organizationId: organization.id, employeeId: employee.id, attendanceDate: workDate, timezone },
+          employee,
+          policy,
+        );
+        if (!schedule.isWorkingDay) {
+          skipped += 1;
+          continue;
+        }
+        const status = policy.missingAttendanceDisposition === MissingAttendanceDisposition.LEAVE
+          ? HrAttendanceStatus.LEAVE
+          : HrAttendanceStatus.ABSENT;
+        await this.prisma.hrAttendanceRecord.create({
+          data: {
+            organizationId: organization.id,
+            employeeId: employee.id,
+            date: workDate,
+            status,
+            attendanceSource: AttendanceSource.AUTO_GENERATED,
+            entryChannel: AttendanceEntryChannel.AUTO,
+            verificationStatus: AttendanceVerificationStatus.VERIFIED,
+            note: `Automatically classified as ${status} because no attendance was recorded.`,
+            scheduleSource: schedule.scheduleSource,
+            scheduleId: schedule.scheduleId,
+            scheduleTimezone: schedule.timezone,
+            overnightShift: schedule.overnightShift,
+            plannedCheckInAt: schedule.plannedCheckInAt,
+            plannedCheckOutAt: schedule.plannedCheckOutAt,
+            graceMinutes: schedule.graceMinutes,
+            expectedWorkMinutes: schedule.expectedWorkMinutes,
+            lateUntilAt: schedule.lateUntilAt,
+            severeLateUntilAt: schedule.severeLateUntilAt,
+            absentAfterAt: schedule.absentAfterAt,
+          },
+        });
+        created += 1;
+      }
+    }
+    return { organizations: organizations.length, created, skipped };
+  }
+
+  private async autoCloseDueOpenRecordForEmployee(
+    employee: any,
+    policy: any,
+    now: Date,
+  ) {
+    if (!policy.autoCloseOpenAttendance) return false;
+    const record = await this.prisma.hrAttendanceRecord.findFirst({
+      where: {
+        organizationId: employee.organizationId,
+        employeeId: employee.id,
+        checkInAt: { not: null },
+        checkOutAt: null,
+        verificationStatus: {
+          notIn: [
+            AttendanceVerificationStatus.REJECTED,
+            AttendanceVerificationStatus.FAILED,
+          ],
+        },
+      },
+      include: { employee: { select: { userId: true } } },
+      orderBy: { checkInAt: 'asc' },
+    });
+    if (!record) return false;
+    const timezone = await this.organizationTimezoneFor(employee.organizationId);
+    const result = await this.autoCloseRecordIfDue(record, policy, timezone, now);
+    return result.closed;
+  }
+
+  private async autoCloseRecordIfDue(
+    record: any,
+    policy: any,
+    organizationTimezone: string,
+    now: Date,
+  ): Promise<{ closed: boolean; warningQueued: boolean }> {
+    const plan = this.autoClosePlan(record, policy, organizationTimezone, now);
+    if (!plan) return { closed: false, warningQueued: false };
+
+    let warningQueued = false;
+    const untilDueMinutes =
+      (plan.dueAt.getTime() - now.getTime()) / (60 * 1000);
+    if (
+      record.autoCloseWarningSentAt == null &&
+      untilDueMinutes > 0 &&
+      untilDueMinutes <= AUTO_CLOSE_WARNING_MINUTES
+    ) {
+      const marked = await this.prisma.hrAttendanceRecord.updateMany({
+        where: {
+          id: record.id,
+          checkOutAt: null,
+          autoCloseWarningSentAt: null,
+        },
+        data: { autoCloseWarningSentAt: now },
+      });
+      if (marked.count) {
+        warningQueued = true;
+        await this.queueAttendanceNotification(record, 'attendance.missed_checkout_warning', {
+          attendanceRecordId: record.id,
+          dueAt: plan.dueAt.toISOString(),
+        });
+      }
+    }
+    if (now.getTime() < plan.dueAt.getTime()) {
+      return { closed: false, warningQueued };
+    }
+
+    const actualCheckInAt = record.actualCheckInAt ?? record.checkInAt;
+    const calculatedWorkMinutes = this.durationMinutes(
+      actualCheckInAt,
+      plan.checkOutAt,
     );
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 1);
-    return { start, end, date: start };
+    const updated = await this.prisma.hrAttendanceRecord.updateMany({
+      where: {
+        id: record.id,
+        checkOutAt: null,
+        verificationStatus: {
+          notIn: [
+            AttendanceVerificationStatus.REJECTED,
+            AttendanceVerificationStatus.FAILED,
+          ],
+        },
+      },
+      data: {
+        checkOutAt: plan.checkOutAt,
+        actualCheckOutAt: plan.checkOutAt,
+        calculatedWorkMinutes,
+        checkOutMethod: CheckOutMethod.AUTO_CLOSE,
+        checkOutVerificationStatus: CheckOutVerificationStatus.AUTO_CLOSED,
+        autoClosed: true,
+        autoClosedAt: now,
+        autoCloseReason: plan.reason,
+        requiresReview: true,
+        requiresManualReview: true,
+        reviewReason: plan.reason,
+      },
+    });
+    if (updated.count) {
+      await this.queueAttendanceNotification(record, 'attendance.auto_closed', {
+        attendanceRecordId: record.id,
+        reason: plan.reason,
+        checkOutAt: plan.checkOutAt.toISOString(),
+      });
+    }
+    return { closed: updated.count > 0, warningQueued };
+  }
+
+  private autoClosePlan(record: any, policy: any, timezone: string, now = new Date()) {
+    if (!policy.autoCloseOpenAttendance || !record.checkInAt) return null;
+    const checkInAt = new Date(record.actualCheckInAt ?? record.checkInAt);
+    if (Number.isNaN(checkInAt.getTime())) return null;
+    const graceMinutes = Math.max(0, Number(policy.autoCloseGraceMinutes ?? 60));
+    const staleAt = new Date(
+      checkInAt.getTime() + STALE_OPEN_ATTENDANCE_MAX_HOURS * 60 * 60 * 1000,
+    );
+    if (record.overnightShift === true) {
+      if (record.plannedCheckOutAt) {
+        const dueAt = new Date(
+          new Date(record.plannedCheckOutAt).getTime() + graceMinutes * 60 * 1000,
+        );
+        if (!Number.isNaN(dueAt.getTime())) {
+          return {
+            dueAt,
+            checkOutAt: dueAt,
+            reason: AutoCloseReason.MISSED_CHECK_OUT_AFTER_SHIFT,
+          };
+        }
+      }
+      // No schedule snapshot means no silent overnight assumption.  The
+      // documented 36-hour safety limit is review-only.
+      return {
+        dueAt: staleAt,
+        checkOutAt: staleAt,
+        reason: AutoCloseReason.STALE_OPEN_RECORD,
+      };
+    }
+
+    if (
+      policy.regularShiftAutoCloseMode ===
+        RegularShiftAutoCloseMode.PLANNED_CHECK_OUT_PLUS_GRACE &&
+      record.plannedCheckOutAt
+    ) {
+      const dueAt = new Date(
+        new Date(record.plannedCheckOutAt).getTime() + graceMinutes * 60 * 1000,
+      );
+      if (!Number.isNaN(dueAt.getTime())) {
+        return {
+          dueAt,
+          checkOutAt: dueAt,
+          reason: AutoCloseReason.MISSED_CHECK_OUT_AFTER_SHIFT,
+        };
+      }
+    }
+
+    const checkInDate = this.organizationLocalDate(checkInAt, timezone);
+    const currentDate = this.organizationLocalDate(now, timezone);
+    if (policy.autoCloseAtLocalMidnight && checkInDate < currentDate) {
+      const endOfWorkDay = new Date(
+        this.attendanceDayBounds(checkInDate, timezone).end.getTime() - 1000,
+      );
+      return {
+        dueAt: endOfWorkDay,
+        checkOutAt: endOfWorkDay,
+        reason: AutoCloseReason.MISSED_CHECK_OUT_END_OF_DAY,
+      };
+    }
+
+    return {
+      dueAt: staleAt,
+      checkOutAt: staleAt,
+      reason: AutoCloseReason.STALE_OPEN_RECORD,
+    };
+  }
+
+  private async queueAttendanceNotification(
+    record: any,
+    type: string,
+    payload: Record<string, string>,
+  ) {
+    try {
+      const notificationEvents = (this.prisma as any).notificationEvent;
+      if (!notificationEvents?.create) return;
+      await notificationEvents.create({
+        data: {
+          organizationId: record.organizationId,
+          userId: record.employee?.userId ?? undefined,
+          type,
+          channel: 'IN_APP',
+          payload,
+        },
+      });
+    } catch {
+      // Notifications are best effort; an outage must never prevent closure.
+    }
+  }
+
+  private async organizationTimezoneFor(organizationId: string) {
+    const organizationDelegate = (this.prisma as any).organization;
+    const organization = organizationDelegate?.findUnique
+      ? await organizationDelegate.findUnique({
+          where: { id: organizationId },
+          select: { timezone: true },
+        })
+      : null;
+    return this.organizationTimezone(organization?.timezone);
+  }
+
+  private shortId(value: string) {
+    return value.length <= 12 ? value : `${value.slice(0, 8)}…`;
   }
 
   private selfAttendanceEnvelope(
@@ -3497,6 +4200,8 @@ export class OperationsService {
       employeeId: record?.employeeId ?? employee?.id ?? null,
       checkInAt,
       checkOutAt,
+      actualCheckInAt: record?.actualCheckInAt ?? checkInAt,
+      actualCheckOutAt: record?.actualCheckOutAt ?? checkOutAt,
       status: record?.status ?? null,
       note: record?.note ?? null,
       verificationStatus,
@@ -3511,6 +4216,16 @@ export class OperationsService {
       penaltyType: record?.penaltyType ?? null,
       penaltyValue: record?.penaltyValue ?? null,
       requiresReview: Boolean(record?.requiresReview),
+      requiresManualReview: Boolean(record?.requiresManualReview),
+      reviewReason: record?.reviewReason ?? null,
+      checkOutMethod: record?.checkOutMethod ?? null,
+      checkOutVerificationStatus: record?.checkOutVerificationStatus ?? null,
+      autoClosed: Boolean(record?.autoClosed),
+      autoClosedAt: record?.autoClosedAt ?? null,
+      autoCloseReason: record?.autoCloseReason ?? null,
+      plannedCheckOutAt: record?.plannedCheckOutAt ?? null,
+      calculatedWorkMinutes: record?.calculatedWorkMinutes ?? null,
+      approvedWorkMinutes: record?.approvedWorkMinutes ?? null,
       checkInLatitude: record?.checkInLatitude ?? null,
       checkInLongitude: record?.checkInLongitude ?? null,
       checkOutLatitude: record?.checkOutLatitude ?? null,
@@ -3529,7 +4244,9 @@ export class OperationsService {
       faceVerificationRejectionReason: record?.faceVerificationRejectionReason ?? null,
       canCheckIn: !checkInAt || Boolean(checkOutAt) || terminalFailure,
       canCheckOut: Boolean(checkInAt && !checkOutAt && !terminalFailure),
-      durationMinutes: this.durationMinutes(checkInAt, checkOutAt),
+      durationMinutes:
+        record?.calculatedWorkMinutes ??
+        this.durationMinutes(checkInAt, checkOutAt),
     };
   }
 
@@ -3590,7 +4307,7 @@ export class OperationsService {
     const rules: any = Array.isArray(storedRules)
       ? Object.fromEntries(storedRules.map((rule: any) => [String(rule.dayOfWeek), rule]))
       : storedRules ?? {};
-    const organizationDefaultRule = { isWorkingDay: true, startTime: policy?.workStartTime ?? '09:00', endTime: policy?.workEndTime ?? '17:00', lateUntilMinutes: Number(policy?.firstLateSliceMinutes ?? 15), severeLateUntilMinutes: Number(policy?.secondLateSliceMinutes ?? 60), absentAfterMinutes: Number(policy?.secondLateSliceMinutes ?? 60), earlyLeaveGraceMinutes: Number(policy?.gracePeriodMinutes ?? 0), overnightShift: false };
+    const organizationDefaultRule = { isWorkingDay: true, startTime: policy?.workStartTime ?? '11:15', endTime: policy?.workEndTime ?? '19:00', lateUntilMinutes: Number(policy?.firstLateSliceMinutes ?? 15), severeLateUntilMinutes: Number(policy?.secondLateSliceMinutes ?? 60), absentAfterMinutes: Number(policy?.secondLateSliceMinutes ?? 60), earlyLeaveGraceMinutes: Number(policy?.gracePeriodMinutes ?? 0), overnightShift: false };
     const rule = hasStoredRules ? (rules[String(weekday)] ?? rules[weekday] ?? null) : organizationDefaultRule;
     if (!rule || rule.isWorkingDay === false) {
       return { source: scheduleSource, scheduleSource, scheduleId: schedule?.id ?? null, timezone, workDate, plannedCheckIn: null, plannedCheckOut: null, plannedCheckInAt: null, plannedCheckOutAt: null, lateUntilAt: null, severeLateUntilAt: null, absentAfterAt: null, graceMinutes: 0, earlyLeaveMinutes: 0, isWorkingDay: false, overnightShift: false, expectedWorkMinutes: 0, configurationWarning };
@@ -3669,6 +4386,11 @@ export class OperationsService {
     return `${item('year')}-${item('month')}-${item('day')}`;
   }
 
+  private previousDate(value: string) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+  }
+
   private attendanceDayBounds(date: string, timezone: string) {
     const [year, month, day] = date.split('-').map(Number);
     const localDate = new Date(Date.UTC(year, month - 1, day));
@@ -3695,11 +4417,11 @@ export class OperationsService {
   }
 
   private calculateLatePenalty(date: Date, checkInAt: Date, policy: any) {
-    const [hours, minutes] = String(policy.workStartTime ?? '09:00')
+    const [hours, minutes] = String(policy.workStartTime ?? '11:15')
       .split(':')
       .map(Number);
     const scheduled = new Date(date);
-    scheduled.setHours(hours || 9, minutes || 0, 0, 0);
+    scheduled.setHours(Number.isFinite(hours) ? hours : 11, Number.isFinite(minutes) ? minutes : 15, 0, 0);
     const minutesLate = Math.max(
       0,
       Math.round((checkInAt.getTime() - scheduled.getTime()) / 60000),
@@ -3790,8 +4512,16 @@ export class OperationsService {
         allowMobileCheckIn: true,
         allowExpandedRadiusWithReview: true,
         webWifiPolicy: WebWifiPolicy.MANUAL_REVIEW,
-        workStartTime: '09:00',
-        workEndTime: '17:00',
+        workStartTime: '11:15',
+        workEndTime: '19:00',
+        monthlyLateAllowanceHours: 4,
+        lateAllowanceChargeHoursPerDay: 1,
+        missingAttendanceDisposition: MissingAttendanceDisposition.ABSENT,
+        autoCloseOpenAttendance: true,
+        regularShiftAutoCloseMode: RegularShiftAutoCloseMode.END_OF_WORK_DAY,
+        autoCloseGraceMinutes: 60,
+        autoCloseAtLocalMidnight: true,
+        checkOutOutsideLocationPolicy: CheckOutOutsideLocationPolicy.BLOCK,
       }
     );
   }
@@ -3805,7 +4535,9 @@ export class OperationsService {
     const reasons: string[] = [];
     const latitude = this.optionalNumber(input.latitude);
     const longitude = this.optionalNumber(input.longitude);
-    const locationAccuracyMeters = this.optionalNumber(input.locationAccuracyMeters);
+    const locationAccuracyMeters = this.optionalNumber(
+      input.locationAccuracyMeters ?? input.accuracy,
+    );
     const wifiSsid = this.optional(input.wifiSsid);
     const wifiBssid = normalizeWifiId(this.optional(input.wifiBssid));
     const photoFileId = this.optional(
@@ -3827,8 +4559,30 @@ export class OperationsService {
     if (policy.allowWebCheckIn === false && isWeb) {
       reasons.push('WEB_CHECK_IN_NOT_ALLOWED');
     }
-    const locationDecision = await this.attendanceLocationDecision(input, policy, user.organizationId!);
+    const locationDecision = await this.attendanceLocationDecision(
+      input,
+      policy,
+      user.organizationId!,
+      phase,
+    );
     reasons.push(...locationDecision.blockingReasons);
+    if (
+      phase === 'checkOut' &&
+      locationDecision.mode !== 'EXACT' &&
+      locationDecision.mode !== 'LOCATION_NOT_REQUIRED'
+    ) {
+      const outsidePolicy =
+        policy.checkOutOutsideLocationPolicy ??
+        CheckOutOutsideLocationPolicy.BLOCK;
+      if (outsidePolicy === CheckOutOutsideLocationPolicy.BLOCK) {
+        reasons.push('OUTSIDE_ALLOWED_LOCATION');
+      } else if (outsidePolicy === CheckOutOutsideLocationPolicy.MANUAL_REVIEW) {
+        reasons.push('CHECK_OUT_OUTSIDE_LOCATION_REVIEW');
+      } else {
+        reasons.push('CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE');
+        if (!photoFileId) reasons.push('PHOTO_REQUIRED');
+      }
+    }
     if (policy.requireWifi) {
       if (isWeb) {
         if (policy.webWifiPolicy === WebWifiPolicy.BLOCK) {
@@ -3878,6 +4632,8 @@ export class OperationsService {
     const reviewReasons = new Set([
       'EXPANDED_LOCATION_REVIEW',
       'WEB_WIFI_MANUAL_REVIEW',
+      'CHECK_OUT_OUTSIDE_LOCATION_REVIEW',
+      'CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE',
     ]);
     const hardFailures = reasons.filter((reason) => !reviewReasons.has(reason));
     const status = hardFailures.length
@@ -3901,7 +4657,9 @@ export class OperationsService {
     return {
       [`${prefix}Latitude`]: this.optionalNumber(input.latitude),
       [`${prefix}Longitude`]: this.optionalNumber(input.longitude),
-      [`${prefix}LocationAccuracyMeters`]: this.optionalNumber(input.locationAccuracyMeters),
+      [`${prefix}LocationAccuracyMeters`]: this.optionalNumber(
+        input.locationAccuracyMeters ?? input.accuracy,
+      ),
       [`${prefix}LocationCapturedAt`]: this.safeDate(input.locationCapturedAt),
       [`${prefix}WifiSsid`]: this.optional(input.wifiSsid),
       [`${prefix}WifiBssid`]: normalizeWifiId(this.optional(input.wifiBssid)),
@@ -3970,7 +4728,12 @@ export class OperationsService {
     return undefined;
   }
 
-  private async attendanceLocationDecision(input: any, policy: any, organizationId: string) {
+  private async attendanceLocationDecision(
+    input: any,
+    policy: any,
+    organizationId: string,
+    phase: 'checkIn' | 'checkOut' = 'checkIn',
+  ) {
     const latitude = this.optionalNumber(input.latitude);
     const longitude = this.optionalNumber(input.longitude);
     const accuracy = this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters);
@@ -3978,8 +4741,9 @@ export class OperationsService {
     if (!policy.requireLocation) return { blockingReasons: [] as string[], source: null, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'LOCATION_NOT_REQUIRED' };
     const reasons: string[] = [];
     if (latitude === undefined || longitude === undefined || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) reasons.push('LOCATION_REQUIRED');
-    // Current clients always send this evidence.  Reject stale or implausibly
-    // future values while keeping older API clients compatible when absent.
+    // Check-out is a final security decision, not a continuation of preflight:
+    // it requires a fresh capture. Check-in retains old-client compatibility.
+    if (phase === 'checkOut' && !capturedAt) reasons.push('LOCATION_STALE');
     if (capturedAt && (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 || capturedAt.getTime() - Date.now() > 60 * 1000)) reasons.push('LOCATION_STALE');
     if (accuracy !== undefined && accuracy < 0) reasons.push('GPS_ACCURACY_TOO_LOW');
     if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
@@ -3990,10 +4754,22 @@ export class OperationsService {
       const branch = await this.prisma.organizationBranch.findFirst({ where: { id: branchId, organizationId, isActive: true }, select: { id: true } });
       if (!branch) reasons.push('BRANCH_NOT_ALLOWED');
     }
-    const locations = await this.prisma.organizationAttendanceLocation.findMany({
+    const configuredLocations = await this.prisma.organizationAttendanceLocation.findMany({
       where: { organizationId, isActive: true, ...(isWeb ? { allowedForWeb: true } : { allowedForMobile: true }), ...(attendanceLocationId ? { id: attendanceLocationId } : {}), ...(branchId && !reasons.includes('BRANCH_NOT_ALLOWED') ? { officeId: branchId } : {}) },
       select: { id: true, name: true, latitude: true, longitude: true, exactRadiusMeters: true, expandedRadiusMeters: true, requiresReviewOutsideExactRadius: true },
     });
+    const locations = configuredLocations.filter((location) =>
+      Number.isFinite(location.latitude) &&
+      Number.isFinite(location.longitude) &&
+      location.latitude >= -90 &&
+      location.latitude <= 90 &&
+      location.longitude >= -180 &&
+      location.longitude <= 180 &&
+      Number.isFinite(location.exactRadiusMeters) &&
+      Number.isFinite(location.expandedRadiusMeters) &&
+      location.exactRadiusMeters > 0 &&
+      location.expandedRadiusMeters >= location.exactRadiusMeters,
+    );
     if (attendanceLocationId && !locations.length) {
       reasons.push('ATTENDANCE_LOCATION_NOT_ALLOWED');
       return { blockingReasons: [...new Set(reasons)], source: 'ATTENDANCE_LOCATION', distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
@@ -4010,8 +4786,10 @@ export class OperationsService {
     if (latitude === undefined || longitude === undefined || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return { blockingReasons: [...new Set(reasons)], source, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
     const nearest = candidates.map((location) => ({ location, distance: distanceMeters(latitude, longitude, location.latitude, location.longitude) })).sort((a, b) => a.distance - b.distance)[0];
     const { location, distance } = nearest;
-    if (distance > location.expandedRadiusMeters || (distance > location.exactRadiusMeters && !location.requiresReviewOutsideExactRadius)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
-    if (distance > location.exactRadiusMeters && distance <= location.expandedRadiusMeters && location.requiresReviewOutsideExactRadius) reasons.push('EXPANDED_LOCATION_REVIEW');
+    if (phase === 'checkIn') {
+      if (distance > location.expandedRadiusMeters || (distance > location.exactRadiusMeters && !location.requiresReviewOutsideExactRadius)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
+      if (distance > location.exactRadiusMeters && distance <= location.expandedRadiusMeters && location.requiresReviewOutsideExactRadius) reasons.push('EXPANDED_LOCATION_REVIEW');
+    }
     const mode = distance <= location.exactRadiusMeters ? 'EXACT' : distance <= location.expandedRadiusMeters ? 'EXPANDED_REVIEW' : 'OUTSIDE';
     return { blockingReasons: [...new Set(reasons)], source, distanceMeters: Math.round(distance), allowedRadiusMeters: location.exactRadiusMeters, exactRadiusMeters: location.exactRadiusMeters, expandedRadiusMeters: location.expandedRadiusMeters, matchedLocationId: location.id, matchedLocationName: location.name, mode };
   }

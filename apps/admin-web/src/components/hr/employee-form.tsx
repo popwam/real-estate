@@ -578,7 +578,7 @@ function defaultAttendanceOverride(timezone?: string | null): AttendanceOverride
     effectiveFrom: new Date().toISOString().slice(0, 10),
     effectiveTo: "",
     timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-    weeklyRules: WEEK_DAYS.map((_, dayOfWeek) => ({ dayOfWeek, isWorkingDay: dayOfWeek > 0 && dayOfWeek < 6, startTime: "09:00", endTime: "17:00", lateUntilMinutes: 15, severeLateUntilMinutes: 60, absentAfterMinutes: 60, earlyLeaveGraceMinutes: 0, overnightShift: false })),
+    weeklyRules: WEEK_DAYS.map((_, dayOfWeek) => ({ dayOfWeek, isWorkingDay: dayOfWeek > 0 && dayOfWeek < 6, startTime: "11:15", endTime: "19:00", lateUntilMinutes: 15, severeLateUntilMinutes: 60, absentAfterMinutes: 60, earlyLeaveGraceMinutes: 0, overnightShift: false })),
   };
 }
 

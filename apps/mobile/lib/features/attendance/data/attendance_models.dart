@@ -17,6 +17,14 @@ class AttendanceRecord {
     required this.canCheckIn,
     required this.canCheckOut,
     this.durationMinutes,
+    this.autoClosed = false,
+    this.autoClosedAt,
+    this.autoCloseReason,
+    this.checkOutMethod,
+    this.checkOutVerificationStatus,
+    this.requiresManualReview = false,
+    this.reviewReason,
+    this.plannedCheckOutAt,
   });
 
   final String? id;
@@ -34,6 +42,14 @@ class AttendanceRecord {
   final bool canCheckIn;
   final bool canCheckOut;
   final int? durationMinutes;
+  final bool autoClosed;
+  final String? autoClosedAt;
+  final String? autoCloseReason;
+  final String? checkOutMethod;
+  final String? checkOutVerificationStatus;
+  final bool requiresManualReview;
+  final String? reviewReason;
+  final String? plannedCheckOutAt;
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
@@ -55,6 +71,14 @@ class AttendanceRecord {
       canCheckIn: json['canCheckIn'] == true,
       canCheckOut: json['canCheckOut'] == true,
       durationMinutes: intValue(json, 'durationMinutes'),
+      autoClosed: json['autoClosed'] == true,
+      autoClosedAt: json['autoClosedAt']?.toString(),
+      autoCloseReason: json['autoCloseReason']?.toString(),
+      checkOutMethod: json['checkOutMethod']?.toString(),
+      checkOutVerificationStatus: json['checkOutVerificationStatus']?.toString(),
+      requiresManualReview: json['requiresManualReview'] == true,
+      reviewReason: json['reviewReason']?.toString(),
+      plannedCheckOutAt: json['plannedCheckOutAt']?.toString(),
     );
   }
 }

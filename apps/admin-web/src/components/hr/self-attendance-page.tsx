@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Check, Clock, LogIn, LogOut, MapPin, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FeedbackState } from "@/components/feedback-state";
@@ -20,6 +20,7 @@ import {
   getMyAttendancePolicyApi,
   getMyWebAttendanceLocationsApi,
   preflightCheckInApi,
+  preflightCheckOutApi,
   uploadAttendanceEvidencePhotoApi,
   type AttendanceCheckInPreflight,
 } from "@/lib/hr-settings-api";
@@ -45,6 +46,7 @@ export function SelfAttendanceSection() {
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [retryLocationAction, setRetryLocationAction] = useState<"check-in" | "check-out" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"check-in" | "check-out" | null>(null);
 
   const today = useQuery({ queryKey: ["hr-attendance", "me", "today"], queryFn: getMyAttendanceTodayApi });
   const history = useQuery({ queryKey: ["hr-attendance", "me", "history"], queryFn: getMyAttendanceHistoryApi });
@@ -110,6 +112,7 @@ export function SelfAttendanceSection() {
     setPreflight(null);
     setFeedback(null);
     setRetryLocationAction(null);
+    setPendingAction(null);
     setStage("idle");
     submittingRef.current = false;
   }, [clearPreview, stopCamera]);
@@ -120,6 +123,7 @@ export function SelfAttendanceSection() {
     setFeedback(null);
     setPreflight(null);
     setRetryLocationAction(null);
+    setPendingAction("check-in");
     clearPreview();
     try {
       setStage("checking-location");
@@ -143,7 +147,13 @@ export function SelfAttendanceSection() {
         submittingRef.current = false;
         return;
       }
-      await startCamera();
+      if (decision.requiresPhoto) await startCamera();
+      else {
+        setStage("recording-attendance");
+        await checkInApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation.id, branchId: selectedAttendanceLocation.branchId });
+        await invalidate();
+        cancelCheckIn();
+      }
     } catch (error) {
       if (isBrowserLocationError(error)) setRetryLocationAction("check-in");
       setFeedback(attendanceErrorMessage(error, t));
@@ -191,19 +201,26 @@ export function SelfAttendanceSection() {
     try {
       setFeedback(null);
       setStage("uploading-photo");
-      const file = new File([photo], "attendance-check-in.jpg", { type: "image/jpeg" });
-      const uploaded = await uploadAttendanceEvidencePhotoApi(file);
+      const action = pendingAction ?? "check-in";
+      const file = new File([photo], action === "check-out" ? "attendance-check-out.jpg" : "attendance-check-in.jpg", { type: "image/jpeg" });
+      const uploaded = await uploadAttendanceEvidencePhotoApi(file, action === "check-out" ? "CHECK_OUT" : "CHECK_IN");
       setStage("recording-attendance");
-      await checkInApi({
+      const payload = {
         ...location,
         attendanceLocationId: selectedAttendanceLocation?.id,
         branchId: selectedAttendanceLocation?.branchId,
         photoFileId: uploaded.fileId,
-      });
+      };
+      if (action === "check-out") {
+        await checkOutApi({ ...payload, attendanceRecordId: today.data?.id ?? undefined });
+      } else {
+        await checkInApi(payload);
+      }
       await invalidate();
       stopCamera();
       clearPreview();
       setLocation(null);
+      setPendingAction(null);
       setStage("idle");
       submittingRef.current = false;
     } catch (error) {
@@ -212,25 +229,48 @@ export function SelfAttendanceSection() {
     }
   };
 
-  const checkOut = useMutation({
-    mutationFn: async () => {
-      setFeedback(null);
-      setStage("checking-out");
+  const beginCheckOut = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setFeedback(null);
+    setPreflight(null);
+    setRetryLocationAction(null);
+    setPendingAction("check-out");
+    clearPreview();
+    try {
+      setStage("checking-location");
       const capturedLocation = await getBrowserLocation(selectedAttendanceLocation?.id ?? null);
-      return checkOutApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation?.id, branchId: selectedAttendanceLocation?.branchId });
-    },
-    onSuccess: invalidate,
-    onError: (error) => {
+      setLocation(capturedLocation);
+      if (!selectedAttendanceLocation) throw new Error("ATTENDANCE_LOCATION_NOT_ALLOWED");
+      setStage("verifying-location");
+      const decision = await preflightCheckOutApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation.id, branchId: selectedAttendanceLocation.branchId, attendanceRecordId: today.data?.id ?? undefined });
+      setPreflight(decision);
+      if (!decision.allowed) {
+        setFeedback(preflightMessage(decision, t));
+        setStage("idle");
+        submittingRef.current = false;
+        return;
+      }
+      if (decision.requiresPhoto) {
+        await startCamera();
+        return;
+      }
+      setStage("recording-attendance");
+      await checkOutApi({ ...capturedLocation, attendanceLocationId: selectedAttendanceLocation.id, branchId: selectedAttendanceLocation.branchId, attendanceRecordId: today.data?.id ?? undefined });
+      await invalidate();
+      cancelCheckIn();
+    } catch (error) {
       if (isBrowserLocationError(error)) setRetryLocationAction("check-out");
       setFeedback(attendanceErrorMessage(error, t));
-    },
-    onSettled: () => setStage("idle"),
-  });
+      setStage("idle");
+      submittingRef.current = false;
+    }
+  };
 
   const retryLocation = () => {
     if (retryLocationAction === "check-out") {
       setRetryLocationAction(null);
-      checkOut.mutate();
+      void beginCheckOut();
       return;
     }
     void beginCheckIn();
@@ -241,7 +281,8 @@ export function SelfAttendanceSection() {
   const todayRecord = record?.id ? record : null;
   const hasOpenAttendance = Boolean(todayRecord?.checkInAt && !todayRecord?.checkOutAt);
   const isCompleted = Boolean(todayRecord?.checkInAt && todayRecord?.checkOutAt);
-  const checkInInProgress = stage !== "idle" && stage !== "checking-out";
+  const checkInInProgress = pendingAction === "check-in" && stage !== "idle";
+  const checkOutInProgress = pendingAction === "check-out" && stage !== "idle";
   const hasEligibleLocation = Boolean(selectedAttendanceLocation);
   const employeeLinked = Boolean(session.data?.hrEmployee?.id && session.data.hrEmployee.status === "ACTIVE" && session.data.hrEmployee.attendanceEnabled);
   const webCheckInAllowed = settings.data?.allowWebCheckIn !== false;
@@ -260,7 +301,7 @@ export function SelfAttendanceSection() {
       todayRecord: todayRecord ? { id: todayRecord.id, checkInAt: todayRecord.checkInAt, checkOutAt: todayRecord.checkOutAt, status: todayRecord.status } : null,
       hasOpenAttendance,
       isLoading,
-      isSubmitting: checkInInProgress || checkOut.isPending,
+      isSubmitting: checkInInProgress || checkOutInProgress,
       employeeLinkStatus: session.isLoading ? "LOADING" : employeeLinked ? "ACTIVE_LINKED" : "NOT_LINKED_OR_INACTIVE",
       attendancePolicy: settings.data ? { allowWebCheckIn: settings.data.allowWebCheckIn, requireLocation: settings.data.requireLocation, requirePhoto: settings.data.requirePhoto, requireWifi: settings.data.requireWifi, webWifiPolicy: settings.data.webWifiPolicy } : null,
       canUseWebAttendance,
@@ -270,7 +311,7 @@ export function SelfAttendanceSection() {
     if (debugKey === lastDebugStateRef.current) return;
     lastDebugStateRef.current = debugKey;
     console.debug("[attendance:self-service]", debugState);
-  }, [attendanceLocationId, canUseWebAttendance, checkInInProgress, checkOut.isPending, eligibleAttendanceLocations.length, employeeLinked, finalActionState, hasOpenAttendance, isLoading, selectedAttendanceLocation?.id, session.isLoading, settings.data, todayRecord]);
+  }, [attendanceLocationId, canUseWebAttendance, checkInInProgress, checkOutInProgress, eligibleAttendanceLocations.length, employeeLinked, finalActionState, hasOpenAttendance, isLoading, selectedAttendanceLocation?.id, session.isLoading, settings.data, todayRecord]);
 
   return (
     <div className="space-y-5">
@@ -283,13 +324,14 @@ export function SelfAttendanceSection() {
             <Metric icon={<MapPin className="h-4 w-4" />} label={t("attendance.self.status")} value={record.status ?? t("common.notSet")} />
           </div>
         ) : null}
+        {record?.autoClosed ? <FeedbackState className="mt-4" tone="error" title={t("attendance.autoClosedBadge")} description={t("attendance.autoClosedDescription", { reason: record.autoCloseReason ?? "-" })} /> : null}
         {settings.data ? <p className="mt-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-sm text-[var(--color-muted)]">{t("companySettings.browserWifiLimitation")}</p> : null}
         {attendanceLocations.isLoading ? <LoadingState label={t("attendance.self.loadingLocations")} /> : null}
         <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           {eligibleAttendanceLocations.length === 1 && selectedAttendanceLocation ? <div className="grid gap-1.5"><Label>{t("attendance.self.branch")}</Label><p className="flex h-10 items-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 text-sm text-[var(--color-foreground)]">{selectedAttendanceLocation.branchName}</p></div> : null}
-          {eligibleAttendanceLocations.length > 1 ? <div className="grid gap-1.5"><Label htmlFor="attendanceLocation">{t("attendance.self.branch")}</Label><select id="attendanceLocation" className="h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-foreground)]" value={attendanceLocationId} onChange={(event) => setAttendanceLocationId(event.target.value)} disabled={checkInInProgress || checkOut.isPending}><option value="">{t("attendance.self.selectAttendanceLocation")}</option>{eligibleAttendanceLocations.map((attendanceLocation) => <option key={attendanceLocation.id} value={attendanceLocation.id}>{attendanceLocation.branchName}</option>)}</select></div> : null}
-          {finalActionState === "check-in" ? <Button type="button" onClick={beginCheckIn} disabled={checkInInProgress || checkOut.isPending}><LogIn className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkInAction"))}</Button> : null}
-          {finalActionState === "check-out" ? <Button type="button" className="ui-button-secondary" onClick={() => checkOut.mutate()} disabled={checkInInProgress || checkOut.isPending}><LogOut className="h-4 w-4" aria-hidden="true" />{stage === "checking-out" ? t("attendance.self.recordingAttendance") : t("attendance.self.checkOutAction")}</Button> : null}
+          {eligibleAttendanceLocations.length > 1 ? <div className="grid gap-1.5"><Label htmlFor="attendanceLocation">{t("attendance.self.branch")}</Label><select id="attendanceLocation" className="h-10 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-foreground)]" value={attendanceLocationId} onChange={(event) => setAttendanceLocationId(event.target.value)} disabled={checkInInProgress || checkOutInProgress}><option value="">{t("attendance.self.selectAttendanceLocation")}</option>{eligibleAttendanceLocations.map((attendanceLocation) => <option key={attendanceLocation.id} value={attendanceLocation.id}>{attendanceLocation.branchName}</option>)}</select></div> : null}
+          {finalActionState === "check-in" ? <Button type="button" onClick={beginCheckIn} disabled={checkInInProgress || checkOutInProgress}><LogIn className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkInAction"))}</Button> : null}
+          {finalActionState === "check-out" ? <Button type="button" className="ui-button-secondary" onClick={() => void beginCheckOut()} disabled={checkInInProgress || checkOutInProgress}><LogOut className="h-4 w-4" aria-hidden="true" />{stageLabel(stage, t, t("attendance.self.checkOutAction"))}</Button> : null}
           {finalActionState === "completed" ? <p className="text-sm font-medium text-[var(--color-muted)]">{t("attendance.self.completedToday")}</p> : null}
         </div>
 
@@ -307,7 +349,7 @@ export function SelfAttendanceSection() {
         {preflight && !preflight.allowed ? <PreflightDetails decision={preflight} accuracyThresholdMeters={settings.data?.locationAccuracyThresholdMeters ?? null} t={t} /> : null}
         {record?.minutesLate ? <FeedbackState className="mt-4" tone="success" title={t("attendance.self.latePenalty")} description={t("attendance.self.latePenaltyDescription", { minutes: record.minutesLate, penalty: record.penaltyType ?? t("common.notSet") })} /> : null}
         {feedback ? <FeedbackState className="mt-4" tone="error" title={t("attendance.self.checkInError")} description={feedback} /> : null}
-        {retryLocationAction ? <Button type="button" className="ui-button-secondary mt-3" onClick={retryLocation} disabled={checkInInProgress || checkOut.isPending}><RotateCcw className="h-4 w-4" aria-hidden="true" />{t("attendance.self.retryLocation")}</Button> : null}
+        {retryLocationAction ? <Button type="button" className="ui-button-secondary mt-3" onClick={retryLocation} disabled={checkInInProgress || checkOutInProgress}><RotateCcw className="h-4 w-4" aria-hidden="true" />{t("attendance.self.retryLocation")}</Button> : null}
       </DetailCard>
 
       <DetailCard title={t("attendance.self.history")}>
@@ -337,7 +379,7 @@ function Metric({ icon, label, value }: { icon: ReactNode; label: string; value:
 
 function preflightMessage(decision: AttendanceCheckInPreflight, t: (key: string, values?: Record<string, string | number>) => string) { return decision.blockingReasons.map((reason) => reasonMessage(reason, t)).join(" ") || t("attendance.self.preflightRejected"); }
 function attendanceErrorMessage(error: unknown, t: (key: string, values?: Record<string, string | number>) => string) { if (error instanceof ApiError) { if (error.status === 401) return t("auth.sessionExpired"); const details = error.details as { reasons?: unknown } | undefined; const reasons = Array.isArray(details?.reasons) ? details.reasons.map(String) : []; return reasons.length ? reasons.map((reason) => reasonMessage(reason, t)).join(" ") : t("attendance.self.requestFailed", { requestId: error.requestId ?? "" }); } if (error instanceof DOMException) return error.name === "NotAllowedError" ? reasonMessage(error.name, t) : t("attendance.self.cameraUnavailable"); if (error instanceof Error) return reasonMessage(error.message, t); return t("attendance.self.requestFailed"); }
-function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_POSITION_UNAVAILABLE", "LOCATION_TIMEOUT", "LOCATION_INSECURE_CONTEXT", "LOCATION_PERMISSION_POLICY_BLOCKED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "ATTENDANCE_LOCATION_NOT_ALLOWED", "OUTSIDE_ALLOWED_LOCATION", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
+function reasonMessage(reason: string, t: (key: string, values?: Record<string, string | number>) => string) { const supported = new Set(["LOCATION_PERMISSION_DENIED", "LOCATION_POSITION_UNAVAILABLE", "LOCATION_TIMEOUT", "LOCATION_INSECURE_CONTEXT", "LOCATION_PERMISSION_POLICY_BLOCKED", "LOCATION_NOT_AVAILABLE", "LOCATION_REQUIRED", "LOCATION_STALE", "GPS_ACCURACY_TOO_LOW", "ATTENDANCE_LOCATION_NOT_CONFIGURED", "ATTENDANCE_LOCATION_NOT_ALLOWED", "OUTSIDE_ALLOWED_LOCATION", "CHECK_OUT_OUTSIDE_LOCATION_REVIEW", "CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE", "WEB_CHECK_IN_NOT_ALLOWED", "WEB_WIFI_NOT_AVAILABLE", "WEB_WIFI_MANUAL_REVIEW", "PHOTO_REQUIRED", "CAMERA_NOT_AVAILABLE", "NotAllowedError"]); return supported.has(reason) ? t(`attendance.self.reason.${reason}`) : t("attendance.self.verificationFailed"); }
 function stageLabel(stage: CheckInStage, t: (key: string, values?: Record<string, string | number>) => string, fallback: string) { return ({ "checking-location": t("attendance.self.checkingLocation"), "verifying-location": t("attendance.self.verifyingLocation"), "starting-camera": t("attendance.self.startingCamera"), "uploading-photo": t("attendance.self.uploadingPhoto"), "recording-attendance": t("attendance.self.recordingAttendance") } as Partial<Record<CheckInStage, string>>)[stage] ?? fallback; }
 function formatDate(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(); }
 function formatDateTime(value: string | null | undefined) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString(); }

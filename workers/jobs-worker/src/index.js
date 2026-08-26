@@ -3,6 +3,7 @@ const { buildHealth } = require('../../_shared/health');
 const { createLogger } = require('../../_shared/logger');
 const { createRabbitMqClient } = require('../../_shared/rabbitmq');
 const { runClaimExpiryJob } = require('./jobs/claim-expiry');
+const { runAttendanceAutoCloseJob } = require('./jobs/attendance-auto-close');
 
 const WORKER_NAME = 'jobs-worker';
 const QUEUE_NAME = 'scheduled-jobs';
@@ -12,6 +13,7 @@ const PLANNED_JOBS = [
   'document-expiry-alerts',
   'domain-verification',
   'saved-search-alerts',
+  'attendance-auto-close',
 ];
 
 async function start(options = {}) {
@@ -27,6 +29,18 @@ async function start(options = {}) {
   await rabbitmq.subscribe(QUEUE_NAME, [], async () => {
     logger.info('Job event placeholder received');
   });
+
+  // This is independent of Admin Web. Railway may run this worker continuously
+  // or invoke `attendance:auto-close` as a cron command every 5–10 minutes.
+  await runAttendanceAutoCloseJob({ logger });
+  if (!options.once) {
+    const interval = Math.max(5, Number(process.env.ATTENDANCE_AUTO_CLOSE_INTERVAL_MINUTES || 10));
+    setInterval(() => {
+      runAttendanceAutoCloseJob({ logger }).catch((error) => {
+        logger.warn('Attendance auto-close job failed', { message: error.message });
+      });
+    }, interval * 60 * 1000);
+  }
 
   if (options.once) {
     await rabbitmq.close();
@@ -56,6 +70,12 @@ async function main() {
       logger,
       dryRun,
     });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'attendance:auto-close') {
+    const result = await runAttendanceAutoCloseJob({ logger });
     console.log(JSON.stringify(result, null, 2));
     return;
   }

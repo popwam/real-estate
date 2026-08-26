@@ -91,6 +91,17 @@ describe('OperationsService self attendance', () => {
             employee,
           }),
         ),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: 'attendance_1',
+          organizationId: employee.organizationId,
+          employeeId: employee.id,
+          date: new Date('2026-07-01T00:00:00.000Z'),
+          checkInAt: new Date('2026-07-01T08:00:00.000Z'),
+          checkOutAt: new Date('2026-07-01T17:00:00.000Z'),
+          status: HrAttendanceStatus.PRESENT,
+          employee,
+        }),
       },
       operationsActivity: {
         create: jest.fn().mockResolvedValue({ id: 'activity_1' }),
@@ -309,8 +320,10 @@ describe('OperationsService self attendance', () => {
   });
 
   it('blocks duplicate open check-ins', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-01T09:00:00.000Z'));
     const { prisma, service } = setup();
-    prisma.hrAttendanceRecord.findFirst.mockResolvedValueOnce({
+    prisma.hrAttendanceRecord.findFirst.mockResolvedValue({
       id: 'attendance_1',
       organizationId: employee.organizationId,
       employeeId: employee.id,
@@ -347,9 +360,9 @@ describe('OperationsService self attendance', () => {
 
     expect(result.employeeId).toBe(employee.id);
     expect(result.canCheckOut).toBe(false);
-    expect(prisma.hrAttendanceRecord.update).toHaveBeenCalledWith(
+    expect(prisma.hrAttendanceRecord.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'attendance_1' },
+        where: { id: 'attendance_1', checkOutAt: null },
         data: expect.objectContaining({
           checkOutAt: expect.any(Date),
           note: 'Leaving',
@@ -717,6 +730,113 @@ describe('OperationsService self attendance', () => {
   });
 });
 
+describe('Attendance auto-close policy', () => {
+  const policy = (overrides: Record<string, unknown> = {}) => ({
+    autoCloseOpenAttendance: true,
+    regularShiftAutoCloseMode: 'END_OF_WORK_DAY',
+    autoCloseGraceMinutes: 60,
+    autoCloseAtLocalMidnight: true,
+    ...overrides,
+  });
+  const record = (overrides: Record<string, unknown> = {}) => ({
+    id: 'attendance_1',
+    organizationId: 'org_1',
+    checkInAt: new Date('2026-07-01T08:00:00.000Z'),
+    actualCheckInAt: null,
+    checkOutAt: null,
+    overnightShift: false,
+    plannedCheckOutAt: null,
+    autoCloseWarningSentAt: null,
+    employee: { userId: 'user_1' },
+    ...overrides,
+  });
+
+  it('closes a regular open record at the organization-local end of day', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record(),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-02T00:10:00.000Z'),
+    );
+    expect(plan.reason).toBe('MISSED_CHECK_OUT_END_OF_DAY');
+    expect(plan.checkOutAt.toISOString()).toBe('2026-07-01T20:59:59.000Z');
+  });
+
+  it('does not use UTC midnight for an organization in another timezone', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({ checkInAt: new Date('2026-07-02T06:00:00.000Z') }),
+      policy(),
+      'America/Los_Angeles',
+      new Date('2026-07-02T06:30:00.000Z'),
+    );
+    // It is still July 1 locally; a UTC-midnight implementation would close it.
+    expect(plan.reason).toBe('STALE_OPEN_RECORD');
+  });
+
+  it('never closes an overnight shift at midnight', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({
+        overnightShift: true,
+        plannedCheckOutAt: new Date('2026-07-02T03:00:00.000Z'),
+      }),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-02T00:10:00.000Z'),
+    );
+    expect(plan.reason).toBe('MISSED_CHECK_OUT_AFTER_SHIFT');
+    expect(plan.dueAt.toISOString()).toBe('2026-07-02T04:00:00.000Z');
+  });
+
+  it('uses the documented safety limit for an overnight record without a checkout snapshot', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({ overnightShift: true }),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-01T10:00:00.000Z'),
+    );
+    expect(plan.reason).toBe('STALE_OPEN_RECORD');
+    expect(plan.dueAt.toISOString()).toBe('2026-07-02T20:00:00.000Z');
+  });
+
+  it('uses planned check-out plus grace when configured for a regular shift', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({ plannedCheckOutAt: new Date('2026-07-01T15:00:00.000Z') }),
+      policy({ regularShiftAutoCloseMode: 'PLANNED_CHECK_OUT_PLUS_GRACE', autoCloseGraceMinutes: 45 }),
+      'Europe/Chisinau',
+      new Date('2026-07-01T16:00:00.000Z'),
+    );
+    expect(plan.reason).toBe('MISSED_CHECK_OUT_AFTER_SHIFT');
+    expect(plan.checkOutAt.toISOString()).toBe('2026-07-01T15:45:00.000Z');
+  });
+
+  it('is idempotent and never marks an auto-close as location verified', async () => {
+    const prisma = {
+      hrAttendanceRecord: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    };
+    const service = new OperationsService(prisma as any);
+    const result = await (service as any).autoCloseRecordIfDue(
+      record(),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-02T00:10:00.000Z'),
+    );
+    expect(result.closed).toBe(false);
+    expect(prisma.hrAttendanceRecord.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          checkOutVerificationStatus: 'AUTO_CLOSED',
+          requiresManualReview: true,
+        }),
+      }),
+    );
+  });
+});
+
 describe('Employee attendance schedule overrides', () => {
   const manager = {
     userId: 'manager_1', organizationId: 'org_1', role: 'developer_admin',
@@ -824,6 +944,7 @@ describe('HR attendance date filtering', () => {
     const prisma = {
       organization: { findUnique: jest.fn().mockResolvedValue({ timezone }) },
       hrAttendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+      organizationAttendanceSettings: { findUnique: jest.fn().mockResolvedValue(null) },
     };
     return { prisma, service: new OperationsService(prisma as any) };
   }
@@ -856,6 +977,130 @@ describe('HR attendance date filtering', () => {
     const { service } = setup();
     await expect(service.listHrAttendance(manager, { date: '2026-02-30' })).rejects.toThrow('valid calendar date');
     await expect(service.listHrAttendance(manager, { date: '03-08-2026' })).rejects.toThrow('YYYY-MM-DD');
+  });
+});
+
+describe('HR attendance roster export', () => {
+  const manager = {
+    userId: 'manager_1',
+    organizationId: 'org_1',
+    role: 'developer_admin',
+    permissions: ['hr.view', 'hr.attendance.export'],
+  } as unknown as AuthenticatedRequestUser;
+
+  it('exports every active employee with channel and monthly late allowance balance', async () => {
+    const employee = {
+      id: 'employee_1',
+      organizationId: 'org_1',
+      name: 'Example Employee',
+      employeeCode: 'EMP-1',
+      status: 'ACTIVE',
+      attendanceScheduleMode: 'ORGANIZATION_DEFAULT',
+      attendanceScheduleId: null,
+      workStartDate: null,
+      hireDate: null,
+    };
+    const attendance = {
+      id: 'attendance_1',
+      employeeId: employee.id,
+      date: new Date('2026-08-04T00:00:00.000Z'),
+      plannedCheckInAt: new Date('2026-08-04T11:15:00.000Z'),
+      checkInAt: new Date('2026-08-04T11:20:00.000Z'),
+      plannedCheckOutAt: new Date('2026-08-04T19:00:00.000Z'),
+      checkOutAt: new Date('2026-08-04T19:00:00.000Z'),
+      status: 'LATE',
+      entryChannel: 'WEB',
+      attendanceSource: 'SELF_SERVICE',
+      minutesLate: 5,
+      note: null,
+    };
+    const prisma = {
+      organization: { findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }) },
+      organizationAttendanceSettings: {
+        findUnique: jest.fn().mockResolvedValue({
+          workStartTime: '11:15',
+          workEndTime: '19:00',
+          monthlyLateAllowanceHours: 4,
+          lateAllowanceChargeHoursPerDay: 1,
+          missingAttendanceDisposition: 'ABSENT',
+        }),
+      },
+      hrEmployee: { findMany: jest.fn().mockResolvedValue([employee]) },
+      hrAttendanceRecord: {
+        findMany: jest.fn()
+          .mockResolvedValueOnce([attendance])
+          .mockResolvedValueOnce([
+            { employeeId: employee.id, date: new Date('2026-08-01T00:00:00.000Z') },
+            { employeeId: employee.id, date: new Date('2026-08-02T00:00:00.000Z') },
+            { employeeId: employee.id, date: new Date('2026-08-03T00:00:00.000Z') },
+            { employeeId: employee.id, date: new Date('2026-08-04T00:00:00.000Z') },
+          ]),
+      },
+    };
+    const service = new OperationsService(prisma as any);
+
+    const csv = await service.exportHrAttendance(
+      { date: '2026-08-04', dateFrom: '2026-08-04', dateTo: '2026-08-04', format: 'csv' },
+      manager,
+    );
+
+    expect(csv).toContain('employeeName');
+    expect(csv).toContain('Example Employee');
+    expect(csv).toContain('WEB');
+    expect(csv).toContain('lateAllowanceRemainingMinutes');
+    expect(csv).toContain(',60,240,0,');
+  });
+
+  it('classifies a missing working day using the configured leave policy', async () => {
+    const employee = {
+      id: 'employee_1',
+      organizationId: 'org_1',
+      status: 'ACTIVE',
+      workStartDate: null,
+      hireDate: null,
+    };
+    const prisma = {
+      organization: { findMany: jest.fn().mockResolvedValue([{ id: 'org_1', timezone: 'UTC' }]) },
+      organizationAttendanceSettings: {
+        findUnique: jest.fn().mockResolvedValue({
+          workStartTime: '11:15',
+          workEndTime: '19:00',
+          missingAttendanceDisposition: 'LEAVE',
+        }),
+      },
+      hrEmployee: { findMany: jest.fn().mockResolvedValue([employee]) },
+      hrAttendanceRecord: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'attendance_1' }),
+      },
+    };
+    const service = new OperationsService(prisma as any);
+    jest.spyOn(service, 'resolveEffectiveAttendanceSchedule').mockResolvedValue({
+      isWorkingDay: true,
+      scheduleSource: 'ORGANIZATION_DEFAULT',
+      scheduleId: null,
+      timezone: 'UTC',
+      overnightShift: false,
+      plannedCheckInAt: new Date('2026-08-04T11:15:00.000Z'),
+      plannedCheckOutAt: new Date('2026-08-04T19:00:00.000Z'),
+      graceMinutes: 0,
+      expectedWorkMinutes: 465,
+      lateUntilAt: new Date('2026-08-04T11:30:00.000Z'),
+      severeLateUntilAt: new Date('2026-08-04T12:15:00.000Z'),
+      absentAfterAt: new Date('2026-08-04T12:15:00.000Z'),
+    } as any);
+
+    await expect(
+      service.reconcileMissingAttendanceRecords(new Date('2026-08-05T01:00:00.000Z')),
+    ).resolves.toMatchObject({ created: 1 });
+    expect(prisma.hrAttendanceRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        date: new Date('2026-08-04T00:00:00.000Z'),
+        status: 'LEAVE',
+        attendanceSource: 'AUTO_GENERATED',
+        entryChannel: 'AUTO',
+      }),
+    });
   });
 });
 

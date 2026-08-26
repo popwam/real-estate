@@ -517,6 +517,20 @@ export class OperationsController {
       () => this.operations.checkOutHrAttendance(body, user),
     );
   }
+  @Post('hr/attendance/check-out/preflight') preflightHrAttendanceCheckOut(
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-attendance-self-check-out-preflight',
+      () => this.operations.preflightHrAttendanceCheckOut(body, user),
+    );
+  }
   @Get('hr/attendance/:id') getHrAttendance(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedRequestUser,

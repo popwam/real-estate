@@ -12,6 +12,7 @@ vi.mock("@/lib/auth", () => auth);
 
 import {
   checkInApi,
+  exportAttendanceCsvApi,
   preflightCheckInApi,
   uploadAttendanceEvidencePhotoApi,
 } from "@/lib/hr-settings-api";
@@ -54,5 +55,13 @@ describe("web self-service attendance API", () => {
     expect(options?.body).toBeInstanceOf(FormData);
     expect((options?.body as FormData).get("purpose")).toBe("CHECK_IN");
     expect((options?.body as FormData).get("file")).toBeInstanceOf(File);
+  });
+
+  it("requests a CSV roster for the selected attendance date", async () => {
+    await exportAttendanceCsvApi("2026-08-04");
+
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(
+      /\/hr\/export\/attendance\?date=2026-08-04&dateFrom=2026-08-04&dateTo=2026-08-04&format=csv$/,
+    );
   });
 });

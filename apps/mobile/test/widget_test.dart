@@ -413,6 +413,7 @@ class _FakeAttendanceRepository implements AttendanceRepository {
   @override
   Future<AttendanceRecord> checkOut({
     String? note,
+    String? attendanceRecordId,
     AttendanceVerificationPayload payload =
         const AttendanceVerificationPayload(),
   }) async {
@@ -458,6 +459,11 @@ class _FakeAttendanceRepository implements AttendanceRepository {
 
   @override
   Future<AttendancePreflight> checkInPreflight(AttendanceVerificationPayload payload) async {
+    return const AttendancePreflight(allowed: true);
+  }
+
+  @override
+  Future<AttendancePreflight> checkOutPreflight(AttendanceVerificationPayload payload) async {
     return const AttendancePreflight(allowed: true);
   }
 }

@@ -56,7 +56,20 @@ export type AttendanceSettings = {
   webWifiPolicy: "BLOCK" | "MANUAL_REVIEW" | "IGNORE_FOR_WEB";
   workStartTime: string;
   workEndTime: string;
+  monthlyLateAllowanceHours: number;
+  lateAllowanceChargeHoursPerDay: number;
+  missingAttendanceDisposition: "ABSENT" | "LEAVE";
+  autoCloseOpenAttendance: boolean;
+  regularShiftAutoCloseMode: "END_OF_WORK_DAY" | "PLANNED_CHECK_OUT_PLUS_GRACE";
+  autoCloseGraceMinutes: number;
+  autoCloseAtLocalMidnight: boolean;
+  checkOutOutsideLocationPolicy: "BLOCK" | "MANUAL_REVIEW" | "ALLOW_WITH_EVIDENCE";
 };
+
+export function exportAttendanceCsvApi(date: string) {
+  const query = new URLSearchParams({ date, dateFrom: date, dateTo: date, format: "csv" });
+  return apiRequest<string>(`/hr/export/attendance?${query.toString()}`);
+}
 
 /** Deliberately limited projection returned to an employee's self-service UI. */
 export type SelfAttendancePolicy = {
@@ -139,6 +152,16 @@ export type SelfAttendance = {
   penaltyType?: string | null;
   penaltyValue?: string | null;
   requiresReview?: boolean;
+  requiresManualReview?: boolean;
+  reviewReason?: string | null;
+  checkOutMethod?: "SELF_SERVICE" | "ADMIN_MANUAL" | "AUTO_CLOSE" | null;
+  checkOutVerificationStatus?: "VERIFIED" | "PENDING_REVIEW" | "NOT_VERIFIED" | "AUTO_CLOSED" | null;
+  autoClosed?: boolean;
+  autoClosedAt?: string | null;
+  autoCloseReason?: string | null;
+  plannedCheckOutAt?: string | null;
+  calculatedWorkMinutes?: number | null;
+  approvedWorkMinutes?: number | null;
   canCheckIn: boolean;
   canCheckOut: boolean;
 };
@@ -203,10 +226,17 @@ export function preflightCheckInApi(input: Record<string, unknown>) {
   });
 }
 
-export function uploadAttendanceEvidencePhotoApi(file: File) {
+export function preflightCheckOutApi(input: Record<string, unknown>) {
+  return apiRequest<AttendanceCheckInPreflight>("/hr/attendance/check-out/preflight", {
+    method: "POST",
+    body: JSON.stringify({ ...input, clientPlatform: "WEB" }),
+  });
+}
+
+export function uploadAttendanceEvidencePhotoApi(file: File, purpose: "CHECK_IN" | "CHECK_OUT" = "CHECK_IN") {
   const body = new FormData();
   body.set("file", file);
-  body.set("purpose", "CHECK_IN");
+  body.set("purpose", purpose);
   return apiRequest<AttendanceEvidencePhoto>("/hr/attendance/evidence-photo", {
     method: "POST",
     body,

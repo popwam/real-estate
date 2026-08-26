@@ -1,5 +1,19 @@
 # Release candidate stabilization — 2026-07-13
 
+## Attendance auto-close and verified check-out (2026-08-05)
+
+Added and applied the additive migration `20260805120000_attendance_auto_close_and_checkout_verification` to the linked Railway environment. It adds organization attendance controls with safe defaults: `autoCloseOpenAttendance=true`, `regularShiftAutoCloseMode=END_OF_WORK_DAY`, `autoCloseGraceMinutes=60`, `autoCloseAtLocalMidnight=true`, and a tenant-selectable `checkOutOutsideLocationPolicy=BLOCK`. It also adds nullable historical-safe check-out provenance, automatic-close/review, schedule snapshot, calculated/approved-minute, and rejected-attempt linkage fields. No historical attendance or payroll data was altered.
+
+The unified auto-close planner uses the organization IANA timezone and DST-aware local-day bounds. Regular non-overnight records close at 23:59:59 of their check-in local day (or a planned check-out plus grace when selected). Explicit overnight snapshots never close at midnight; they close at planned check-out plus policy grace. Missing overnight planned checkout uses a documented 36-hour safety bound and always requires manual review. Auto-close writes `AUTO_CLOSE`, `AUTO_CLOSED`, a reason, calculated minutes, and review flags; it deliberately leaves approved minutes null and never claims location verification.
+
+`pnpm --filter api attendance:auto-close` runs the batch-safe, idempotent worker entrypoint. The `jobs-worker` invokes it independently of Admin Web on startup and every configurable 10 minutes (minimum five); it can also be used as the Railway cron command. It logs aggregate counts and shortened IDs only. Warning and completion notification events are best effort and cannot block closure.
+
+Before a new self-service check-in the API checks the employee's single open accepted record and conditionally auto-closes it with the same planner. If it is still active, the API returns `ATTENDANCE_ALREADY_CHECKED_IN` and `nextAction=CHECK_OUT`, avoiding a late P2002.
+
+Added `POST /hr/attendance/check-out/preflight`; Web and Android now capture fresh location and use it before final check-out. The final endpoint reloads the employee's open record and eligible active organization location, recomputes geofence/accuracy/freshness/Wi-Fi/photo checks, and uses a conditional update for duplicate-safe check-out. A `BLOCK` outside-location decision leaves the record open and records only an `HrAttendanceAttempt` linked to that attendance record. `MANUAL_REVIEW` closes as pending review, while `ALLOW_WITH_EVIDENCE` requires evidence and records the explicit review reason. Auto-closed state, time, reason, planned checkout, review requirement, method, and location-verification status are exposed in the attendance views; English, Arabic, and French Auto-closed badges are included.
+
+Validation passed: Prisma generate, API test suite (34 suites, 220 passed, 1 skipped), API build, Admin Web tests (14 files, 62 passed), Admin Web build, and `flutter analyze`. Railway `migrate deploy`, API deployment, and Admin Web deployment succeeded; their public health/root checks returned HTTP 200. No commit, push, deletion, or historical data modification was performed.
+
 ## Scope and outcome
 
 This slice stabilizes platform maintenance, organization provisioning, HR employee login, attendance integrity, recruitment readiness, private company-document review, RBAC, critical EN/AR/FR copy, and the production accessibility panel. No database reset, destructive migration, owner deletion, password overwrite, commit, push, or deployment was performed.
