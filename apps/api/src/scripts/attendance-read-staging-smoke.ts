@@ -81,7 +81,7 @@ async function main() {
       '/hr/attendance/me/today',
       '/hr/attendance/me/history',
       '/hr/attendance/me/policy',
-      '/hr/export/attendance?date=2026-08-29&dateFrom=2026-08-29&dateTo=2026-08-29&format=csv',
+      '/hr/export/attendance?dateFrom=2026-08-01&dateTo=2026-08-31&format=csv',
     ];
     const results: Array<{
       path: string;

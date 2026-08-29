@@ -51,7 +51,10 @@ import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { HashService } from '../auth/hash.service';
 import { PrismaService } from '../database/prisma.service';
 import { FilesService } from '../files/files.service';
-import { normalizeOptionalPhoneOrThrow, phonesMatch } from '../../common/phone-normalization';
+import {
+  normalizeOptionalPhoneOrThrow,
+  phonesMatch,
+} from '../../common/phone-normalization';
 import { isPlatformUser } from '../../common/organization-scope';
 import { ROLE_PERMISSIONS } from '../permissions/rbac.seed';
 
@@ -248,7 +251,11 @@ export class OperationsService {
 
   listOrganizationBranches(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['company.settings.view', 'company.settings.manage', 'hr.manage']);
+    requireOperationPermission(user, [
+      'company.settings.view',
+      'company.settings.manage',
+      'hr.manage',
+    ]);
     return this.prisma.organizationBranch.findMany({
       where: this.organizationScopedWhere(input, user),
       orderBy: { createdAt: 'desc' },
@@ -313,15 +320,37 @@ export class OperationsService {
 
   async getAttendanceSettings(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['company.settings.view', 'company.settings.manage', 'hr.view', 'hr.manage']);
+    requireOperationPermission(user, [
+      'company.settings.view',
+      'company.settings.manage',
+      'hr.view',
+      'hr.manage',
+    ]);
     const organizationId = this.resolveScopedOrganizationId(input, user);
     return this.attendancePolicy(organizationId);
   }
 
   async listAttendanceSchedules(user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
-    return this.prisma.hrAttendanceSchedule.findMany({ where: { organizationId: requireOperationOrganizationId(user), isActive: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true, effectiveFrom: true, effectiveTo: true } });
+    requireOperationPermission(user, [
+      'hr.employees.view',
+      'hr.view',
+      'hr.manage',
+    ]);
+    return this.prisma.hrAttendanceSchedule.findMany({
+      where: {
+        organizationId: requireOperationOrganizationId(user),
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        timezone: true,
+        effectiveFrom: true,
+        effectiveTo: true,
+      },
+    });
   }
 
   async updateAttendanceSettings(input: any, user: AuthenticatedRequestUser) {
@@ -350,7 +379,11 @@ export class OperationsService {
 
   async listHrEmployees(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    requireOperationPermission(user, [
+      'hr.employees.view',
+      'hr.view',
+      'hr.manage',
+    ]);
     const records = await this.prisma.hrEmployee.findMany({
       where: this.employeeOrganizationWhere(input, user),
       include: HR_EMPLOYEE_INCLUDE,
@@ -388,12 +421,19 @@ export class OperationsService {
     this.assertEmployeeRoleAssignable(roleName, user);
     const requestedPermissions = this.permissionKeys(input.permissions);
     await this.assertAssignableEmployeePermissions(requestedPermissions, user);
-    const generatedPassword = !this.optional(input.temporaryPassword ?? input.password);
+    const generatedPassword = !this.optional(
+      input.temporaryPassword ?? input.password,
+    );
     const password = generatedPassword
       ? this.generateTemporaryPassword()
-      : this.required(input.temporaryPassword ?? input.password, 'temporaryPassword');
+      : this.required(
+          input.temporaryPassword ?? input.password,
+          'temporaryPassword',
+        );
     if (password.length < 12 || password === '123456') {
-      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
+      throw new BadRequestException(
+        'temporaryPassword must be at least 12 characters and cannot use the legacy default.',
+      );
     }
     const passwordHash = await this.hashService!.hash(password);
     const name = this.employeeName(input);
@@ -405,7 +445,10 @@ export class OperationsService {
     const attendanceSchedule = await this.employeeAttendanceScheduleSelection(
       organizationId,
       input,
-      { attendanceScheduleMode: AttendanceScheduleMode.ORGANIZATION_DEFAULT, attendanceScheduleId: null },
+      {
+        attendanceScheduleMode: AttendanceScheduleMode.ORGANIZATION_DEFAULT,
+        attendanceScheduleId: null,
+      },
     );
 
     const record = await this.prisma.$transaction(async (tx) => {
@@ -416,7 +459,9 @@ export class OperationsService {
         },
       });
       if (existingEmployee) {
-        throw new ConflictException('Employee already exists in this organization.');
+        throw new ConflictException(
+          'Employee already exists in this organization.',
+        );
       }
 
       const existingUser = await tx.user.findUnique({
@@ -424,10 +469,14 @@ export class OperationsService {
         include: { hrEmployeeProfile: true },
       });
       if (existingUser && existingUser.organizationId !== organizationId) {
-        throw new ConflictException('Email is already registered for another organization.');
+        throw new ConflictException(
+          'Email is already registered for another organization.',
+        );
       }
       if (existingUser?.hrEmployeeProfile) {
-        throw new ConflictException('User is already linked to an employee profile.');
+        throw new ConflictException(
+          'User is already linked to an employee profile.',
+        );
       }
 
       const role = await this.ensureEmployeeRole(tx, organizationId, roleName);
@@ -534,8 +583,15 @@ export class OperationsService {
       'phone',
       this.optional(input.phoneCountry) ?? organization?.country,
     );
-    await this.assertEmployeePhoneAvailable(phone, existing.userId ?? undefined);
-    const attendanceSchedule = await this.employeeAttendanceScheduleSelection(existing.organizationId, input, existing);
+    await this.assertEmployeePhoneAvailable(
+      phone,
+      existing.userId ?? undefined,
+    );
+    const attendanceSchedule = await this.employeeAttendanceScheduleSelection(
+      existing.organizationId,
+      input,
+      existing,
+    );
     const record = await this.prisma.hrEmployee.update({
       where: { id },
       data: {
@@ -576,68 +632,192 @@ export class OperationsService {
     return this.hrEmployeeResponse(record);
   }
 
-  async getEmployeeAttendanceOverride(employeeId: string, user: AuthenticatedRequestUser) {
-    this.assertHrWorkspace(user); requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+  async getEmployeeAttendanceOverride(
+    employeeId: string,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, [
+      'hr.employees.view',
+      'hr.view',
+      'hr.manage',
+    ]);
     const employee = await this.assertExists('hrEmployee', employeeId, user);
     // Return the currently effective override when one exists; otherwise retain
     // the most recently configured active override so switching back to this
     // mode restores the administrator's previous weekly rules.
     const now = new Date();
-    return this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
-      where: { employeeId, organizationId: employee.organizationId, isActive: true },
-      orderBy: [{ effectiveFrom: 'desc' }],
-    }).then(async (latest: any) => this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
-      where: { employeeId, organizationId: employee.organizationId, isActive: true, effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] },
-      orderBy: { effectiveFrom: 'desc' },
-    }) ?? latest);
+    return this.prisma.hrEmployeeAttendanceScheduleOverride
+      .findFirst({
+        where: {
+          employeeId,
+          organizationId: employee.organizationId,
+          isActive: true,
+        },
+        orderBy: [{ effectiveFrom: 'desc' }],
+      })
+      .then(
+        async (latest: any) =>
+          this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+            where: {
+              employeeId,
+              organizationId: employee.organizationId,
+              isActive: true,
+              effectiveFrom: { lte: now },
+              OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }],
+            },
+            orderBy: { effectiveFrom: 'desc' },
+          }) ?? latest,
+      );
   }
-  async createEmployeeAttendanceOverride(employeeId: string, input: any, user: AuthenticatedRequestUser) {
+  async createEmployeeAttendanceOverride(
+    employeeId: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     const employee = await this.overrideEmployee(employeeId, user);
     const data = await this.validatedAttendanceOverride(employee, input);
-    return this.prisma.hrEmployeeAttendanceScheduleOverride.create({ data: { ...data, employeeId, organizationId: employee.organizationId } });
+    return this.prisma.hrEmployeeAttendanceScheduleOverride.create({
+      data: { ...data, employeeId, organizationId: employee.organizationId },
+    });
   }
-  async updateEmployeeAttendanceOverride(employeeId: string, overrideId: string, input: any, user: AuthenticatedRequestUser) {
+  async updateEmployeeAttendanceOverride(
+    employeeId: string,
+    overrideId: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     const employee = await this.overrideEmployee(employeeId, user);
-    const existing = await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { id: overrideId, employeeId, organizationId: employee.organizationId } });
-    if (!existing) throw new NotFoundException('Attendance override not found.');
-    const data = await this.validatedAttendanceOverride(employee, input, overrideId);
-    return this.prisma.hrEmployeeAttendanceScheduleOverride.update({ where: { id: overrideId }, data });
+    const existing =
+      await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+        where: {
+          id: overrideId,
+          employeeId,
+          organizationId: employee.organizationId,
+        },
+      });
+    if (!existing)
+      throw new NotFoundException('Attendance override not found.');
+    const data = await this.validatedAttendanceOverride(
+      employee,
+      input,
+      overrideId,
+    );
+    return this.prisma.hrEmployeeAttendanceScheduleOverride.update({
+      where: { id: overrideId },
+      data,
+    });
   }
-  private async overrideEmployee(employeeId: string, user: AuthenticatedRequestUser) { this.assertHrWorkspace(user); requireOperationPermission(user, ['hr.employees.update', 'hr.manage']); return this.assertExists('hrEmployee', employeeId, user); }
-  private async validatedAttendanceOverride(employee: any, input: any, excludeId?: string) {
+  private async overrideEmployee(
+    employeeId: string,
+    user: AuthenticatedRequestUser,
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.employees.update', 'hr.manage']);
+    return this.assertExists('hrEmployee', employeeId, user);
+  }
+  private async validatedAttendanceOverride(
+    employee: any,
+    input: any,
+    excludeId?: string,
+  ) {
     const rules = input?.weeklyRules;
-    if (!Array.isArray(rules) || !rules.length) throw new BadRequestException('weeklyRules is required.');
+    if (!Array.isArray(rules) || !rules.length)
+      throw new BadRequestException('weeklyRules is required.');
     const days = new Set<number>();
-    for (const rule of rules) { const day = Number(rule.dayOfWeek); if (!Number.isInteger(day) || day < 0 || day > 6 || days.has(day)) throw new BadRequestException('weeklyRules contains an invalid or duplicate dayOfWeek.'); days.add(day); this.assertAttendanceRule(rule); }
+    for (const rule of rules) {
+      const day = Number(rule.dayOfWeek);
+      if (!Number.isInteger(day) || day < 0 || day > 6 || days.has(day))
+        throw new BadRequestException(
+          'weeklyRules contains an invalid or duplicate dayOfWeek.',
+        );
+      days.add(day);
+      this.assertAttendanceRule(rule);
+    }
     const timezone = this.attendanceTimezone(input.timezone);
-    const effectiveFrom = new Date(input.effectiveFrom); const effectiveTo = input.effectiveTo ? new Date(input.effectiveTo) : null;
-    if (Number.isNaN(effectiveFrom.getTime()) || (effectiveTo && (Number.isNaN(effectiveTo.getTime()) || effectiveTo < effectiveFrom))) throw new BadRequestException('Invalid effective dates.');
-    const overlap = await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { employeeId: employee.id, organizationId: employee.organizationId, isActive: true, ...(excludeId ? { id: { not: excludeId } } : {}), effectiveFrom: { lte: effectiveTo ?? new Date('9999-12-31') }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveFrom } }] } });
-    if (overlap) throw new ConflictException('Attendance override effective dates overlap.');
+    const effectiveFrom = new Date(input.effectiveFrom);
+    const effectiveTo = input.effectiveTo ? new Date(input.effectiveTo) : null;
+    if (
+      Number.isNaN(effectiveFrom.getTime()) ||
+      (effectiveTo &&
+        (Number.isNaN(effectiveTo.getTime()) || effectiveTo < effectiveFrom))
+    )
+      throw new BadRequestException('Invalid effective dates.');
+    const overlap =
+      await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+        where: {
+          employeeId: employee.id,
+          organizationId: employee.organizationId,
+          isActive: true,
+          ...(excludeId ? { id: { not: excludeId } } : {}),
+          effectiveFrom: { lte: effectiveTo ?? new Date('9999-12-31') },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveFrom } }],
+        },
+      });
+    if (overlap)
+      throw new ConflictException(
+        'Attendance override effective dates overlap.',
+      );
     // Boundaries are inclusive: an override ending at the same instant another
     // one starts overlaps and is rejected. This is intentional and documented.
-    return { weeklyRules: rules, timezone, effectiveFrom, effectiveTo, isActive: input.isActive === false ? false : true };
+    return {
+      weeklyRules: rules,
+      timezone,
+      effectiveFrom,
+      effectiveTo,
+      isActive: input.isActive === false ? false : true,
+    };
   }
 
-  private async employeeAttendanceScheduleSelection(organizationId: string, input: any, existing: any) {
-    const mode = input.attendanceScheduleMode === undefined
-      ? (existing.attendanceScheduleMode ?? AttendanceScheduleMode.ORGANIZATION_DEFAULT)
-      : this.enumValue(AttendanceScheduleMode, input.attendanceScheduleMode, AttendanceScheduleMode.ORGANIZATION_DEFAULT);
-    const requestedId = input.attendanceScheduleId === undefined ? existing.attendanceScheduleId : this.optional(input.attendanceScheduleId);
-    if (mode === AttendanceScheduleMode.ORGANIZATION_DEFAULT) return { mode, id: null };
+  private async employeeAttendanceScheduleSelection(
+    organizationId: string,
+    input: any,
+    existing: any,
+  ) {
+    const mode =
+      input.attendanceScheduleMode === undefined
+        ? (existing.attendanceScheduleMode ??
+          AttendanceScheduleMode.ORGANIZATION_DEFAULT)
+        : this.enumValue(
+            AttendanceScheduleMode,
+            input.attendanceScheduleMode,
+            AttendanceScheduleMode.ORGANIZATION_DEFAULT,
+          );
+    const requestedId =
+      input.attendanceScheduleId === undefined
+        ? existing.attendanceScheduleId
+        : this.optional(input.attendanceScheduleId);
+    if (mode === AttendanceScheduleMode.ORGANIZATION_DEFAULT)
+      return { mode, id: null };
     if (mode === AttendanceScheduleMode.ASSIGNED_SCHEDULE) {
-      if (!requestedId) throw new BadRequestException('attendanceScheduleId is required for an assigned schedule.');
-      const schedule = await this.prisma.hrAttendanceSchedule.findFirst({ where: { id: requestedId, organizationId, isActive: true } });
-      if (!schedule) throw new BadRequestException('attendanceScheduleId must reference an active schedule in this organization.');
+      if (!requestedId)
+        throw new BadRequestException(
+          'attendanceScheduleId is required for an assigned schedule.',
+        );
+      const schedule = await this.prisma.hrAttendanceSchedule.findFirst({
+        where: { id: requestedId, organizationId, isActive: true },
+      });
+      if (!schedule)
+        throw new BadRequestException(
+          'attendanceScheduleId must reference an active schedule in this organization.',
+        );
       return { mode, id: requestedId };
     }
     // The mode is only valid after an override has been safely saved. This
     // prevents a partial web save from leaving an employee in a silent void.
     if (existing?.id) {
-      const override = await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { employeeId: existing.id, organizationId, isActive: true } });
-      if (!override) throw new BadRequestException('Create an employee attendance override before selecting EMPLOYEE_OVERRIDE mode.');
+      const override =
+        await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+          where: { employeeId: existing.id, organizationId, isActive: true },
+        });
+      if (!override)
+        throw new BadRequestException(
+          'Create an employee attendance override before selecting EMPLOYEE_OVERRIDE mode.',
+        );
     } else {
-      throw new BadRequestException('Create the employee override after the employee profile is created, then select EMPLOYEE_OVERRIDE mode.');
+      throw new BadRequestException(
+        'Create the employee override after the employee profile is created, then select EMPLOYEE_OVERRIDE mode.',
+      );
     }
     return { mode, id: null };
   }
@@ -677,7 +857,11 @@ export class OperationsService {
 
   async getHrEmployee(id: string, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['hr.employees.view', 'hr.view', 'hr.manage']);
+    requireOperationPermission(user, [
+      'hr.employees.view',
+      'hr.view',
+      'hr.manage',
+    ]);
     const record = await this.prisma.hrEmployee
       .findFirstOrThrow({
         where: { id, ...operationOrganizationWhere(user) },
@@ -708,9 +892,14 @@ export class OperationsService {
     const generated = !this.optional(input.temporaryPassword ?? input.password);
     const temporaryPassword = generated
       ? this.generateTemporaryPassword()
-      : this.required(input.temporaryPassword ?? input.password, 'temporaryPassword');
+      : this.required(
+          input.temporaryPassword ?? input.password,
+          'temporaryPassword',
+        );
     if (temporaryPassword.length < 12 || temporaryPassword === '123456') {
-      throw new BadRequestException('temporaryPassword must be at least 12 characters and cannot use the legacy default.');
+      throw new BadRequestException(
+        'temporaryPassword must be at least 12 characters and cannot use the legacy default.',
+      );
     }
     await this.prisma.user.update({
       where: { id: employee.userId },
@@ -731,7 +920,12 @@ export class OperationsService {
       undefined,
       employee.organizationId,
     );
-    await this.recordAudit(user, 'employee.password_reset', 'HrEmployee', employee.id);
+    await this.recordAudit(
+      user,
+      'employee.password_reset',
+      'HrEmployee',
+      employee.id,
+    );
     return {
       id: employee.id,
       passwordReset: true,
@@ -826,9 +1020,15 @@ export class OperationsService {
       { role: roleName },
       employee.organizationId,
     );
-    await this.recordAudit(user, 'employee.role_changed', 'HrEmployee', employee.id, {
-      role: roleName,
-    });
+    await this.recordAudit(
+      user,
+      'employee.role_changed',
+      'HrEmployee',
+      employee.id,
+      {
+        role: roleName,
+      },
+    );
     return this.getHrEmployee(id, user);
   }
 
@@ -883,7 +1083,10 @@ export class OperationsService {
     return this.getHrEmployee(id, user);
   }
 
-  async listHrAttendance(user: AuthenticatedRequestUser, input: Record<string, unknown> = {}) {
+  async listHrAttendance(
+    user: AuthenticatedRequestUser,
+    input: Record<string, unknown> = {},
+  ) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
     const organizationId = this.resolveScopedOrganizationId(input, user);
@@ -925,23 +1128,36 @@ export class OperationsService {
     ]);
     const lateDaysByEmployee = new Map<string, Set<string>>();
     for (const lateRecord of lateRecords) {
-      const days = lateDaysByEmployee.get(lateRecord.employeeId) ?? new Set<string>();
+      const days =
+        lateDaysByEmployee.get(lateRecord.employeeId) ?? new Set<string>();
       days.add(this.dateOnly(lateRecord.date));
       lateDaysByEmployee.set(lateRecord.employeeId, days);
     }
-    const allowanceMinutes = Math.max(0, Number(policy.monthlyLateAllowanceHours ?? 4)) * 60;
-    const chargeMinutes = Math.max(1, Number(policy.lateAllowanceChargeHoursPerDay ?? 1)) * 60;
+    const allowanceMinutes =
+      Math.max(0, Number(policy.monthlyLateAllowanceHours ?? 4)) * 60;
+    const chargeMinutes =
+      Math.max(1, Number(policy.lateAllowanceChargeHoursPerDay ?? 1)) * 60;
     return records.map((record) => {
       const lateDays = lateDaysByEmployee.get(record.employeeId)?.size ?? 0;
       const usedMinutes = Math.min(allowanceMinutes, lateDays * chargeMinutes);
-      const chargedToday = Number(record.minutesLate ?? 0) > 0
-        ? Math.min(chargeMinutes, Math.max(0, allowanceMinutes - Math.max(0, lateDays - 1) * chargeMinutes))
-        : 0;
+      const chargedToday =
+        Number(record.minutesLate ?? 0) > 0
+          ? Math.min(
+              chargeMinutes,
+              Math.max(
+                0,
+                allowanceMinutes - Math.max(0, lateDays - 1) * chargeMinutes,
+              ),
+            )
+          : 0;
       return {
         ...record,
         lateAllowanceChargedMinutes: chargedToday,
         lateAllowanceUsedMinutes: usedMinutes,
-        lateAllowanceRemainingMinutes: Math.max(0, allowanceMinutes - usedMinutes),
+        lateAllowanceRemainingMinutes: Math.max(
+          0,
+          allowanceMinutes - usedMinutes,
+        ),
       };
     });
   }
@@ -949,59 +1165,61 @@ export class OperationsService {
   async createHrAttendance(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.attendance.manage']);
-    const record = await this.prisma.hrAttendanceRecord.create({
-      data: {
-        organizationId: requireOperationOrganizationId(user),
-        employeeId: this.required(input.employeeId, 'employeeId'),
-        date: input.date ? new Date(String(input.date)) : new Date(),
-        checkInAt: input.checkInAt
-          ? new Date(String(input.checkInAt))
-          : undefined,
-        checkOutAt: input.checkOutAt
-          ? new Date(String(input.checkOutAt))
-          : undefined,
-        actualCheckInAt: input.checkInAt
-          ? new Date(String(input.checkInAt))
-          : undefined,
-        actualCheckOutAt: input.checkOutAt
-          ? new Date(String(input.checkOutAt))
-          : undefined,
-        checkOutMethod: input.checkOutAt
-          ? CheckOutMethod.ADMIN_MANUAL
-          : undefined,
-        checkOutVerificationStatus: input.checkOutAt
-          ? CheckOutVerificationStatus.NOT_VERIFIED
-          : undefined,
-        status: this.enumValue(
-          HrAttendanceStatus,
-          input.status,
-          HrAttendanceStatus.PRESENT,
-        ),
-        note: this.optional(input.note),
-        attendanceSource: AttendanceSource.MANUAL_ADMIN,
-        entryChannel: AttendanceEntryChannel.MANUAL_ADMIN,
-        verificationStatus: this.enumValue(
-          AttendanceVerificationStatus,
-          input.verificationStatus,
-          AttendanceVerificationStatus.PENDING_REVIEW,
-        ),
-        verificationFailureReasons: this.optionalJsonArray(
-          input.verificationFailureReasons,
-        ),
-        dvrVerificationStatus: this.enumValue(
-          DvrVerificationStatus,
-          input.dvrVerificationStatus,
-          DvrVerificationStatus.NOT_REQUIRED,
-        ),
-        dvrReferenceId: this.optional(input.dvrReferenceId),
-      },
-      include: { employee: true },
-    }).catch((error: unknown) => {
-      if ((error as { code?: string })?.code === 'P2002') {
-        throw new ConflictException('You are already checked in.');
-      }
-      throw error;
-    });
+    const record = await this.prisma.hrAttendanceRecord
+      .create({
+        data: {
+          organizationId: requireOperationOrganizationId(user),
+          employeeId: this.required(input.employeeId, 'employeeId'),
+          date: input.date ? new Date(String(input.date)) : new Date(),
+          checkInAt: input.checkInAt
+            ? new Date(String(input.checkInAt))
+            : undefined,
+          checkOutAt: input.checkOutAt
+            ? new Date(String(input.checkOutAt))
+            : undefined,
+          actualCheckInAt: input.checkInAt
+            ? new Date(String(input.checkInAt))
+            : undefined,
+          actualCheckOutAt: input.checkOutAt
+            ? new Date(String(input.checkOutAt))
+            : undefined,
+          checkOutMethod: input.checkOutAt
+            ? CheckOutMethod.ADMIN_MANUAL
+            : undefined,
+          checkOutVerificationStatus: input.checkOutAt
+            ? CheckOutVerificationStatus.NOT_VERIFIED
+            : undefined,
+          status: this.enumValue(
+            HrAttendanceStatus,
+            input.status,
+            HrAttendanceStatus.PRESENT,
+          ),
+          note: this.optional(input.note),
+          attendanceSource: AttendanceSource.MANUAL_ADMIN,
+          entryChannel: AttendanceEntryChannel.MANUAL_ADMIN,
+          verificationStatus: this.enumValue(
+            AttendanceVerificationStatus,
+            input.verificationStatus,
+            AttendanceVerificationStatus.PENDING_REVIEW,
+          ),
+          verificationFailureReasons: this.optionalJsonArray(
+            input.verificationFailureReasons,
+          ),
+          dvrVerificationStatus: this.enumValue(
+            DvrVerificationStatus,
+            input.dvrVerificationStatus,
+            DvrVerificationStatus.NOT_REQUIRED,
+          ),
+          dvrReferenceId: this.optional(input.dvrReferenceId),
+        },
+        include: { employee: true },
+      })
+      .catch((error: unknown) => {
+        if ((error as { code?: string })?.code === 'P2002') {
+          throw new ConflictException('You are already checked in.');
+        }
+        throw error;
+      });
     await this.recordActivity(
       user,
       OperationsModule.HR,
@@ -1095,7 +1313,12 @@ export class OperationsService {
       user,
     );
     if (verification.reject) {
-      const attempt = await this.recordRejectedAttendanceAttempt(employee, input, verification, 'CHECK_IN');
+      const attempt = await this.recordRejectedAttendanceAttempt(
+        employee,
+        input,
+        verification,
+        'CHECK_IN',
+      );
       throw new BadRequestException({
         success: false,
         code: 'ATTENDANCE_CHECK_IN_REJECTED',
@@ -1104,9 +1327,17 @@ export class OperationsService {
         attendanceRecordId: null,
       });
     }
-    const photoFileId = this.optional(input.photoFileId ?? input.checkInPhotoFileId);
-    const face = await this.prepareAttendanceFaceVerification(employee, photoFileId, policy);
-    const timezone = await this.organizationTimezoneFor(employee.organizationId);
+    const photoFileId = this.optional(
+      input.photoFileId ?? input.checkInPhotoFileId,
+    );
+    const face = await this.prepareAttendanceFaceVerification(
+      employee,
+      photoFileId,
+      policy,
+    );
+    const timezone = await this.organizationTimezoneFor(
+      employee.organizationId,
+    );
     const date = this.zonedWorkDate(now, timezone);
     const openRecord = await this.prisma.hrAttendanceRecord.findFirst({
       where: {
@@ -1132,7 +1363,16 @@ export class OperationsService {
       });
     }
 
-    const schedule = await this.resolveEffectiveAttendanceSchedule({ organizationId: employee.organizationId, employeeId: employee.id, attendanceDate: date, timezone }, employee, policy);
+    const schedule = await this.resolveEffectiveAttendanceSchedule(
+      {
+        organizationId: employee.organizationId,
+        employeeId: employee.id,
+        attendanceDate: date,
+        timezone,
+      },
+      employee,
+      policy,
+    );
     const late = this.calculateScheduleLatePenalty(now, schedule, policy);
     const record = await this.prisma.hrAttendanceRecord.create({
       data: {
@@ -1194,7 +1434,11 @@ export class OperationsService {
       employee.name,
       this.attendanceMetadata(input, verification),
     );
-    if (face.createReferenceCandidate && photoFileId && this.prisma.employeeAttendanceReferencePhoto) {
+    if (
+      face.createReferenceCandidate &&
+      photoFileId &&
+      this.prisma.employeeAttendanceReferencePhoto
+    ) {
       await this.prisma.employeeAttendanceReferencePhoto.create({
         data: {
           organizationId: employee.organizationId,
@@ -1204,25 +1448,38 @@ export class OperationsService {
           status: policy.firstAttendancePhotoRequiresApproval
             ? AttendanceReferencePhotoStatus.PENDING_REFERENCE_APPROVAL
             : AttendanceReferencePhotoStatus.APPROVED_REFERENCE,
-          approvedById: policy.firstAttendancePhotoRequiresApproval ? undefined : user.userId,
-          approvedAt: policy.firstAttendancePhotoRequiresApproval ? undefined : new Date(),
+          approvedById: policy.firstAttendancePhotoRequiresApproval
+            ? undefined
+            : user.userId,
+          approvedAt: policy.firstAttendancePhotoRequiresApproval
+            ? undefined
+            : new Date(),
         },
       });
       if (!policy.firstAttendancePhotoRequiresApproval) {
-        await this.prisma.hrEmployee.update({ where: { id: employee.id }, data: { faceReferenceFileId: photoFileId } });
+        await this.prisma.hrEmployee.update({
+          where: { id: employee.id },
+          data: { faceReferenceFileId: photoFileId },
+        });
       }
     }
     return this.selfAttendanceEnvelope(record);
   }
 
   /** Read-only location gate used before the mobile client opens its camera. */
-  async preflightHrAttendanceCheckIn(input: any, user: AuthenticatedRequestUser) {
+  async preflightHrAttendanceCheckIn(
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     return this.preflightSelfAttendance(input, user, 'checkIn');
   }
 
   /** Check-out has an independent outside-location policy and therefore must
    * not reuse a check-in preflight result. */
-  async preflightHrAttendanceCheckOut(input: any, user: AuthenticatedRequestUser) {
+  async preflightHrAttendanceCheckOut(
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     return this.preflightSelfAttendance(input, user, 'checkOut');
   }
 
@@ -1233,8 +1490,15 @@ export class OperationsService {
   ) {
     const employee = await this.resolveCurrentEmployee(user);
     const policy = await this.attendancePolicy(employee.organizationId);
-    const decision = await this.attendanceLocationDecision(input, policy, employee.organizationId, phase);
-    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
+    const decision = await this.attendanceLocationDecision(
+      input,
+      policy,
+      employee.organizationId,
+      phase,
+    );
+    const isWeb =
+      this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' ||
+      !this.optional(input.clientPlatform);
     const blockingReasons = [...decision.blockingReasons];
     if (isWeb && policy.allowWebCheckIn === false) {
       blockingReasons.push('WEB_CHECK_IN_NOT_ALLOWED');
@@ -1247,11 +1511,19 @@ export class OperationsService {
       }
     }
     const reasons = [...new Set(blockingReasons)];
-    if (phase === 'checkOut' && decision.mode !== 'EXACT' && decision.mode !== 'LOCATION_NOT_REQUIRED') {
-      const outsidePolicy = policy.checkOutOutsideLocationPolicy ?? CheckOutOutsideLocationPolicy.BLOCK;
+    if (
+      phase === 'checkOut' &&
+      decision.mode !== 'EXACT' &&
+      decision.mode !== 'LOCATION_NOT_REQUIRED'
+    ) {
+      const outsidePolicy =
+        policy.checkOutOutsideLocationPolicy ??
+        CheckOutOutsideLocationPolicy.BLOCK;
       if (outsidePolicy === CheckOutOutsideLocationPolicy.BLOCK) {
         blockingReasons.push('OUTSIDE_ALLOWED_LOCATION');
-      } else if (outsidePolicy === CheckOutOutsideLocationPolicy.MANUAL_REVIEW) {
+      } else if (
+        outsidePolicy === CheckOutOutsideLocationPolicy.MANUAL_REVIEW
+      ) {
         blockingReasons.push('CHECK_OUT_OUTSIDE_LOCATION_REVIEW');
       } else {
         blockingReasons.push('CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE');
@@ -1267,7 +1539,8 @@ export class OperationsService {
       // A review-only outcome can proceed to the live-photo step; the final
       // check-in remains PENDING_REVIEW and re-runs every verification.
       allowed: reasons.every((reason) => reviewReasons.has(reason)),
-      insideAllowedRadius: decision.mode === 'EXACT' || decision.mode === 'EXPANDED_REVIEW',
+      insideAllowedRadius:
+        decision.mode === 'EXACT' || decision.mode === 'EXPANDED_REVIEW',
       distanceMeters: decision.distanceMeters,
       allowedRadiusMeters: decision.allowedRadiusMeters,
       exactRadiusMeters: decision.exactRadiusMeters,
@@ -1275,7 +1548,10 @@ export class OperationsService {
       matchedLocationId: decision.matchedLocationId,
       matchedLocationName: decision.matchedLocationName,
       source: decision.source,
-      accuracyMeters: this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters) ?? null,
+      accuracyMeters:
+        this.optionalNumber(
+          input.locationAccuracyMeters ?? input.accuracyMeters,
+        ) ?? null,
       accuracyAccepted: !reasons.includes('GPS_ACCURACY_TOO_LOW'),
       mode: decision.mode,
       blockingReasons: reasons,
@@ -1287,52 +1563,138 @@ export class OperationsService {
           policy.checkOutOutsideLocationPolicy ===
             CheckOutOutsideLocationPolicy.ALLOW_WITH_EVIDENCE),
       requiresWifi: Boolean(policy.requireWifi),
-      requiresDeviceIntegrity: Boolean(policy.blockDeveloperOptions || policy.blockUsbDebugging),
+      requiresDeviceIntegrity: Boolean(
+        policy.blockDeveloperOptions || policy.blockUsbDebugging,
+      ),
       requiresDvrReview: Boolean(policy.requireDvrReview),
     };
   }
 
-  async listEmployeeAttendanceReferences(employeeId: string, user: AuthenticatedRequestUser) {
+  async listEmployeeAttendanceReferences(
+    employeeId: string,
+    user: AuthenticatedRequestUser,
+  ) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
+    requireOperationPermission(user, [
+      'hr.attendance.review',
+      'hr.attendance.manage',
+    ]);
     await this.findEmployeeForMutation(employeeId, user);
     return this.prisma.employeeAttendanceReferencePhoto.findMany({
-      where: { employeeId, ...operationOrganizationWhere(user) }, orderBy: { createdAt: 'desc' },
+      where: { employeeId, ...operationOrganizationWhere(user) },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  async reviewAttendanceReference(id: string, input: any, user: AuthenticatedRequestUser) {
+  async reviewAttendanceReference(
+    id: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
-    const reference = await this.prisma.employeeAttendanceReferencePhoto.findFirstOrThrow({ where: { id, ...operationOrganizationWhere(user) } }).catch(() => { throw new NotFoundException('Reference photo not found.'); });
+    requireOperationPermission(user, [
+      'hr.attendance.review',
+      'hr.attendance.manage',
+    ]);
+    const reference = await this.prisma.employeeAttendanceReferencePhoto
+      .findFirstOrThrow({ where: { id, ...operationOrganizationWhere(user) } })
+      .catch(() => {
+        throw new NotFoundException('Reference photo not found.');
+      });
     const approve = input.approve === true;
     let updated: any;
     try {
       updated = await this.prisma.$transaction(async (tx) => {
         if (approve) {
-          await tx.employeeAttendanceReferencePhoto.updateMany({ where: { employeeId: reference.employeeId, status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE }, data: { status: AttendanceReferencePhotoStatus.REVOKED, revokedById: user.userId, revokedAt: new Date() } });
+          await tx.employeeAttendanceReferencePhoto.updateMany({
+            where: {
+              employeeId: reference.employeeId,
+              status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE,
+            },
+            data: {
+              status: AttendanceReferencePhotoStatus.REVOKED,
+              revokedById: user.userId,
+              revokedAt: new Date(),
+            },
+          });
         }
-        const next = await tx.employeeAttendanceReferencePhoto.update({ where: { id }, data: approve ? { status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE, approvedById: user.userId, approvedAt: new Date(), rejectionReason: null } : { status: AttendanceReferencePhotoStatus.REJECTED, rejectionReason: this.optional(input.rejectionReason) ?? 'REJECTED_BY_REVIEWER' } });
-        if (approve) await tx.hrEmployee.update({ where: { id: reference.employeeId }, data: { faceReferenceFileId: reference.fileId } });
+        const next = await tx.employeeAttendanceReferencePhoto.update({
+          where: { id },
+          data: approve
+            ? {
+                status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE,
+                approvedById: user.userId,
+                approvedAt: new Date(),
+                rejectionReason: null,
+              }
+            : {
+                status: AttendanceReferencePhotoStatus.REJECTED,
+                rejectionReason:
+                  this.optional(input.rejectionReason) ??
+                  'REJECTED_BY_REVIEWER',
+              },
+        });
+        if (approve)
+          await tx.hrEmployee.update({
+            where: { id: reference.employeeId },
+            data: { faceReferenceFileId: reference.fileId },
+          });
         return next;
       });
     } catch (error) {
       if ((error as { code?: string })?.code === 'P2002') {
-        throw new ConflictException('Another reference photo was approved concurrently. Refresh and try again.');
+        throw new ConflictException(
+          'Another reference photo was approved concurrently. Refresh and try again.',
+        );
       }
       throw error;
     }
-    await this.recordAudit(user, approve ? 'attendance.reference_approved' : 'attendance.reference_rejected', 'EmployeeAttendanceReferencePhoto', id, { employeeId: reference.employeeId });
+    await this.recordAudit(
+      user,
+      approve
+        ? 'attendance.reference_approved'
+        : 'attendance.reference_rejected',
+      'EmployeeAttendanceReferencePhoto',
+      id,
+      { employeeId: reference.employeeId },
+    );
     return updated;
   }
 
-  async reviewAttendanceFaceVerification(id: string, input: any, user: AuthenticatedRequestUser) {
+  async reviewAttendanceFaceVerification(
+    id: string,
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     this.assertHrWorkspace(user);
-    requireOperationPermission(user, ['hr.attendance.review', 'hr.attendance.manage']);
+    requireOperationPermission(user, [
+      'hr.attendance.review',
+      'hr.attendance.manage',
+    ]);
     await this.assertExists('hrAttendanceRecord', id, user);
     const approved = input.approve === true;
-    const record = await this.prisma.hrAttendanceRecord.update({ where: { id }, data: { faceVerificationStatus: approved ? AttendanceFaceVerificationStatus.APPROVED_MANUALLY : AttendanceFaceVerificationStatus.REJECTED, faceVerificationReviewedById: user.userId, faceVerificationReviewedAt: new Date(), faceVerificationRejectionReason: approved ? null : this.optional(input.rejectionReason) ?? 'REJECTED_BY_REVIEWER', requiresReview: !approved } });
-    await this.recordAudit(user, approved ? 'attendance.face_approved_manually' : 'attendance.face_rejected', 'HrAttendanceRecord', id);
+    const record = await this.prisma.hrAttendanceRecord.update({
+      where: { id },
+      data: {
+        faceVerificationStatus: approved
+          ? AttendanceFaceVerificationStatus.APPROVED_MANUALLY
+          : AttendanceFaceVerificationStatus.REJECTED,
+        faceVerificationReviewedById: user.userId,
+        faceVerificationReviewedAt: new Date(),
+        faceVerificationRejectionReason: approved
+          ? null
+          : (this.optional(input.rejectionReason) ?? 'REJECTED_BY_REVIEWER'),
+        requiresReview: !approved,
+      },
+    });
+    await this.recordAudit(
+      user,
+      approved
+        ? 'attendance.face_approved_manually'
+        : 'attendance.face_rejected',
+      'HrAttendanceRecord',
+      id,
+    );
     return record;
   }
 
@@ -1403,7 +1765,14 @@ export class OperationsService {
 
     const checkedOutAt = new Date();
     const earlyLeave = record.plannedCheckOutAt
-      ? Math.max(0, Math.round((new Date(record.plannedCheckOutAt).getTime() - checkedOutAt.getTime()) / 60000))
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(record.plannedCheckOutAt).getTime() -
+              checkedOutAt.getTime()) /
+              60000,
+          ),
+        )
       : 0;
     const calculatedWorkMinutes = this.durationMinutes(
       record.actualCheckInAt ?? record.checkInAt,
@@ -1427,7 +1796,11 @@ export class OperationsService {
         requiresManualReview:
           verification.status === AttendanceVerificationStatus.PENDING_REVIEW,
         reviewReason,
-        status: earlyLeave > Number(record.graceMinutes ?? 0) && record.status === HrAttendanceStatus.PRESENT ? HrAttendanceStatus.EARLY_LEAVE : record.status,
+        status:
+          earlyLeave > Number(record.graceMinutes ?? 0) &&
+          record.status === HrAttendanceStatus.PRESENT
+            ? HrAttendanceStatus.EARLY_LEAVE
+            : record.status,
         note: this.mergeNote(record.note, input.note),
         ...this.attendanceEvidenceData(input, 'checkOut'),
         verificationStatus: this.mergeVerificationStatus(
@@ -1457,7 +1830,10 @@ export class OperationsService {
         include: { employee: true },
       });
       if (completed) return this.selfAttendanceEnvelope(completed);
-      throw new ConflictException({ code: 'ATTENDANCE_CHECK_OUT_NOT_OPEN', nextAction: 'CHECK_IN' });
+      throw new ConflictException({
+        code: 'ATTENDANCE_CHECK_OUT_NOT_OPEN',
+        nextAction: 'CHECK_IN',
+      });
     }
     const updated = await this.prisma.hrAttendanceRecord.findUniqueOrThrow({
       where: { id: record.id },
@@ -1479,7 +1855,9 @@ export class OperationsService {
 
   async myAttendanceToday(user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
-    const timezone = await this.organizationTimezoneFor(employee.organizationId);
+    const timezone = await this.organizationTimezoneFor(
+      employee.organizationId,
+    );
     const localDate = this.organizationLocalDate(new Date(), timezone);
     const { start, end } = this.attendanceDayBounds(localDate, timezone);
     const date = this.zonedWorkDate(new Date(), timezone);
@@ -1487,7 +1865,12 @@ export class OperationsService {
       where: {
         organizationId: employee.organizationId,
         employeeId: employee.id,
-        verificationStatus: { notIn: [AttendanceVerificationStatus.REJECTED, AttendanceVerificationStatus.FAILED] },
+        verificationStatus: {
+          notIn: [
+            AttendanceVerificationStatus.REJECTED,
+            AttendanceVerificationStatus.FAILED,
+          ],
+        },
         OR: [
           { checkInAt: { gte: start, lt: end } },
           { checkInAt: null, date: { gte: start, lt: end } },
@@ -1551,21 +1934,25 @@ export class OperationsService {
    * Organization branches alone are not attendance evidence. */
   async myWebAttendanceLocations(user: AuthenticatedRequestUser) {
     const employee = await this.resolveCurrentEmployee(user);
-    const locations = await this.prisma.organizationAttendanceLocation.findMany({
-      where: {
-        organizationId: employee.organizationId,
-        isActive: true,
-        allowedForWeb: true,
-        officeId: { not: null },
-        office: { is: { organizationId: employee.organizationId, isActive: true } },
-      },
-      include: {
-        office: {
-          select: { id: true, name: true, isActive: true },
+    const locations = await this.prisma.organizationAttendanceLocation.findMany(
+      {
+        where: {
+          organizationId: employee.organizationId,
+          isActive: true,
+          allowedForWeb: true,
+          officeId: { not: null },
+          office: {
+            is: { organizationId: employee.organizationId, isActive: true },
+          },
         },
+        include: {
+          office: {
+            select: { id: true, name: true, isActive: true },
+          },
+        },
+        orderBy: { name: 'asc' },
       },
-      orderBy: { name: 'asc' },
-    });
+    );
 
     return locations
       .filter((location) => location.office?.isActive)
@@ -2992,9 +3379,11 @@ export class OperationsService {
       select: { timezone: true },
     });
     const timezone = this.organizationTimezone(organization?.timezone);
-    const requestedDate = input.date ?? (
-      input.dateFrom && input.dateFrom === input.dateTo ? input.dateFrom : null
-    );
+    const requestedDate =
+      input.date ??
+      (input.dateFrom && input.dateFrom === input.dateTo
+        ? input.dateFrom
+        : null);
     if (requestedDate) {
       const date = this.attendanceListDate(requestedDate, timezone);
       const policy = await this.attendancePolicy(organizationId);
@@ -3008,10 +3397,14 @@ export class OperationsService {
       if (status) items = items.filter((item) => item.status === status);
       return this.exportEnvelope('hr.attendance', input, items);
     }
+    const { start, end } = this.attendanceExportDateRange(input, timezone);
     const where: Prisma.HrAttendanceRecordWhereInput = {
       ...operationOrganizationWhere(user, this.optional(input.organizationId)),
       status: this.optionalEnum(HrAttendanceStatus, input.status),
-      date: this.dateFilter(input),
+      OR: [
+        { checkInAt: { gte: start, lt: end } },
+        { checkInAt: null, date: { gte: start, lt: end } },
+      ],
     };
     const items = await this.prisma.hrAttendanceRecord.findMany({
       where,
@@ -3031,7 +3424,6 @@ export class OperationsService {
         note: true,
       },
       orderBy: { date: 'desc' },
-      take: this.exportLimit(input),
     });
     return this.exportEnvelope('hr.attendance', input, items);
   }
@@ -3070,55 +3462,85 @@ export class OperationsService {
         select: { employeeId: true, date: true },
       }),
     ]);
-    const recordByEmployee = new Map(records.map((record: any) => [record.employeeId, record]));
+    const recordByEmployee = new Map(
+      records.map((record: any) => [record.employeeId, record]),
+    );
     const lateDaysByEmployee = new Map<string, Set<string>>();
     for (const record of lateRecords) {
-      const days = lateDaysByEmployee.get(record.employeeId) ?? new Set<string>();
+      const days =
+        lateDaysByEmployee.get(record.employeeId) ?? new Set<string>();
       days.add(this.dateOnly(record.date));
       lateDaysByEmployee.set(record.employeeId, days);
     }
-    const allowanceMinutes = Math.max(0, Number(policy.monthlyLateAllowanceHours ?? 4)) * 60;
-    const chargeMinutes = Math.max(1, Number(policy.lateAllowanceChargeHoursPerDay ?? 1)) * 60;
+    const allowanceMinutes =
+      Math.max(0, Number(policy.monthlyLateAllowanceHours ?? 4)) * 60;
+    const chargeMinutes =
+      Math.max(1, Number(policy.lateAllowanceChargeHoursPerDay ?? 1)) * 60;
     const now = new Date();
     const rows: Record<string, unknown>[] = [];
 
     for (const employee of employees) {
       const employmentStart = employee.workStartDate ?? employee.hireDate;
-      if (employmentStart && new Date(employmentStart).getTime() >= end.getTime()) continue;
+      if (
+        employmentStart &&
+        new Date(employmentStart).getTime() >= end.getTime()
+      )
+        continue;
       const record = recordByEmployee.get(employee.id) as any | undefined;
       const schedule = record
         ? null
         : await this.resolveEffectiveAttendanceSchedule(
-            { organizationId, employeeId: employee.id, attendanceDate: start, timezone },
+            {
+              organizationId,
+              employeeId: employee.id,
+              attendanceDate: start,
+              timezone,
+            },
             employee,
             policy,
           );
       const lateDays = lateDaysByEmployee.get(employee.id)?.size ?? 0;
       const usedMinutes = Math.min(allowanceMinutes, lateDays * chargeMinutes);
-      const chargedToday = record?.minutesLate > 0
-        ? Math.min(chargeMinutes, Math.max(0, allowanceMinutes - Math.max(0, lateDays - 1) * chargeMinutes))
-        : 0;
-      const missingStatus = schedule?.isWorkingDay === false
-        ? HrAttendanceStatus.OFF
-        : schedule?.plannedCheckOut && now.getTime() < schedule.plannedCheckOut.getTime()
-          ? 'NOT_RECORDED'
-          : policy.missingAttendanceDisposition ?? MissingAttendanceDisposition.ABSENT;
+      const chargedToday =
+        record?.minutesLate > 0
+          ? Math.min(
+              chargeMinutes,
+              Math.max(
+                0,
+                allowanceMinutes - Math.max(0, lateDays - 1) * chargeMinutes,
+              ),
+            )
+          : 0;
+      const missingStatus =
+        schedule?.isWorkingDay === false
+          ? HrAttendanceStatus.OFF
+          : schedule?.plannedCheckOut &&
+              now.getTime() < schedule.plannedCheckOut.getTime()
+            ? 'NOT_RECORDED'
+            : (policy.missingAttendanceDisposition ??
+              MissingAttendanceDisposition.ABSENT);
       rows.push({
         employeeId: employee.id,
         employeeName: employee.name,
         employeeCode: employee.employeeCode ?? null,
         date,
-        plannedCheckInAt: record?.plannedCheckInAt ?? schedule?.plannedCheckInAt ?? null,
+        plannedCheckInAt:
+          record?.plannedCheckInAt ?? schedule?.plannedCheckInAt ?? null,
         checkInAt: record?.checkInAt ?? null,
-        plannedCheckOutAt: record?.plannedCheckOutAt ?? schedule?.plannedCheckOutAt ?? null,
+        plannedCheckOutAt:
+          record?.plannedCheckOutAt ?? schedule?.plannedCheckOutAt ?? null,
         checkOutAt: record?.checkOutAt ?? null,
         status: record?.status ?? missingStatus,
         entryChannel: record?.entryChannel ?? AttendanceEntryChannel.AUTO,
-        attendanceSource: record?.attendanceSource ?? AttendanceSource.AUTO_GENERATED,
+        attendanceSource:
+          record?.attendanceSource ?? AttendanceSource.AUTO_GENERATED,
         minutesLate: record?.minutesLate ?? 0,
         lateAllowanceChargedMinutes: chargedToday,
         lateAllowanceUsedMinutes: usedMinutes,
-        lateAllowanceRemainingMinutes: Math.max(0, allowanceMinutes - usedMinutes),
+        lateAllowanceRemainingMinutes: Math.max(
+          0,
+          allowanceMinutes - usedMinutes,
+        ),
         note: record?.note ?? null,
       });
     }
@@ -3349,7 +3771,9 @@ export class OperationsService {
     if (isPlatformUser(user)) {
       const organizationId = this.optional(input.organizationId);
       if (!organizationId) {
-        throw new BadRequestException('organizationId is required for platform users.');
+        throw new BadRequestException(
+          'organizationId is required for platform users.',
+        );
       }
       return organizationId;
     }
@@ -3358,7 +3782,9 @@ export class OperationsService {
       this.optional(input.organizationId) &&
       this.optional(input.organizationId) !== user.organizationId
     ) {
-      throw new ForbiddenException('Cannot create employees in another organization.');
+      throw new ForbiddenException(
+        'Cannot create employees in another organization.',
+      );
     }
 
     return requireOperationOrganizationId(user);
@@ -3374,7 +3800,9 @@ export class OperationsService {
     }
 
     if (organizationId && organizationId !== user.organizationId) {
-      throw new ForbiddenException('Cannot access employees in another organization.');
+      throw new ForbiddenException(
+        'Cannot access employees in another organization.',
+      );
     }
 
     return operationOrganizationWhere(user);
@@ -3384,7 +3812,10 @@ export class OperationsService {
     return { organizationId: this.resolveScopedOrganizationId(input, user) };
   }
 
-  private resolveScopedOrganizationId(input: any, user: AuthenticatedRequestUser) {
+  private resolveScopedOrganizationId(
+    input: any,
+    user: AuthenticatedRequestUser,
+  ) {
     const organizationId = this.optional(input.organizationId);
     if (isPlatformUser(user)) {
       const scoped = organizationId ?? user.organizationId;
@@ -3413,7 +3844,10 @@ export class OperationsService {
         AttendancePenaltyType.MARK_LATE,
       ),
       firstLatePenaltyValue: this.optional(input.firstLatePenaltyValue),
-      secondLateSliceMinutes: this.positiveInt(input.secondLateSliceMinutes, 30),
+      secondLateSliceMinutes: this.positiveInt(
+        input.secondLateSliceMinutes,
+        30,
+      ),
       secondLatePenaltyType: this.enumValue(
         AttendancePenaltyType,
         input.secondLatePenaltyType,
@@ -3427,19 +3861,36 @@ export class OperationsService {
       ),
       requireWifi: Boolean(input.requireWifi),
       allowedWifiSsids: this.stringList(input.allowedWifiSsids),
-      allowedWifiBssids: this.stringList(input.allowedWifiBssids).map((value) => normalizeWifiId(value) ?? value),
-      blockDeveloperOptions: input.blockDeveloperOptions === undefined ? true : Boolean(input.blockDeveloperOptions),
-      blockUsbDebugging: input.blockUsbDebugging === undefined ? true : Boolean(input.blockUsbDebugging),
+      allowedWifiBssids: this.stringList(input.allowedWifiBssids).map(
+        (value) => normalizeWifiId(value) ?? value,
+      ),
+      blockDeveloperOptions:
+        input.blockDeveloperOptions === undefined
+          ? true
+          : Boolean(input.blockDeveloperOptions),
+      blockUsbDebugging:
+        input.blockUsbDebugging === undefined
+          ? true
+          : Boolean(input.blockUsbDebugging),
       requirePhoto: Boolean(input.requirePhoto),
-      maxGpsAccuracyMeters: this.optionalPositiveInt(input.maxGpsAccuracyMeters, 'maxGpsAccuracyMeters'),
+      maxGpsAccuracyMeters: this.optionalPositiveInt(
+        input.maxGpsAccuracyMeters,
+        'maxGpsAccuracyMeters',
+      ),
       firstAttendancePhotoRequiresApproval:
         input.firstAttendancePhotoRequiresApproval === undefined
           ? true
           : Boolean(input.firstAttendancePhotoRequiresApproval),
       requireFaceVerification: Boolean(input.requireFaceVerification),
       requireDvrReview: Boolean(input.requireDvrReview),
-      allowWebCheckIn: input.allowWebCheckIn === undefined ? true : Boolean(input.allowWebCheckIn),
-      allowMobileCheckIn: input.allowMobileCheckIn === undefined ? true : Boolean(input.allowMobileCheckIn),
+      allowWebCheckIn:
+        input.allowWebCheckIn === undefined
+          ? true
+          : Boolean(input.allowWebCheckIn),
+      allowMobileCheckIn:
+        input.allowMobileCheckIn === undefined
+          ? true
+          : Boolean(input.allowMobileCheckIn),
       allowExpandedRadiusWithReview:
         input.allowExpandedRadiusWithReview === undefined
           ? true
@@ -3528,7 +3979,8 @@ export class OperationsService {
     const reasons: string[] = [];
     if (!user) reasons.push('LOGIN_USER_MISSING');
     if (user && !user.hasPassword) reasons.push('PASSWORD_MISSING');
-    if (employee.status !== HrEmployeeStatus.ACTIVE) reasons.push('EMPLOYEE_INACTIVE');
+    if (employee.status !== HrEmployeeStatus.ACTIVE)
+      reasons.push('EMPLOYEE_INACTIVE');
     if (user && !user.isActive) reasons.push('USER_INACTIVE');
     if (!employee.email && !user?.email) reasons.push('EMAIL_REQUIRED');
     if (!user?.role?.permissions?.length) reasons.push('NO_ROLE_PERMISSIONS');
@@ -3569,12 +4021,16 @@ export class OperationsService {
     user: AuthenticatedRequestUser,
   ) {
     if (roleName.startsWith('platform_') && !isPlatformUser(user)) {
-      throw new ForbiddenException('Company users cannot assign platform roles.');
+      throw new ForbiddenException(
+        'Company users cannot assign platform roles.',
+      );
     }
   }
 
   private userRoleForEmployeeRole(roleName: string) {
-    return COMPANY_ROLE_TO_USER_ROLE[roleName] ?? UserRole.DEVELOPER_SALES_AGENT;
+    return (
+      COMPANY_ROLE_TO_USER_ROLE[roleName] ?? UserRole.DEVELOPER_SALES_AGENT
+    );
   }
 
   private permissionKeys(value: unknown) {
@@ -3599,7 +4055,9 @@ export class OperationsService {
 
     for (const permission of permissions) {
       if (this.isPlatformPermission(permission) && !isPlatformUser(user)) {
-        throw new ForbiddenException('Company users cannot assign platform permissions.');
+        throw new ForbiddenException(
+          'Company users cannot assign platform permissions.',
+        );
       }
     }
 
@@ -3611,14 +4069,18 @@ export class OperationsService {
       (permission) => !user.permissions?.includes(permission),
     );
     if (missing.length) {
-      throw new ForbiddenException('Cannot assign permissions you do not have.');
+      throw new ForbiddenException(
+        'Cannot assign permissions you do not have.',
+      );
     }
   }
 
   private isPlatformPermission(permission: string) {
     return (
       PLATFORM_PERMISSION_KEYS.has(permission) ||
-      PLATFORM_PERMISSION_PREFIXES.some((prefix) => permission.startsWith(prefix))
+      PLATFORM_PERMISSION_PREFIXES.some((prefix) =>
+        permission.startsWith(prefix),
+      )
     );
   }
 
@@ -3638,7 +4100,11 @@ export class OperationsService {
       update: {},
     });
 
-    await this.syncRolePermissions(prisma, role.id, ROLE_PERMISSIONS[roleName] ?? []);
+    await this.syncRolePermissions(
+      prisma,
+      role.id,
+      ROLE_PERMISSIONS[roleName] ?? [],
+    );
     return role;
   }
 
@@ -3702,10 +4168,13 @@ export class OperationsService {
       select: { id: true, phone: true },
     });
     const conflict = users.some(
-      (candidate) => candidate.id !== exceptUserId && phonesMatch(candidate.phone, phone),
+      (candidate) =>
+        candidate.id !== exceptUserId && phonesMatch(candidate.phone, phone),
     );
     if (conflict) {
-      throw new ConflictException('Phone number cannot be used for this account.');
+      throw new ConflictException(
+        'Phone number cannot be used for this account.',
+      );
     }
   }
 
@@ -3734,7 +4203,9 @@ export class OperationsService {
 
   private ensureHashService() {
     if (!this.hashService) {
-      throw new BadRequestException('Password hashing service is not available.');
+      throw new BadRequestException(
+        'Password hashing service is not available.',
+      );
     }
   }
 
@@ -3908,12 +4379,18 @@ export class OperationsService {
       const { start, end } = this.attendanceDayBounds(targetDate, timezone);
       const policy = await this.attendancePolicy(organization.id);
       const employees = await this.prisma.hrEmployee.findMany({
-        where: { organizationId: organization.id, status: HrEmployeeStatus.ACTIVE },
+        where: {
+          organizationId: organization.id,
+          status: HrEmployeeStatus.ACTIVE,
+        },
       });
 
       for (const employee of employees) {
         const employmentStart = employee.workStartDate ?? employee.hireDate;
-        if (employmentStart && new Date(employmentStart).getTime() >= end.getTime()) {
+        if (
+          employmentStart &&
+          new Date(employmentStart).getTime() >= end.getTime()
+        ) {
           skipped += 1;
           continue;
         }
@@ -3933,7 +4410,12 @@ export class OperationsService {
           continue;
         }
         const schedule = await this.resolveEffectiveAttendanceSchedule(
-          { organizationId: organization.id, employeeId: employee.id, attendanceDate: workDate, timezone },
+          {
+            organizationId: organization.id,
+            employeeId: employee.id,
+            attendanceDate: workDate,
+            timezone,
+          },
           employee,
           policy,
         );
@@ -3941,9 +4423,11 @@ export class OperationsService {
           skipped += 1;
           continue;
         }
-        const status = policy.missingAttendanceDisposition === MissingAttendanceDisposition.LEAVE
-          ? HrAttendanceStatus.LEAVE
-          : HrAttendanceStatus.ABSENT;
+        const status =
+          policy.missingAttendanceDisposition ===
+          MissingAttendanceDisposition.LEAVE
+            ? HrAttendanceStatus.LEAVE
+            : HrAttendanceStatus.ABSENT;
         await this.prisma.hrAttendanceRecord.create({
           data: {
             organizationId: organization.id,
@@ -3996,8 +4480,15 @@ export class OperationsService {
       orderBy: { checkInAt: 'asc' },
     });
     if (!record) return false;
-    const timezone = await this.organizationTimezoneFor(employee.organizationId);
-    const result = await this.autoCloseRecordIfDue(record, policy, timezone, now);
+    const timezone = await this.organizationTimezoneFor(
+      employee.organizationId,
+    );
+    const result = await this.autoCloseRecordIfDue(
+      record,
+      policy,
+      timezone,
+      now,
+    );
     return result.closed;
   }
 
@@ -4028,10 +4519,14 @@ export class OperationsService {
       });
       if (marked.count) {
         warningQueued = true;
-        await this.queueAttendanceNotification(record, 'attendance.missed_checkout_warning', {
-          attendanceRecordId: record.id,
-          dueAt: plan.dueAt.toISOString(),
-        });
+        await this.queueAttendanceNotification(
+          record,
+          'attendance.missed_checkout_warning',
+          {
+            attendanceRecordId: record.id,
+            dueAt: plan.dueAt.toISOString(),
+          },
+        );
       }
     }
     if (now.getTime() < plan.dueAt.getTime()) {
@@ -4078,18 +4573,27 @@ export class OperationsService {
     return { closed: updated.count > 0, warningQueued };
   }
 
-  private autoClosePlan(record: any, policy: any, timezone: string, now = new Date()) {
+  private autoClosePlan(
+    record: any,
+    policy: any,
+    timezone: string,
+    now = new Date(),
+  ) {
     if (!policy.autoCloseOpenAttendance || !record.checkInAt) return null;
     const checkInAt = new Date(record.actualCheckInAt ?? record.checkInAt);
     if (Number.isNaN(checkInAt.getTime())) return null;
-    const graceMinutes = Math.max(0, Number(policy.autoCloseGraceMinutes ?? 60));
+    const graceMinutes = Math.max(
+      0,
+      Number(policy.autoCloseGraceMinutes ?? 60),
+    );
     const staleAt = new Date(
       checkInAt.getTime() + STALE_OPEN_ATTENDANCE_MAX_HOURS * 60 * 60 * 1000,
     );
     if (record.overnightShift === true) {
       if (record.plannedCheckOutAt) {
         const dueAt = new Date(
-          new Date(record.plannedCheckOutAt).getTime() + graceMinutes * 60 * 1000,
+          new Date(record.plannedCheckOutAt).getTime() +
+            graceMinutes * 60 * 1000,
         );
         if (!Number.isNaN(dueAt.getTime())) {
           return {
@@ -4240,8 +4744,11 @@ export class OperationsService {
       capturedImageId: record?.capturedImageId ?? null,
       faceVerificationProvider: record?.faceVerificationProvider ?? null,
       faceVerificationConfidence: record?.faceVerificationConfidence ?? null,
-      faceVerificationStatus: record?.faceVerificationStatus ?? AttendanceFaceVerificationStatus.NOT_REQUIRED,
-      faceVerificationRejectionReason: record?.faceVerificationRejectionReason ?? null,
+      faceVerificationStatus:
+        record?.faceVerificationStatus ??
+        AttendanceFaceVerificationStatus.NOT_REQUIRED,
+      faceVerificationRejectionReason:
+        record?.faceVerificationRejectionReason ?? null,
       canCheckIn: !checkInAt || Boolean(checkOutAt) || terminalFailure,
       canCheckOut: Boolean(checkInAt && !checkOutAt && !terminalFailure),
       durationMinutes:
@@ -4276,41 +4783,115 @@ export class OperationsService {
 
   /** Central schedule resolver. Historical records use its saved snapshot, never a later schedule edit. */
   async resolveEffectiveAttendanceSchedule(
-    input: { organizationId: string; employeeId: string; attendanceDate: Date; timezone?: string },
+    input: {
+      organizationId: string;
+      employeeId: string;
+      attendanceDate: Date;
+      timezone?: string;
+    },
     employee?: any,
     policy?: any,
   ) {
-    const currentEmployee = employee ?? await this.prisma.hrEmployee.findFirstOrThrow({ where: { id: input.employeeId, organizationId: input.organizationId } });
+    const currentEmployee =
+      employee ??
+      (await this.prisma.hrEmployee.findFirstOrThrow({
+        where: { id: input.employeeId, organizationId: input.organizationId },
+      }));
     const effectiveAt = input.attendanceDate;
-    const mode = currentEmployee.attendanceScheduleMode ?? AttendanceScheduleMode.ORGANIZATION_DEFAULT;
-    const activePeriod = { isActive: true, effectiveFrom: { lte: effectiveAt }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveAt } }] };
-    const override = mode === AttendanceScheduleMode.EMPLOYEE_OVERRIDE && this.prisma.hrEmployeeAttendanceScheduleOverride
-      ? await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({ where: { organizationId: input.organizationId, employeeId: input.employeeId, ...activePeriod }, orderBy: { effectiveFrom: 'desc' } })
-      : null;
-    const assigned = !override && currentEmployee.attendanceScheduleId && this.prisma.hrAttendanceSchedule
-      ? await this.prisma.hrAttendanceSchedule.findFirst({ where: { id: currentEmployee.attendanceScheduleId, organizationId: input.organizationId, ...activePeriod } })
-      : null;
+    const mode =
+      currentEmployee.attendanceScheduleMode ??
+      AttendanceScheduleMode.ORGANIZATION_DEFAULT;
+    const activePeriod = {
+      isActive: true,
+      effectiveFrom: { lte: effectiveAt },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gte: effectiveAt } }],
+    };
+    const override =
+      mode === AttendanceScheduleMode.EMPLOYEE_OVERRIDE &&
+      this.prisma.hrEmployeeAttendanceScheduleOverride
+        ? await this.prisma.hrEmployeeAttendanceScheduleOverride.findFirst({
+            where: {
+              organizationId: input.organizationId,
+              employeeId: input.employeeId,
+              ...activePeriod,
+            },
+            orderBy: { effectiveFrom: 'desc' },
+          })
+        : null;
+    const assigned =
+      !override &&
+      currentEmployee.attendanceScheduleId &&
+      this.prisma.hrAttendanceSchedule
+        ? await this.prisma.hrAttendanceSchedule.findFirst({
+            where: {
+              id: currentEmployee.attendanceScheduleId,
+              organizationId: input.organizationId,
+              ...activePeriod,
+            },
+          })
+        : null;
     const schedule = override ?? assigned;
-    const scheduleSource = override ? AttendanceScheduleMode.EMPLOYEE_OVERRIDE : assigned ? AttendanceScheduleMode.ASSIGNED_SCHEDULE : AttendanceScheduleMode.ORGANIZATION_DEFAULT;
+    const scheduleSource = override
+      ? AttendanceScheduleMode.EMPLOYEE_OVERRIDE
+      : assigned
+        ? AttendanceScheduleMode.ASSIGNED_SCHEDULE
+        : AttendanceScheduleMode.ORGANIZATION_DEFAULT;
     // An invalid/missing employee override deliberately falls back; callers can
     // surface this warning without preventing a legitimate attendance action.
-    const configurationWarning = mode === AttendanceScheduleMode.EMPLOYEE_OVERRIDE && !override
-      ? 'EMPLOYEE_OVERRIDE_NOT_EFFECTIVE_FALLBACK_USED'
-      : mode === AttendanceScheduleMode.ASSIGNED_SCHEDULE && !assigned
-        ? 'ASSIGNED_SCHEDULE_NOT_EFFECTIVE_FALLBACK_USED'
-        : null;
-    const timezone = this.attendanceTimezone(schedule?.timezone ?? input.timezone ?? 'UTC');
+    const configurationWarning =
+      mode === AttendanceScheduleMode.EMPLOYEE_OVERRIDE && !override
+        ? 'EMPLOYEE_OVERRIDE_NOT_EFFECTIVE_FALLBACK_USED'
+        : mode === AttendanceScheduleMode.ASSIGNED_SCHEDULE && !assigned
+          ? 'ASSIGNED_SCHEDULE_NOT_EFFECTIVE_FALLBACK_USED'
+          : null;
+    const timezone = this.attendanceTimezone(
+      schedule?.timezone ?? input.timezone ?? 'UTC',
+    );
     const workDate = this.zonedWorkDate(input.attendanceDate, timezone);
     const weekday = workDate.getUTCDay();
     const storedRules: any = schedule?.weeklyRules;
-    const hasStoredRules = Array.isArray(storedRules) || Boolean(storedRules && typeof storedRules === 'object');
+    const hasStoredRules =
+      Array.isArray(storedRules) ||
+      Boolean(storedRules && typeof storedRules === 'object');
     const rules: any = Array.isArray(storedRules)
-      ? Object.fromEntries(storedRules.map((rule: any) => [String(rule.dayOfWeek), rule]))
-      : storedRules ?? {};
-    const organizationDefaultRule = { isWorkingDay: true, startTime: policy?.workStartTime ?? '11:15', endTime: policy?.workEndTime ?? '19:00', lateUntilMinutes: Number(policy?.firstLateSliceMinutes ?? 15), severeLateUntilMinutes: Number(policy?.secondLateSliceMinutes ?? 60), absentAfterMinutes: Number(policy?.secondLateSliceMinutes ?? 60), earlyLeaveGraceMinutes: Number(policy?.gracePeriodMinutes ?? 0), overnightShift: false };
-    const rule = hasStoredRules ? (rules[String(weekday)] ?? rules[weekday] ?? null) : organizationDefaultRule;
+      ? Object.fromEntries(
+          storedRules.map((rule: any) => [String(rule.dayOfWeek), rule]),
+        )
+      : (storedRules ?? {});
+    const organizationDefaultRule = {
+      isWorkingDay: true,
+      startTime: policy?.workStartTime ?? '11:15',
+      endTime: policy?.workEndTime ?? '19:00',
+      lateUntilMinutes: Number(policy?.firstLateSliceMinutes ?? 15),
+      severeLateUntilMinutes: Number(policy?.secondLateSliceMinutes ?? 60),
+      absentAfterMinutes: Number(policy?.secondLateSliceMinutes ?? 60),
+      earlyLeaveGraceMinutes: Number(policy?.gracePeriodMinutes ?? 0),
+      overnightShift: false,
+    };
+    const rule = hasStoredRules
+      ? (rules[String(weekday)] ?? rules[weekday] ?? null)
+      : organizationDefaultRule;
     if (!rule || rule.isWorkingDay === false) {
-      return { source: scheduleSource, scheduleSource, scheduleId: schedule?.id ?? null, timezone, workDate, plannedCheckIn: null, plannedCheckOut: null, plannedCheckInAt: null, plannedCheckOutAt: null, lateUntilAt: null, severeLateUntilAt: null, absentAfterAt: null, graceMinutes: 0, earlyLeaveMinutes: 0, isWorkingDay: false, overnightShift: false, expectedWorkMinutes: 0, configurationWarning };
+      return {
+        source: scheduleSource,
+        scheduleSource,
+        scheduleId: schedule?.id ?? null,
+        timezone,
+        workDate,
+        plannedCheckIn: null,
+        plannedCheckOut: null,
+        plannedCheckInAt: null,
+        plannedCheckOutAt: null,
+        lateUntilAt: null,
+        severeLateUntilAt: null,
+        absentAfterAt: null,
+        graceMinutes: 0,
+        earlyLeaveMinutes: 0,
+        isWorkingDay: false,
+        overnightShift: false,
+        expectedWorkMinutes: 0,
+        configurationWarning,
+      };
     }
     // Organization defaults are the established attendance-policy fallback.
     // They predate weekly-rule validation and may contain legacy overnight-like
@@ -4320,75 +4901,222 @@ export class OperationsService {
     const end = String(rule.endTime);
     const overnightShift = Boolean(rule.overnightShift);
     const plannedCheckIn = this.scheduleDateTime(workDate, start, 0, timezone);
-    const plannedCheckOut = this.scheduleDateTime(workDate, end, overnightShift ? 1 : 0, timezone);
-    const expectedWorkMinutes = Math.max(0, Math.round((plannedCheckOut.getTime() - plannedCheckIn.getTime()) / 60000) - Number(rule.breakMinutes ?? 0));
+    const plannedCheckOut = this.scheduleDateTime(
+      workDate,
+      end,
+      overnightShift ? 1 : 0,
+      timezone,
+    );
+    const expectedWorkMinutes = Math.max(
+      0,
+      Math.round(
+        (plannedCheckOut.getTime() - plannedCheckIn.getTime()) / 60000,
+      ) - Number(rule.breakMinutes ?? 0),
+    );
     const lateUntilMinutes = Number(rule.lateUntilMinutes);
     const severeLateUntilMinutes = Number(rule.severeLateUntilMinutes);
     const absentAfterMinutes = Number(rule.absentAfterMinutes);
-    return { source: scheduleSource, scheduleSource, scheduleId: schedule?.id ?? null, timezone, workDate, plannedCheckIn, plannedCheckOut, plannedCheckInAt: plannedCheckIn, plannedCheckOutAt: plannedCheckOut, lateUntilAt: new Date(plannedCheckIn.getTime() + lateUntilMinutes * 60000), severeLateUntilAt: new Date(plannedCheckIn.getTime() + severeLateUntilMinutes * 60000), absentAfterAt: new Date(plannedCheckIn.getTime() + absentAfterMinutes * 60000), graceMinutes: Number(rule.earlyLeaveGraceMinutes ?? 0), earlyLeaveMinutes: Number(rule.earlyLeaveGraceMinutes ?? 0), isWorkingDay: true, overnightShift, expectedWorkMinutes, configurationWarning };
+    return {
+      source: scheduleSource,
+      scheduleSource,
+      scheduleId: schedule?.id ?? null,
+      timezone,
+      workDate,
+      plannedCheckIn,
+      plannedCheckOut,
+      plannedCheckInAt: plannedCheckIn,
+      plannedCheckOutAt: plannedCheckOut,
+      lateUntilAt: new Date(
+        plannedCheckIn.getTime() + lateUntilMinutes * 60000,
+      ),
+      severeLateUntilAt: new Date(
+        plannedCheckIn.getTime() + severeLateUntilMinutes * 60000,
+      ),
+      absentAfterAt: new Date(
+        plannedCheckIn.getTime() + absentAfterMinutes * 60000,
+      ),
+      graceMinutes: Number(rule.earlyLeaveGraceMinutes ?? 0),
+      earlyLeaveMinutes: Number(rule.earlyLeaveGraceMinutes ?? 0),
+      isWorkingDay: true,
+      overnightShift,
+      expectedWorkMinutes,
+      configurationWarning,
+    };
   }
 
-  private scheduleDateTime(date: Date, time: string, dayOffset = 0, timezone = 'UTC') {
+  private scheduleDateTime(
+    date: Date,
+    time: string,
+    dayOffset = 0,
+    timezone = 'UTC',
+  ) {
     const [hours, minutes] = time.split(':').map(Number);
-    const local = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + dayOffset, hours || 0, minutes || 0, 0, 0);
+    const local = Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + dayOffset,
+      hours || 0,
+      minutes || 0,
+      0,
+      0,
+    );
     let result = new Date(local);
     // Two iterations account for the offset at the target instant (including DST).
-    for (let index = 0; index < 2; index += 1) result = new Date(local - this.timezoneOffsetMilliseconds(result, timezone));
+    for (let index = 0; index < 2; index += 1)
+      result = new Date(
+        local - this.timezoneOffsetMilliseconds(result, timezone),
+      );
     return result;
   }
 
-  private calculateScheduleLatePenalty(checkInAt: Date, schedule: any, policy: any) {
+  private calculateScheduleLatePenalty(
+    checkInAt: Date,
+    schedule: any,
+    policy: any,
+  ) {
     if (schedule.source === AttendanceScheduleMode.ORGANIZATION_DEFAULT) {
-      const legacy = this.calculateLatePenalty(schedule.plannedCheckIn, checkInAt, policy);
-      return { ...legacy, attendanceStatus: legacy.minutesLate > 0 ? HrAttendanceStatus.LATE : HrAttendanceStatus.PRESENT };
+      const legacy = this.calculateLatePenalty(
+        schedule.plannedCheckIn,
+        checkInAt,
+        policy,
+      );
+      return {
+        ...legacy,
+        attendanceStatus:
+          legacy.minutesLate > 0
+            ? HrAttendanceStatus.LATE
+            : HrAttendanceStatus.PRESENT,
+      };
     }
-    if (!schedule.isWorkingDay) return { minutesLate: 0, attendanceStatus: HrAttendanceStatus.PRESENT, lateLevel: AttendanceLateLevel.ON_TIME, penaltyType: AttendancePenaltyType.NONE, penaltyValue: null, requiresReview: false };
-    const minutesLate = Math.max(0, Math.round((checkInAt.getTime() - schedule.plannedCheckIn.getTime()) / 60000));
-    const attendanceStatus = minutesLate <= 0 ? HrAttendanceStatus.PRESENT : checkInAt.getTime() <= schedule.lateUntilAt.getTime() ? HrAttendanceStatus.LATE : checkInAt.getTime() <= schedule.absentAfterAt.getTime() ? HrAttendanceStatus.SEVERE_LATE : HrAttendanceStatus.ABSENT;
-    if (attendanceStatus === HrAttendanceStatus.PRESENT) return { minutesLate, attendanceStatus, lateLevel: minutesLate ? AttendanceLateLevel.GRACE : AttendanceLateLevel.ON_TIME, penaltyType: AttendancePenaltyType.NONE, penaltyValue: null, requiresReview: false };
+    if (!schedule.isWorkingDay)
+      return {
+        minutesLate: 0,
+        attendanceStatus: HrAttendanceStatus.PRESENT,
+        lateLevel: AttendanceLateLevel.ON_TIME,
+        penaltyType: AttendancePenaltyType.NONE,
+        penaltyValue: null,
+        requiresReview: false,
+      };
+    const minutesLate = Math.max(
+      0,
+      Math.round(
+        (checkInAt.getTime() - schedule.plannedCheckIn.getTime()) / 60000,
+      ),
+    );
+    const attendanceStatus =
+      minutesLate <= 0
+        ? HrAttendanceStatus.PRESENT
+        : checkInAt.getTime() <= schedule.lateUntilAt.getTime()
+          ? HrAttendanceStatus.LATE
+          : checkInAt.getTime() <= schedule.absentAfterAt.getTime()
+            ? HrAttendanceStatus.SEVERE_LATE
+            : HrAttendanceStatus.ABSENT;
+    if (attendanceStatus === HrAttendanceStatus.PRESENT)
+      return {
+        minutesLate,
+        attendanceStatus,
+        lateLevel: minutesLate
+          ? AttendanceLateLevel.GRACE
+          : AttendanceLateLevel.ON_TIME,
+        penaltyType: AttendancePenaltyType.NONE,
+        penaltyValue: null,
+        requiresReview: false,
+      };
     const plannedStart = `${String(schedule.plannedCheckIn.getUTCHours()).padStart(2, '0')}:${String(schedule.plannedCheckIn.getUTCMinutes()).padStart(2, '0')}`;
-    return { ...this.calculateLatePenalty(schedule.plannedCheckIn, checkInAt, { ...policy, workStartTime: plannedStart, gracePeriodMinutes: 0 }), attendanceStatus };
+    return {
+      ...this.calculateLatePenalty(schedule.plannedCheckIn, checkInAt, {
+        ...policy,
+        workStartTime: plannedStart,
+        gracePeriodMinutes: 0,
+      }),
+      attendanceStatus,
+    };
   }
 
   private assertAttendanceRule(rule: any) {
     if (rule.isWorkingDay === false) return;
-    if (typeof rule.startTime !== 'string' || typeof rule.endTime !== 'string') throw new BadRequestException('Working days require startTime and endTime.');
-    const values = ['lateUntilMinutes', 'severeLateUntilMinutes', 'absentAfterMinutes', 'earlyLeaveGraceMinutes'].map((key) => Number(rule[key]));
-    if (values.some((value) => !Number.isFinite(value) || value < 0) || values[0] >= values[1] || values[1] > values[2]) throw new BadRequestException('Attendance thresholds must satisfy 0 <= late < severe <= absent.');
-    const start = String(rule.startTime); const end = String(rule.endTime);
-    if (!this.isAttendanceTime(start) || !this.isAttendanceTime(end) || (end <= start && !rule.overnightShift)) throw new BadRequestException('Invalid attendance time range.');
+    if (typeof rule.startTime !== 'string' || typeof rule.endTime !== 'string')
+      throw new BadRequestException(
+        'Working days require startTime and endTime.',
+      );
+    const values = [
+      'lateUntilMinutes',
+      'severeLateUntilMinutes',
+      'absentAfterMinutes',
+      'earlyLeaveGraceMinutes',
+    ].map((key) => Number(rule[key]));
+    if (
+      values.some((value) => !Number.isFinite(value) || value < 0) ||
+      values[0] >= values[1] ||
+      values[1] > values[2]
+    )
+      throw new BadRequestException(
+        'Attendance thresholds must satisfy 0 <= late < severe <= absent.',
+      );
+    const start = String(rule.startTime);
+    const end = String(rule.endTime);
+    if (
+      !this.isAttendanceTime(start) ||
+      !this.isAttendanceTime(end) ||
+      (end <= start && !rule.overnightShift)
+    )
+      throw new BadRequestException('Invalid attendance time range.');
   }
 
   private attendanceTimezone(value: unknown) {
-    const timezone = typeof value === 'string' && value.trim() ? value.trim() : null;
+    const timezone =
+      typeof value === 'string' && value.trim() ? value.trim() : null;
     if (!timezone) throw new BadRequestException('timezone is required.');
-    try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(); } catch { throw new BadRequestException('timezone must be a valid IANA timezone.'); }
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format();
+    } catch {
+      throw new BadRequestException('timezone must be a valid IANA timezone.');
+    }
     return timezone;
   }
 
   private organizationTimezone(value: unknown) {
     if (typeof value !== 'string' || !value.trim()) return 'UTC';
-    try { return this.attendanceTimezone(value); } catch { return 'UTC'; }
+    try {
+      return this.attendanceTimezone(value);
+    } catch {
+      return 'UTC';
+    }
   }
 
   private attendanceListDate(value: unknown, timezone: string) {
-    if (value === undefined || value === null || value === '') return this.organizationLocalDate(new Date(), timezone);
-    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new BadRequestException('date must be YYYY-MM-DD.');
+    if (value === undefined || value === null || value === '')
+      return this.organizationLocalDate(new Date(), timezone);
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+      throw new BadRequestException('date must be YYYY-MM-DD.');
     const [year, month, day] = value.split('-').map(Number);
     const candidate = new Date(Date.UTC(year, month - 1, day));
-    if (candidate.getUTCFullYear() !== year || candidate.getUTCMonth() !== month - 1 || candidate.getUTCDate() !== day) throw new BadRequestException('date must be a valid calendar date.');
+    if (
+      candidate.getUTCFullYear() !== year ||
+      candidate.getUTCMonth() !== month - 1 ||
+      candidate.getUTCDate() !== day
+    )
+      throw new BadRequestException('date must be a valid calendar date.');
     return value;
   }
 
   private organizationLocalDate(value: Date, timezone: string) {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(value);
-    const item = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(value);
+    const item = (type: string) =>
+      parts.find((part) => part.type === type)?.value ?? '';
     return `${item('year')}-${item('month')}-${item('day')}`;
   }
 
   private previousDate(value: string) {
     const [year, month, day] = value.split('-').map(Number);
-    return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+    return new Date(Date.UTC(year, month - 1, day - 1))
+      .toISOString()
+      .slice(0, 10);
   }
 
   private attendanceDayBounds(date: string, timezone: string) {
@@ -4405,15 +5133,40 @@ export class OperationsService {
   }
 
   private zonedWorkDate(value: Date, timezone: string) {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(value);
-    const part = (type: string) => Number(parts.find((item) => item.type === type)?.value);
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(value);
+    const part = (type: string) =>
+      Number(parts.find((item) => item.type === type)?.value);
     return new Date(Date.UTC(part('year'), part('month') - 1, part('day')));
   }
 
   private timezoneOffsetMilliseconds(value: Date, timezone: string) {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(value);
-    const part = (type: string) => Number(parts.find((item) => item.type === type)?.value);
-    return Date.UTC(part('year'), part('month') - 1, part('day'), part('hour'), part('minute'), part('second')) - value.getTime();
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(value);
+    const part = (type: string) =>
+      Number(parts.find((item) => item.type === type)?.value);
+    return (
+      Date.UTC(
+        part('year'),
+        part('month') - 1,
+        part('day'),
+        part('hour'),
+        part('minute'),
+        part('second'),
+      ) - value.getTime()
+    );
   }
 
   private calculateLatePenalty(date: Date, checkInAt: Date, policy: any) {
@@ -4421,7 +5174,12 @@ export class OperationsService {
       .split(':')
       .map(Number);
     const scheduled = new Date(date);
-    scheduled.setHours(Number.isFinite(hours) ? hours : 11, Number.isFinite(minutes) ? minutes : 15, 0, 0);
+    scheduled.setHours(
+      Number.isFinite(hours) ? hours : 11,
+      Number.isFinite(minutes) ? minutes : 15,
+      0,
+      0,
+    );
     const minutesLate = Math.max(
       0,
       Math.round((checkInAt.getTime() - scheduled.getTime()) / 60000),
@@ -4452,16 +5210,19 @@ export class OperationsService {
       return {
         minutesLate,
         lateLevel: AttendanceLateLevel.FIRST_SLICE,
-        penaltyType: policy.firstLatePenaltyType ?? AttendancePenaltyType.MARK_LATE,
+        penaltyType:
+          policy.firstLatePenaltyType ?? AttendancePenaltyType.MARK_LATE,
         penaltyValue: policy.firstLatePenaltyValue ?? null,
-        requiresReview: policy.firstLatePenaltyType === AttendancePenaltyType.MANUAL_REVIEW,
+        requiresReview:
+          policy.firstLatePenaltyType === AttendancePenaltyType.MANUAL_REVIEW,
       };
     }
     if (minutesLate <= grace + first + second) {
       return {
         minutesLate,
         lateLevel: AttendanceLateLevel.SECOND_SLICE,
-        penaltyType: policy.secondLatePenaltyType ?? AttendancePenaltyType.MANUAL_REVIEW,
+        penaltyType:
+          policy.secondLatePenaltyType ?? AttendancePenaltyType.MANUAL_REVIEW,
         penaltyValue: policy.secondLatePenaltyValue ?? null,
         requiresReview: true,
       };
@@ -4470,7 +5231,8 @@ export class OperationsService {
       minutesLate,
       lateLevel: AttendanceLateLevel.BEYOND_SECOND,
       penaltyType:
-        policy.beyondSecondSlicePenaltyType ?? AttendancePenaltyType.MANUAL_REVIEW,
+        policy.beyondSecondSlicePenaltyType ??
+        AttendancePenaltyType.MANUAL_REVIEW,
       penaltyValue: null,
       requiresReview: true,
     };
@@ -4546,7 +5308,9 @@ export class OperationsService {
           phase === 'checkIn' ? 'checkInPhotoFileId' : 'checkOutPhotoFileId'
         ],
     );
-    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
+    const isWeb =
+      this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' ||
+      !this.optional(input.clientPlatform);
     const developerOptionsEnabled = input.developerOptionsEnabled === true;
     const usbDebuggingEnabled = input.usbDebuggingEnabled === true;
 
@@ -4576,7 +5340,9 @@ export class OperationsService {
         CheckOutOutsideLocationPolicy.BLOCK;
       if (outsidePolicy === CheckOutOutsideLocationPolicy.BLOCK) {
         reasons.push('OUTSIDE_ALLOWED_LOCATION');
-      } else if (outsidePolicy === CheckOutOutsideLocationPolicy.MANUAL_REVIEW) {
+      } else if (
+        outsidePolicy === CheckOutOutsideLocationPolicy.MANUAL_REVIEW
+      ) {
         reasons.push('CHECK_OUT_OUTSIDE_LOCATION_REVIEW');
       } else {
         reasons.push('CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE');
@@ -4640,9 +5406,9 @@ export class OperationsService {
       ? AttendanceVerificationStatus.REJECTED
       : reasons.length
         ? AttendanceVerificationStatus.PENDING_REVIEW
-      : policy.requireDvrReview
-        ? AttendanceVerificationStatus.PENDING_REVIEW
-        : AttendanceVerificationStatus.VERIFIED;
+        : policy.requireDvrReview
+          ? AttendanceVerificationStatus.PENDING_REVIEW
+          : AttendanceVerificationStatus.VERIFIED;
 
     return {
       status,
@@ -4736,62 +5502,216 @@ export class OperationsService {
   ) {
     const latitude = this.optionalNumber(input.latitude);
     const longitude = this.optionalNumber(input.longitude);
-    const accuracy = this.optionalNumber(input.locationAccuracyMeters ?? input.accuracyMeters);
-    const capturedAt = this.safeDate(input.locationCapturedAt ?? input.capturedAt);
-    if (!policy.requireLocation) return { blockingReasons: [] as string[], source: null, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'LOCATION_NOT_REQUIRED' };
+    const accuracy = this.optionalNumber(
+      input.locationAccuracyMeters ?? input.accuracyMeters,
+    );
+    const capturedAt = this.safeDate(
+      input.locationCapturedAt ?? input.capturedAt,
+    );
+    if (!policy.requireLocation)
+      return {
+        blockingReasons: [] as string[],
+        source: null,
+        distanceMeters: null,
+        allowedRadiusMeters: null,
+        exactRadiusMeters: null,
+        expandedRadiusMeters: null,
+        matchedLocationId: null,
+        matchedLocationName: null,
+        mode: 'LOCATION_NOT_REQUIRED',
+      };
     const reasons: string[] = [];
-    if (latitude === undefined || longitude === undefined || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) reasons.push('LOCATION_REQUIRED');
+    if (
+      latitude === undefined ||
+      longitude === undefined ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    )
+      reasons.push('LOCATION_REQUIRED');
     // Check-out is a final security decision, not a continuation of preflight:
     // it requires a fresh capture. Check-in retains old-client compatibility.
     if (phase === 'checkOut' && !capturedAt) reasons.push('LOCATION_STALE');
-    if (capturedAt && (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 || capturedAt.getTime() - Date.now() > 60 * 1000)) reasons.push('LOCATION_STALE');
-    if (accuracy !== undefined && accuracy < 0) reasons.push('GPS_ACCURACY_TOO_LOW');
-    if (policy.maxGpsAccuracyMeters && (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)) reasons.push('GPS_ACCURACY_TOO_LOW');
-    const isWeb = this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' || !this.optional(input.clientPlatform);
+    if (
+      capturedAt &&
+      (Date.now() - capturedAt.getTime() > 10 * 60 * 1000 ||
+        capturedAt.getTime() - Date.now() > 60 * 1000)
+    )
+      reasons.push('LOCATION_STALE');
+    if (accuracy !== undefined && accuracy < 0)
+      reasons.push('GPS_ACCURACY_TOO_LOW');
+    if (
+      policy.maxGpsAccuracyMeters &&
+      (accuracy === undefined || accuracy > policy.maxGpsAccuracyMeters)
+    )
+      reasons.push('GPS_ACCURACY_TOO_LOW');
+    const isWeb =
+      this.optional(input.clientPlatform)?.toUpperCase() === 'WEB' ||
+      !this.optional(input.clientPlatform);
     const branchId = this.optional(input.branchId);
     const attendanceLocationId = this.optional(input.attendanceLocationId);
     if (branchId) {
-      const branch = await this.prisma.organizationBranch.findFirst({ where: { id: branchId, organizationId, isActive: true }, select: { id: true } });
+      const branch = await this.prisma.organizationBranch.findFirst({
+        where: { id: branchId, organizationId, isActive: true },
+        select: { id: true },
+      });
       if (!branch) reasons.push('BRANCH_NOT_ALLOWED');
     }
-    const configuredLocations = await this.prisma.organizationAttendanceLocation.findMany({
-      where: { organizationId, isActive: true, ...(isWeb ? { allowedForWeb: true } : { allowedForMobile: true }), ...(attendanceLocationId ? { id: attendanceLocationId } : {}), ...(branchId && !reasons.includes('BRANCH_NOT_ALLOWED') ? { officeId: branchId } : {}) },
-      select: { id: true, name: true, latitude: true, longitude: true, exactRadiusMeters: true, expandedRadiusMeters: true, requiresReviewOutsideExactRadius: true },
-    });
-    const locations = configuredLocations.filter((location) =>
-      Number.isFinite(location.latitude) &&
-      Number.isFinite(location.longitude) &&
-      location.latitude >= -90 &&
-      location.latitude <= 90 &&
-      location.longitude >= -180 &&
-      location.longitude <= 180 &&
-      Number.isFinite(location.exactRadiusMeters) &&
-      Number.isFinite(location.expandedRadiusMeters) &&
-      location.exactRadiusMeters > 0 &&
-      location.expandedRadiusMeters >= location.exactRadiusMeters,
+    const configuredLocations =
+      await this.prisma.organizationAttendanceLocation.findMany({
+        where: {
+          organizationId,
+          isActive: true,
+          ...(isWeb ? { allowedForWeb: true } : { allowedForMobile: true }),
+          ...(attendanceLocationId ? { id: attendanceLocationId } : {}),
+          ...(branchId && !reasons.includes('BRANCH_NOT_ALLOWED')
+            ? { officeId: branchId }
+            : {}),
+        },
+        select: {
+          id: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          exactRadiusMeters: true,
+          expandedRadiusMeters: true,
+          requiresReviewOutsideExactRadius: true,
+        },
+      });
+    const locations = configuredLocations.filter(
+      (location) =>
+        Number.isFinite(location.latitude) &&
+        Number.isFinite(location.longitude) &&
+        location.latitude >= -90 &&
+        location.latitude <= 90 &&
+        location.longitude >= -180 &&
+        location.longitude <= 180 &&
+        Number.isFinite(location.exactRadiusMeters) &&
+        Number.isFinite(location.expandedRadiusMeters) &&
+        location.exactRadiusMeters > 0 &&
+        location.expandedRadiusMeters >= location.exactRadiusMeters,
     );
     if (attendanceLocationId && !locations.length) {
       reasons.push('ATTENDANCE_LOCATION_NOT_ALLOWED');
-      return { blockingReasons: [...new Set(reasons)], source: 'ATTENDANCE_LOCATION', distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+      return {
+        blockingReasons: [...new Set(reasons)],
+        source: 'ATTENDANCE_LOCATION',
+        distanceMeters: null,
+        allowedRadiusMeters: null,
+        exactRadiusMeters: null,
+        expandedRadiusMeters: null,
+        matchedLocationId: null,
+        matchedLocationName: null,
+        mode: 'OUTSIDE',
+      };
     }
     // Deprecated organization settings are used only for tenants with no valid Attendance Location.
-    const candidates = locations.length ? locations : (typeof policy.allowedLatitude === 'number' && typeof policy.allowedLongitude === 'number'
-      ? [{ id: null, name: null, latitude: policy.allowedLatitude, longitude: policy.allowedLongitude, exactRadiusMeters: Number(policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30), expandedRadiusMeters: Number(policy.expandedRadiusMeters ?? policy.allowedRadiusMeters ?? 1000), requiresReviewOutsideExactRadius: Boolean(policy.allowExpandedRadiusWithReview) }]
-      : []);
-    const source = locations.length ? 'ATTENDANCE_LOCATION' : candidates.length ? 'LEGACY_SETTINGS' : null;
+    const candidates = locations.length
+      ? locations
+      : typeof policy.allowedLatitude === 'number' &&
+          typeof policy.allowedLongitude === 'number'
+        ? [
+            {
+              id: null,
+              name: null,
+              latitude: policy.allowedLatitude,
+              longitude: policy.allowedLongitude,
+              exactRadiusMeters: Number(
+                policy.exactRadiusMeters ?? policy.allowedRadiusMeters ?? 30,
+              ),
+              expandedRadiusMeters: Number(
+                policy.expandedRadiusMeters ??
+                  policy.allowedRadiusMeters ??
+                  1000,
+              ),
+              requiresReviewOutsideExactRadius: Boolean(
+                policy.allowExpandedRadiusWithReview,
+              ),
+            },
+          ]
+        : [];
+    const source = locations.length
+      ? 'ATTENDANCE_LOCATION'
+      : candidates.length
+        ? 'LEGACY_SETTINGS'
+        : null;
     if (!candidates.length) {
       reasons.push('ATTENDANCE_LOCATION_NOT_CONFIGURED');
-      return { blockingReasons: [...new Set(reasons)], source, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
+      return {
+        blockingReasons: [...new Set(reasons)],
+        source,
+        distanceMeters: null,
+        allowedRadiusMeters: null,
+        exactRadiusMeters: null,
+        expandedRadiusMeters: null,
+        matchedLocationId: null,
+        matchedLocationName: null,
+        mode: 'OUTSIDE',
+      };
     }
-    if (latitude === undefined || longitude === undefined || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return { blockingReasons: [...new Set(reasons)], source, distanceMeters: null, allowedRadiusMeters: null, exactRadiusMeters: null, expandedRadiusMeters: null, matchedLocationId: null, matchedLocationName: null, mode: 'OUTSIDE' };
-    const nearest = candidates.map((location) => ({ location, distance: distanceMeters(latitude, longitude, location.latitude, location.longitude) })).sort((a, b) => a.distance - b.distance)[0];
+    if (
+      latitude === undefined ||
+      longitude === undefined ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    )
+      return {
+        blockingReasons: [...new Set(reasons)],
+        source,
+        distanceMeters: null,
+        allowedRadiusMeters: null,
+        exactRadiusMeters: null,
+        expandedRadiusMeters: null,
+        matchedLocationId: null,
+        matchedLocationName: null,
+        mode: 'OUTSIDE',
+      };
+    const nearest = candidates
+      .map((location) => ({
+        location,
+        distance: distanceMeters(
+          latitude,
+          longitude,
+          location.latitude,
+          location.longitude,
+        ),
+      }))
+      .sort((a, b) => a.distance - b.distance)[0];
     const { location, distance } = nearest;
     if (phase === 'checkIn') {
-      if (distance > location.expandedRadiusMeters || (distance > location.exactRadiusMeters && !location.requiresReviewOutsideExactRadius)) reasons.push('OUTSIDE_ALLOWED_LOCATION');
-      if (distance > location.exactRadiusMeters && distance <= location.expandedRadiusMeters && location.requiresReviewOutsideExactRadius) reasons.push('EXPANDED_LOCATION_REVIEW');
+      if (
+        distance > location.expandedRadiusMeters ||
+        (distance > location.exactRadiusMeters &&
+          !location.requiresReviewOutsideExactRadius)
+      )
+        reasons.push('OUTSIDE_ALLOWED_LOCATION');
+      if (
+        distance > location.exactRadiusMeters &&
+        distance <= location.expandedRadiusMeters &&
+        location.requiresReviewOutsideExactRadius
+      )
+        reasons.push('EXPANDED_LOCATION_REVIEW');
     }
-    const mode = distance <= location.exactRadiusMeters ? 'EXACT' : distance <= location.expandedRadiusMeters ? 'EXPANDED_REVIEW' : 'OUTSIDE';
-    return { blockingReasons: [...new Set(reasons)], source, distanceMeters: Math.round(distance), allowedRadiusMeters: location.exactRadiusMeters, exactRadiusMeters: location.exactRadiusMeters, expandedRadiusMeters: location.expandedRadiusMeters, matchedLocationId: location.id, matchedLocationName: location.name, mode };
+    const mode =
+      distance <= location.exactRadiusMeters
+        ? 'EXACT'
+        : distance <= location.expandedRadiusMeters
+          ? 'EXPANDED_REVIEW'
+          : 'OUTSIDE';
+    return {
+      blockingReasons: [...new Set(reasons)],
+      source,
+      distanceMeters: Math.round(distance),
+      allowedRadiusMeters: location.exactRadiusMeters,
+      exactRadiusMeters: location.exactRadiusMeters,
+      expandedRadiusMeters: location.expandedRadiusMeters,
+      matchedLocationId: location.id,
+      matchedLocationName: location.name,
+      mode,
+    };
   }
 
   private safeDate(value: unknown) {
@@ -4802,16 +5722,34 @@ export class OperationsService {
 
   /** Provider boundary. No biometric provider is configured in this release, so
    * reference-backed photos deliberately remain in HR manual review. */
-  private async prepareAttendanceFaceVerification(employee: any, photoFileId: string | undefined, policy: any) {
-    if (!photoFileId) return { status: AttendanceFaceVerificationStatus.NOT_REQUIRED, provider: null, referenceImageId: null, createReferenceCandidate: false };
+  private async prepareAttendanceFaceVerification(
+    employee: any,
+    photoFileId: string | undefined,
+    policy: any,
+  ) {
+    if (!photoFileId)
+      return {
+        status: AttendanceFaceVerificationStatus.NOT_REQUIRED,
+        provider: null,
+        referenceImageId: null,
+        createReferenceCandidate: false,
+      };
     const reference = this.prisma.employeeAttendanceReferencePhoto
       ? await this.prisma.employeeAttendanceReferencePhoto.findFirst({
-      where: { employeeId: employee.id, status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE },
-      orderBy: { approvedAt: 'desc' },
-    })
+          where: {
+            employeeId: employee.id,
+            status: AttendanceReferencePhotoStatus.APPROVED_REFERENCE,
+          },
+          orderBy: { approvedAt: 'desc' },
+        })
       : null;
     if (!reference) {
-      return { status: AttendanceFaceVerificationStatus.PENDING, provider: 'MANUAL', referenceImageId: null, createReferenceCandidate: true };
+      return {
+        status: AttendanceFaceVerificationStatus.PENDING,
+        provider: 'MANUAL',
+        referenceImageId: null,
+        createReferenceCandidate: true,
+      };
     }
     return {
       status: policy.requireFaceVerification
@@ -4959,6 +5897,32 @@ export class OperationsService {
     const gte = input.dateFrom ? new Date(String(input.dateFrom)) : undefined;
     const lte = input.dateTo ? new Date(String(input.dateTo)) : undefined;
     return gte || lte ? { gte, lte } : undefined;
+  }
+
+  private attendanceExportDateRange(input: any, timezone: string) {
+    const referenceDate = this.attendanceListDate(
+      input.dateFrom ?? input.dateTo,
+      timezone,
+    );
+    const [year, month] = referenceDate.split('-').map(Number);
+    const monthPrefix = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}`;
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const dateFrom = this.attendanceListDate(
+      input.dateFrom ?? `${monthPrefix}-01`,
+      timezone,
+    );
+    const dateTo = this.attendanceListDate(
+      input.dateTo ?? `${monthPrefix}-${String(lastDay).padStart(2, '0')}`,
+      timezone,
+    );
+    if (dateFrom > dateTo) {
+      throw new BadRequestException('dateFrom must be on or before dateTo.');
+    }
+
+    return {
+      start: this.attendanceDayBounds(dateFrom, timezone).start,
+      end: this.attendanceDayBounds(dateTo, timezone).end,
+    };
   }
 
   private exportLimit(input: any) {
