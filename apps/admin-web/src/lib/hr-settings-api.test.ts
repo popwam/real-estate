@@ -13,7 +13,9 @@ vi.mock("@/lib/auth", () => auth);
 import {
   checkInApi,
   exportAttendanceCsvApi,
+  getMonthlyAttendanceApi,
   preflightCheckInApi,
+  saveMonthlyAttendanceDayApi,
   uploadAttendanceEvidencePhotoApi,
 } from "@/lib/hr-settings-api";
 
@@ -21,14 +23,14 @@ describe("web self-service attendance API", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
+      vi.fn().mockImplementation(() =>
+        Promise.resolve(
           new Response(JSON.stringify({ fileId: "photo-1", allowed: true }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
           }),
         ),
+      ),
     );
   });
 
@@ -99,6 +101,36 @@ describe("web self-service attendance API", () => {
 
     expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(
       /dateFrom=2028-02-01&dateTo=2028-02-29&format=csv$/,
+    );
+  });
+
+  it("loads the monthly employee-by-day attendance matrix", async () => {
+    await getMonthlyAttendanceApi("2026-08");
+
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(
+      /\/hr\/attendance\/monthly\?month=2026-08$/,
+    );
+  });
+
+  it("creates a missing day and patches an existing attendance record", async () => {
+    const input = {
+      employeeId: "employee-1",
+      date: "2026-08-04",
+      status: "PRESENT",
+      checkInAt: "2026-08-04T06:00:00.000Z",
+    };
+    await saveMonthlyAttendanceDayApi(null, input);
+    await saveMonthlyAttendanceDayApi("attendance-1", input);
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringMatching(/\/hr\/attendance$/),
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringMatching(/\/hr\/attendance\/attendance-1$/),
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify(input) }),
     );
   });
 });

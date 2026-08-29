@@ -75,6 +75,65 @@ export function exportAttendanceCsvApi(date: string) {
   return apiRequest<string>(`/hr/export/attendance?${query.toString()}`);
 }
 
+export type MonthlyAttendanceDay = {
+  id: string | null;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string | null;
+  date: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  plannedCheckInAt: string | null;
+  plannedCheckOutAt: string | null;
+  minutesLate: number | null;
+  entryChannel: string | null;
+  attendanceSource: string | null;
+  status: string;
+  note: string | null;
+};
+
+export type MonthlyAttendanceEmployee = {
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string | null;
+  days: MonthlyAttendanceDay[];
+};
+
+export type MonthlyAttendanceResponse = {
+  month: string;
+  timezone: string;
+  days: string[];
+  employees: MonthlyAttendanceEmployee[];
+};
+
+export function getMonthlyAttendanceApi(month: string) {
+  return apiRequest<MonthlyAttendanceResponse>(
+    `/hr/attendance/monthly?month=${encodeURIComponent(month)}`,
+  );
+}
+
+export function saveMonthlyAttendanceDayApi(
+  recordId: string | null,
+  input: {
+    employeeId: string;
+    date: string;
+    status: string;
+    checkInAt?: string | null;
+    checkOutAt?: string | null;
+    note?: string | null;
+  },
+) {
+  return apiRequest<MonthlyAttendanceDay>(
+    recordId
+      ? `/hr/attendance/${encodeURIComponent(recordId)}`
+      : "/hr/attendance",
+    {
+      method: recordId ? "PATCH" : "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 function monthRange(date: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) throw new Error("date must be YYYY-MM-DD");

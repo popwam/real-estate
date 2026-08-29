@@ -1162,6 +1162,53 @@ export class OperationsService {
     });
   }
 
+  async listMonthlyHrAttendance(
+    user: AuthenticatedRequestUser,
+    input: Record<string, unknown> = {},
+  ) {
+    this.assertHrWorkspace(user);
+    requireOperationPermission(user, ['hr.view', 'hr.attendance.manage']);
+    const organizationId = requireOperationOrganizationId(user);
+    const organization = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { timezone: true },
+    });
+    const timezone = this.organizationTimezone(organization?.timezone);
+    const month = this.attendanceMonth(input.month, timezone);
+    const { dateFrom, dateTo } = this.monthDateRange(month);
+    const rows = await this.attendanceRosterRange(
+      organizationId,
+      dateFrom,
+      dateTo,
+      timezone,
+    );
+    const days = this.calendarDateRange(dateFrom, dateTo);
+    const employees = new Map<
+      string,
+      {
+        employeeId: string;
+        employeeName: string;
+        employeeCode: string | null;
+        days: Record<string, unknown>[];
+      }
+    >();
+
+    for (const row of rows) {
+      const employeeId = String(row.employeeId);
+      const employee = employees.get(employeeId) ?? {
+        employeeId,
+        employeeName: String(row.employeeName ?? ''),
+        employeeCode:
+          typeof row.employeeCode === 'string' ? row.employeeCode : null,
+        days: [],
+      };
+      employee.days.push(row);
+      employees.set(employeeId, employee);
+    }
+
+    return { month, timezone, days, employees: [...employees.values()] };
+  }
+
   async createHrAttendance(input: any, user: AuthenticatedRequestUser) {
     this.assertHrWorkspace(user);
     requireOperationPermission(user, ['hr.attendance.manage']);
@@ -1244,24 +1291,23 @@ export class OperationsService {
       where: { id },
       data: {
         date: input.date ? new Date(String(input.date)) : undefined,
-        checkInAt: input.checkInAt
-          ? new Date(String(input.checkInAt))
-          : undefined,
-        checkOutAt: input.checkOutAt
-          ? new Date(String(input.checkOutAt))
-          : undefined,
-        actualCheckInAt: input.checkInAt
-          ? new Date(String(input.checkInAt))
-          : undefined,
-        actualCheckOutAt: input.checkOutAt
-          ? new Date(String(input.checkOutAt))
-          : undefined,
-        checkOutMethod: input.checkOutAt
+        checkInAt: this.optionalAttendanceDate(input, 'checkInAt'),
+        checkOutAt: this.optionalAttendanceDate(input, 'checkOutAt'),
+        actualCheckInAt: this.optionalAttendanceDate(input, 'checkInAt'),
+        actualCheckOutAt: this.optionalAttendanceDate(input, 'checkOutAt'),
+        checkOutMethod: this.optionalAttendanceDate(input, 'checkOutAt')
           ? CheckOutMethod.ADMIN_MANUAL
-          : undefined,
-        checkOutVerificationStatus: input.checkOutAt
+          : Object.prototype.hasOwnProperty.call(input, 'checkOutAt')
+            ? null
+            : undefined,
+        checkOutVerificationStatus: this.optionalAttendanceDate(
+          input,
+          'checkOutAt',
+        )
           ? CheckOutVerificationStatus.NOT_VERIFIED
-          : undefined,
+          : Object.prototype.hasOwnProperty.call(input, 'checkOutAt')
+            ? null
+            : undefined,
         status: input.status,
         note: input.note,
         verificationStatus: input.verificationStatus,
@@ -3397,35 +3443,95 @@ export class OperationsService {
       if (status) items = items.filter((item) => item.status === status);
       return this.exportEnvelope('hr.attendance', input, items);
     }
-    const { start, end } = this.attendanceExportDateRange(input, timezone);
-    const where: Prisma.HrAttendanceRecordWhereInput = {
-      ...operationOrganizationWhere(user, this.optional(input.organizationId)),
-      status: this.optionalEnum(HrAttendanceStatus, input.status),
-      OR: [
-        { checkInAt: { gte: start, lt: end } },
-        { checkInAt: null, date: { gte: start, lt: end } },
-      ],
-    };
-    const items = await this.prisma.hrAttendanceRecord.findMany({
-      where,
-      select: {
-        id: true,
-        organizationId: true,
-        employeeId: true,
-        date: true,
-        checkInAt: true,
-        checkOutAt: true,
-        plannedCheckInAt: true,
-        plannedCheckOutAt: true,
-        minutesLate: true,
-        entryChannel: true,
-        attendanceSource: true,
-        status: true,
-        note: true,
-      },
-      orderBy: { date: 'desc' },
-    });
+    const { dateFrom, dateTo } = this.attendanceExportDateRange(
+      input,
+      timezone,
+    );
+    let items = await this.attendanceRosterRange(
+      organizationId,
+      dateFrom,
+      dateTo,
+      timezone,
+    );
+    const status = this.optional(input.status);
+    if (status) items = items.filter((item) => item.status === status);
     return this.exportEnvelope('hr.attendance', input, items);
+  }
+
+  private async attendanceRosterRange(
+    organizationId: string,
+    dateFrom: string,
+    dateTo: string,
+    timezone: string,
+  ): Promise<Record<string, unknown>[]> {
+    const start = this.attendanceDayBounds(dateFrom, timezone).start;
+    const end = this.attendanceDayBounds(dateTo, timezone).end;
+    const storedDateStart = new Date(`${dateFrom}T00:00:00.000Z`);
+    const storedDateEnd = new Date(`${dateTo}T00:00:00.000Z`);
+    storedDateEnd.setUTCDate(storedDateEnd.getUTCDate() + 1);
+    const [employees, records] = await Promise.all([
+      this.prisma.hrEmployee.findMany({
+        where: { organizationId, status: HrEmployeeStatus.ACTIVE },
+        select: {
+          id: true,
+          name: true,
+          employeeCode: true,
+          workStartDate: true,
+          hireDate: true,
+        },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.hrAttendanceRecord.findMany({
+        where: {
+          organizationId,
+          OR: [
+            { checkInAt: { gte: start, lt: end } },
+            {
+              checkInAt: null,
+              date: { gte: storedDateStart, lt: storedDateEnd },
+            },
+          ],
+        },
+        orderBy: [{ date: 'asc' }, { checkInAt: 'asc' }, { id: 'asc' }],
+      }),
+    ]);
+    const recordsByEmployeeDay = new Map<string, any>();
+    for (const record of records) {
+      const date = record.checkInAt
+        ? this.organizationLocalDate(record.checkInAt, timezone)
+        : this.dateOnly(record.date);
+      recordsByEmployeeDay.set(`${record.employeeId}:${date}`, record);
+    }
+    const rows: Record<string, unknown>[] = [];
+
+    for (const employee of employees) {
+      const employmentStart = employee.workStartDate ?? employee.hireDate;
+      for (const date of this.calendarDateRange(dateFrom, dateTo)) {
+        const record = recordsByEmployeeDay.get(`${employee.id}:${date}`);
+        const beforeEmployment =
+          employmentStart && this.dateOnly(new Date(employmentStart)) > date;
+        rows.push({
+          id: record?.id ?? null,
+          employeeId: employee.id,
+          employeeName: employee.name,
+          employeeCode: employee.employeeCode ?? null,
+          date,
+          checkInAt: record?.checkInAt ?? null,
+          checkOutAt: record?.checkOutAt ?? null,
+          plannedCheckInAt: record?.plannedCheckInAt ?? null,
+          plannedCheckOutAt: record?.plannedCheckOutAt ?? null,
+          minutesLate: record?.minutesLate ?? null,
+          entryChannel: record?.entryChannel ?? null,
+          attendanceSource: record?.attendanceSource ?? null,
+          status:
+            record?.status ??
+            (beforeEmployment ? 'NOT_EMPLOYED' : 'NOT_RECORDED'),
+          note: record?.note ?? null,
+        });
+      }
+    }
+
+    return rows;
   }
 
   private async dailyAttendanceRoster(
@@ -5893,6 +5999,13 @@ export class OperationsService {
     throw new BadRequestException('status must be ACTIVE or INACTIVE.');
   }
 
+  private optionalAttendanceDate(input: any, key: string) {
+    if (!Object.prototype.hasOwnProperty.call(input, key)) return undefined;
+    const value = input[key];
+    if (value === null || value === '') return null;
+    return new Date(String(value));
+  }
+
   private dateFilter(input: any) {
     const gte = input.dateFrom ? new Date(String(input.dateFrom)) : undefined;
     const lte = input.dateTo ? new Date(String(input.dateTo)) : undefined;
@@ -5919,10 +6032,41 @@ export class OperationsService {
       throw new BadRequestException('dateFrom must be on or before dateTo.');
     }
 
+    return { dateFrom, dateTo };
+  }
+
+  private attendanceMonth(value: unknown, timezone: string) {
+    if (value === undefined || value === null || value === '') {
+      return this.organizationLocalDate(new Date(), timezone).slice(0, 7);
+    }
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}$/.test(value)) {
+      throw new BadRequestException('month must be YYYY-MM.');
+    }
+    const [year, month] = value.split('-').map(Number);
+    if (year < 1 || month < 1 || month > 12) {
+      throw new BadRequestException('month must be a valid calendar month.');
+    }
+    return value;
+  }
+
+  private monthDateRange(monthValue: string) {
+    const [year, month] = monthValue.split('-').map(Number);
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
     return {
-      start: this.attendanceDayBounds(dateFrom, timezone).start,
-      end: this.attendanceDayBounds(dateTo, timezone).end,
+      dateFrom: `${monthValue}-01`,
+      dateTo: `${monthValue}-${String(lastDay).padStart(2, '0')}`,
     };
+  }
+
+  private calendarDateRange(dateFrom: string, dateTo: string) {
+    const [year, month, day] = dateFrom.split('-').map(Number);
+    const cursor = new Date(Date.UTC(year, month - 1, day));
+    const dates: string[] = [];
+    while (cursor.toISOString().slice(0, 10) <= dateTo) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    return dates;
   }
 
   private exportLimit(input: any) {

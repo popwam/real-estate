@@ -36,11 +36,13 @@ export const messages = {
     "الوصول مخصص لمستخدمي POPWAM المصرح لهم فقط. يتم اختيار مساحة عملك تلقائياً بعد تسجيل الدخول.",
   "auth.changePassword.eyebrow": "كلمة مرور مؤقتة",
   "auth.changePassword.title": "تغيير كلمة المرور",
-  "auth.changePassword.description": "حسابك يستخدم كلمة مرور مؤقتة. اختر كلمة مرور خاصة قبل المتابعة.",
+  "auth.changePassword.description":
+    "حسابك يستخدم كلمة مرور مؤقتة. اختر كلمة مرور خاصة قبل المتابعة.",
   "auth.changePassword.currentPassword": "كلمة المرور الحالية",
   "auth.changePassword.newPassword": "كلمة المرور الجديدة",
   "auth.changePassword.confirmPassword": "تأكيد كلمة المرور الجديدة",
-  "auth.changePassword.passwordMismatch": "كلمتا المرور الجديدتان غير متطابقتين.",
+  "auth.changePassword.passwordMismatch":
+    "كلمتا المرور الجديدتان غير متطابقتين.",
   "auth.changePassword.error": "تعذر تغيير كلمة المرور",
   "auth.changePassword.submit": "تغيير كلمة المرور",
   "auth.checkingSession": "جارٍ التحقق من الجلسة",
@@ -49,22 +51,27 @@ export const messages = {
   "statusPage.tryAgain": "حاول مرة أخرى",
   "statusPage.403.eyebrow": "الوصول مرفوض",
   "statusPage.403.title": "لا تملك صلاحية الوصول",
-  "statusPage.403.body": "تم تسجيل دخولك، لكن هذه الصفحة تحتاج إلى صلاحية إضافية. اطلب من المسؤول تحديث صلاحياتك إذا كنت تعتقد أن هذا غير صحيح.",
+  "statusPage.403.body":
+    "تم تسجيل دخولك، لكن هذه الصفحة تحتاج إلى صلاحية إضافية. اطلب من المسؤول تحديث صلاحياتك إذا كنت تعتقد أن هذا غير صحيح.",
   "statusPage.404.eyebrow": "الصفحة غير موجودة",
   "statusPage.404.title": "هذه الصفحة غير متاحة",
-  "statusPage.404.body": "قد يكون الرابط قديمًا أو تم نقله أو مخفيًا بسبب صلاحيات مساحة العمل الحالية.",
+  "statusPage.404.body":
+    "قد يكون الرابط قديمًا أو تم نقله أو مخفيًا بسبب صلاحيات مساحة العمل الحالية.",
   "statusPage.500.eyebrow": "خطأ غير متوقع",
   "statusPage.500.title": "حدث خطأ أثناء تحميل الصفحة",
-  "statusPage.500.body": "تعذر إكمال تحميل هذه الصفحة. يمكنك المحاولة مرة أخرى أو الرجوع إلى الصفحة الرئيسية.",
+  "statusPage.500.body":
+    "تعذر إكمال تحميل هذه الصفحة. يمكنك المحاولة مرة أخرى أو الرجوع إلى الصفحة الرئيسية.",
   "apiErrors.permissionRequired": "لا تملك الصلاحية المطلوبة لعرض هذا المحتوى.",
   "apiErrors.notFound": "لم يتم العثور على المحتوى المطلوب.",
-  "apiErrors.network": "تعذر الاتصال بالخدمة. تحقق من الاتصال ثم حاول مرة أخرى.",
+  "apiErrors.network":
+    "تعذر الاتصال بالخدمة. تحقق من الاتصال ثم حاول مرة أخرى.",
   "apiErrors.server": "تعذر على الخدمة إكمال الطلب. حاول مرة أخرى.",
   "apiErrors.requestId": "معرّف الطلب: {requestId}.",
   "account.refreshAccess": "تحديث الصلاحيات",
   "statusPage.505.eyebrow": "المتصفح غير مدعوم",
   "statusPage.505.title": "إصدار المتصفح غير مدعوم",
-  "statusPage.505.body": "يرجى تحديث المتصفح أو فتح POPWAM من متصفح حديث للمتابعة بأمان.",
+  "statusPage.505.body":
+    "يرجى تحديث المتصفح أو فتح POPWAM من متصفح حديث للمتابعة بأمان.",
   "translatedText.placeholder.en": "Enter English text here",
   "translatedText.placeholder.ar": "اكتب النص العربي هنا",
   "translatedText.placeholder.fr": "Saisissez le texte français ici",
@@ -409,16 +416,19 @@ export const messages = {
   "organizationTypes.developer": "مطور عقاري",
   "organizationTypes.brokerage": "شركة وساطة عقارية",
   "organizationTypes.individualBroker": "وسيط عقاري فردي",
-  "errors.organizationTypeInvalid": "نوع المؤسسة المختار غير صالح. اختر نوعًا من القائمة.",
+  "errors.organizationTypeInvalid":
+    "نوع المؤسسة المختار غير صالح. اختر نوعًا من القائمة.",
   "provisioning.documentFile": "المستند القانوني الخاص",
   "provisioning.documentFileRequired": "اختر ملف مستند قانوني لرفعه.",
   "provisioning.documentUploadFailed": "تعذر رفع المستند القانوني.",
-  "provisioning.noExtractedFields": "لا توجد حقول منظمة متاحة. راجع المستند يدويًا.",
+  "provisioning.noExtractedFields":
+    "لا توجد حقول منظمة متاحة. راجع المستند يدويًا.",
   "provisioning.currentValue": "القيمة الحالية",
   "provisioning.extractedValue": "القيمة المستخرجة",
   "provisioning.applySelected": "تطبيق المحدد",
   "provisioning.rejectSelected": "رفض المحدد",
-  "provisioning.confirmSensitiveFields": "هل تريد تطبيق المعرفات القانونية الحساسة المحددة على الملف الأولي؟",
+  "provisioning.confirmSensitiveFields":
+    "هل تريد تطبيق المعرفات القانونية الحساسة المحددة على الملف الأولي؟",
   "extractedFields.legalName": "الاسم القانوني",
   "extractedFields.tradeName": "الاسم التجاري",
   "extractedFields.commercialRegisterNumber": "رقم السجل التجاري",
@@ -449,16 +459,19 @@ export const messages = {
   "employeeAccess.forbiddenTitle": "403 - Permission required",
   "employeeAccess.forbiddenDescription": "لا يملك حسابك صلاحية فتح هذه الصفحة.",
   "employeeAccess.title": "وصول الموظفين",
-  "employeeAccess.description": "أنشئ حسابات منفصلة للموظفين وامنح كل شخص الصفحات والإجراءات التي يحتاجها فقط.",
+  "employeeAccess.description":
+    "أنشئ حسابات منفصلة للموظفين وامنح كل شخص الصفحات والإجراءات التي يحتاجها فقط.",
   "employeeAccess.addEmployee": "إضافة موظف",
   "employeeAccess.separateAccountsTitle": "الحسابات المنفصلة مطلوبة",
-  "employeeAccess.doNotShareWarning": "لا تشارك حسابك الخاص. أنشئ حساب موظف منفصل بدلاً من ذلك.",
+  "employeeAccess.doNotShareWarning":
+    "لا تشارك حسابك الخاص. أنشئ حساب موظف منفصل بدلاً من ذلك.",
   "employeeAccess.employees": "الموظفون",
   "employeeAccess.loadingEmployees": "جارٍ تحميل الموظفين",
   "employeeAccess.loadingEmployee": "جارٍ تحميل الموظف",
   "employeeAccess.loadError": "تعذر تحميل الموظفين",
   "employeeAccess.emptyTitle": "لا توجد حسابات موظفين بعد",
-  "employeeAccess.emptyDescription": "أنشئ تسجيل دخول منفصل لكل عضو في الفريق قبل منحه الوصول.",
+  "employeeAccess.emptyDescription":
+    "أنشئ تسجيل دخول منفصل لكل عضو في الفريق قبل منحه الوصول.",
   "employeeAccess.createFirstEmployee": "إنشاء أول موظف",
   "employeeAccess.employee": "الموظف",
   "employeeAccess.contact": "التواصل",
@@ -470,10 +483,12 @@ export const messages = {
   "employeeAccess.active": "نشط",
   "employeeAccess.inactive": "غير نشط",
   "employeeAccess.newTitle": "موظف جديد",
-  "employeeAccess.newDescription": "أنشئ حساب دخول مقيداً بهذه الشركة وحدد صلاحيات الصفحات والإجراءات.",
+  "employeeAccess.newDescription":
+    "أنشئ حساب دخول مقيداً بهذه الشركة وحدد صلاحيات الصفحات والإجراءات.",
   "employeeAccess.createError": "تعذر إنشاء الموظف",
   "employeeAccess.detailTitle": "تفاصيل وصول الموظف",
-  "employeeAccess.detailDescription": "راجع حالة الدخول وقالب الدور والصلاحيات المعينة.",
+  "employeeAccess.detailDescription":
+    "راجع حالة الدخول وقالب الدور والصلاحيات المعينة.",
   "employeeAccess.currentAccess": "الوصول الحالي",
   "employeeAccess.updateError": "تعذر تحديث الموظف",
   "employeeAccess.accountActions": "إجراءات الحساب",
@@ -482,22 +497,30 @@ export const messages = {
   "employeeAccess.resetPassword": "إعادة تعيين كلمة المرور",
   "employeeAccess.generatedIfBlank": "اتركه فارغاً لإنشاء كلمة مرور مؤقتة",
   "employeeAccess.generatedPasswordTitle": "تم إنشاء كلمة مرور مؤقتة",
-  "employeeAccess.generatedPasswordDescription": "أرسل كلمة المرور المؤقتة إلى الموظف بطريقة آمنة. لن تظهر مرة أخرى: {password}",
+  "employeeAccess.generatedPasswordDescription":
+    "أرسل كلمة المرور المؤقتة إلى الموظف بطريقة آمنة. لن تظهر مرة أخرى: {password}",
   "employeeAccess.generatePassword": "إنشاء",
   "employeeAccess.createdPasswordTitle": "تم إنشاء الموظف",
-  "employeeAccess.createdPasswordDescription": "أرسل كلمة المرور المؤقتة إلى الموظف بطريقة آمنة. لن تظهر مرة أخرى: {password}",
+  "employeeAccess.createdPasswordDescription":
+    "أرسل كلمة المرور المؤقتة إلى الموظف بطريقة آمنة. لن تظهر مرة أخرى: {password}",
   "employeeAccess.viewEmployee": "عرض الموظف",
   "employeeAccess.organization": "المؤسسة",
   "employeeAccess.selectOrganization": "اختر المؤسسة",
   "employeeAccess.organizationFilter": "تصفية حسب المؤسسة",
   "employeeAccess.allOrganizations": "كل المؤسسات",
-  "employeeAccess.loginNotReadyTitle": "تم إنشاء الحساب لكن الوصول لتسجيل الدخول غير جاهز",
-  "employeeAccess.loginReadiness.LOGIN_USER_MISSING": "تم إنشاء الحساب لكن الوصول لتسجيل الدخول غير نشط.",
-  "employeeAccess.loginReadiness.PASSWORD_MISSING": "حساب المستخدم للموظف لا يحتوي على كلمة مرور.",
+  "employeeAccess.loginNotReadyTitle":
+    "تم إنشاء الحساب لكن الوصول لتسجيل الدخول غير جاهز",
+  "employeeAccess.loginReadiness.LOGIN_USER_MISSING":
+    "تم إنشاء الحساب لكن الوصول لتسجيل الدخول غير نشط.",
+  "employeeAccess.loginReadiness.PASSWORD_MISSING":
+    "حساب المستخدم للموظف لا يحتوي على كلمة مرور.",
   "employeeAccess.loginReadiness.EMPLOYEE_INACTIVE": "الموظف غير نشط.",
-  "employeeAccess.loginReadiness.USER_INACTIVE": "تم إنشاء الحساب لكن الوصول لتسجيل الدخول غير نشط.",
-  "employeeAccess.loginReadiness.EMAIL_REQUIRED": "البريد الإلكتروني للموظف مطلوب حسب المخطط الحالي.",
-  "employeeAccess.loginReadiness.NO_ROLE_PERMISSIONS": "لا يوجد دور أو صلاحيات للموظف.",
+  "employeeAccess.loginReadiness.USER_INACTIVE":
+    "تم إنشاء الحساب لكن الوصول لتسجيل الدخول غير نشط.",
+  "employeeAccess.loginReadiness.EMAIL_REQUIRED":
+    "البريد الإلكتروني للموظف مطلوب حسب المخطط الحالي.",
+  "employeeAccess.loginReadiness.NO_ROLE_PERMISSIONS":
+    "لا يوجد دور أو صلاحيات للموظف.",
   "employeeAccess.loginReadiness.UNKNOWN": "الوصول لتسجيل الدخول غير جاهز.",
   "employeeAccess.resetError": "تعذر إعادة تعيين كلمة المرور",
   "employeeAccess.statusError": "تعذر تحديث الحالة",
@@ -513,7 +536,8 @@ export const messages = {
   "employeeAccess.country": "الدولة",
   "employeeAccess.countryEgypt": "مصر (+20)",
   "employeeAccess.countryUsa": "الولايات المتحدة (+1)",
-  "employeeAccess.mustChangePasswordWarning": "يمكن للموظف تسجيل الدخول بكلمة المرور المؤقتة هذه، ويجب تغييرها قبل استخدام الصفحات المحمية.",
+  "employeeAccess.mustChangePasswordWarning":
+    "يمكن للموظف تسجيل الدخول بكلمة المرور المؤقتة هذه، ويجب تغييرها قبل استخدام الصفحات المحمية.",
   "employeeAccess.createEmployee": "إنشاء موظف",
   "employeeAccess.saveEmployee": "حفظ الموظف",
   "employeeAccess.group.dashboard": "لوحة التحكم",
@@ -543,9 +567,12 @@ export const messages = {
   "employeeAccess.permission.hrEmployeesView": "عرض الموظفين",
   "employeeAccess.permission.hrEmployeesCreate": "إنشاء الموظفين",
   "employeeAccess.permission.hrEmployeesUpdate": "تحديث الموظفين",
-  "employeeAccess.permission.hrEmployeesDeactivate": "تنشيط أو إلغاء تنشيط الموظفين",
-  "employeeAccess.permission.hrEmployeesResetPassword": "إعادة تعيين كلمات مرور الموظفين",
-  "employeeAccess.permission.hrEmployeesPermissionsManage": "إدارة صلاحيات الموظفين",
+  "employeeAccess.permission.hrEmployeesDeactivate":
+    "تنشيط أو إلغاء تنشيط الموظفين",
+  "employeeAccess.permission.hrEmployeesResetPassword":
+    "إعادة تعيين كلمات مرور الموظفين",
+  "employeeAccess.permission.hrEmployeesPermissionsManage":
+    "إدارة صلاحيات الموظفين",
   "employeeAccess.permission.hrAttendanceSelf": "استخدام الحضور الذاتي",
   "employeeAccess.permission.hrAttendanceView": "عرض الحضور",
   "employeeAccess.permission.hrAttendanceManage": "إدارة الحضور",
@@ -573,11 +600,13 @@ export const messages = {
   "employeeAccess.permission.websiteView": "عرض إعدادات الموقع",
   "employeeAccess.permission.websiteUpdate": "تحديث إعدادات الموقع",
   "employeeAccess.permission.platformOrganizationsView": "عرض مؤسسات المنصة",
-  "employeeAccess.permission.platformOrganizationsManage": "إدارة مؤسسات المنصة",
+  "employeeAccess.permission.platformOrganizationsManage":
+    "إدارة مؤسسات المنصة",
   "employeeAccess.permission.platformUsersManage": "إدارة مستخدمي المنصة",
   "employeeAccess.permission.organizationsViewAll": "عرض كل المؤسسات",
   "developer.access.checking": "جارٍ التحقق من وصول المطور",
-  "companyDomains.description": "أضف نطاقات الشركة وتحقق منها واختبرها وحدد الافتراضي أو احذفها.",
+  "companyDomains.description":
+    "أضف نطاقات الشركة وتحقق منها واختبرها وحدد الافتراضي أو احذفها.",
   "companyDomains.loading": "جارٍ تحميل النطاقات",
   "companyDomains.status": "الحالة",
   "companyDomains.domain": "النطاق",
@@ -591,7 +620,8 @@ export const messages = {
   "companyDomains.markDefault": "تعيين كافتراضي",
   "companyDomains.emptyTitle": "لا توجد نطاقات بعد",
   "companyDomains.emptyDescription": "أضف نطاقا لبدء التحقق.",
-  "companySettings.pageDescription": "إدارة هوية الموقع العامة والنطاقات والفروع وسياسة الحضور.",
+  "companySettings.pageDescription":
+    "إدارة هوية الموقع العامة والنطاقات والفروع وسياسة الحضور.",
   "companySettings.loadingWebsiteSettings": "جارٍ تحميل إعدادات الموقع",
   "companySettings.branches": "الفروع",
   "companySettings.loadingBranches": "جارٍ تحميل الفروع",
@@ -610,8 +640,10 @@ export const messages = {
   "companySettings.secondLateSlice": "الشريحة الثانية للتأخير (دقائق)",
   "companySettings.workStartTime": "وقت بدء العمل",
   "companySettings.workEndTime": "وقت انتهاء العمل",
-  "companySettings.monthlyLateAllowanceHours": "رصيد سماح التأخير الشهري (ساعات)",
-  "companySettings.lateAllowanceChargeHoursPerDay": "المخصوم من الرصيد لكل يوم تأخير (ساعات)",
+  "companySettings.monthlyLateAllowanceHours":
+    "رصيد سماح التأخير الشهري (ساعات)",
+  "companySettings.lateAllowanceChargeHoursPerDay":
+    "المخصوم من الرصيد لكل يوم تأخير (ساعات)",
   "companySettings.missingAttendanceDisposition": "اليوم دون تسجيل حضور",
   "companySettings.missingAttendanceAbsent": "غياب تلقائي",
   "companySettings.missingAttendanceLeave": "إجازة",
@@ -625,7 +657,8 @@ export const messages = {
   "companySettings.requireDvrReview": "طلب مراجعة DVR",
   "companySettings.allowWebCheckIn": "السماح بالحضور من الويب",
   "companySettings.allowMobileCheckIn": "السماح بالحضور من الجوال",
-  "companySettings.browserWifiLimitation": "لا تستطيع المتصفحات قراءة اسم Wi-Fi أو BSSID بشكل موثوق. يمكن لحضور الويب أن يمنع التسجيل أو يتجاهل Wi-Fi أو يرسل السجل للمراجعة اليدوية حسب هذه السياسة.",
+  "companySettings.browserWifiLimitation":
+    "لا تستطيع المتصفحات قراءة اسم Wi-Fi أو BSSID بشكل موثوق. يمكن لحضور الويب أن يمنع التسجيل أو يتجاهل Wi-Fi أو يرسل السجل للمراجعة اليدوية حسب هذه السياسة.",
   "companySettings.saveAttendancePolicy": "حفظ سياسة الحضور",
   "companySettings.autoCloseGraceMinutes": "مهلة الإغلاق التلقائي (بالدقائق)",
   "companySettings.regularShiftAutoCloseMode": "إغلاق الدوام العادي تلقائيًا",
@@ -633,10 +666,13 @@ export const messages = {
   "companySettings.autoCloseAfterShift": "وقت الخروج المخطط + مهلة",
   "companySettings.checkOutOutsideLocationPolicy": "سياسة الخروج خارج الموقع",
   "companySettings.allowWithEvidence": "السماح مع الدليل",
-  "companySettings.autoCloseOpenAttendance": "إغلاق حالات نسيان الخروج تلقائيًا",
-  "companySettings.autoCloseAtLocalMidnight": "إغلاق الدوام العادي عند منتصف الليل المحلي",
+  "companySettings.autoCloseOpenAttendance":
+    "إغلاق حالات نسيان الخروج تلقائيًا",
+  "companySettings.autoCloseAtLocalMidnight":
+    "إغلاق الدوام العادي عند منتصف الليل المحلي",
   "attendance.self.title": "حضوري",
-  "attendance.self.description": "سجل الحضور والانصراف من الويب عندما تسمح سياسة الحضور بذلك.",
+  "attendance.self.description":
+    "سجل الحضور والانصراف من الويب عندما تسمح سياسة الحضور بذلك.",
   "attendance.self.today": "اليوم",
   "attendance.self.loadingToday": "جارٍ تحميل حضور اليوم",
   "attendance.self.checkIn": "الحضور",
@@ -647,12 +683,14 @@ export const messages = {
   "attendance.self.checkInAction": "تسجيل الحضور",
   "attendance.self.checkOutAction": "تسجيل الانصراف",
   "attendance.self.latePenalty": "جزاء التأخير",
-  "attendance.self.latePenaltyDescription": "تأخير {minutes} دقيقة. الجزاء: {penalty}.",
+  "attendance.self.latePenaltyDescription":
+    "تأخير {minutes} دقيقة. الجزاء: {penalty}.",
   "attendance.self.locationError": "تعذر التقاط الموقع",
   "attendance.self.locationUnavailable": "موقع المتصفح غير متاح.",
   "attendance.self.locationRequired": "إذن الموقع مطلوب لتسجيل الحضور.",
   "attendance.self.retryLocation": "إعادة محاولة الموقع",
-  "attendance.self.accuracyTooLowDetails": "دقة GPS الحالية {current} م؛ سياسة الحضور تتطلب {required} م أو أفضل.",
+  "attendance.self.accuracyTooLowDetails":
+    "دقة GPS الحالية {current} م؛ سياسة الحضور تتطلب {required} م أو أفضل.",
   "attendance.self.checkInError": "فشل تسجيل الحضور",
   "attendance.self.checkOutError": "فشل تسجيل الانصراف",
   "attendance.self.history": "السجل",
@@ -664,7 +702,8 @@ export const messages = {
   "attendance.self.verifyingLocation": "جارٍ التحقق من موقع العمل",
   "attendance.self.startingCamera": "جارٍ تشغيل الكاميرا",
   "attendance.self.cameraReady": "الكاميرا جاهزة. التقط صورة مباشرة للمتابعة.",
-  "attendance.self.cameraUnavailable": "الكاميرا غير متاحة. الصورة المباشرة مطلوبة للمتابعة.",
+  "attendance.self.cameraUnavailable":
+    "الكاميرا غير متاحة. الصورة المباشرة مطلوبة للمتابعة.",
   "attendance.self.capturePhoto": "التقاط صورة",
   "attendance.self.photoPreview": "معاينة الصورة",
   "attendance.self.usePhoto": "استخدام هذه الصورة",
@@ -674,9 +713,12 @@ export const messages = {
   "attendance.self.recordingAttendance": "جارٍ تسجيل الحضور",
   "attendance.self.preflightRejected": "تعذر التحقق من موقعك لتسجيل الحضور.",
   "attendance.autoClosedBadge": "مغلق تلقائيًا",
-  "attendance.autoClosedDescription": "أُغلق هذا الحضور تلقائيًا ويحتاج إلى مراجعة. السبب: {reason}",
-  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_REVIEW": "تسجيل الخروج خارج موقع العمل الدقيق ويتطلب مراجعة يدوية.",
-  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE": "تسجيل الخروج خارج موقع العمل الدقيق ويتطلب دليلًا.",
+  "attendance.autoClosedDescription":
+    "أُغلق هذا الحضور تلقائيًا ويحتاج إلى مراجعة. السبب: {reason}",
+  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_REVIEW":
+    "تسجيل الخروج خارج موقع العمل الدقيق ويتطلب مراجعة يدوية.",
+  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE":
+    "تسجيل الخروج خارج موقع العمل الدقيق ويتطلب دليلًا.",
   "attendance.self.distance": "المسافة",
   "attendance.self.radius": "النطاق المسموح",
   "attendance.self.accuracy": "دقة الموقع",
@@ -684,40 +726,59 @@ export const messages = {
   "attendance.self.accuracyRejected": "غير كافية",
   "attendance.self.requestFailed": "تعذر إكمال طلب الحضور. {requestId}",
   "attendance.self.verificationFailed": "فشل التحقق من الحضور.",
-  "attendance.self.reason.LOCATION_PERMISSION_DENIED": "تم رفض إذن الموقع. على iPhone: الإعدادات ← الخصوصية والأمان ← خدمات الموقع ← مواقع Safari ← أثناء الاستخدام ← الموقع الدقيق، ثم Safari ← إعدادات المواقع ← الموقع ← سماح.",
-  "attendance.self.reason.LOCATION_POSITION_UNAVAILABLE": "الموقع الحالي غير متاح. انتقل إلى مكان مفتوح ثم أعد محاولة الموقع.",
-  "attendance.self.reason.LOCATION_TIMEOUT": "انتهت مهلة طلب الموقع. أعد محاولة الموقع.",
-  "attendance.self.reason.LOCATION_INSECURE_CONTEXT": "يتطلب الموقع HTTPS. افتح النسخة الآمنة من هذه الصفحة ثم حاول مجددًا.",
-  "attendance.self.reason.LOCATION_PERMISSION_POLICY_BLOCKED": "تم حظر الموقع بواسطة إعداد Permissions-Policy للموقع. تواصل مع المسؤول.",
+  "attendance.self.reason.LOCATION_PERMISSION_DENIED":
+    "تم رفض إذن الموقع. على iPhone: الإعدادات ← الخصوصية والأمان ← خدمات الموقع ← مواقع Safari ← أثناء الاستخدام ← الموقع الدقيق، ثم Safari ← إعدادات المواقع ← الموقع ← سماح.",
+  "attendance.self.reason.LOCATION_POSITION_UNAVAILABLE":
+    "الموقع الحالي غير متاح. انتقل إلى مكان مفتوح ثم أعد محاولة الموقع.",
+  "attendance.self.reason.LOCATION_TIMEOUT":
+    "انتهت مهلة طلب الموقع. أعد محاولة الموقع.",
+  "attendance.self.reason.LOCATION_INSECURE_CONTEXT":
+    "يتطلب الموقع HTTPS. افتح النسخة الآمنة من هذه الصفحة ثم حاول مجددًا.",
+  "attendance.self.reason.LOCATION_PERMISSION_POLICY_BLOCKED":
+    "تم حظر الموقع بواسطة إعداد Permissions-Policy للموقع. تواصل مع المسؤول.",
   "attendance.self.reason.LOCATION_NOT_AVAILABLE": "موقع المتصفح غير متاح.",
   "attendance.self.reason.LOCATION_REQUIRED": "الموقع مطلوب لتسجيل الحضور.",
-  "attendance.self.reason.LOCATION_STALE": "التقط موقعاً حديثاً ثم حاول مجدداً.",
-  "attendance.self.reason.GPS_ACCURACY_TOO_LOW": "دقة الموقع غير كافية. حاول مرة أخرى في مكان مفتوح.",
-  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_CONFIGURED": "لا يوجد موقع عمل مؤهل مضبوط.",
-  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_ALLOWED": "موقع الحضور المحدد لم يعد مؤهلاً لتسجيل الحضور من الويب.",
-  "attendance.self.reason.OUTSIDE_ALLOWED_LOCATION": "أنت خارج موقع العمل المسموح.",
-  "attendance.self.reason.WEB_CHECK_IN_NOT_ALLOWED": "تسجيل الحضور من الويب غير مسموح به حسب السياسة.",
-  "attendance.self.reason.WEB_WIFI_NOT_AVAILABLE": "هذه السياسة تتطلب Wi-Fi المكتب ولا يمكن للمتصفح التحقق منه.",
-  "attendance.self.reason.WEB_WIFI_MANUAL_REVIEW": "لا يمكن التحقق من Wi-Fi المكتب في المتصفح؛ سيتطلب الحضور مراجعة.",
+  "attendance.self.reason.LOCATION_STALE":
+    "التقط موقعاً حديثاً ثم حاول مجدداً.",
+  "attendance.self.reason.GPS_ACCURACY_TOO_LOW":
+    "دقة الموقع غير كافية. حاول مرة أخرى في مكان مفتوح.",
+  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_CONFIGURED":
+    "لا يوجد موقع عمل مؤهل مضبوط.",
+  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_ALLOWED":
+    "موقع الحضور المحدد لم يعد مؤهلاً لتسجيل الحضور من الويب.",
+  "attendance.self.reason.OUTSIDE_ALLOWED_LOCATION":
+    "أنت خارج موقع العمل المسموح.",
+  "attendance.self.reason.WEB_CHECK_IN_NOT_ALLOWED":
+    "تسجيل الحضور من الويب غير مسموح به حسب السياسة.",
+  "attendance.self.reason.WEB_WIFI_NOT_AVAILABLE":
+    "هذه السياسة تتطلب Wi-Fi المكتب ولا يمكن للمتصفح التحقق منه.",
+  "attendance.self.reason.WEB_WIFI_MANUAL_REVIEW":
+    "لا يمكن التحقق من Wi-Fi المكتب في المتصفح؛ سيتطلب الحضور مراجعة.",
   "attendance.self.reason.PHOTO_REQUIRED": "صورة حضور مباشرة مطلوبة.",
   "attendance.self.reason.CAMERA_NOT_AVAILABLE": "الكاميرا غير متاحة.",
   "attendance.self.reason.NotAllowedError": "تم رفض إذن الكاميرا.",
   "attendance.self.loadingLocations": "جارٍ تحميل مواقع الحضور المؤهلة",
   "attendance.self.locationSetupTitle": "موقع الحضور غير مضبوط",
-  "attendance.self.locationSetupRequired": "لم يتم إعداد موقع حضور نشط ومسموح للويب لهذا الفرع. اطلب من المسؤول إعداد Attendance Locations قبل تسجيل الحضور.",
+  "attendance.self.locationSetupRequired":
+    "لم يتم إعداد موقع حضور نشط ومسموح للويب لهذا الفرع. اطلب من المسؤول إعداد Attendance Locations قبل تسجيل الحضور.",
   "attendance.self.selectAttendanceLocation": "اختر موقع الحضور",
   "attendance.self.loadingAction": "جارٍ تحميل إجراء الحضور",
   "attendance.self.locationSelectionTitle": "اختر موقع الحضور",
-  "attendance.self.locationSelectionRequired": "اختر موقعًا من مواقع الحضور المؤهلة قبل تسجيل الحضور.",
+  "attendance.self.locationSelectionRequired":
+    "اختر موقعًا من مواقع الحضور المؤهلة قبل تسجيل الحضور.",
   "attendance.self.employeeLinkTitle": "حساب الموظف غير مرتبط",
-  "attendance.self.employeeLinkDescription": "يجب ربط حسابك بملف موظف نشط لاستخدام الحضور من الويب.",
+  "attendance.self.employeeLinkDescription":
+    "يجب ربط حسابك بملف موظف نشط لاستخدام الحضور من الويب.",
   "attendance.self.policyBlockedTitle": "سياسة الحضور تمنع الحضور من الويب",
-  "attendance.self.policyWebDisabled": "سياسة الحضور لا تسمح بتسجيل الحضور من الويب.",
-  "attendance.self.policyWifiBlocked": "سياسة الحضور تتطلب Wi-Fi المكتب، ولا يمكن للمتصفح التحقق منه.",
+  "attendance.self.policyWebDisabled":
+    "سياسة الحضور لا تسمح بتسجيل الحضور من الويب.",
+  "attendance.self.policyWifiBlocked":
+    "سياسة الحضور تتطلب Wi-Fi المكتب، ولا يمكن للمتصفح التحقق منه.",
   "attendance.self.actionUnavailableTitle": "إجراء الحضور غير متاح",
   "hr360.attendanceScheduleMode": "نوع جدول الحضور",
   "hr360.attendanceSchedule": "جدول العمل والحضور",
-  "hr360.employeeScheduleOverrideHint": "تُضبط الاستثناءات الأسبوعية للموظف بواسطة الموارد البشرية ولها أولوية على الجدول المعين وجدول الشركة.",
+  "hr360.employeeScheduleOverrideHint":
+    "تُضبط الاستثناءات الأسبوعية للموظف بواسطة الموارد البشرية ولها أولوية على الجدول المعين وجدول الشركة.",
   "hr360.override.effectiveFrom": "ساري من",
   "hr360.override.effectiveTo": "ساري حتى",
   "hr360.override.timezone": "المنطقة الزمنية",
@@ -742,7 +803,8 @@ export const messages = {
   "attendance.admin.nextDay": "اليوم التالي",
   "attendance.admin.emptyForDate": "لا توجد سجلات حضور لهذا التاريخ.",
   "attendance.workspace.noAccessTitle": "الحضور غير متاح",
-  "attendance.workspace.noAccessDescription": "حسابك غير مرتبط بموظف نشط ولا يملك صلاحية إدارة الحضور.",
+  "attendance.workspace.noAccessDescription":
+    "حسابك غير مرتبط بموظف نشط ولا يملك صلاحية إدارة الحضور.",
   "common.clearFilters": "مسح الفلاتر",
   "common.project": "المشروع",
   "common.visibility": "الظهور",
@@ -928,6 +990,23 @@ export const messages = {
   "attendance.admin.export": "تصدير الحضور والغياب",
   "attendance.admin.exporting": "جارٍ التصدير...",
   "attendance.admin.exportError": "تعذر تنزيل كشف الحضور والغياب.",
+  "attendance.monthly.title": "كشف الحضور الشهري",
+  "attendance.monthly.description":
+    "اعرض جميع الموظفين وكل أيام الشهر. اضغط على أي يوم لإضافة سجل الحضور أو تعديله.",
+  "attendance.monthly.previous": "الشهر السابق",
+  "attendance.monthly.current": "الشهر الحالي",
+  "attendance.monthly.searchEmployee": "ابحث باسم الموظف أو الكود",
+  "attendance.monthly.noEmployees": "لا يوجد موظفون مطابقون.",
+  "attendance.monthly.editDay": "تعديل حضور اليوم",
+  "attendance.monthly.status.PRESENT": "حاضر",
+  "attendance.monthly.status.LATE": "متأخر",
+  "attendance.monthly.status.SEVERE_LATE": "تأخير شديد",
+  "attendance.monthly.status.ABSENT": "غائب",
+  "attendance.monthly.status.LEAVE": "إجازة",
+  "attendance.monthly.status.OFF": "راحة",
+  "attendance.monthly.status.EARLY_LEAVE": "انصراف مبكر",
+  "attendance.monthly.status.NOT_RECORDED": "غير مسجل",
+  "attendance.monthly.status.NOT_EMPLOYED": "قبل التعيين",
   "navigation.moreNavigation": "المزيد من التنقل",
   "navigation.openMore": "فتح المزيد من التنقل",
   "navigation.more": "المزيد",
@@ -1640,7 +1719,8 @@ export const messages = {
   "hr.quickActions": "إجراءات الموارد البشرية",
   "hr.pagination": "صفحة {page} من {maxPage}، {total} موظف",
   "hr.dashboard.title": "لوحة الموارد البشرية",
-  "hr.dashboard.description": "مؤشرات فعلية للموظفين والحضور والطلبات والمستندات والتعيينات.",
+  "hr.dashboard.description":
+    "مؤشرات فعلية للموظفين والحضور والطلبات والمستندات والتعيينات.",
   "hr.dashboard.totalEmployees": "إجمالي الموظفين",
   "hr.dashboard.activeEmployees": "الموظفون النشطون",
   "hr.dashboard.onLeaveToday": "في إجازة اليوم",
@@ -1654,7 +1734,8 @@ export const messages = {
   "hr.dashboard.withoutLogin": "بدون دخول",
   "hr.dashboard.missingFace": "بدون صورة وجه",
   "hr.employees.title": "الموظفون",
-  "hr.employees.description": "قائمة الموظفين مع المرشحات وحالة الحضور وإدارة الوصول.",
+  "hr.employees.description":
+    "قائمة الموظفين مع المرشحات وحالة الحضور وإدارة الوصول.",
   "hr.filters.title": "فلاتر متقدمة",
   "hr.filters.roleAccess": "الدور / الوصول",
   "hr.filters.todayStatus": "حالة اليوم",
@@ -1677,8 +1758,10 @@ export const messages = {
   "hr.quick.resetPassword": "إعادة كلمة المرور",
   "hr.quick.documents": "المستندات",
   "hr.quick.permissions": "الصلاحيات",
-  "hr.quick.protectedAction": "هذا الإجراء محمي ويتطلب تأكيدًا. استخدم التعليق أو التعطيل ما لم يكن الحذف مسموحًا صراحة.",
-  "hr.quick.comingSoonDetail": "استخدم ملف الموظف الشامل أو معالج الإجراءات لإتمام هذا الإجراء.",
+  "hr.quick.protectedAction":
+    "هذا الإجراء محمي ويتطلب تأكيدًا. استخدم التعليق أو التعطيل ما لم يكن الحذف مسموحًا صراحة.",
+  "hr.quick.comingSoonDetail":
+    "استخدم ملف الموظف الشامل أو معالج الإجراءات لإتمام هذا الإجراء.",
   "hr.quickAction.addEmployee": "إضافة موظف",
   "hr.quickAction.addWorkSchedule": "إضافة جدول",
   "hr.quickAction.newAssignment": "تكليف جديد",
@@ -1689,11 +1772,14 @@ export const messages = {
   "hr.quickAction.addBonus": "إضافة مكافأة",
   "hr.quickAction.manualCheckIn": "حضور يدوي",
   "hr.workGroups.title": "مجموعات العمل",
-  "hr.workGroups.description": "إدارة مجموعات العمل والمديرين والجداول وملفات الحضور داخل المؤسسة.",
+  "hr.workGroups.description":
+    "إدارة مجموعات العمل والمديرين والجداول وملفات الحضور داخل المؤسسة.",
   "hr.teams.title": "الفرق",
-  "hr.teams.description": "إدارة الفرق وربطها بمجموعات العمل والمديرين والموظفين.",
+  "hr.teams.description":
+    "إدارة الفرق وربطها بمجموعات العمل والمديرين والموظفين.",
   "hr.actions.title": "إجراءات الموظفين",
-  "hr.actions.description": "تنفيذ إجراءات الموظفين المسموحة مع المراجعة وسجل التدقيق.",
+  "hr.actions.description":
+    "تنفيذ إجراءات الموظفين المسموحة مع المراجعة وسجل التدقيق.",
   "hr.actions.wizard": "معالج الإجراء",
   "hr.actions.employeeIds": "معرّفات الموظفين مفصولة بفواصل",
   "hr.actions.detailsJson": "تفاصيل الإجراء بصيغة JSON",
@@ -1701,16 +1787,19 @@ export const messages = {
   "hr.actions.applied": "تم التطبيق",
   "hr.actions.affected": "الموظفون المتأثرون: {count}",
   "hr.documents.title": "مستندات الموظفين",
-  "hr.documents.description": "متابعة مستندات الموظفين الناقصة والمنتهية وحالة المراجعة اليدوية.",
+  "hr.documents.description":
+    "متابعة مستندات الموظفين الناقصة والمنتهية وحالة المراجعة اليدوية.",
   "hr.documents.missing": "ناقصة",
   "hr.documents.expired": "منتهية",
   "hr.documents.upload": "رفع مستند",
   "hr.documents.none": "لا توجد مستندات في هذا القسم",
   "hr.orgChart.title": "الهيكل التنظيمي",
-  "hr.orgChart.description": "عرض الهيكل حسب المكاتب والأقسام والمديرين والموظفين.",
+  "hr.orgChart.description":
+    "عرض الهيكل حسب المكاتب والأقسام والمديرين والموظفين.",
   "hr.orgChart.tree": "الهرم التنظيمي",
   "hr.transferLog.title": "سجل النقل",
-  "hr.transferLog.description": "سجل نقل الموظفين بين المكاتب والأقسام والمناصب والمديرين.",
+  "hr.transferLog.description":
+    "سجل نقل الموظفين بين المكاتب والأقسام والمناصب والمديرين.",
   "hr.titleChanges.title": "تغييرات المسمى",
   "hr.titleChanges.description": "سجل تغييرات المسمى والمنصب والدرجة الوظيفية.",
   "hr360.option.NOT_CONFIGURED": "غير معد",
@@ -1774,7 +1863,8 @@ export const messages = {
   "hr360.step.documents": "المستندات والتحقق من الوجه",
   "hr360.step.permissions": "الصلاحيات والوصول",
   "hr360.step.review": "المراجعة",
-  "hr360.newDescription": "أنشئ ملف موظف متكامل يشمل الدخول والوظيفة والحضور والرواتب والمستندات والصلاحيات.",
+  "hr360.newDescription":
+    "أنشئ ملف موظف متكامل يشمل الدخول والوظيفة والحضور والرواتب والمستندات والصلاحيات.",
   "hr360.detailDescription": "عرض ملف الموظف الشامل وتحديثه.",
   "hr360.photoFileId": "معرّف ملف صورة الموظف",
   "hr360.faceReferenceFileId": "معرّف صورة مرجع الوجه",
@@ -1851,7 +1941,8 @@ export const messages = {
   "hr360.documentExpiryDate": "تاريخ انتهاء المستند",
   "hr360.aiReviewStatus": "حالة مراجعة الذكاء الاصطناعي",
   "hr360.manualReview": "المراجعة اليدوية",
-  "hr360.manualReviewDescription": "لم يتم ربط مراجعة ذكاء اصطناعي فعلية بعد. استخدم حالة المراجعة اليدوية حتى توصيل مزود حقيقي.",
+  "hr360.manualReviewDescription":
+    "لم يتم ربط مراجعة ذكاء اصطناعي فعلية بعد. استخدم حالة المراجعة اليدوية حتى توصيل مزود حقيقي.",
   "hr.todayStatus.PRESENT": "حاضر",
   "hr.todayStatus.LATE": "متأخر",
   "hr.todayStatus.ABSENT": "غائب",
@@ -1888,7 +1979,8 @@ export const messages = {
   "hr.foundation.settings.title": "HR Settings",
   "hr.foundation.settings.description": "وصف محلي بدون بيانات وهمية.",
   "hr.foundation.availableSections": "Available sections",
-  "hr.foundation.comingSoonDescription": "Foundation is visible now. Data will appear when the real engine is implemented.",
+  "hr.foundation.comingSoonDescription":
+    "Foundation is visible now. Data will appear when the real engine is implemented.",
   "hr.foundation.section.inbox": "Inbox",
   "hr.foundation.section.outgoing": "Outgoing",
   "hr.foundation.section.settings": "Settings",
@@ -2011,9 +2103,11 @@ export const messages = {
   "hr360.mustChangePassword": "يجب تغيير كلمة المرور",
   "hr360.lastLogin": "آخر دخول",
   "provisioning.addCompany": "إضافة شركة",
-  "provisioning.addCompanyDescription": "إنشاء الشركة والاشتراك والحدود والمواقع والنطاقات وأول مسؤول في مسار واحد.",
+  "provisioning.addCompanyDescription":
+    "إنشاء الشركة والاشتراك والحدود والمواقع والنطاقات وأول مسؤول في مسار واحد.",
   "provisioning.wizard.title": "إنشاء شركة من المنصة",
-  "provisioning.wizard.description": "أكمل الأقسام ثم أنشئ المؤسسة مع رابط البوابة.",
+  "provisioning.wizard.description":
+    "أكمل الأقسام ثم أنشئ المؤسسة مع رابط البوابة.",
   "provisioning.step.company": "معلومات الشركة",
   "provisioning.step.subscription": "الاشتراك والخطة",
   "provisioning.step.limits": "الحدود",
@@ -2086,7 +2180,8 @@ export const messages = {
   "provisioning.appliesTo": "ينطبق على",
   "provisioning.required": "إلزامي",
   "provisioning.webWifiPolicy": "سياسة Wi-Fi للويب",
-  "provisioning.browserCannotReadWifi": "لا يمكن للمتصفح قراءة اسم Wi-Fi بشكل موثوق. سيتبع حضور الويب سياسة Wi-Fi للويب المحددة.",
+  "provisioning.browserCannotReadWifi":
+    "لا يمكن للمتصفح قراءة اسم Wi-Fi بشكل موثوق. سيتبع حضور الويب سياسة Wi-Fi للويب المحددة.",
   "provisioning.domains": "النطاقات",
   "provisioning.subdomain": "النطاق الفرعي",
   "provisioning.customDomain": "النطاق المخصص",
@@ -2096,7 +2191,8 @@ export const messages = {
   "provisioning.redirectMode": "وضع إعادة التوجيه",
   "provisioning.redirectUrl": "رابط إعادة التوجيه",
   "provisioning.inboundSourceMode": "وضع المصدر الوارد",
-  "provisioning.domainFallbackNote": "لا يتم افتراض DNS شامل. تحصل الشركة دائما على رابط مسار احتياطي.",
+  "provisioning.domainFallbackNote":
+    "لا يتم افتراض DNS شامل. تحصل الشركة دائما على رابط مسار احتياطي.",
   "provisioning.companyPortal": "بوابة الشركة",
   "provisioning.publicLink": "الرابط العام",
   "provisioning.createFirstAdmin": "إنشاء أول مسؤول",
@@ -2110,9 +2206,11 @@ export const messages = {
   "provisioning.companyAdmin": "مسؤول الشركة",
   "provisioning.subscriptionExpired": "انتهى الاشتراك",
   "provisioning.limitExceeded": "تم تجاوز الحد",
-  "provisioning.reviewCopy": "راجع إعداد الشركة ثم أنشئ المؤسسة. سيتم إنشاء رابط بوابة ومسار احتياطي تلقائيا.",
+  "provisioning.reviewCopy":
+    "راجع إعداد الشركة ثم أنشئ المؤسسة. سيتم إنشاء رابط بوابة ومسار احتياطي تلقائيا.",
   "provisioning.loadingCompany": "جار تحميل الشركة",
-  "provisioning.detailDescription": "إدارة ملف الشركة والاشتراك والحدود وأماكن العمل والحضور وWi-Fi والنطاقات والمستخدمين.",
+  "provisioning.detailDescription":
+    "إدارة ملف الشركة والاشتراك والحدود وأماكن العمل والحضور وWi-Fi والنطاقات والمستخدمين.",
   "provisioning.companyTabs": "تبويبات إعدادات الشركة",
   "provisioning.tab.overview": "نظرة عامة",
   "provisioning.tab.subscription": "الاشتراك",
@@ -2125,9 +2223,11 @@ export const messages = {
   "provisioning.companyProfile": "ملف الشركة",
   "provisioning.savedRecords": "السجلات المحفوظة",
   "provisioning.noRecords": "لا توجد سجلات بعد.",
-  "provisioning.usersAfterCreation": "يمكن إنشاء أول مسؤول من المعالج. يتوفر باقي المستخدمين من خلال صلاحيات موظفي الموارد البشرية.",
+  "provisioning.usersAfterCreation":
+    "يمكن إنشاء أول مسؤول من المعالج. يتوفر باقي المستخدمين من خلال صلاحيات موظفي الموارد البشرية.",
   "provisioning.firstAdminCreated": "تم إنشاء أول مسؤول وتحديث فحص التفعيل.",
-  "provisioning.firstAdminPlatformForbidden": "لا يمكن إنشاء أول مسؤول لمؤسسة المنصة من هذا المسار.",
+  "provisioning.firstAdminPlatformForbidden":
+    "لا يمكن إنشاء أول مسؤول لمؤسسة المنصة من هذا المسار.",
   "provisioning.organizationUsers": "مستخدمو المؤسسة",
   "provisioning.reviewCompany": "مراجعة الشركة",
   "provisioning.tab.publicSite": "الموقع العام",
@@ -2151,7 +2251,8 @@ export const messages = {
   "provisioning.showGallery": "إظهار المعرض",
   "provisioning.showProjects": "إظهار المشروعات",
   "provisioning.showLeadForm": "إظهار نموذج العملاء",
-  "provisioning.redirectResourceNote": "إعادة التوجيه تستخدم أقل موارد POPWAM. البوابة والمعرض مستضافان لدى POPWAM.",
+  "provisioning.redirectResourceNote":
+    "إعادة التوجيه تستخدم أقل موارد POPWAM. البوابة والمعرض مستضافان لدى POPWAM.",
   "provisioning.legalTax": "القانوني والضريبي",
   "provisioning.tradeName": "الاسم التجاري",
   "provisioning.commercialRegister": "السجل التجاري",
@@ -2202,7 +2303,8 @@ export const messages = {
   "navigation.labels.offers": "العروض",
   "navigation.labels.candidate.documents": "مستندات المرشح",
   "hr.recruitment.title": "التوظيف",
-  "hr.recruitment.description": "استقبال المتقدمين ومراجعة المستندات والمقابلات والعروض والتحويل إلى موظف.",
+  "hr.recruitment.description":
+    "استقبال المتقدمين ومراجعة المستندات والمقابلات والعروض والتحويل إلى موظف.",
   "hr.recruitment.loading": "جار تحميل التوظيف",
   "hr.recruitment.loadError": "تعذر تحميل بيانات التوظيف",
   "hr.recruitment.totalApplicants": "إجمالي المتقدمين",
@@ -2222,13 +2324,15 @@ export const messages = {
   "hr.recruitment.applicants": "المتقدمون",
   "hr.recruitment.applicantsDescription": "مراجعة المرشحين قبل إنشاء الموظف.",
   "hr.recruitment.noApplicants": "لا يوجد متقدمون بعد",
-  "hr.recruitment.noApplicantsDescription": "سيظهر هنا المتقدمون من الموقع أو الإدخال الداخلي.",
+  "hr.recruitment.noApplicantsDescription":
+    "سيظهر هنا المتقدمون من الموقع أو الإدخال الداخلي.",
   "hr.recruitment.generalApplication": "تقديم عام",
   "hr.recruitment.aiReviewStatus": "حالة مراجعة AI/OCR",
   "hr.recruitment.submittedAt": "تاريخ التقديم",
   "hr.recruitment.pagination": "صفحة {page} من {maxPage}، {total} متقدم",
   "hr.recruitment.secretaryIntake": "إدخال السكرتارية",
-  "hr.recruitment.secretaryIntakeDescription": "تسجيل متقدم حضوري أو ورقي بدون إنشاء دخول موظف.",
+  "hr.recruitment.secretaryIntakeDescription":
+    "تسجيل متقدم حضوري أو ورقي بدون إنشاء دخول موظف.",
   "hr.recruitment.walkInApplicant": "متقدم حضوري",
   "hr.recruitment.fullName": "الاسم الكامل",
   "hr.recruitment.nationality": "الجنسية",
@@ -2264,7 +2368,8 @@ export const messages = {
   "hr.recruitment.uploadOfficialDocument": "رفع مستند رسمي",
   "hr.recruitment.extractData": "استخراج البيانات",
   "hr.recruitment.aiReview": "مراجعة AI/OCR",
-  "hr.recruitment.noFakeAi": "لا تتم الموافقة على أي نتيجة AI أو OCR تلقائيًا. يجب على الموارد البشرية تأكيد الحقول يدويًا.",
+  "hr.recruitment.noFakeAi":
+    "لا تتم الموافقة على أي نتيجة AI أو OCR تلقائيًا. يجب على الموارد البشرية تأكيد الحقول يدويًا.",
   "hr.recruitment.interviews": "المقابلات",
   "hr.recruitment.scheduleInterview": "جدولة مقابلة",
   "hr.recruitment.offers": "العروض",
@@ -2276,14 +2381,16 @@ export const messages = {
   "hr.recruitment.salaryCurrency": "عملة الراتب",
   "hr.recruitment.startDate": "تاريخ البدء",
   "hr.recruitment.requiredDocuments": "المستندات المطلوبة",
-  "hr.recruitment.requiredDocumentsDescription": "تحديد المستندات المطلوبة للمتقدم حسب سياسة الشركة.",
+  "hr.recruitment.requiredDocumentsDescription":
+    "تحديد المستندات المطلوبة للمتقدم حسب سياسة الشركة.",
   "hr.recruitment.cv": "السيرة الذاتية",
   "hr.recruitment.graduationCertificate": "شهادة التخرج",
   "hr.recruitment.nationalId": "الهوية الوطنية",
   "hr.recruitment.militaryCertificate": "الشهادة العسكرية",
   "hr.recruitment.lastSalaryProof": "إثبات آخر راتب",
   "hr.recruitment.experienceCertificate": "شهادة خبرة",
-  "hr.recruitment.sectionDescription": "أساس سير عمل التوظيف بدون موافقة AI وهمية.",
+  "hr.recruitment.sectionDescription":
+    "أساس سير عمل التوظيف بدون موافقة AI وهمية.",
   "hr.recruitment.newApplicant": "متقدم جديد",
   "hr.recruitment.status.pending_review": "قيد المراجعة",
   "hr.recruitment.status.documents_missing": "المستندات ناقصة",
@@ -2309,7 +2416,8 @@ export const messages = {
   "provisioning.tab.accessLevels": "مستويات الوصول",
   "verification.activationGate": "بوابة التفعيل",
   "verification.readyToActivate": "تم استيفاء كل متطلبات التفعيل.",
-  "verification.activationBlocked": "لا يمكن تفعيل الشركة حتى تتم الموافقة على كل المتطلبات.",
+  "verification.activationBlocked":
+    "لا يمكن تفعيل الشركة حتى تتم الموافقة على كل المتطلبات.",
   "verification.requiredDocuments": "المستندات المطلوبة",
   "verification.documentsApproved": "تمت الموافقة على المستندات المطلوبة.",
   "verification.subscription": "الاشتراك",
@@ -2328,23 +2436,30 @@ export const messages = {
   "mapPicker.title": "اختيار الموقع",
   "mapPicker.addressPlaceholder": "ابحث عن العنوان أو أدخله",
   "mapPicker.currentLocation": "استخدام الموقع الحالي",
-  "mapPicker.providerMissing": "مزود الخرائط غير مهيأ. استخدم موقع المتصفح أو أدخل الإحداثيات من التفاصيل المتقدمة.",
+  "mapPicker.providerMissing":
+    "مزود الخرائط غير مهيأ. استخدم موقع المتصفح أو أدخل الإحداثيات من التفاصيل المتقدمة.",
   "mapPicker.advanced": "تفاصيل متقدمة",
   "mapPicker.geolocationUnavailable": "موقع المتصفح غير متاح.",
   "mapPicker.geolocationDenied": "تم رفض إذن الموقع أو انتهت المهلة.",
   "platformSettings.title": "إعدادات المنصة",
-  "platformSettings.description": "إدارة الخطط والاشتراكات وسياسات التحقق والوحدات وإعدادات النطاقات.",
+  "platformSettings.description":
+    "إدارة الخطط والاشتراكات وسياسات التحقق والوحدات وإعدادات النطاقات.",
   "platformSettings.error": "تعذر تحميل إعدادات المنصة",
   "platformSettings.plans": "الخطط",
   "platformSettings.subscriptions": "الاشتراكات",
   "platformSettings.verificationPolicies": "سياسات التحقق",
   "platformSettings.modules": "الوحدات",
   "platformSettings.domains": "النطاقات",
-  "platformSettings.plans.description": "إنشاء وإدارة خطط المنصة والأسعار والحدود والوحدات المفعلة.",
-  "platformSettings.subscriptions.description": "مراجعة اشتراكات الشركات وحالتها.",
-  "platformSettings.verification-policies.description": "تحديد المستندات المطلوبة حسب الدولة والنوع والشكل القانوني ودور المالك.",
-  "platformSettings.modules.description": "مراجعة الوحدات التي يمكن ربطها بالخطط.",
-  "platformSettings.domains.description": "مراجعة مسار الاحتياطي وحالة النطاقات الفرعية وملاحظات DNS والاستضافة.",
+  "platformSettings.plans.description":
+    "إنشاء وإدارة خطط المنصة والأسعار والحدود والوحدات المفعلة.",
+  "platformSettings.subscriptions.description":
+    "مراجعة اشتراكات الشركات وحالتها.",
+  "platformSettings.verification-policies.description":
+    "تحديد المستندات المطلوبة حسب الدولة والنوع والشكل القانوني ودور المالك.",
+  "platformSettings.modules.description":
+    "مراجعة الوحدات التي يمكن ربطها بالخطط.",
+  "platformSettings.domains.description":
+    "مراجعة مسار الاحتياطي وحالة النطاقات الفرعية وملاحظات DNS والاستضافة.",
   "platformSettings.domainDefaults": "الإعدادات الافتراضية للنطاق",
   "platformSettings.wildcardEnabled": "النطاقات الفرعية الشاملة مفعلة",
   "platformSettings.wildcardDisabled": "النطاقات الفرعية الشاملة معطلة",
@@ -2361,9 +2476,11 @@ export const messages = {
   "platformSettings.stagingRootDomain": "نطاق الاختبار الرئيسي",
   "platformSettings.fallbackPath": "مسار الاحتياطي",
   "platformSettings.wildcard": "حالة النطاق الشامل",
-  "platformSettings.domainInstructions": "لا يتم تفعيل أي نطاق مخصص قبل نجاح تحقق Railway وCloudflare. عند تعطيل النطاق الشامل استخدم /sites/:slug فقط.",
+  "platformSettings.domainInstructions":
+    "لا يتم تفعيل أي نطاق مخصص قبل نجاح تحقق Railway وCloudflare. عند تعطيل النطاق الشامل استخدم /sites/:slug فقط.",
   "accessLevels.title": "مستويات وصول الشركة",
-  "accessLevels.companyScopedNote": "مستويات الوصول خاصة بهذه الشركة. لا يستطيع مسؤول الشركة منح صلاحيات المنصة.",
+  "accessLevels.companyScopedNote":
+    "مستويات الوصول خاصة بهذه الشركة. لا يستطيع مسؤول الشركة منح صلاحيات المنصة.",
   "accessLevels.code": "الرمز",
   "accessLevels.displayName": "اسم العرض",
   "accessLevels.localizedName": "الاسم المترجم",
@@ -2404,7 +2521,8 @@ export const messages = {
   "hr.quickAction.futureIntegration": "ربط مزود بوابة ذكية",
   "hr.quickAction.resetPosition": "إعادة ضبط الموضع",
   "realEstate.title": "أساس دخول السكان",
-  "realEstate.description": "إدارة الكمبوندات والمباني والوحدات والعملاء والتخصيصات وتصاريح QR الآمنة.",
+  "realEstate.description":
+    "إدارة الكمبوندات والمباني والوحدات والعملاء والتخصيصات وتصاريح QR الآمنة.",
   "realEstate.projects": "المشروعات",
   "realEstate.buildings": "المباني",
   "realEstate.units": "الوحدات",
@@ -2425,7 +2543,8 @@ export const messages = {
   "realEstate.generateQr": "إنشاء QR",
   "realEstate.noActiveQrPass": "لا يوجد تصريح QR فعال",
   "realEstate.qrAccessPass": "تصريح دخول QR",
-  "realEstate.smartGateNotConfigured": "تصريح الدخول بالـ QR متاح. ربط بوابة ذكية غير مفعّل.",
+  "realEstate.smartGateNotConfigured":
+    "تصريح الدخول بالـ QR متاح. ربط بوابة ذكية غير مفعّل.",
   "realEstate.regenerateQr": "إعادة إنشاء QR",
   "realEstate.suspendQr": "إيقاف QR مؤقتا",
   "realEstate.revokeQr": "إلغاء QR",
@@ -2452,34 +2571,43 @@ export const messages = {
   "navigation.groups.advertising": "الإعلانات",
   "platformWelcome.eyebrow": "مرحبًا",
   "platformWelcome.title": "مرحبًا بك في منصة POPWAM",
-  "platformWelcome.description": "استخدم مركز التحكم لإدارة المؤسسات والتحقق والاشتراكات والأفراد وجاهزية المنصة من بيانات النظام الفعلية.",
-  "platformWelcome.organizations": "أنشئ المؤسسات عبر مستندات قانونية مراجعة ولا تفعّلها قبل اكتمال المتطلبات.",
-  "platformWelcome.operations": "تابع الاشتراكات والمستخدمين والتوظيف ومشكلات الحضور وصحة التكاملات.",
-  "platformWelcome.security": "تخصيص التنقل لا يمنح صلاحيات؛ تفرض الواجهة وواجهة البرمجة الصلاحيات.",
+  "platformWelcome.description":
+    "استخدم مركز التحكم لإدارة المؤسسات والتحقق والاشتراكات والأفراد وجاهزية المنصة من بيانات النظام الفعلية.",
+  "platformWelcome.organizations":
+    "أنشئ المؤسسات عبر مستندات قانونية مراجعة ولا تفعّلها قبل اكتمال المتطلبات.",
+  "platformWelcome.operations":
+    "تابع الاشتراكات والمستخدمين والتوظيف ومشكلات الحضور وصحة التكاملات.",
+  "platformWelcome.security":
+    "تخصيص التنقل لا يمنح صلاحيات؛ تفرض الواجهة وواجهة البرمجة الصلاحيات.",
   "platformWelcome.doNotShowAgain": "عدم الإظهار مرة أخرى",
   "platformWelcome.getStarted": "ابدأ الآن",
-  "platformWelcome.saveError": "تعذر حفظ التفضيل. حاول مرة أخرى قبل إغلاق هذه الرسالة نهائيًا.",
+  "platformWelcome.saveError":
+    "تعذر حفظ التفضيل. حاول مرة أخرى قبل إغلاق هذه الرسالة نهائيًا.",
   "platformDashboard.title": "لوحة تحكم المنصة",
-  "platformDashboard.description": "عمليات المنصة المباشرة ومؤشرات الأعمال وجاهزية البنية التحتية.",
+  "platformDashboard.description":
+    "عمليات المنصة المباشرة ومؤشرات الأعمال وجاهزية البنية التحتية.",
   "platformDashboard.about": "حول المنصة",
   "platformDashboard.realDataDescription": "محسوب من سجلات المنصة الحالية.",
   "platformDashboard.openDetails": "فتح التفاصيل",
   "platformDashboard.organizations": "المؤسسات",
-  "platformDashboard.organizationsDescription": "دورة حياة المؤسسات الحالية وتغطية الأسواق المدعومة.",
+  "platformDashboard.organizationsDescription":
+    "دورة حياة المؤسسات الحالية وتغطية الأسواق المدعومة.",
   "platformDashboard.totalOrganizations": "المؤسسات",
   "platformDashboard.activeOrganizations": "المؤسسات النشطة",
   "platformDashboard.draftOrganizations": "المسودات والمستندات المطلوبة",
   "platformDashboard.awaitingVerification": "بانتظار التحقق",
   "platformDashboard.registeredCountries": "الدول المدعومة",
   "platformDashboard.subscriptions": "الاشتراكات",
-  "platformDashboard.subscriptionsDescription": "حالة الاشتراكات الحالية ومواعيد الانتهاء القادمة.",
+  "platformDashboard.subscriptionsDescription":
+    "حالة الاشتراكات الحالية ومواعيد الانتهاء القادمة.",
   "platformDashboard.activeSubscriptions": "الاشتراكات النشطة",
   "platformDashboard.trialSubscriptions": "الاشتراكات التجريبية",
   "platformDashboard.expiringSubscriptions": "تنتهي خلال 30 يومًا",
   "platformDashboard.inactiveSubscriptions": "منتهية أو معلقة",
   "platformDashboard.plansInUse": "الخطط المستخدمة",
   "platformDashboard.peopleAndOperations": "الأفراد والعمليات",
-  "platformDashboard.peopleDescription": "المستخدمون والموظفون والتوظيف والمكاتب والحضور والتنبيهات.",
+  "platformDashboard.peopleDescription":
+    "المستخدمون والموظفون والتوظيف والمكاتب والحضور والتنبيهات.",
   "platformDashboard.platformUsers": "مستخدمو المنصة",
   "platformDashboard.companyUsers": "مستخدمو الشركات",
   "platformDashboard.employees": "الموظفون",
@@ -2489,7 +2617,8 @@ export const messages = {
   "platformDashboard.attendanceIssues": "مشكلات الحضور",
   "platformDashboard.unresolvedAlerts": "التنبيهات غير المحلولة",
   "platformDashboard.health": "صحة المنصة",
-  "platformDashboard.healthDescription": "حالة الإعداد والترحيلات دون كشف بيانات الدخول.",
+  "platformDashboard.healthDescription":
+    "حالة الإعداد والترحيلات دون كشف بيانات الدخول.",
   "platformDashboard.database": "قاعدة البيانات والترحيلات",
   "platformDashboard.r2": "تخزين الملفات الخاص",
   "platformDashboard.cloudflare": "استخراج المستندات",
@@ -2520,48 +2649,58 @@ export const messages = {
   "platformDashboard.zeroAttendanceIssues": "لا توجد مشكلة حضور تحتاج مراجعة.",
   "platformDashboard.zeroAlerts": "لا يوجد تنبيه منصة غير محلول.",
   "organizationOnboarding.step1": "الخطوة 1 من 7",
-  "organizationOnboarding.identityTitle": "نوع المؤسسة والدولة ومقدم الطلب المسؤول",
-  "organizationOnboarding.identityDescription": "أنشئ مسودة مراجعة آمنة. تكتمل بيانات الملف القانوني بعد استخراج المستندات والتأكيد اليدوي فقط.",
+  "organizationOnboarding.identityTitle":
+    "نوع المؤسسة والدولة ومقدم الطلب المسؤول",
+  "organizationOnboarding.identityDescription":
+    "أنشئ مسودة مراجعة آمنة. تكتمل بيانات الملف القانوني بعد استخراج المستندات والتأكيد اليدوي فقط.",
   "organizationOnboarding.workingName": "اسم المؤسسة المؤقت",
   "organizationOnboarding.submitterName": "اسم مقدم الطلب المسؤول",
   "organizationOnboarding.submitterEmail": "بريد مقدم الطلب المسؤول",
   "organizationOnboarding.submitterPhone": "هاتف مقدم الطلب المسؤول",
   "organizationOnboarding.continueToDocuments": "إنشاء المسودة ورفع المستندات",
   "organizationOnboarding.documentsNext": "المستندات هي الخطوة التالية",
-  "organizationOnboarding.documentsExplanation": "تفتح المسودة مباشرة في الرفع المحمي. تبقى القيم المستخرجة اقتراحات حتى يحددها المراجع ويطبقها.",
+  "organizationOnboarding.documentsExplanation":
+    "تفتح المسودة مباشرة في الرفع المحمي. تبقى القيم المستخرجة اقتراحات حتى يحددها المراجع ويطبقها.",
   "organizationOnboarding.commercialRegister": "صفحات أو صور السجل التجاري",
   "organizationOnboarding.taxCard": "وجها البطاقة الضريبية",
   "organizationOnboarding.ownerIdentity": "وجها مستند هوية المالك",
   "organizationOnboarding.responsibleIdentity": "هوية الشخص المسؤول أو المفوض",
-  "organizationOnboarding.authorization": "مستند التفويض إذا لم يكن المسؤول هو المالك",
-  "organizationOnboarding.laterSetup": "تُضبط الفروع والمكاتب والحضور وشبكة Wi-Fi والجداول ومستويات الوصول وطرق الدخول لاحقًا بواسطة مدير الشركة.",
+  "organizationOnboarding.authorization":
+    "مستند التفويض إذا لم يكن المسؤول هو المالك",
+  "organizationOnboarding.laterSetup":
+    "تُضبط الفروع والمكاتب والحضور وشبكة Wi-Fi والجداول ومستويات الوصول وطرق الدخول لاحقًا بواسطة مدير الشركة.",
   "platformSettings.planType": "نوع الخطة",
   "platformSettings.durationValue": "المدة",
   "platformSettings.durationUnit": "وحدة المدة",
   "platformSettings.allowsNoExpiry": "السماح دون انتهاء",
   "platformSettings.allowedLoginMethods": "طرق الدخول المسموحة",
   "platformSettings.metadata": "الدول والعملات واللغات",
-  "platformSettings.metadata.description": "إدارة السجلات المتاحة في إنشاء المؤسسات والخطط وإعداد الشركة.",
+  "platformSettings.metadata.description":
+    "إدارة السجلات المتاحة في إنشاء المؤسسات والخطط وإعداد الشركة.",
   "platformSettings.metadata.country": "الدول",
   "platformSettings.metadata.currency": "العملات",
   "platformSettings.metadata.language": "اللغات",
   "platformSettings.metadata.code": "الرمز",
   "platformSettings.metadata.order": "الترتيب",
-  "platformSettings.metadata.empty": "لا توجد سجلات في هذه الفئة. أضف السجل الأول أعلاه.",
+  "platformSettings.metadata.empty":
+    "لا توجد سجلات في هذه الفئة. أضف السجل الأول أعلاه.",
   "platformSettings.editPlans": "تعديل الخطط",
-  "platformSettings.createPlanFirst": "أنشئ خطة منصة وفعّلها قبل تعيين الاشتراك.",
+  "platformSettings.createPlanFirst":
+    "أنشئ خطة منصة وفعّلها قبل تعيين الاشتراك.",
   "sidebar.dragToReorder": "اسحب لإعادة ترتيب القسم",
   "platformDashboard.loading": "جارٍ تحميل بيانات المنصة الحالية.",
   "platformDashboard.unavailable": "غير متاح",
   "platformDashboard.loadError": "تعذر تحميل بيانات لوحة المنصة بأمان.",
   "platformDashboard.requestId": "معرّف الطلب: {requestId}",
   "platformDashboard.distributions": "توزيع المؤسسات",
-  "platformDashboard.distributionsDescription": "أعداد المؤسسات الفعلية مجمعة حسب الحالة والنوع ودولة التسجيل.",
+  "platformDashboard.distributionsDescription":
+    "أعداد المؤسسات الفعلية مجمعة حسب الحالة والنوع ودولة التسجيل.",
   "platformDashboard.byStatus": "حسب الحالة",
   "platformDashboard.byType": "حسب النوع",
   "platformDashboard.byCountry": "حسب الدولة",
   "platformDashboard.planDistribution": "توزيع الخطط",
-  "platformDashboard.planDistributionDescription": "المؤسسات مجمعة حسب الخطط المعينة حاليًا لاشتراكاتها.",
+  "platformDashboard.planDistributionDescription":
+    "المؤسسات مجمعة حسب الخطط المعينة حاليًا لاشتراكاتها.",
   "platformDashboard.migrations": "ترحيلات قاعدة البيانات",
   "platformDashboard.notReady": "غير جاهز",
   "platformDashboard.integration.cameras": "الكاميرات",
@@ -2572,7 +2711,8 @@ export const messages = {
   "platformDashboard.integrationStatus.configuration_required": "الإعداد مطلوب",
   "platformDashboard.integrationStatus.disabled": "معطل",
   "organizationLifecycle.title": "دورة حياة المؤسسة",
-  "organizationLifecycle.description": "أرشف المؤسسات بأمان أو استعد السجلات المؤرشفة أو علّق الوصول أو احذف مسودة مؤهلة بعد مراجعة الأثر.",
+  "organizationLifecycle.description":
+    "أرشف المؤسسات بأمان أو استعد السجلات المؤرشفة أو علّق الوصول أو احذف مسودة مؤهلة بعد مراجعة الأثر.",
   "organizationLifecycle.reason": "السبب أو ملاحظة داخلية",
   "organizationLifecycle.archive": "أرشفة المؤسسة",
   "organizationLifecycle.restore": "استعادة المؤسسة",
@@ -2580,10 +2720,13 @@ export const messages = {
   "organizationLifecycle.impact": "معاينة أثر الحذف",
   "organizationLifecycle.confirmName": "اكتب اسم المؤسسة بالكامل",
   "organizationLifecycle.deleteDraft": "حذف المسودة نهائيًا",
-  "organizationLifecycle.deleteDraftWarning": "هذه المسودة مؤهلة للحذف النهائي. اكتب «{name}» للتأكيد.",
-  "organizationLifecycle.deleteBlocked": "الحذف النهائي محظور بسبب حالة المؤسسة أو السجلات المرتبطة. استخدم الأرشفة بدلًا منه.",
+  "organizationLifecycle.deleteDraftWarning":
+    "هذه المسودة مؤهلة للحذف النهائي. اكتب «{name}» للتأكيد.",
+  "organizationLifecycle.deleteBlocked":
+    "الحذف النهائي محظور بسبب حالة المؤسسة أو السجلات المرتبطة. استخدم الأرشفة بدلًا منه.",
   "organizationOnboarding.metadataRequired": "بيانات المنصة مطلوبة",
-  "organizationOnboarding.metadataRequiredDescription": "أضف دولة ولغة مدعومتين على الأقل قبل إنشاء مؤسسة.",
+  "organizationOnboarding.metadataRequiredDescription":
+    "أضف دولة ولغة مدعومتين على الأقل قبل إنشاء مؤسسة.",
   "organizationOnboarding.manageMetadata": "إدارة بيانات المنصة",
 } as const;
 

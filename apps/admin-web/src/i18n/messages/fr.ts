@@ -40,11 +40,13 @@ export const messages = {
     "L’accès est réservé aux utilisateurs POPWAM autorisés. Votre espace de travail est sélectionné automatiquement après la connexion.",
   "auth.changePassword.eyebrow": "Mot de passe temporaire",
   "auth.changePassword.title": "Changer votre mot de passe",
-  "auth.changePassword.description": "Votre compte utilise un mot de passe temporaire. Choisissez un mot de passe prive avant de continuer.",
+  "auth.changePassword.description":
+    "Votre compte utilise un mot de passe temporaire. Choisissez un mot de passe prive avant de continuer.",
   "auth.changePassword.currentPassword": "Mot de passe actuel",
   "auth.changePassword.newPassword": "Nouveau mot de passe",
   "auth.changePassword.confirmPassword": "Confirmer le nouveau mot de passe",
-  "auth.changePassword.passwordMismatch": "Les nouveaux mots de passe ne correspondent pas.",
+  "auth.changePassword.passwordMismatch":
+    "Les nouveaux mots de passe ne correspondent pas.",
   "auth.changePassword.error": "Le mot de passe n'a pas pu etre change",
   "auth.changePassword.submit": "Changer le mot de passe",
   "auth.checkingSession": "Verification de la session",
@@ -53,29 +55,40 @@ export const messages = {
   "statusPage.tryAgain": "Reessayer",
   "statusPage.403.eyebrow": "Acces refuse",
   "statusPage.403.title": "Vous n'avez pas acces",
-  "statusPage.403.body": "Votre compte est connecte, mais cette zone exige une permission supplementaire. Demandez a un administrateur de mettre a jour votre acces si cela semble incorrect.",
+  "statusPage.403.body":
+    "Votre compte est connecte, mais cette zone exige une permission supplementaire. Demandez a un administrateur de mettre a jour votre acces si cela semble incorrect.",
   "statusPage.404.eyebrow": "Page introuvable",
   "statusPage.404.title": "Cette page n'est pas disponible",
-  "statusPage.404.body": "Le lien peut etre ancien, deplace ou masque par les permissions actuelles de votre espace de travail.",
+  "statusPage.404.body":
+    "Le lien peut etre ancien, deplace ou masque par les permissions actuelles de votre espace de travail.",
   "statusPage.500.eyebrow": "Erreur inattendue",
   "statusPage.500.title": "Une erreur est survenue",
-  "statusPage.500.body": "Nous n'avons pas pu terminer le chargement de cette page. Vous pouvez reessayer ou revenir a l'accueil de l'espace de travail.",
-  "apiErrors.permissionRequired": "Vous n'avez pas l'autorisation requise pour afficher ce contenu.",
+  "statusPage.500.body":
+    "Nous n'avons pas pu terminer le chargement de cette page. Vous pouvez reessayer ou revenir a l'accueil de l'espace de travail.",
+  "apiErrors.permissionRequired":
+    "Vous n'avez pas l'autorisation requise pour afficher ce contenu.",
   "apiErrors.notFound": "Le contenu demande est introuvable.",
-  "apiErrors.network": "Le service est inaccessible. Verifiez votre connexion et reessayez.",
-  "apiErrors.server": "Le service n'a pas pu terminer cette demande. Reessayez.",
+  "apiErrors.network":
+    "Le service est inaccessible. Verifiez votre connexion et reessayez.",
+  "apiErrors.server":
+    "Le service n'a pas pu terminer cette demande. Reessayez.",
   "apiErrors.requestId": "Identifiant de demande : {requestId}.",
   "account.refreshAccess": "Actualiser les acces",
   "statusPage.505.eyebrow": "Navigateur non pris en charge",
-  "statusPage.505.title": "Cette version du navigateur n'est pas prise en charge",
-  "statusPage.505.body": "Veuillez mettre a jour votre navigateur ou ouvrir POPWAM dans un navigateur moderne pour continuer en toute securite.",
+  "statusPage.505.title":
+    "Cette version du navigateur n'est pas prise en charge",
+  "statusPage.505.body":
+    "Veuillez mettre a jour votre navigateur ou ouvrir POPWAM dans un navigateur moderne pour continuer en toute securite.",
   "translatedText.placeholder.en": "Enter English text here",
   "translatedText.placeholder.ar": "اكتب النص العربي هنا",
   "translatedText.placeholder.fr": "Saisissez le texte français ici",
   "provisioning.missingRequirements": "Informations requises manquantes",
-  "provisioning.completeRequiredFields": "Completez les champs requis avant de continuer.",
-  "provisioning.required.organizationType": "Choisissez le type d'organisation.",
-  "provisioning.required.displayName": "Saisissez le nom d'affichage de l'entreprise.",
+  "provisioning.completeRequiredFields":
+    "Completez les champs requis avant de continuer.",
+  "provisioning.required.organizationType":
+    "Choisissez le type d'organisation.",
+  "provisioning.required.displayName":
+    "Saisissez le nom d'affichage de l'entreprise.",
   "auth.keepSignedIn": "Rester connecte",
   "auth.sessionExpired": "Session expiree",
   "auth.reloginRequired": "Nouvelle connexion requise",
@@ -421,16 +434,21 @@ export const messages = {
   "organizationTypes.developer": "Promoteur immobilier",
   "organizationTypes.brokerage": "Société de courtage",
   "organizationTypes.individualBroker": "Courtier individuel",
-  "errors.organizationTypeInvalid": "Le type d’organisation sélectionné n’est pas valide.",
+  "errors.organizationTypeInvalid":
+    "Le type d’organisation sélectionné n’est pas valide.",
   "provisioning.documentFile": "Document juridique privé",
-  "provisioning.documentFileRequired": "Choisissez un document juridique à téléverser.",
-  "provisioning.documentUploadFailed": "Le document juridique n’a pas pu être téléversé.",
-  "provisioning.noExtractedFields": "Aucun champ structuré n’est disponible. Vérifiez le document manuellement.",
+  "provisioning.documentFileRequired":
+    "Choisissez un document juridique à téléverser.",
+  "provisioning.documentUploadFailed":
+    "Le document juridique n’a pas pu être téléversé.",
+  "provisioning.noExtractedFields":
+    "Aucun champ structuré n’est disponible. Vérifiez le document manuellement.",
   "provisioning.currentValue": "Valeur actuelle",
   "provisioning.extractedValue": "Valeur extraite",
   "provisioning.applySelected": "Appliquer la sélection",
   "provisioning.rejectSelected": "Rejeter la sélection",
-  "provisioning.confirmSensitiveFields": "Appliquer les identifiants juridiques sensibles sélectionnés au profil brouillon ?",
+  "provisioning.confirmSensitiveFields":
+    "Appliquer les identifiants juridiques sensibles sélectionnés au profil brouillon ?",
   "extractedFields.legalName": "Raison sociale",
   "extractedFields.tradeName": "Nom commercial",
   "extractedFields.commercialRegisterNumber": "Numéro du registre du commerce",
@@ -459,18 +477,22 @@ export const messages = {
   "common.none": "Aucun",
   "employeeAccess.checkingAccess": "Verification de l'acces",
   "employeeAccess.forbiddenTitle": "403 - Autorisation requise",
-  "employeeAccess.forbiddenDescription": "Votre compte n'a pas l'autorisation d'ouvrir cette page.",
+  "employeeAccess.forbiddenDescription":
+    "Votre compte n'a pas l'autorisation d'ouvrir cette page.",
   "employeeAccess.title": "Acces des employes",
-  "employeeAccess.description": "Creez des comptes employe separes et attribuez uniquement les pages et actions necessaires.",
+  "employeeAccess.description":
+    "Creez des comptes employe separes et attribuez uniquement les pages et actions necessaires.",
   "employeeAccess.addEmployee": "Ajouter un employe",
   "employeeAccess.separateAccountsTitle": "Comptes separes requis",
-  "employeeAccess.doNotShareWarning": "Ne partagez pas votre propre compte. Creez plutot un compte employe separe.",
+  "employeeAccess.doNotShareWarning":
+    "Ne partagez pas votre propre compte. Creez plutot un compte employe separe.",
   "employeeAccess.employees": "Employes",
   "employeeAccess.loadingEmployees": "Chargement des employes",
   "employeeAccess.loadingEmployee": "Chargement de l'employe",
   "employeeAccess.loadError": "Les employes n'ont pas pu etre charges",
   "employeeAccess.emptyTitle": "Aucun compte employe pour le moment",
-  "employeeAccess.emptyDescription": "Creez une connexion separee pour chaque membre de l'equipe avant de lui donner acces.",
+  "employeeAccess.emptyDescription":
+    "Creez une connexion separee pour chaque membre de l'equipe avant de lui donner acces.",
   "employeeAccess.createFirstEmployee": "Creer le premier employe",
   "employeeAccess.employee": "Employe",
   "employeeAccess.contact": "Contact",
@@ -482,35 +504,47 @@ export const messages = {
   "employeeAccess.active": "Actif",
   "employeeAccess.inactive": "Inactif",
   "employeeAccess.newTitle": "Nouvel employe",
-  "employeeAccess.newDescription": "Creez un compte de connexion limite a cette societe et attribuez les autorisations de pages et d'actions.",
+  "employeeAccess.newDescription":
+    "Creez un compte de connexion limite a cette societe et attribuez les autorisations de pages et d'actions.",
   "employeeAccess.createError": "L'employe n'a pas pu etre cree",
   "employeeAccess.detailTitle": "Detail de l'acces employe",
-  "employeeAccess.detailDescription": "Verifiez le statut de connexion, le modele de role et les autorisations attribuees.",
+  "employeeAccess.detailDescription":
+    "Verifiez le statut de connexion, le modele de role et les autorisations attribuees.",
   "employeeAccess.currentAccess": "Acces actuel",
   "employeeAccess.updateError": "L'employe n'a pas pu etre mis a jour",
   "employeeAccess.accountActions": "Actions du compte",
   "employeeAccess.activate": "Activer",
   "employeeAccess.deactivate": "Desactiver",
   "employeeAccess.resetPassword": "Reinitialiser le mot de passe",
-  "employeeAccess.generatedIfBlank": "Laisser vide pour generer un mot de passe temporaire",
+  "employeeAccess.generatedIfBlank":
+    "Laisser vide pour generer un mot de passe temporaire",
   "employeeAccess.generatedPasswordTitle": "Mot de passe temporaire genere",
-  "employeeAccess.generatedPasswordDescription": "Envoyez ce mot de passe temporaire a l'employe de facon securisee. Il ne sera plus affiche : {password}",
+  "employeeAccess.generatedPasswordDescription":
+    "Envoyez ce mot de passe temporaire a l'employe de facon securisee. Il ne sera plus affiche : {password}",
   "employeeAccess.generatePassword": "Generer",
   "employeeAccess.createdPasswordTitle": "Employe cree",
-  "employeeAccess.createdPasswordDescription": "Envoyez ce mot de passe temporaire a l'employe de facon securisee. Il ne sera plus affiche : {password}",
+  "employeeAccess.createdPasswordDescription":
+    "Envoyez ce mot de passe temporaire a l'employe de facon securisee. Il ne sera plus affiche : {password}",
   "employeeAccess.viewEmployee": "Voir l'employe",
   "employeeAccess.organization": "Organisation",
   "employeeAccess.selectOrganization": "Selectionner une organisation",
   "employeeAccess.organizationFilter": "Filtre d'organisation",
   "employeeAccess.allOrganizations": "Toutes les organisations",
-  "employeeAccess.loginNotReadyTitle": "Le compte est cree mais l'acces de connexion n'est pas pret",
-  "employeeAccess.loginReadiness.LOGIN_USER_MISSING": "Le compte est cree mais l'acces de connexion n'est pas actif.",
-  "employeeAccess.loginReadiness.PASSWORD_MISSING": "Le compte utilisateur de l'employe n'a pas de mot de passe.",
+  "employeeAccess.loginNotReadyTitle":
+    "Le compte est cree mais l'acces de connexion n'est pas pret",
+  "employeeAccess.loginReadiness.LOGIN_USER_MISSING":
+    "Le compte est cree mais l'acces de connexion n'est pas actif.",
+  "employeeAccess.loginReadiness.PASSWORD_MISSING":
+    "Le compte utilisateur de l'employe n'a pas de mot de passe.",
   "employeeAccess.loginReadiness.EMPLOYEE_INACTIVE": "L'employe est inactif.",
-  "employeeAccess.loginReadiness.USER_INACTIVE": "Le compte est cree mais l'acces de connexion n'est pas actif.",
-  "employeeAccess.loginReadiness.EMAIL_REQUIRED": "L'e-mail de l'employe est requis par le schema actuel.",
-  "employeeAccess.loginReadiness.NO_ROLE_PERMISSIONS": "L'employe n'a pas de role ni d'autorisations.",
-  "employeeAccess.loginReadiness.UNKNOWN": "L'acces de connexion n'est pas pret.",
+  "employeeAccess.loginReadiness.USER_INACTIVE":
+    "Le compte est cree mais l'acces de connexion n'est pas actif.",
+  "employeeAccess.loginReadiness.EMAIL_REQUIRED":
+    "L'e-mail de l'employe est requis par le schema actuel.",
+  "employeeAccess.loginReadiness.NO_ROLE_PERMISSIONS":
+    "L'employe n'a pas de role ni d'autorisations.",
+  "employeeAccess.loginReadiness.UNKNOWN":
+    "L'acces de connexion n'est pas pret.",
   "employeeAccess.resetError": "Le mot de passe n'a pas pu etre reinitialise",
   "employeeAccess.statusError": "Le statut n'a pas pu etre mis a jour",
   "employeeAccess.accountDetails": "Details du compte",
@@ -525,7 +559,8 @@ export const messages = {
   "employeeAccess.country": "Pays",
   "employeeAccess.countryEgypt": "Egypte (+20)",
   "employeeAccess.countryUsa": "Etats-Unis (+1)",
-  "employeeAccess.mustChangePasswordWarning": "L'employe peut se connecter avec ce mot de passe temporaire et doit le changer avant d'utiliser les pages protegees.",
+  "employeeAccess.mustChangePasswordWarning":
+    "L'employe peut se connecter avec ce mot de passe temporaire et doit le changer avant d'utiliser les pages protegees.",
   "employeeAccess.createEmployee": "Creer l'employe",
   "employeeAccess.saveEmployee": "Enregistrer l'employe",
   "employeeAccess.group.dashboard": "Tableau de bord",
@@ -549,15 +584,21 @@ export const messages = {
   "employeeAccess.role.sales_agent": "Agent commercial",
   "employeeAccess.role.finance_user": "Utilisateur finance",
   "employeeAccess.role.employee_self_service": "Libre-service employe",
-  "employeeAccess.permission.companyDashboardView": "Voir le tableau de bord societe",
-  "employeeAccess.permission.companySettingsView": "Voir les parametres societe",
-  "employeeAccess.permission.companySettingsManage": "Gerer les parametres societe",
+  "employeeAccess.permission.companyDashboardView":
+    "Voir le tableau de bord societe",
+  "employeeAccess.permission.companySettingsView":
+    "Voir les parametres societe",
+  "employeeAccess.permission.companySettingsManage":
+    "Gerer les parametres societe",
   "employeeAccess.permission.hrEmployeesView": "Voir les employes",
   "employeeAccess.permission.hrEmployeesCreate": "Creer des employes",
   "employeeAccess.permission.hrEmployeesUpdate": "Mettre a jour les employes",
-  "employeeAccess.permission.hrEmployeesDeactivate": "Activer ou desactiver les employes",
-  "employeeAccess.permission.hrEmployeesResetPassword": "Reinitialiser les mots de passe employe",
-  "employeeAccess.permission.hrEmployeesPermissionsManage": "Gerer les autorisations employe",
+  "employeeAccess.permission.hrEmployeesDeactivate":
+    "Activer ou desactiver les employes",
+  "employeeAccess.permission.hrEmployeesResetPassword":
+    "Reinitialiser les mots de passe employe",
+  "employeeAccess.permission.hrEmployeesPermissionsManage":
+    "Gerer les autorisations employe",
   "employeeAccess.permission.hrAttendanceSelf": "Utiliser sa propre presence",
   "employeeAccess.permission.hrAttendanceView": "Voir la presence",
   "employeeAccess.permission.hrAttendanceManage": "Gerer la presence",
@@ -574,22 +615,32 @@ export const messages = {
   "employeeAccess.permission.dealsCreate": "Creer des transactions",
   "employeeAccess.permission.dealsUpdate": "Mettre a jour les transactions",
   "employeeAccess.permission.dealsManage": "Gerer les transactions",
-  "employeeAccess.permission.dealRoomsJoin": "Rejoindre les salles de transaction",
-  "employeeAccess.permission.dealRoomsCreate": "Creer des salles de transaction",
-  "employeeAccess.permission.dealRoomsManage": "Gerer les salles de transaction",
+  "employeeAccess.permission.dealRoomsJoin":
+    "Rejoindre les salles de transaction",
+  "employeeAccess.permission.dealRoomsCreate":
+    "Creer des salles de transaction",
+  "employeeAccess.permission.dealRoomsManage":
+    "Gerer les salles de transaction",
   "employeeAccess.permission.filesView": "Voir les fichiers",
   "employeeAccess.permission.filesUpload": "Televerser des fichiers",
   "employeeAccess.permission.reportsView": "Voir les rapports",
   "employeeAccess.permission.reportsExport": "Exporter les rapports",
-  "employeeAccess.permission.exportsOrganizationData": "Exporter les donnees de l'organisation",
+  "employeeAccess.permission.exportsOrganizationData":
+    "Exporter les donnees de l'organisation",
   "employeeAccess.permission.websiteView": "Voir les parametres du site",
-  "employeeAccess.permission.websiteUpdate": "Mettre a jour les parametres du site",
-  "employeeAccess.permission.platformOrganizationsView": "Voir les organisations plateforme",
-  "employeeAccess.permission.platformOrganizationsManage": "Gerer les organisations plateforme",
-  "employeeAccess.permission.platformUsersManage": "Gerer les utilisateurs plateforme",
-  "employeeAccess.permission.organizationsViewAll": "Voir toutes les organisations",
+  "employeeAccess.permission.websiteUpdate":
+    "Mettre a jour les parametres du site",
+  "employeeAccess.permission.platformOrganizationsView":
+    "Voir les organisations plateforme",
+  "employeeAccess.permission.platformOrganizationsManage":
+    "Gerer les organisations plateforme",
+  "employeeAccess.permission.platformUsersManage":
+    "Gerer les utilisateurs plateforme",
+  "employeeAccess.permission.organizationsViewAll":
+    "Voir toutes les organisations",
   "developer.access.checking": "Verification de l'acces promoteur",
-  "companyDomains.description": "Ajoutez, verifiez, testez, choisissez un domaine par defaut ou supprimez les domaines de la societe.",
+  "companyDomains.description":
+    "Ajoutez, verifiez, testez, choisissez un domaine par defaut ou supprimez les domaines de la societe.",
   "companyDomains.loading": "Chargement des domaines",
   "companyDomains.status": "Statut",
   "companyDomains.domain": "Domaine",
@@ -602,15 +653,19 @@ export const messages = {
   "companyDomains.testDomain": "Tester le domaine",
   "companyDomains.markDefault": "Marquer par defaut",
   "companyDomains.emptyTitle": "Aucun domaine pour le moment",
-  "companyDomains.emptyDescription": "Ajoutez un domaine pour lancer la verification.",
-  "companySettings.pageDescription": "Gerez l'identite du site public, les domaines, les agences et la politique de presence.",
+  "companyDomains.emptyDescription":
+    "Ajoutez un domaine pour lancer la verification.",
+  "companySettings.pageDescription":
+    "Gerez l'identite du site public, les domaines, les agences et la politique de presence.",
   "companySettings.loadingWebsiteSettings": "Chargement des parametres du site",
   "companySettings.branches": "Agences",
   "companySettings.loadingBranches": "Chargement des agences",
   "companySettings.branchSaveError": "L'agence n'a pas pu etre enregistree",
   "companySettings.attendancePolicy": "Politique de presence",
-  "companySettings.loadingAttendancePolicy": "Chargement de la politique de presence",
-  "companySettings.attendanceSaveError": "La politique de presence n'a pas pu etre enregistree",
+  "companySettings.loadingAttendancePolicy":
+    "Chargement de la politique de presence",
+  "companySettings.attendanceSaveError":
+    "La politique de presence n'a pas pu etre enregistree",
   "companySettings.branchName": "Nom de l'agence",
   "companySettings.city": "Ville",
   "companySettings.latitude": "Latitude",
@@ -622,8 +677,10 @@ export const messages = {
   "companySettings.secondLateSlice": "Deuxieme palier de retard (minutes)",
   "companySettings.workStartTime": "Heure de debut",
   "companySettings.workEndTime": "Heure de fin",
-  "companySettings.monthlyLateAllowanceHours": "Tolerance mensuelle de retard (heures)",
-  "companySettings.lateAllowanceChargeHoursPerDay": "Tolerance consommee par jour de retard (heures)",
+  "companySettings.monthlyLateAllowanceHours":
+    "Tolerance mensuelle de retard (heures)",
+  "companySettings.lateAllowanceChargeHoursPerDay":
+    "Tolerance consommee par jour de retard (heures)",
   "companySettings.missingAttendanceDisposition": "Jour sans pointage",
   "companySettings.missingAttendanceAbsent": "Absence automatique",
   "companySettings.missingAttendanceLeave": "Conge",
@@ -637,18 +694,26 @@ export const messages = {
   "companySettings.requireDvrReview": "Exiger la revue DVR",
   "companySettings.allowWebCheckIn": "Autoriser le pointage web",
   "companySettings.allowMobileCheckIn": "Autoriser le pointage mobile",
-  "companySettings.browserWifiLimitation": "Les navigateurs ne peuvent pas lire de facon fiable le SSID ou le BSSID Wi-Fi. La presence web peut bloquer, ignorer le Wi-Fi ou envoyer l'enregistrement en revue manuelle selon cette politique.",
-  "companySettings.saveAttendancePolicy": "Enregistrer la politique de presence",
-  "companySettings.autoCloseGraceMinutes": "Delai de grace de fermeture automatique (minutes)",
-  "companySettings.regularShiftAutoCloseMode": "Fermeture automatique des horaires reguliers",
+  "companySettings.browserWifiLimitation":
+    "Les navigateurs ne peuvent pas lire de facon fiable le SSID ou le BSSID Wi-Fi. La presence web peut bloquer, ignorer le Wi-Fi ou envoyer l'enregistrement en revue manuelle selon cette politique.",
+  "companySettings.saveAttendancePolicy":
+    "Enregistrer la politique de presence",
+  "companySettings.autoCloseGraceMinutes":
+    "Delai de grace de fermeture automatique (minutes)",
+  "companySettings.regularShiftAutoCloseMode":
+    "Fermeture automatique des horaires reguliers",
   "companySettings.autoCloseEndOfDay": "Fin de journee de l'organisation",
   "companySettings.autoCloseAfterShift": "Depart planifie plus delai de grace",
-  "companySettings.checkOutOutsideLocationPolicy": "Politique de depart hors lieu",
+  "companySettings.checkOutOutsideLocationPolicy":
+    "Politique de depart hors lieu",
   "companySettings.allowWithEvidence": "Autoriser avec preuve",
-  "companySettings.autoCloseOpenAttendance": "Fermer automatiquement les departs oublies",
-  "companySettings.autoCloseAtLocalMidnight": "Fermer les horaires reguliers a minuit local",
+  "companySettings.autoCloseOpenAttendance":
+    "Fermer automatiquement les departs oublies",
+  "companySettings.autoCloseAtLocalMidnight":
+    "Fermer les horaires reguliers a minuit local",
   "attendance.self.title": "Ma presence",
-  "attendance.self.description": "Pointez votre arrivee et votre depart depuis le web lorsque la politique de presence l'autorise.",
+  "attendance.self.description":
+    "Pointez votre arrivee et votre depart depuis le web lorsque la politique de presence l'autorise.",
   "attendance.self.today": "Aujourd'hui",
   "attendance.self.loadingToday": "Chargement de la presence du jour",
   "attendance.self.checkIn": "Arrivee",
@@ -659,12 +724,16 @@ export const messages = {
   "attendance.self.checkInAction": "Pointer l'arrivee",
   "attendance.self.checkOutAction": "Pointer le depart",
   "attendance.self.latePenalty": "Penalite de retard",
-  "attendance.self.latePenaltyDescription": "{minutes} minutes de retard. Penalite : {penalty}.",
+  "attendance.self.latePenaltyDescription":
+    "{minutes} minutes de retard. Penalite : {penalty}.",
   "attendance.self.locationError": "La localisation n'a pas pu etre capturee",
-  "attendance.self.locationUnavailable": "La localisation du navigateur n'est pas disponible.",
-  "attendance.self.locationRequired": "L'autorisation de localisation est requise pour pointer l'arrivee.",
+  "attendance.self.locationUnavailable":
+    "La localisation du navigateur n'est pas disponible.",
+  "attendance.self.locationRequired":
+    "L'autorisation de localisation est requise pour pointer l'arrivee.",
   "attendance.self.retryLocation": "Reessayer la localisation",
-  "attendance.self.accuracyTooLowDetails": "La precision GPS est de {current} m ; la politique de presence exige {required} m ou mieux.",
+  "attendance.self.accuracyTooLowDetails":
+    "La precision GPS est de {current} m ; la politique de presence exige {required} m ou mieux.",
   "attendance.self.checkInError": "Le pointage d'arrivee a echoue",
   "attendance.self.checkOutError": "Le pointage de depart a echoue",
   "attendance.self.history": "Historique",
@@ -675,61 +744,97 @@ export const messages = {
   "attendance.self.checkingLocation": "Verification de la localisation",
   "attendance.self.verifyingLocation": "Verification du lieu de travail",
   "attendance.self.startingCamera": "Demarrage de la camera",
-  "attendance.self.cameraReady": "La camera est prete. Prenez une photo en direct pour continuer.",
-  "attendance.self.cameraUnavailable": "La camera n'est pas disponible. Une photo en direct est requise.",
+  "attendance.self.cameraReady":
+    "La camera est prete. Prenez une photo en direct pour continuer.",
+  "attendance.self.cameraUnavailable":
+    "La camera n'est pas disponible. Une photo en direct est requise.",
   "attendance.self.capturePhoto": "Prendre une photo",
   "attendance.self.photoPreview": "Apercu de la photo",
   "attendance.self.usePhoto": "Utiliser cette photo",
   "attendance.self.retakePhoto": "Reprendre",
-  "attendance.self.photoCaptureFailed": "La photo n'a pas pu etre prise. Veuillez reessayer.",
+  "attendance.self.photoCaptureFailed":
+    "La photo n'a pas pu etre prise. Veuillez reessayer.",
   "attendance.self.uploadingPhoto": "Envoi de la photo",
   "attendance.self.recordingAttendance": "Enregistrement de la presence",
-  "attendance.self.preflightRejected": "Votre localisation n'a pas pu etre verifiee pour la presence.",
+  "attendance.self.preflightRejected":
+    "Votre localisation n'a pas pu etre verifiee pour la presence.",
   "attendance.autoClosedBadge": "Fermé automatiquement",
-  "attendance.autoClosedDescription": "Cette presence a ete fermee automatiquement et doit etre revisee. Motif : {reason}",
-  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_REVIEW": "Votre depart est hors du lieu de travail precis et exige une revision manuelle.",
-  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE": "Votre depart est hors du lieu de travail precis et exige une preuve.",
+  "attendance.autoClosedDescription":
+    "Cette presence a ete fermee automatiquement et doit etre revisee. Motif : {reason}",
+  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_REVIEW":
+    "Votre depart est hors du lieu de travail precis et exige une revision manuelle.",
+  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE":
+    "Votre depart est hors du lieu de travail precis et exige une preuve.",
   "attendance.self.distance": "Distance",
   "attendance.self.radius": "Rayon autorise",
   "attendance.self.accuracy": "Precision de la localisation",
   "attendance.self.accuracyAccepted": "Acceptee",
   "attendance.self.accuracyRejected": "Insuffisante",
-  "attendance.self.requestFailed": "La demande de presence n'a pas pu etre terminee. {requestId}",
+  "attendance.self.requestFailed":
+    "La demande de presence n'a pas pu etre terminee. {requestId}",
   "attendance.self.verificationFailed": "La verification de presence a echoue.",
-  "attendance.self.reason.LOCATION_PERMISSION_DENIED": "L'autorisation de localisation a ete refusee. Sur iPhone : Reglages → Confidentialite et securite → Service de localisation → Sites web Safari → Lors de l’utilisation → Localisation precise ; puis Safari → Reglages des sites web → Localisation → Autoriser.",
-  "attendance.self.reason.LOCATION_POSITION_UNAVAILABLE": "Votre position actuelle n'est pas disponible. Deplacez-vous dans un espace ouvert puis reessayez.",
-  "attendance.self.reason.LOCATION_TIMEOUT": "La demande de localisation a expire. Reessayez la localisation.",
-  "attendance.self.reason.LOCATION_INSECURE_CONTEXT": "La localisation necessite HTTPS. Ouvrez la version securisee de cette page puis reessayez.",
-  "attendance.self.reason.LOCATION_PERMISSION_POLICY_BLOCKED": "La localisation est bloquee par la configuration Permissions-Policy de ce site. Contactez votre administrateur.",
-  "attendance.self.reason.LOCATION_NOT_AVAILABLE": "La localisation du navigateur n'est pas disponible.",
-  "attendance.self.reason.LOCATION_REQUIRED": "La localisation est requise pour la presence.",
-  "attendance.self.reason.LOCATION_STALE": "Capturez une nouvelle localisation actuelle, puis reessayez.",
-  "attendance.self.reason.GPS_ACCURACY_TOO_LOW": "La precision de la localisation est insuffisante. Reessayez dehors.",
-  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_CONFIGURED": "Aucun lieu de travail eligible n'est configure.",
-  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_ALLOWED": "Le lieu de presence selectionne n'est plus eligible au pointage web.",
-  "attendance.self.reason.OUTSIDE_ALLOWED_LOCATION": "Vous etes hors du lieu de travail autorise.",
-  "attendance.self.reason.WEB_CHECK_IN_NOT_ALLOWED": "Le pointage web n'est pas autorise par votre politique de presence.",
-  "attendance.self.reason.WEB_WIFI_NOT_AVAILABLE": "Cette politique requiert le Wi-Fi du bureau, qu'un navigateur ne peut pas verifier.",
-  "attendance.self.reason.WEB_WIFI_MANUAL_REVIEW": "Le Wi-Fi du bureau ne peut pas etre verifie dans un navigateur ; cette presence sera revue.",
-  "attendance.self.reason.PHOTO_REQUIRED": "Une photo de presence en direct est requise.",
-  "attendance.self.reason.CAMERA_NOT_AVAILABLE": "La camera n'est pas disponible.",
-  "attendance.self.reason.NotAllowedError": "L'autorisation de la camera a ete refusee.",
-  "attendance.self.loadingLocations": "Chargement des lieux de presence eligibles",
+  "attendance.self.reason.LOCATION_PERMISSION_DENIED":
+    "L'autorisation de localisation a ete refusee. Sur iPhone : Reglages → Confidentialite et securite → Service de localisation → Sites web Safari → Lors de l’utilisation → Localisation precise ; puis Safari → Reglages des sites web → Localisation → Autoriser.",
+  "attendance.self.reason.LOCATION_POSITION_UNAVAILABLE":
+    "Votre position actuelle n'est pas disponible. Deplacez-vous dans un espace ouvert puis reessayez.",
+  "attendance.self.reason.LOCATION_TIMEOUT":
+    "La demande de localisation a expire. Reessayez la localisation.",
+  "attendance.self.reason.LOCATION_INSECURE_CONTEXT":
+    "La localisation necessite HTTPS. Ouvrez la version securisee de cette page puis reessayez.",
+  "attendance.self.reason.LOCATION_PERMISSION_POLICY_BLOCKED":
+    "La localisation est bloquee par la configuration Permissions-Policy de ce site. Contactez votre administrateur.",
+  "attendance.self.reason.LOCATION_NOT_AVAILABLE":
+    "La localisation du navigateur n'est pas disponible.",
+  "attendance.self.reason.LOCATION_REQUIRED":
+    "La localisation est requise pour la presence.",
+  "attendance.self.reason.LOCATION_STALE":
+    "Capturez une nouvelle localisation actuelle, puis reessayez.",
+  "attendance.self.reason.GPS_ACCURACY_TOO_LOW":
+    "La precision de la localisation est insuffisante. Reessayez dehors.",
+  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_CONFIGURED":
+    "Aucun lieu de travail eligible n'est configure.",
+  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_ALLOWED":
+    "Le lieu de presence selectionne n'est plus eligible au pointage web.",
+  "attendance.self.reason.OUTSIDE_ALLOWED_LOCATION":
+    "Vous etes hors du lieu de travail autorise.",
+  "attendance.self.reason.WEB_CHECK_IN_NOT_ALLOWED":
+    "Le pointage web n'est pas autorise par votre politique de presence.",
+  "attendance.self.reason.WEB_WIFI_NOT_AVAILABLE":
+    "Cette politique requiert le Wi-Fi du bureau, qu'un navigateur ne peut pas verifier.",
+  "attendance.self.reason.WEB_WIFI_MANUAL_REVIEW":
+    "Le Wi-Fi du bureau ne peut pas etre verifie dans un navigateur ; cette presence sera revue.",
+  "attendance.self.reason.PHOTO_REQUIRED":
+    "Une photo de presence en direct est requise.",
+  "attendance.self.reason.CAMERA_NOT_AVAILABLE":
+    "La camera n'est pas disponible.",
+  "attendance.self.reason.NotAllowedError":
+    "L'autorisation de la camera a ete refusee.",
+  "attendance.self.loadingLocations":
+    "Chargement des lieux de presence eligibles",
   "attendance.self.loadingAction": "Chargement de l'action de presence",
-  "attendance.self.locationSetupTitle": "Le lieu de presence n'est pas configure",
-  "attendance.self.locationSetupRequired": "Aucun lieu de presence web actif n'est configure pour cette agence. Demandez a un administrateur de configurer les lieux de presence avant de pointer.",
-  "attendance.self.selectAttendanceLocation": "Selectionnez un lieu de presence",
+  "attendance.self.locationSetupTitle":
+    "Le lieu de presence n'est pas configure",
+  "attendance.self.locationSetupRequired":
+    "Aucun lieu de presence web actif n'est configure pour cette agence. Demandez a un administrateur de configurer les lieux de presence avant de pointer.",
+  "attendance.self.selectAttendanceLocation":
+    "Selectionnez un lieu de presence",
   "attendance.self.locationSelectionTitle": "Selectionnez un lieu de presence",
-  "attendance.self.locationSelectionRequired": "Selectionnez un lieu de presence eligible avant de pointer.",
+  "attendance.self.locationSelectionRequired":
+    "Selectionnez un lieu de presence eligible avant de pointer.",
   "attendance.self.employeeLinkTitle": "Le profil employe n'est pas lie",
-  "attendance.self.employeeLinkDescription": "Votre compte doit etre lie a un profil employe actif avant d'utiliser la presence web.",
+  "attendance.self.employeeLinkDescription":
+    "Votre compte doit etre lie a un profil employe actif avant d'utiliser la presence web.",
   "attendance.self.policyBlockedTitle": "La politique bloque la presence web",
-  "attendance.self.policyWebDisabled": "Votre politique de presence n'autorise pas le pointage web.",
-  "attendance.self.policyWifiBlocked": "Votre politique requiert le Wi-Fi du bureau, qu'un navigateur ne peut pas verifier.",
-  "attendance.self.actionUnavailableTitle": "L'action de presence n'est pas disponible",
+  "attendance.self.policyWebDisabled":
+    "Votre politique de presence n'autorise pas le pointage web.",
+  "attendance.self.policyWifiBlocked":
+    "Votre politique requiert le Wi-Fi du bureau, qu'un navigateur ne peut pas verifier.",
+  "attendance.self.actionUnavailableTitle":
+    "L'action de presence n'est pas disponible",
   "hr360.attendanceScheduleMode": "Mode de planning de presence",
   "hr360.attendanceSchedule": "Planning de travail et de presence",
-  "hr360.employeeScheduleOverrideHint": "Les exceptions hebdomadaires de l'employe sont configurees par les RH et sont prioritaires.",
+  "hr360.employeeScheduleOverrideHint":
+    "Les exceptions hebdomadaires de l'employe sont configurees par les RH et sont prioritaires.",
   "hr360.override.effectiveFrom": "Effectif à partir du",
   "hr360.override.effectiveTo": "Effectif jusqu'au",
   "hr360.override.timezone": "Fuseau horaire",
@@ -747,14 +852,17 @@ export const messages = {
   "hr360.option.EMPLOYEE_OVERRIDE": "Exception employe",
   "provisioning.attendanceOfficeBranch": "Bureau / agence",
   "provisioning.unlinkedBranch": "Agence non liee",
-  "provisioning.unlinkedAttendanceLocations": "Lieux de presence non lies a une agence",
+  "provisioning.unlinkedAttendanceLocations":
+    "Lieux de presence non lies a une agence",
   "attendance.workspace.teamAttendance": "Presence de l'equipe",
   "attendance.admin.today": "Aujourd’hui",
   "attendance.admin.previousDay": "Jour précédent",
   "attendance.admin.nextDay": "Jour suivant",
-  "attendance.admin.emptyForDate": "Aucun enregistrement de présence pour cette date.",
+  "attendance.admin.emptyForDate":
+    "Aucun enregistrement de présence pour cette date.",
   "attendance.workspace.noAccessTitle": "La presence n'est pas disponible",
-  "attendance.workspace.noAccessDescription": "Votre compte n'est pas lie a un employe actif et ne dispose pas de l'acces de gestion des presences.",
+  "attendance.workspace.noAccessDescription":
+    "Votre compte n'est pas lie a un employe actif et ne dispose pas de l'acces de gestion des presences.",
   "common.clearFilters": "Effacer les filtres",
   "common.project": "Projet",
   "common.visibility": "Visibilité",
@@ -946,7 +1054,25 @@ export const messages = {
   "attendance.admin.allowanceRemaining": "Tolerance restante",
   "attendance.admin.export": "Exporter les presences",
   "attendance.admin.exporting": "Exportation...",
-  "attendance.admin.exportError": "Impossible de telecharger l'export des presences.",
+  "attendance.admin.exportError":
+    "Impossible de telecharger l'export des presences.",
+  "attendance.monthly.title": "Feuille de présence mensuelle",
+  "attendance.monthly.description":
+    "Affichez tous les employés et tous les jours du mois. Sélectionnez un jour pour ajouter ou modifier la présence.",
+  "attendance.monthly.previous": "Mois précédent",
+  "attendance.monthly.current": "Mois actuel",
+  "attendance.monthly.searchEmployee": "Rechercher par nom ou code employé",
+  "attendance.monthly.noEmployees": "Aucun employé correspondant.",
+  "attendance.monthly.editDay": "Modifier la présence du jour",
+  "attendance.monthly.status.PRESENT": "Présent",
+  "attendance.monthly.status.LATE": "En retard",
+  "attendance.monthly.status.SEVERE_LATE": "Très en retard",
+  "attendance.monthly.status.ABSENT": "Absent",
+  "attendance.monthly.status.LEAVE": "Congé",
+  "attendance.monthly.status.OFF": "Repos",
+  "attendance.monthly.status.EARLY_LEAVE": "Départ anticipé",
+  "attendance.monthly.status.NOT_RECORDED": "Non enregistré",
+  "attendance.monthly.status.NOT_EMPLOYED": "Non employé",
   "navigation.moreNavigation": "Navigation supplémentaire",
   "navigation.openMore": "Ouvrir la navigation supplémentaire",
   "navigation.more": "Plus",
@@ -1715,7 +1841,8 @@ export const messages = {
   "hr.quickActions": "Actions RH",
   "hr.pagination": "pagination",
   "hr.dashboard.title": "Tableau RH",
-  "hr.dashboard.description": "Description de la section sans donnees fictives.",
+  "hr.dashboard.description":
+    "Description de la section sans donnees fictives.",
   "hr.dashboard.totalEmployees": "total employes",
   "hr.dashboard.activeEmployees": "actifs employes",
   "hr.dashboard.onLeaveToday": "en conge aujourdhui",
@@ -1729,7 +1856,8 @@ export const messages = {
   "hr.dashboard.withoutLogin": "sans connexion",
   "hr.dashboard.missingFace": "manquants visage",
   "hr.employees.title": "employes",
-  "hr.employees.description": "Description de la section sans donnees fictives.",
+  "hr.employees.description":
+    "Description de la section sans donnees fictives.",
   "hr.filters.title": "filtres",
   "hr.filters.roleAccess": "role acces",
   "hr.filters.todayStatus": "Statut du jour",
@@ -1764,7 +1892,8 @@ export const messages = {
   "hr.quickAction.addBonus": "Ajouter une prime",
   "hr.quickAction.manualCheckIn": "Ajouter un pointage manuel",
   "hr.workGroups.title": "Groupes de travail",
-  "hr.workGroups.description": "Description de la section sans donnees fictives.",
+  "hr.workGroups.description":
+    "Description de la section sans donnees fictives.",
   "hr.teams.title": "equipes",
   "hr.teams.description": "Description de la section sans donnees fictives.",
   "hr.actions.title": "actions",
@@ -1776,7 +1905,8 @@ export const messages = {
   "hr.actions.applied": "applique",
   "hr.actions.affected": "concernes",
   "hr.documents.title": "documents",
-  "hr.documents.description": "Description de la section sans donnees fictives.",
+  "hr.documents.description":
+    "Description de la section sans donnees fictives.",
   "hr.documents.missing": "Documents manquants",
   "hr.documents.expired": "expires",
   "hr.documents.upload": "Televerser un document",
@@ -1785,9 +1915,11 @@ export const messages = {
   "hr.orgChart.description": "Description de la section sans donnees fictives.",
   "hr.orgChart.tree": "arbre",
   "hr.transferLog.title": "transfert journal",
-  "hr.transferLog.description": "Description de la section sans donnees fictives.",
+  "hr.transferLog.description":
+    "Description de la section sans donnees fictives.",
   "hr.titleChanges.title": "titre changements",
-  "hr.titleChanges.description": "Description de la section sans donnees fictives.",
+  "hr.titleChanges.description":
+    "Description de la section sans donnees fictives.",
   "hr360.option.NOT_CONFIGURED": "Option",
   "hr360.option.PENDING_REVIEW": "En revue",
   "hr360.option.APPROVED": "Approuve",
@@ -1947,21 +2079,29 @@ export const messages = {
   "hr.action.finalize_payment": "paiement",
   "hr.action.add_grace_minutes": "ajouter",
   "hr.foundation.requests.title": "demandes",
-  "hr.foundation.requests.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.requests.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.attendance.title": "presence",
-  "hr.foundation.attendance.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.attendance.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.finance.title": "finance",
-  "hr.foundation.finance.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.finance.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.assets.title": "actifs",
-  "hr.foundation.assets.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.assets.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.tasks.title": "taches",
-  "hr.foundation.tasks.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.tasks.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.hrDocuments.title": "RH documents",
-  "hr.foundation.hrDocuments.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.hrDocuments.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.reports.title": "rapports",
-  "hr.foundation.reports.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.reports.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.settings.title": "parametres",
-  "hr.foundation.settings.description": "Description de la section sans donnees fictives.",
+  "hr.foundation.settings.description":
+    "Description de la section sans donnees fictives.",
   "hr.foundation.availableSections": "disponibles sections",
   "hr.foundation.comingSoonDescription": "bientot disponible description",
   "hr.foundation.section.inbox": "reception",
@@ -2067,12 +2207,14 @@ export const messages = {
   "hr360.removePhoto": "Supprimer la photo",
   "hr360.uploadingPhoto": "Televersement de la photo",
   "hr360.imageUploadHint": "JPEG, PNG ou WebP. Taille maximale 5 Mo.",
-  "hr360.invalidImageType": "Type d image invalide. Utilisez JPEG, PNG ou WebP.",
+  "hr360.invalidImageType":
+    "Type d image invalide. Utilisez JPEG, PNG ou WebP.",
   "hr360.fileTooLarge": "Le fichier est trop volumineux. Taille maximale 5 Mo.",
   "hr360.uploadFailed": "Echec du televersement de la photo.",
   "hr360.uploadAuthRequired": "Reconnectez vous avant de televerser.",
   "hr360.photoPreviewUnavailable": "Apercu de la photo indisponible.",
-  "hr360.permissionsExplanation": "L employe ne verra que les pages selectionnees.",
+  "hr360.permissionsExplanation":
+    "L employe ne verra que les pages selectionnees.",
   "hr360.roleTemplate": "Modele de role",
   "hr360.searchPermissions": "Rechercher des permissions",
   "hr360.selectAllGroup": "Tout selectionner dans le groupe",
@@ -2086,9 +2228,11 @@ export const messages = {
   "hr360.mustChangePassword": "Doit changer le mot de passe",
   "hr360.lastLogin": "Derniere connexion",
   "provisioning.addCompany": "Ajouter une entreprise",
-  "provisioning.addCompanyDescription": "Creez le profil, l abonnement, les limites, les lieux, les domaines et le premier administrateur dans un seul parcours.",
+  "provisioning.addCompanyDescription":
+    "Creez le profil, l abonnement, les limites, les lieux, les domaines et le premier administrateur dans un seul parcours.",
   "provisioning.wizard.title": "Creation d entreprise plateforme",
-  "provisioning.wizard.description": "Completez chaque section puis creez l organisation avec son lien portail par defaut.",
+  "provisioning.wizard.description":
+    "Completez chaque section puis creez l organisation avec son lien portail par defaut.",
   "provisioning.step.company": "Informations entreprise",
   "provisioning.step.subscription": "Abonnement et plan",
   "provisioning.step.limits": "Limites",
@@ -2161,7 +2305,8 @@ export const messages = {
   "provisioning.appliesTo": "S applique a",
   "provisioning.required": "Obligatoire",
   "provisioning.webWifiPolicy": "Politique Wi-Fi web",
-  "provisioning.browserCannotReadWifi": "Le navigateur ne peut pas lire le nom Wi-Fi de facon fiable. Le pointage web suivra la politique Wi-Fi web configuree.",
+  "provisioning.browserCannotReadWifi":
+    "Le navigateur ne peut pas lire le nom Wi-Fi de facon fiable. Le pointage web suivra la politique Wi-Fi web configuree.",
   "provisioning.domains": "Domaines",
   "provisioning.subdomain": "Sous-domaine",
   "provisioning.customDomain": "Domaine personnalise",
@@ -2171,7 +2316,8 @@ export const messages = {
   "provisioning.redirectMode": "Mode de redirection",
   "provisioning.redirectUrl": "URL de redirection",
   "provisioning.inboundSourceMode": "Mode source entrante",
-  "provisioning.domainFallbackNote": "Le DNS wildcard n est pas suppose. L entreprise recoit toujours une URL de chemin de secours.",
+  "provisioning.domainFallbackNote":
+    "Le DNS wildcard n est pas suppose. L entreprise recoit toujours une URL de chemin de secours.",
   "provisioning.companyPortal": "Portail entreprise",
   "provisioning.publicLink": "Lien public",
   "provisioning.createFirstAdmin": "Creer le premier administrateur",
@@ -2185,9 +2331,11 @@ export const messages = {
   "provisioning.companyAdmin": "Administrateur entreprise",
   "provisioning.subscriptionExpired": "Abonnement expire",
   "provisioning.limitExceeded": "Limite depassee",
-  "provisioning.reviewCopy": "Verifiez la configuration puis creez l organisation. Un lien portail et un chemin de secours seront crees automatiquement.",
+  "provisioning.reviewCopy":
+    "Verifiez la configuration puis creez l organisation. Un lien portail et un chemin de secours seront crees automatiquement.",
   "provisioning.loadingCompany": "Chargement entreprise",
-  "provisioning.detailDescription": "Gerez profil, abonnement, limites, lieux, presence, Wi-Fi, domaines et utilisateurs.",
+  "provisioning.detailDescription":
+    "Gerez profil, abonnement, limites, lieux, presence, Wi-Fi, domaines et utilisateurs.",
   "provisioning.companyTabs": "Onglets parametres entreprise",
   "provisioning.tab.overview": "Apercu",
   "provisioning.tab.subscription": "Abonnement",
@@ -2200,9 +2348,12 @@ export const messages = {
   "provisioning.companyProfile": "Profil entreprise",
   "provisioning.savedRecords": "Enregistrements",
   "provisioning.noRecords": "Aucun enregistrement.",
-  "provisioning.usersAfterCreation": "Le premier administrateur peut etre cree dans l assistant. Les autres utilisateurs passent par l acces employe RH.",
-  "provisioning.firstAdminCreated": "Le premier administrateur a été créé et le contrôle d’activation a été actualisé.",
-  "provisioning.firstAdminPlatformForbidden": "Le premier administrateur de l’organisation Plateforme ne peut pas être créé ici.",
+  "provisioning.usersAfterCreation":
+    "Le premier administrateur peut etre cree dans l assistant. Les autres utilisateurs passent par l acces employe RH.",
+  "provisioning.firstAdminCreated":
+    "Le premier administrateur a été créé et le contrôle d’activation a été actualisé.",
+  "provisioning.firstAdminPlatformForbidden":
+    "Le premier administrateur de l’organisation Plateforme ne peut pas être créé ici.",
   "provisioning.organizationUsers": "Utilisateurs de l’organisation",
   "provisioning.reviewCompany": "Revoir entreprise",
   "provisioning.tab.publicSite": "Site public",
@@ -2210,7 +2361,8 @@ export const messages = {
   "provisioning.tab.owners": "Propriétaires",
   "provisioning.tab.documents": "Documents",
   "provisioning.domainDiagnostics": "Diagnostics du domaine",
-  "provisioning.domainDiagnosticsLoading": "Chargement des diagnostics du domaine",
+  "provisioning.domainDiagnosticsLoading":
+    "Chargement des diagnostics du domaine",
   "provisioning.publicSite": "Site public",
   "provisioning.publicSiteMode": "Mode du site public",
   "provisioning.theme": "Thème",
@@ -2219,14 +2371,16 @@ export const messages = {
   "provisioning.headlineTranslations": "Traductions du titre",
   "provisioning.descriptionTranslations": "Traductions de la description",
   "provisioning.seoTitleTranslations": "Traductions du titre SEO",
-  "provisioning.seoDescriptionTranslations": "Traductions de la description SEO",
+  "provisioning.seoDescriptionTranslations":
+    "Traductions de la description SEO",
   "provisioning.showLogo": "Afficher le logo",
   "provisioning.showContactInfo": "Afficher les coordonnées",
   "provisioning.showOffices": "Afficher les bureaux",
   "provisioning.showGallery": "Afficher la galerie",
   "provisioning.showProjects": "Afficher les projets",
   "provisioning.showLeadForm": "Afficher le formulaire prospect",
-  "provisioning.redirectResourceNote": "La redirection utilise le moins de ressources POPWAM. Le portail et la galerie sont hébergés par POPWAM.",
+  "provisioning.redirectResourceNote":
+    "La redirection utilise le moins de ressources POPWAM. Le portail et la galerie sont hébergés par POPWAM.",
   "provisioning.legalTax": "Juridique et fiscal",
   "provisioning.tradeName": "Nom commercial",
   "provisioning.commercialRegister": "Registre du commerce",
@@ -2277,7 +2431,8 @@ export const messages = {
   "navigation.labels.offers": "Offres",
   "navigation.labels.candidate.documents": "Documents candidat",
   "hr.recruitment.title": "Recrutement",
-  "hr.recruitment.description": "Accueil des candidats, documents, entretiens, offres et conversion en employé.",
+  "hr.recruitment.description":
+    "Accueil des candidats, documents, entretiens, offres et conversion en employé.",
   "hr.recruitment.loading": "Chargement du recrutement",
   "hr.recruitment.loadError": "Impossible de charger le recrutement",
   "hr.recruitment.totalApplicants": "Total candidats",
@@ -2295,15 +2450,18 @@ export const messages = {
   "hr.recruitment.jobTitle": "Titre du poste",
   "hr.recruitment.publicApplyEnabled": "Candidature publique activée",
   "hr.recruitment.applicants": "Candidats",
-  "hr.recruitment.applicantsDescription": "Réviser les candidats avant la création d'employé.",
+  "hr.recruitment.applicantsDescription":
+    "Réviser les candidats avant la création d'employé.",
   "hr.recruitment.noApplicants": "Aucun candidat",
-  "hr.recruitment.noApplicantsDescription": "Les candidatures publiques et internes apparaîtront ici.",
+  "hr.recruitment.noApplicantsDescription":
+    "Les candidatures publiques et internes apparaîtront ici.",
   "hr.recruitment.generalApplication": "Candidature générale",
   "hr.recruitment.aiReviewStatus": "Statut IA/OCR",
   "hr.recruitment.submittedAt": "Date de candidature",
   "hr.recruitment.pagination": "Page {page} sur {maxPage}, {total} candidats",
   "hr.recruitment.secretaryIntake": "Saisie secrétaire",
-  "hr.recruitment.secretaryIntakeDescription": "Enregistrer un candidat papier ou sur place sans créer de connexion employé.",
+  "hr.recruitment.secretaryIntakeDescription":
+    "Enregistrer un candidat papier ou sur place sans créer de connexion employé.",
   "hr.recruitment.walkInApplicant": "Candidat sur place",
   "hr.recruitment.fullName": "Nom complet",
   "hr.recruitment.nationality": "Nationalité",
@@ -2316,7 +2474,8 @@ export const messages = {
   "hr.recruitment.applicantCreated": "Candidat créé",
   "hr.recruitment.saveError": "Impossible d'enregistrer",
   "hr.recruitment.applicant": "Candidat",
-  "hr.recruitment.applicantNotEmployee": "Cette personne est candidate, pas encore employée",
+  "hr.recruitment.applicantNotEmployee":
+    "Cette personne est candidate, pas encore employée",
   "hr.recruitment.tab.overview": "Vue d'ensemble",
   "hr.recruitment.tab.personal": "Données personnelles",
   "hr.recruitment.tab.documents": "Documents",
@@ -2339,7 +2498,8 @@ export const messages = {
   "hr.recruitment.uploadOfficialDocument": "Téléverser un document officiel",
   "hr.recruitment.extractData": "Extraire les données",
   "hr.recruitment.aiReview": "Révision IA/OCR",
-  "hr.recruitment.noFakeAi": "Aucun résultat IA ou OCR n'est approuvé automatiquement. Les RH doivent confirmer les champs.",
+  "hr.recruitment.noFakeAi":
+    "Aucun résultat IA ou OCR n'est approuvé automatiquement. Les RH doivent confirmer les champs.",
   "hr.recruitment.interviews": "Entretiens",
   "hr.recruitment.scheduleInterview": "Planifier un entretien",
   "hr.recruitment.offers": "Offres",
@@ -2351,14 +2511,16 @@ export const messages = {
   "hr.recruitment.salaryCurrency": "Devise du salaire",
   "hr.recruitment.startDate": "Date de début",
   "hr.recruitment.requiredDocuments": "Documents requis",
-  "hr.recruitment.requiredDocumentsDescription": "Définir les documents exigés par la politique de l'entreprise.",
+  "hr.recruitment.requiredDocumentsDescription":
+    "Définir les documents exigés par la politique de l'entreprise.",
   "hr.recruitment.cv": "CV",
   "hr.recruitment.graduationCertificate": "Diplôme",
   "hr.recruitment.nationalId": "Identité nationale",
   "hr.recruitment.militaryCertificate": "Certificat militaire",
   "hr.recruitment.lastSalaryProof": "Justificatif du dernier salaire",
   "hr.recruitment.experienceCertificate": "Attestation d'expérience",
-  "hr.recruitment.sectionDescription": "Fondation du flux de recrutement sans fausse approbation IA.",
+  "hr.recruitment.sectionDescription":
+    "Fondation du flux de recrutement sans fausse approbation IA.",
   "hr.recruitment.newApplicant": "Nouveau candidat",
   "hr.recruitment.status.pending_review": "En attente de révision",
   "hr.recruitment.status.documents_missing": "Documents manquants",
@@ -2383,8 +2545,10 @@ export const messages = {
   "navigation.labels.platform.settings": "Paramètres plateforme",
   "provisioning.tab.accessLevels": "Niveaux d'accès",
   "verification.activationGate": "Contrôle d'activation",
-  "verification.readyToActivate": "Toutes les exigences d'activation sont satisfaites.",
-  "verification.activationBlocked": "L'activation de l'entreprise est bloquée jusqu'à l'approbation de chaque exigence.",
+  "verification.readyToActivate":
+    "Toutes les exigences d'activation sont satisfaites.",
+  "verification.activationBlocked":
+    "L'activation de l'entreprise est bloquée jusqu'à l'approbation de chaque exigence.",
   "verification.requiredDocuments": "Documents requis",
   "verification.documentsApproved": "Les documents requis sont approuvés.",
   "verification.subscription": "Abonnement",
@@ -2394,7 +2558,8 @@ export const messages = {
   "verification.firstAdmin": "Premier administrateur",
   "verification.firstAdminReady": "Le premier administrateur est prêt.",
   "verification.owners": "Propriétaires et signataires",
-  "verification.ownersReady": "Les exigences des propriétaires sont satisfaites.",
+  "verification.ownersReady":
+    "Les exigences des propriétaires sont satisfaites.",
   "verification.noMissingRequirements": "Aucune exigence manquante.",
   "verification.activateCompany": "Activer l'entreprise",
   "verification.approveDocument": "Approuver le document",
@@ -2403,23 +2568,32 @@ export const messages = {
   "mapPicker.title": "Sélecteur d'emplacement",
   "mapPicker.addressPlaceholder": "Recherchez ou saisissez l'adresse",
   "mapPicker.currentLocation": "Utiliser l'emplacement actuel",
-  "mapPicker.providerMissing": "Le fournisseur de carte n'est pas configuré. Utilisez la position du navigateur ou saisissez les coordonnées dans les détails avancés.",
+  "mapPicker.providerMissing":
+    "Le fournisseur de carte n'est pas configuré. Utilisez la position du navigateur ou saisissez les coordonnées dans les détails avancés.",
   "mapPicker.advanced": "Détails avancés",
-  "mapPicker.geolocationUnavailable": "La localisation du navigateur n'est pas disponible.",
-  "mapPicker.geolocationDenied": "L'autorisation de localisation a été refusée ou a expiré.",
+  "mapPicker.geolocationUnavailable":
+    "La localisation du navigateur n'est pas disponible.",
+  "mapPicker.geolocationDenied":
+    "L'autorisation de localisation a été refusée ou a expiré.",
   "platformSettings.title": "Paramètres plateforme",
-  "platformSettings.description": "Gérez les plans, abonnements, politiques de vérification, modules et paramètres de domaine.",
+  "platformSettings.description":
+    "Gérez les plans, abonnements, politiques de vérification, modules et paramètres de domaine.",
   "platformSettings.error": "Impossible de charger les paramètres plateforme",
   "platformSettings.plans": "Plans",
   "platformSettings.subscriptions": "Abonnements",
   "platformSettings.verificationPolicies": "Politiques de vérification",
   "platformSettings.modules": "Modules",
   "platformSettings.domains": "Domaines",
-  "platformSettings.plans.description": "Créer et maintenir les plans plateforme, prix, limites et modules activés.",
-  "platformSettings.subscriptions.description": "Consulter les abonnements des entreprises et leur statut.",
-  "platformSettings.verification-policies.description": "Configurer les documents requis par pays, type, forme juridique et rôle du propriétaire.",
-  "platformSettings.modules.description": "Consulter les modules pouvant être associés aux plans.",
-  "platformSettings.domains.description": "Consulter le chemin de secours, l'état wildcard et les notes DNS/hébergement.",
+  "platformSettings.plans.description":
+    "Créer et maintenir les plans plateforme, prix, limites et modules activés.",
+  "platformSettings.subscriptions.description":
+    "Consulter les abonnements des entreprises et leur statut.",
+  "platformSettings.verification-policies.description":
+    "Configurer les documents requis par pays, type, forme juridique et rôle du propriétaire.",
+  "platformSettings.modules.description":
+    "Consulter les modules pouvant être associés aux plans.",
+  "platformSettings.domains.description":
+    "Consulter le chemin de secours, l'état wildcard et les notes DNS/hébergement.",
   "platformSettings.domainDefaults": "Paramètres de domaine par défaut",
   "platformSettings.wildcardEnabled": "Sous-domaines wildcard activés",
   "platformSettings.wildcardDisabled": "Sous-domaines wildcard désactivés",
@@ -2436,9 +2610,11 @@ export const messages = {
   "platformSettings.stagingRootDomain": "Domaine racine de staging",
   "platformSettings.fallbackPath": "Chemin de secours",
   "platformSettings.wildcard": "État wildcard",
-  "platformSettings.domainInstructions": "Ne marquez aucun domaine personnalisé actif avant la validation Railway et Cloudflare. Si le wildcard est désactivé, utilisez uniquement /sites/:slug.",
+  "platformSettings.domainInstructions":
+    "Ne marquez aucun domaine personnalisé actif avant la validation Railway et Cloudflare. Si le wildcard est désactivé, utilisez uniquement /sites/:slug.",
   "accessLevels.title": "Niveaux d'accès de l'entreprise",
-  "accessLevels.companyScopedNote": "Les niveaux d'accès sont limités à cette entreprise. Les administrateurs d'entreprise ne peuvent pas attribuer de permissions plateforme.",
+  "accessLevels.companyScopedNote":
+    "Les niveaux d'accès sont limités à cette entreprise. Les administrateurs d'entreprise ne peuvent pas attribuer de permissions plateforme.",
   "accessLevels.code": "Code",
   "accessLevels.displayName": "Nom d'affichage",
   "accessLevels.localizedName": "Nom localisé",
@@ -2447,7 +2623,8 @@ export const messages = {
   "accessLevels.permissions": "Permissions",
   "common.noData": "Aucune donnee pour le moment",
   "platformOrganizations.error.status": "Statut : {status}.",
-  "platformOrganizations.error.requestId": "Identifiant de requete : {requestId}.",
+  "platformOrganizations.error.requestId":
+    "Identifiant de requete : {requestId}.",
   "sidebar.moveToSection": "Deplacer vers une section",
   "navigation.labels.real.estate": "Immobilier",
   "navigation.labels.customers": "Clients",
@@ -2475,11 +2652,13 @@ export const messages = {
   "hr.quickAction.uploadHrDocument": "Importer un document RH",
   "hr.quickAction.openHrSettings": "Ouvrir les parametres RH",
   "hr.quickAction.openCompanyOffices": "Ouvrir les bureaux",
-  "hr.quickAction.openCompanyAttendanceSettings": "Ouvrir les parametres de presence",
+  "hr.quickAction.openCompanyAttendanceSettings":
+    "Ouvrir les parametres de presence",
   "hr.quickAction.futureIntegration": "Integration fournisseur de portail",
   "hr.quickAction.resetPosition": "Reinitialiser la position",
   "realEstate.title": "Fondation d'acces resident",
-  "realEstate.description": "Gerez les compounds, batiments, unites, clients, affectations et pass QR securises.",
+  "realEstate.description":
+    "Gerez les compounds, batiments, unites, clients, affectations et pass QR securises.",
   "realEstate.projects": "Projets",
   "realEstate.buildings": "Batiments",
   "realEstate.units": "Unites",
@@ -2500,7 +2679,8 @@ export const messages = {
   "realEstate.generateQr": "Generer QR",
   "realEstate.noActiveQrPass": "Aucun pass QR actif",
   "realEstate.qrAccessPass": "Pass d'acces QR",
-  "realEstate.smartGateNotConfigured": "Le pass d'acces QR est disponible. L'integration de portail intelligent n'est pas configuree.",
+  "realEstate.smartGateNotConfigured":
+    "Le pass d'acces QR est disponible. L'integration de portail intelligent n'est pas configuree.",
   "realEstate.regenerateQr": "Regenerer QR",
   "realEstate.suspendQr": "Suspendre QR",
   "realEstate.revokeQr": "Revoquer QR",
@@ -2517,7 +2697,8 @@ export const messages = {
   "realEstate.paymentsPlaceholder": "Emplacement paiements",
   "realEstate.servicesPlaceholder": "Emplacement services",
   "realEstate.supportPlaceholder": "Emplacement support",
-  "realEstate.placeholderBody": "Cette zone est preparee pour le portail resident.",
+  "realEstate.placeholderBody":
+    "Cette zone est preparee pour le portail resident.",
   "realEstate.fullName": "Nom complet",
   "realEstate.phone": "Telephone",
   "realEstate.email": "E-mail",
@@ -2527,34 +2708,44 @@ export const messages = {
   "navigation.groups.advertising": "Publicité",
   "platformWelcome.eyebrow": "Bienvenue",
   "platformWelcome.title": "Bienvenue sur la plateforme POPWAM",
-  "platformWelcome.description": "Gérez les organisations, les vérifications, les abonnements, les personnes et la disponibilité à partir des données réelles.",
-  "platformWelcome.organizations": "Créez les organisations avec des documents juridiques révisés et activez-les après validation.",
-  "platformWelcome.operations": "Suivez les abonnements, utilisateurs, recrutements, présences et intégrations.",
-  "platformWelcome.security": "La navigation n’accorde aucun droit ; les autorisations restent appliquées par l’API et l’interface.",
+  "platformWelcome.description":
+    "Gérez les organisations, les vérifications, les abonnements, les personnes et la disponibilité à partir des données réelles.",
+  "platformWelcome.organizations":
+    "Créez les organisations avec des documents juridiques révisés et activez-les après validation.",
+  "platformWelcome.operations":
+    "Suivez les abonnements, utilisateurs, recrutements, présences et intégrations.",
+  "platformWelcome.security":
+    "La navigation n’accorde aucun droit ; les autorisations restent appliquées par l’API et l’interface.",
   "platformWelcome.doNotShowAgain": "Ne plus afficher",
   "platformWelcome.getStarted": "Commencer",
-  "platformWelcome.saveError": "La préférence n’a pas pu être enregistrée. Réessayez avant de fermer définitivement ce message.",
+  "platformWelcome.saveError":
+    "La préférence n’a pas pu être enregistrée. Réessayez avant de fermer définitivement ce message.",
   "platformDashboard.title": "Tableau de bord plateforme",
-  "platformDashboard.description": "Opérations en direct, indicateurs métier et disponibilité de l’infrastructure.",
+  "platformDashboard.description":
+    "Opérations en direct, indicateurs métier et disponibilité de l’infrastructure.",
   "platformDashboard.about": "À propos de la plateforme",
-  "platformDashboard.realDataDescription": "Calculé à partir des enregistrements actuels.",
+  "platformDashboard.realDataDescription":
+    "Calculé à partir des enregistrements actuels.",
   "platformDashboard.openDetails": "Ouvrir les détails",
   "platformDashboard.organizations": "Organisations",
-  "platformDashboard.organizationsDescription": "Cycle de vie des organisations et couverture des marchés.",
+  "platformDashboard.organizationsDescription":
+    "Cycle de vie des organisations et couverture des marchés.",
   "platformDashboard.totalOrganizations": "Organisations",
   "platformDashboard.activeOrganizations": "Organisations actives",
   "platformDashboard.draftOrganizations": "Brouillons et documents requis",
   "platformDashboard.awaitingVerification": "En attente de vérification",
   "platformDashboard.registeredCountries": "Pays pris en charge",
   "platformDashboard.subscriptions": "Abonnements",
-  "platformDashboard.subscriptionsDescription": "État actuel et expirations à venir.",
+  "platformDashboard.subscriptionsDescription":
+    "État actuel et expirations à venir.",
   "platformDashboard.activeSubscriptions": "Abonnements actifs",
   "platformDashboard.trialSubscriptions": "Abonnements d’essai",
   "platformDashboard.expiringSubscriptions": "Expiration sous 30 jours",
   "platformDashboard.inactiveSubscriptions": "Expirés ou suspendus",
   "platformDashboard.plansInUse": "Forfaits utilisés",
   "platformDashboard.peopleAndOperations": "Personnes et opérations",
-  "platformDashboard.peopleDescription": "Utilisateurs, employés, recrutement, bureaux, présence et alertes.",
+  "platformDashboard.peopleDescription":
+    "Utilisateurs, employés, recrutement, bureaux, présence et alertes.",
   "platformDashboard.platformUsers": "Utilisateurs plateforme",
   "platformDashboard.companyUsers": "Utilisateurs entreprise",
   "platformDashboard.employees": "Employés",
@@ -2564,7 +2755,8 @@ export const messages = {
   "platformDashboard.attendanceIssues": "Problèmes de présence",
   "platformDashboard.unresolvedAlerts": "Alertes non résolues",
   "platformDashboard.health": "Santé de la plateforme",
-  "platformDashboard.healthDescription": "Configuration et migrations sans exposer les secrets.",
+  "platformDashboard.healthDescription":
+    "Configuration et migrations sans exposer les secrets.",
   "platformDashboard.database": "Base de données et migrations",
   "platformDashboard.r2": "Stockage privé",
   "platformDashboard.cloudflare": "Extraction documentaire",
@@ -2592,51 +2784,68 @@ export const messages = {
   "platformDashboard.zeroApplicants": "Aucun candidat à réviser.",
   "platformDashboard.zeroInterviews": "Aucun entretien futur.",
   "platformDashboard.zeroOffices": "Aucun bureau actif.",
-  "platformDashboard.zeroAttendanceIssues": "Aucun problème de présence à réviser.",
+  "platformDashboard.zeroAttendanceIssues":
+    "Aucun problème de présence à réviser.",
   "platformDashboard.zeroAlerts": "Aucune alerte non résolue.",
   "organizationOnboarding.step1": "Étape 1 sur 7",
-  "organizationOnboarding.identityTitle": "Type, pays et responsable de la soumission",
-  "organizationOnboarding.identityDescription": "Créez un brouillon sécurisé. Le profil juridique est complété après extraction et confirmation manuelle.",
+  "organizationOnboarding.identityTitle":
+    "Type, pays et responsable de la soumission",
+  "organizationOnboarding.identityDescription":
+    "Créez un brouillon sécurisé. Le profil juridique est complété après extraction et confirmation manuelle.",
   "organizationOnboarding.workingName": "Nom de travail de l’organisation",
   "organizationOnboarding.submitterName": "Nom du responsable",
   "organizationOnboarding.submitterEmail": "E-mail du responsable",
   "organizationOnboarding.submitterPhone": "Téléphone du responsable",
-  "organizationOnboarding.continueToDocuments": "Créer le brouillon et charger les documents",
+  "organizationOnboarding.continueToDocuments":
+    "Créer le brouillon et charger les documents",
   "organizationOnboarding.documentsNext": "Les documents viennent ensuite",
-  "organizationOnboarding.documentsExplanation": "Le brouillon ouvre le chargement protégé. Les valeurs extraites restent des suggestions jusqu’à leur validation manuelle.",
-  "organizationOnboarding.commercialRegister": "Pages ou images du registre du commerce",
+  "organizationOnboarding.documentsExplanation":
+    "Le brouillon ouvre le chargement protégé. Les valeurs extraites restent des suggestions jusqu’à leur validation manuelle.",
+  "organizationOnboarding.commercialRegister":
+    "Pages ou images du registre du commerce",
   "organizationOnboarding.taxCard": "Recto et verso de la carte fiscale",
-  "organizationOnboarding.ownerIdentity": "Pièce d’identité du propriétaire recto verso",
-  "organizationOnboarding.responsibleIdentity": "Identité du responsable ou mandataire",
-  "organizationOnboarding.authorization": "Autorisation si le responsable n’est pas le propriétaire",
-  "organizationOnboarding.laterSetup": "Les agences, bureaux, présences, Wi-Fi, horaires, accès et méthodes de connexion sont configurés ensuite par l’administrateur.",
+  "organizationOnboarding.ownerIdentity":
+    "Pièce d’identité du propriétaire recto verso",
+  "organizationOnboarding.responsibleIdentity":
+    "Identité du responsable ou mandataire",
+  "organizationOnboarding.authorization":
+    "Autorisation si le responsable n’est pas le propriétaire",
+  "organizationOnboarding.laterSetup":
+    "Les agences, bureaux, présences, Wi-Fi, horaires, accès et méthodes de connexion sont configurés ensuite par l’administrateur.",
   "platformSettings.planType": "Type de forfait",
   "platformSettings.durationValue": "Durée",
   "platformSettings.durationUnit": "Unité de durée",
   "platformSettings.allowsNoExpiry": "Autoriser sans expiration",
   "platformSettings.allowedLoginMethods": "Méthodes de connexion autorisées",
   "platformSettings.metadata": "Pays, devises et langues",
-  "platformSettings.metadata.description": "Gérez les enregistrements disponibles dans l’intégration, les forfaits et la configuration.",
+  "platformSettings.metadata.description":
+    "Gérez les enregistrements disponibles dans l’intégration, les forfaits et la configuration.",
   "platformSettings.metadata.country": "Pays",
   "platformSettings.metadata.currency": "Devises",
   "platformSettings.metadata.language": "Langues",
   "platformSettings.metadata.code": "Code",
   "platformSettings.metadata.order": "Ordre",
-  "platformSettings.metadata.empty": "Aucun enregistrement dans cette catégorie. Ajoutez le premier ci-dessus.",
+  "platformSettings.metadata.empty":
+    "Aucun enregistrement dans cette catégorie. Ajoutez le premier ci-dessus.",
   "platformSettings.editPlans": "Modifier les forfaits",
-  "platformSettings.createPlanFirst": "Créez et activez un forfait plateforme avant d’attribuer un abonnement.",
+  "platformSettings.createPlanFirst":
+    "Créez et activez un forfait plateforme avant d’attribuer un abonnement.",
   "sidebar.dragToReorder": "Faire glisser pour réordonner la section",
-  "platformDashboard.loading": "Chargement des données actuelles de la plateforme.",
+  "platformDashboard.loading":
+    "Chargement des données actuelles de la plateforme.",
   "platformDashboard.unavailable": "Indisponible",
-  "platformDashboard.loadError": "Les données du tableau de bord n’ont pas pu être chargées en toute sécurité.",
+  "platformDashboard.loadError":
+    "Les données du tableau de bord n’ont pas pu être chargées en toute sécurité.",
   "platformDashboard.requestId": "Identifiant de requête : {requestId}",
   "platformDashboard.distributions": "Répartition des organisations",
-  "platformDashboard.distributionsDescription": "Comptages réels regroupés par statut, type et pays d’enregistrement.",
+  "platformDashboard.distributionsDescription":
+    "Comptages réels regroupés par statut, type et pays d’enregistrement.",
   "platformDashboard.byStatus": "Par statut",
   "platformDashboard.byType": "Par type",
   "platformDashboard.byCountry": "Par pays",
   "platformDashboard.planDistribution": "Répartition des forfaits",
-  "platformDashboard.planDistributionDescription": "Organisations regroupées selon les forfaits actuellement associés à leurs abonnements.",
+  "platformDashboard.planDistributionDescription":
+    "Organisations regroupées selon les forfaits actuellement associés à leurs abonnements.",
   "platformDashboard.migrations": "Migrations de la base de données",
   "platformDashboard.notReady": "Non prêt",
   "platformDashboard.integration.cameras": "Caméras",
@@ -2644,10 +2853,12 @@ export const messages = {
   "platformDashboard.integration.metaAds": "Meta Ads",
   "platformDashboard.integration.tiktokAds": "TikTok Ads",
   "platformDashboard.integrationStatus.connected": "Connecté",
-  "platformDashboard.integrationStatus.configuration_required": "Configuration requise",
+  "platformDashboard.integrationStatus.configuration_required":
+    "Configuration requise",
   "platformDashboard.integrationStatus.disabled": "Désactivé",
   "organizationLifecycle.title": "Cycle de vie de l’organisation",
-  "organizationLifecycle.description": "Archivez en sécurité, restaurez, suspendez l’accès ou supprimez définitivement un brouillon admissible après vérification de l’impact.",
+  "organizationLifecycle.description":
+    "Archivez en sécurité, restaurez, suspendez l’accès ou supprimez définitivement un brouillon admissible après vérification de l’impact.",
   "organizationLifecycle.reason": "Motif ou note interne",
   "organizationLifecycle.archive": "Archiver l’organisation",
   "organizationLifecycle.restore": "Restaurer l’organisation",
@@ -2655,10 +2866,14 @@ export const messages = {
   "organizationLifecycle.impact": "Aperçu de l’impact de suppression",
   "organizationLifecycle.confirmName": "Saisir le nom exact de l’organisation",
   "organizationLifecycle.deleteDraft": "Supprimer définitivement le brouillon",
-  "organizationLifecycle.deleteDraftWarning": "Ce brouillon peut être supprimé définitivement. Saisissez « {name} » pour confirmer.",
-  "organizationLifecycle.deleteBlocked": "La suppression définitive est bloquée par l’état ou les enregistrements liés. Archivez plutôt l’organisation.",
-  "organizationOnboarding.metadataRequired": "Les métadonnées de plateforme sont requises",
-  "organizationOnboarding.metadataRequiredDescription": "Ajoutez au moins un pays et une langue pris en charge avant de créer une organisation.",
+  "organizationLifecycle.deleteDraftWarning":
+    "Ce brouillon peut être supprimé définitivement. Saisissez « {name} » pour confirmer.",
+  "organizationLifecycle.deleteBlocked":
+    "La suppression définitive est bloquée par l’état ou les enregistrements liés. Archivez plutôt l’organisation.",
+  "organizationOnboarding.metadataRequired":
+    "Les métadonnées de plateforme sont requises",
+  "organizationOnboarding.metadataRequiredDescription":
+    "Ajoutez au moins un pays et une langue pris en charge avant de créer une organisation.",
   "organizationOnboarding.manageMetadata": "Gérer les métadonnées",
 } as const;
 

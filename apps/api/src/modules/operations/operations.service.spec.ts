@@ -343,12 +343,10 @@ describe('OperationsService self attendance', () => {
     const tx = {
       employeeAttendanceReferencePhoto: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        update: jest
-          .fn()
-          .mockResolvedValue({
-            id: 'reference_1',
-            status: 'APPROVED_REFERENCE',
-          }),
+        update: jest.fn().mockResolvedValue({
+          id: 'reference_1',
+          status: 'APPROVED_REFERENCE',
+        }),
       },
       hrEmployee: { update: jest.fn().mockResolvedValue(employee) },
     };
@@ -1362,15 +1360,23 @@ describe('HR attendance roster export', () => {
   } as unknown as AuthenticatedRequestUser;
 
   it('exports the complete selected month with organization-local day bounds', async () => {
+    const employee = {
+      id: 'employee_1',
+      name: 'Example Employee',
+      employeeCode: 'EMP-1',
+      workStartDate: null,
+      hireDate: null,
+    };
     const prisma = {
       organization: {
         findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }),
       },
+      hrEmployee: { findMany: jest.fn().mockResolvedValue([employee]) },
       hrAttendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const service = new OperationsService(prisma as any);
 
-    await service.exportHrAttendance(
+    const csv = await service.exportHrAttendance(
       { dateFrom: '2026-08-01', dateTo: '2026-08-31', format: 'csv' },
       manager,
     );
@@ -1399,6 +1405,48 @@ describe('HR attendance roster export', () => {
     expect(
       prisma.hrAttendanceRecord.findMany.mock.calls[0][0],
     ).not.toHaveProperty('take');
+    expect(csv).toContain('employeeName');
+    expect(csv).toContain('Example Employee');
+    expect(csv).toContain('2026-08-01');
+    expect(csv).toContain('2026-08-31');
+    expect(csv.split('\n')).toHaveLength(32);
+  });
+
+  it('returns every calendar day grouped under each employee for the monthly table', async () => {
+    const prisma = {
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }),
+      },
+      hrEmployee: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'employee_1',
+            name: 'Example Employee',
+            employeeCode: 'EMP-1',
+            workStartDate: null,
+            hireDate: null,
+          },
+        ]),
+      },
+      hrAttendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new OperationsService(prisma as any);
+
+    const result = await service.listMonthlyHrAttendance(manager, {
+      month: '2026-02',
+    });
+
+    expect(result.days).toHaveLength(28);
+    expect(result.employees).toHaveLength(1);
+    expect(result.employees[0]).toMatchObject({
+      employeeName: 'Example Employee',
+      employeeCode: 'EMP-1',
+    });
+    expect(result.employees[0].days).toHaveLength(28);
+    expect(result.employees[0].days[0]).toMatchObject({
+      date: '2026-02-01',
+      status: 'NOT_RECORDED',
+    });
   });
 
   it('exports every active employee with channel and monthly late allowance balance', async () => {

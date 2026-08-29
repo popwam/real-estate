@@ -81,6 +81,7 @@ async function main() {
       '/hr/attendance/me/today',
       '/hr/attendance/me/history',
       '/hr/attendance/me/policy',
+      '/hr/attendance/monthly?month=2026-08',
       '/hr/export/attendance?dateFrom=2026-08-01&dateTo=2026-08-31&format=csv',
     ];
     const results: Array<{
@@ -90,6 +91,7 @@ async function main() {
       schemaError: boolean;
       contentType: string | null;
       responseBytes: number;
+      monthlyContract?: boolean;
     }> = [];
 
     for (const path of paths) {
@@ -98,13 +100,19 @@ async function main() {
       });
       const body = await response.text();
       const schemaError = /P2022|column .* does not exist/i.test(body);
+      const monthlyContract = path.includes('/monthly?')
+        ? validatesMonthlyMatrix(body, 31)
+        : path.includes('/hr/export/attendance')
+          ? validatesMonthlyCsv(body, '2026-08-01', '2026-08-31')
+          : undefined;
       results.push({
         path,
         status: response.status,
-        passed: response.ok && !schemaError,
+        passed: response.ok && !schemaError && monthlyContract !== false,
         schemaError,
         contentType: response.headers.get('content-type'),
         responseBytes: Buffer.byteLength(body),
+        monthlyContract,
       });
     }
 
@@ -113,6 +121,36 @@ async function main() {
   } finally {
     await prisma.$disconnect();
   }
+}
+
+function validatesMonthlyMatrix(body: string, expectedDays: number) {
+  try {
+    const value = JSON.parse(body) as {
+      days?: unknown[];
+      employees?: Array<{ employeeName?: unknown; days?: unknown[] }>;
+    };
+    return (
+      value.days?.length === expectedDays &&
+      Array.isArray(value.employees) &&
+      value.employees.every(
+        (employee) =>
+          typeof employee.employeeName === 'string' &&
+          employee.employeeName.trim().length > 0 &&
+          employee.days?.length === expectedDays,
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+function validatesMonthlyCsv(body: string, firstDay: string, lastDay: string) {
+  const header = body.split(/\r?\n/, 1)[0] ?? '';
+  return (
+    header.includes('employeeName') &&
+    body.includes(firstDay) &&
+    body.includes(lastDay)
+  );
 }
 
 void main();

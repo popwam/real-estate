@@ -38,7 +38,8 @@ export const messages = {
     "Access is limited to authorized POPWAM users. Your workspace is selected automatically after sign-in.",
   "auth.changePassword.eyebrow": "Temporary password",
   "auth.changePassword.title": "Change your password",
-  "auth.changePassword.description": "Your account is using a temporary password. Choose a private password before continuing.",
+  "auth.changePassword.description":
+    "Your account is using a temporary password. Choose a private password before continuing.",
   "auth.changePassword.currentPassword": "Current password",
   "auth.changePassword.newPassword": "New password",
   "auth.changePassword.confirmPassword": "Confirm new password",
@@ -51,27 +52,35 @@ export const messages = {
   "statusPage.tryAgain": "Try again",
   "statusPage.403.eyebrow": "Access denied",
   "statusPage.403.title": "You do not have access",
-  "statusPage.403.body": "Your account is signed in, but this area requires another permission. Ask an administrator to update your access if this looks wrong.",
+  "statusPage.403.body":
+    "Your account is signed in, but this area requires another permission. Ask an administrator to update your access if this looks wrong.",
   "statusPage.404.eyebrow": "Page not found",
   "statusPage.404.title": "This page is not available",
-  "statusPage.404.body": "The link may be outdated, moved, or hidden by your current workspace permissions.",
+  "statusPage.404.body":
+    "The link may be outdated, moved, or hidden by your current workspace permissions.",
   "statusPage.500.eyebrow": "Unexpected error",
   "statusPage.500.title": "Something went wrong",
-  "statusPage.500.body": "We could not finish loading this page. You can try again or return to the workspace home.",
-  "apiErrors.permissionRequired": "You do not have permission to view this content.",
+  "statusPage.500.body":
+    "We could not finish loading this page. You can try again or return to the workspace home.",
+  "apiErrors.permissionRequired":
+    "You do not have permission to view this content.",
   "apiErrors.notFound": "The requested content was not found.",
-  "apiErrors.network": "The service could not be reached. Check your connection and try again.",
-  "apiErrors.server": "The service could not complete this request. Please try again.",
+  "apiErrors.network":
+    "The service could not be reached. Check your connection and try again.",
+  "apiErrors.server":
+    "The service could not complete this request. Please try again.",
   "apiErrors.requestId": "Request ID: {requestId}.",
   "account.refreshAccess": "Refresh access",
   "statusPage.505.eyebrow": "Browser not supported",
   "statusPage.505.title": "This browser version is not supported",
-  "statusPage.505.body": "Please update your browser or open POPWAM from a modern browser to continue safely.",
+  "statusPage.505.body":
+    "Please update your browser or open POPWAM from a modern browser to continue safely.",
   "translatedText.placeholder.en": "Enter English text here",
   "translatedText.placeholder.ar": "اكتب النص العربي هنا",
   "translatedText.placeholder.fr": "Saisissez le texte français ici",
   "provisioning.missingRequirements": "Missing requirements",
-  "provisioning.completeRequiredFields": "Complete the required fields before continuing.",
+  "provisioning.completeRequiredFields":
+    "Complete the required fields before continuing.",
   "provisioning.required.organizationType": "Choose the organization type.",
   "provisioning.required.displayName": "Enter the company display name.",
   "auth.keepSignedIn": "Keep me signed in",
@@ -412,16 +421,21 @@ export const messages = {
   "organizationTypes.developer": "Real Estate Developer",
   "organizationTypes.brokerage": "Brokerage Company",
   "organizationTypes.individualBroker": "Individual Broker",
-  "errors.organizationTypeInvalid": "The selected organization type is invalid. Choose a value from the list.",
+  "errors.organizationTypeInvalid":
+    "The selected organization type is invalid. Choose a value from the list.",
   "provisioning.documentFile": "Private legal document",
-  "provisioning.documentFileRequired": "Choose a legal document file to upload.",
-  "provisioning.documentUploadFailed": "The legal document could not be uploaded.",
-  "provisioning.noExtractedFields": "No structured fields are available. Review the document manually.",
+  "provisioning.documentFileRequired":
+    "Choose a legal document file to upload.",
+  "provisioning.documentUploadFailed":
+    "The legal document could not be uploaded.",
+  "provisioning.noExtractedFields":
+    "No structured fields are available. Review the document manually.",
   "provisioning.currentValue": "Current value",
   "provisioning.extractedValue": "Extracted value",
   "provisioning.applySelected": "Apply selected",
   "provisioning.rejectSelected": "Reject selected",
-  "provisioning.confirmSensitiveFields": "Apply the selected sensitive legal identifiers to the draft profile?",
+  "provisioning.confirmSensitiveFields":
+    "Apply the selected sensitive legal identifiers to the draft profile?",
   "extractedFields.legalName": "Legal name",
   "extractedFields.tradeName": "Trade name",
   "extractedFields.commercialRegisterNumber": "Commercial register number",
@@ -450,18 +464,22 @@ export const messages = {
   "common.none": "None",
   "employeeAccess.checkingAccess": "Checking access",
   "employeeAccess.forbiddenTitle": "403 - Permission required",
-  "employeeAccess.forbiddenDescription": "Your account does not have permission to open this page.",
+  "employeeAccess.forbiddenDescription":
+    "Your account does not have permission to open this page.",
   "employeeAccess.title": "Employee access",
-  "employeeAccess.description": "Create separate employee accounts and assign only the pages and actions each person needs.",
+  "employeeAccess.description":
+    "Create separate employee accounts and assign only the pages and actions each person needs.",
   "employeeAccess.addEmployee": "Add employee",
   "employeeAccess.separateAccountsTitle": "Separate accounts required",
-  "employeeAccess.doNotShareWarning": "Do not share your own account. Create a separate employee account instead.",
+  "employeeAccess.doNotShareWarning":
+    "Do not share your own account. Create a separate employee account instead.",
   "employeeAccess.employees": "Employees",
   "employeeAccess.loadingEmployees": "Loading employees",
   "employeeAccess.loadingEmployee": "Loading employee",
   "employeeAccess.loadError": "Employees could not be loaded",
   "employeeAccess.emptyTitle": "No employee accounts yet",
-  "employeeAccess.emptyDescription": "Create a separate login for each team member before giving them access.",
+  "employeeAccess.emptyDescription":
+    "Create a separate login for each team member before giving them access.",
   "employeeAccess.createFirstEmployee": "Create first employee",
   "employeeAccess.employee": "Employee",
   "employeeAccess.contact": "Contact",
@@ -473,34 +491,45 @@ export const messages = {
   "employeeAccess.active": "Active",
   "employeeAccess.inactive": "Inactive",
   "employeeAccess.newTitle": "New employee",
-  "employeeAccess.newDescription": "Create a login account scoped to this company and assign page and action permissions.",
+  "employeeAccess.newDescription":
+    "Create a login account scoped to this company and assign page and action permissions.",
   "employeeAccess.createError": "Employee could not be created",
   "employeeAccess.detailTitle": "Employee access detail",
-  "employeeAccess.detailDescription": "Review login status, role template, and assigned permissions.",
+  "employeeAccess.detailDescription":
+    "Review login status, role template, and assigned permissions.",
   "employeeAccess.currentAccess": "Current access",
   "employeeAccess.updateError": "Employee could not be updated",
   "employeeAccess.accountActions": "Account actions",
   "employeeAccess.activate": "Activate",
   "employeeAccess.deactivate": "Deactivate",
   "employeeAccess.resetPassword": "Reset password",
-  "employeeAccess.generatedIfBlank": "Leave blank to generate a temporary password",
+  "employeeAccess.generatedIfBlank":
+    "Leave blank to generate a temporary password",
   "employeeAccess.generatedPasswordTitle": "Temporary password generated",
-  "employeeAccess.generatedPasswordDescription": "Send this temporary password to the employee securely. It will not be shown again: {password}",
+  "employeeAccess.generatedPasswordDescription":
+    "Send this temporary password to the employee securely. It will not be shown again: {password}",
   "employeeAccess.generatePassword": "Generate",
   "employeeAccess.createdPasswordTitle": "Employee created",
-  "employeeAccess.createdPasswordDescription": "Send this temporary password to the employee securely. It will not be shown again: {password}",
+  "employeeAccess.createdPasswordDescription":
+    "Send this temporary password to the employee securely. It will not be shown again: {password}",
   "employeeAccess.viewEmployee": "View employee",
   "employeeAccess.organization": "Organization",
   "employeeAccess.selectOrganization": "Select organization",
   "employeeAccess.organizationFilter": "Organization filter",
   "employeeAccess.allOrganizations": "All organizations",
-  "employeeAccess.loginNotReadyTitle": "Account created but login access is not ready",
-  "employeeAccess.loginReadiness.LOGIN_USER_MISSING": "Account created but login access is not active.",
-  "employeeAccess.loginReadiness.PASSWORD_MISSING": "Employee user is missing password.",
+  "employeeAccess.loginNotReadyTitle":
+    "Account created but login access is not ready",
+  "employeeAccess.loginReadiness.LOGIN_USER_MISSING":
+    "Account created but login access is not active.",
+  "employeeAccess.loginReadiness.PASSWORD_MISSING":
+    "Employee user is missing password.",
   "employeeAccess.loginReadiness.EMPLOYEE_INACTIVE": "Employee is inactive.",
-  "employeeAccess.loginReadiness.USER_INACTIVE": "Account created but login access is not active.",
-  "employeeAccess.loginReadiness.EMAIL_REQUIRED": "Employee email is required by current schema.",
-  "employeeAccess.loginReadiness.NO_ROLE_PERMISSIONS": "Employee has no role/permissions.",
+  "employeeAccess.loginReadiness.USER_INACTIVE":
+    "Account created but login access is not active.",
+  "employeeAccess.loginReadiness.EMAIL_REQUIRED":
+    "Employee email is required by current schema.",
+  "employeeAccess.loginReadiness.NO_ROLE_PERMISSIONS":
+    "Employee has no role/permissions.",
   "employeeAccess.loginReadiness.UNKNOWN": "Login access is not ready.",
   "employeeAccess.resetError": "Password could not be reset",
   "employeeAccess.statusError": "Status could not be updated",
@@ -516,7 +545,8 @@ export const messages = {
   "employeeAccess.country": "Country",
   "employeeAccess.countryEgypt": "Egypt (+20)",
   "employeeAccess.countryUsa": "United States (+1)",
-  "employeeAccess.mustChangePasswordWarning": "The employee can sign in with this temporary password and must change it before using protected pages.",
+  "employeeAccess.mustChangePasswordWarning":
+    "The employee can sign in with this temporary password and must change it before using protected pages.",
   "employeeAccess.createEmployee": "Create employee",
   "employeeAccess.saveEmployee": "Save employee",
   "employeeAccess.group.dashboard": "Dashboard",
@@ -546,9 +576,12 @@ export const messages = {
   "employeeAccess.permission.hrEmployeesView": "View employees",
   "employeeAccess.permission.hrEmployeesCreate": "Create employees",
   "employeeAccess.permission.hrEmployeesUpdate": "Update employees",
-  "employeeAccess.permission.hrEmployeesDeactivate": "Activate or deactivate employees",
-  "employeeAccess.permission.hrEmployeesResetPassword": "Reset employee passwords",
-  "employeeAccess.permission.hrEmployeesPermissionsManage": "Manage employee permissions",
+  "employeeAccess.permission.hrEmployeesDeactivate":
+    "Activate or deactivate employees",
+  "employeeAccess.permission.hrEmployeesResetPassword":
+    "Reset employee passwords",
+  "employeeAccess.permission.hrEmployeesPermissionsManage":
+    "Manage employee permissions",
   "employeeAccess.permission.hrAttendanceSelf": "Use own attendance",
   "employeeAccess.permission.hrAttendanceView": "View attendance",
   "employeeAccess.permission.hrAttendanceManage": "Manage attendance",
@@ -572,15 +605,19 @@ export const messages = {
   "employeeAccess.permission.filesUpload": "Upload files",
   "employeeAccess.permission.reportsView": "View reports",
   "employeeAccess.permission.reportsExport": "Export reports",
-  "employeeAccess.permission.exportsOrganizationData": "Export organization data",
+  "employeeAccess.permission.exportsOrganizationData":
+    "Export organization data",
   "employeeAccess.permission.websiteView": "View website settings",
   "employeeAccess.permission.websiteUpdate": "Update website settings",
-  "employeeAccess.permission.platformOrganizationsView": "View platform organizations",
-  "employeeAccess.permission.platformOrganizationsManage": "Manage platform organizations",
+  "employeeAccess.permission.platformOrganizationsView":
+    "View platform organizations",
+  "employeeAccess.permission.platformOrganizationsManage":
+    "Manage platform organizations",
   "employeeAccess.permission.platformUsersManage": "Manage platform users",
   "employeeAccess.permission.organizationsViewAll": "View all organizations",
   "developer.access.checking": "Checking developer access",
-  "companyDomains.description": "Add, verify, test, choose a default, or remove company domains.",
+  "companyDomains.description":
+    "Add, verify, test, choose a default, or remove company domains.",
   "companyDomains.loading": "Loading domains",
   "companyDomains.status": "Status",
   "companyDomains.domain": "Domain",
@@ -594,7 +631,8 @@ export const messages = {
   "companyDomains.markDefault": "Mark default",
   "companyDomains.emptyTitle": "No domains yet",
   "companyDomains.emptyDescription": "Add a domain to start verification.",
-  "companySettings.pageDescription": "Manage public website identity, domains, branches, and attendance policy.",
+  "companySettings.pageDescription":
+    "Manage public website identity, domains, branches, and attendance policy.",
   "companySettings.loadingWebsiteSettings": "Loading website settings",
   "companySettings.branches": "Branches",
   "companySettings.loadingBranches": "Loading branches",
@@ -614,7 +652,8 @@ export const messages = {
   "companySettings.workStartTime": "Work start time",
   "companySettings.workEndTime": "Work end time",
   "companySettings.monthlyLateAllowanceHours": "Monthly late allowance (hours)",
-  "companySettings.lateAllowanceChargeHoursPerDay": "Allowance charged per late day (hours)",
+  "companySettings.lateAllowanceChargeHoursPerDay":
+    "Allowance charged per late day (hours)",
   "companySettings.missingAttendanceDisposition": "Day with no attendance",
   "companySettings.missingAttendanceAbsent": "Automatic absence",
   "companySettings.missingAttendanceLeave": "Leave",
@@ -628,18 +667,23 @@ export const messages = {
   "companySettings.requireDvrReview": "Require DVR review",
   "companySettings.allowWebCheckIn": "Allow web check-in",
   "companySettings.allowMobileCheckIn": "Allow mobile check-in",
-  "companySettings.browserWifiLimitation": "Browsers cannot reliably read Wi-Fi SSID or BSSID. Web attendance can block, ignore Wi-Fi, or send the record to manual review according to this policy.",
+  "companySettings.browserWifiLimitation":
+    "Browsers cannot reliably read Wi-Fi SSID or BSSID. Web attendance can block, ignore Wi-Fi, or send the record to manual review according to this policy.",
   "companySettings.saveAttendancePolicy": "Save attendance policy",
   "companySettings.autoCloseGraceMinutes": "Auto-close grace (minutes)",
   "companySettings.regularShiftAutoCloseMode": "Regular shift auto-close",
   "companySettings.autoCloseEndOfDay": "End of organization work day",
   "companySettings.autoCloseAfterShift": "Planned check-out plus grace",
-  "companySettings.checkOutOutsideLocationPolicy": "Check-out outside-location policy",
+  "companySettings.checkOutOutsideLocationPolicy":
+    "Check-out outside-location policy",
   "companySettings.allowWithEvidence": "Allow with evidence",
-  "companySettings.autoCloseOpenAttendance": "Automatically close missed check-outs",
-  "companySettings.autoCloseAtLocalMidnight": "Close regular shifts at local midnight",
+  "companySettings.autoCloseOpenAttendance":
+    "Automatically close missed check-outs",
+  "companySettings.autoCloseAtLocalMidnight":
+    "Close regular shifts at local midnight",
   "attendance.self.title": "My attendance",
-  "attendance.self.description": "Check in and out from the web when your attendance policy allows it.",
+  "attendance.self.description":
+    "Check in and out from the web when your attendance policy allows it.",
   "attendance.self.today": "Today",
   "attendance.self.loadingToday": "Loading today's attendance",
   "attendance.self.checkIn": "Check-in",
@@ -650,12 +694,15 @@ export const messages = {
   "attendance.self.checkInAction": "Check in",
   "attendance.self.checkOutAction": "Check out",
   "attendance.self.latePenalty": "Late penalty",
-  "attendance.self.latePenaltyDescription": "{minutes} minutes late. Penalty: {penalty}.",
+  "attendance.self.latePenaltyDescription":
+    "{minutes} minutes late. Penalty: {penalty}.",
   "attendance.self.locationError": "Location could not be captured",
   "attendance.self.locationUnavailable": "Browser location is not available.",
-  "attendance.self.locationRequired": "Location permission is required for check-in.",
+  "attendance.self.locationRequired":
+    "Location permission is required for check-in.",
   "attendance.self.retryLocation": "Retry location",
-  "attendance.self.accuracyTooLowDetails": "GPS accuracy is {current} m; the attendance policy requires {required} m or better.",
+  "attendance.self.accuracyTooLowDetails":
+    "GPS accuracy is {current} m; the attendance policy requires {required} m or better.",
   "attendance.self.checkInError": "Check-in failed",
   "attendance.self.checkOutError": "Check-out failed",
   "attendance.self.history": "History",
@@ -666,61 +713,91 @@ export const messages = {
   "attendance.self.checkingLocation": "Checking location",
   "attendance.self.verifyingLocation": "Verifying work location",
   "attendance.self.startingCamera": "Starting camera",
-  "attendance.self.cameraReady": "Camera is ready. Take a live photo to continue.",
-  "attendance.self.cameraUnavailable": "The camera is not available. A live photo is required to continue.",
+  "attendance.self.cameraReady":
+    "Camera is ready. Take a live photo to continue.",
+  "attendance.self.cameraUnavailable":
+    "The camera is not available. A live photo is required to continue.",
   "attendance.self.capturePhoto": "Capture photo",
   "attendance.self.photoPreview": "Photo preview",
   "attendance.self.usePhoto": "Use this photo",
   "attendance.self.retakePhoto": "Retake",
-  "attendance.self.photoCaptureFailed": "The photo could not be captured. Please try again.",
+  "attendance.self.photoCaptureFailed":
+    "The photo could not be captured. Please try again.",
   "attendance.self.uploadingPhoto": "Uploading photo",
   "attendance.self.recordingAttendance": "Recording attendance",
-  "attendance.self.preflightRejected": "Your location could not be verified for attendance.",
+  "attendance.self.preflightRejected":
+    "Your location could not be verified for attendance.",
   "attendance.autoClosedBadge": "Auto-closed",
-  "attendance.autoClosedDescription": "This attendance was closed automatically and requires review. Reason: {reason}",
-  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_REVIEW": "Your check-out is outside the precise work location and requires manual review.",
-  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE": "Your check-out is outside the precise work location and requires evidence.",
+  "attendance.autoClosedDescription":
+    "This attendance was closed automatically and requires review. Reason: {reason}",
+  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_REVIEW":
+    "Your check-out is outside the precise work location and requires manual review.",
+  "attendance.self.reason.CHECK_OUT_OUTSIDE_LOCATION_EVIDENCE":
+    "Your check-out is outside the precise work location and requires evidence.",
   "attendance.self.distance": "Distance",
   "attendance.self.radius": "Allowed radius",
   "attendance.self.accuracy": "Location accuracy",
   "attendance.self.accuracyAccepted": "Accepted",
   "attendance.self.accuracyRejected": "Too low",
-  "attendance.self.requestFailed": "The attendance request could not be completed. {requestId}",
+  "attendance.self.requestFailed":
+    "The attendance request could not be completed. {requestId}",
   "attendance.self.verificationFailed": "Attendance verification failed.",
-  "attendance.self.reason.LOCATION_PERMISSION_DENIED": "Location permission was denied. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using → Precise Location; then Safari → Website Settings → Location → Allow.",
-  "attendance.self.reason.LOCATION_POSITION_UNAVAILABLE": "Your current position is unavailable. Move to an open area and tap Retry location.",
-  "attendance.self.reason.LOCATION_TIMEOUT": "The location request timed out. Tap Retry location.",
-  "attendance.self.reason.LOCATION_INSECURE_CONTEXT": "Location requires HTTPS. Open the secure version of this page and try again.",
-  "attendance.self.reason.LOCATION_PERMISSION_POLICY_BLOCKED": "Location is blocked by this site's Permissions-Policy configuration. Contact your administrator.",
-  "attendance.self.reason.LOCATION_NOT_AVAILABLE": "Browser location is not available.",
-  "attendance.self.reason.LOCATION_REQUIRED": "Location is required for attendance.",
-  "attendance.self.reason.LOCATION_STALE": "Please capture a new, current location.",
-  "attendance.self.reason.GPS_ACCURACY_TOO_LOW": "Location accuracy is too low. Please try again outdoors.",
-  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_CONFIGURED": "No eligible work location is configured.",
-  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_ALLOWED": "The selected attendance location is no longer eligible for web check-in.",
-  "attendance.self.reason.OUTSIDE_ALLOWED_LOCATION": "You are outside the allowed work location.",
-  "attendance.self.reason.WEB_CHECK_IN_NOT_ALLOWED": "Web check-in is not allowed by your attendance policy.",
-  "attendance.self.reason.WEB_WIFI_NOT_AVAILABLE": "This policy requires office Wi-Fi, which browsers cannot verify.",
-  "attendance.self.reason.WEB_WIFI_MANUAL_REVIEW": "Office Wi-Fi cannot be verified in a browser; this attendance will require review.",
-  "attendance.self.reason.PHOTO_REQUIRED": "A live attendance photo is required.",
+  "attendance.self.reason.LOCATION_PERMISSION_DENIED":
+    "Location permission was denied. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using → Precise Location; then Safari → Website Settings → Location → Allow.",
+  "attendance.self.reason.LOCATION_POSITION_UNAVAILABLE":
+    "Your current position is unavailable. Move to an open area and tap Retry location.",
+  "attendance.self.reason.LOCATION_TIMEOUT":
+    "The location request timed out. Tap Retry location.",
+  "attendance.self.reason.LOCATION_INSECURE_CONTEXT":
+    "Location requires HTTPS. Open the secure version of this page and try again.",
+  "attendance.self.reason.LOCATION_PERMISSION_POLICY_BLOCKED":
+    "Location is blocked by this site's Permissions-Policy configuration. Contact your administrator.",
+  "attendance.self.reason.LOCATION_NOT_AVAILABLE":
+    "Browser location is not available.",
+  "attendance.self.reason.LOCATION_REQUIRED":
+    "Location is required for attendance.",
+  "attendance.self.reason.LOCATION_STALE":
+    "Please capture a new, current location.",
+  "attendance.self.reason.GPS_ACCURACY_TOO_LOW":
+    "Location accuracy is too low. Please try again outdoors.",
+  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_CONFIGURED":
+    "No eligible work location is configured.",
+  "attendance.self.reason.ATTENDANCE_LOCATION_NOT_ALLOWED":
+    "The selected attendance location is no longer eligible for web check-in.",
+  "attendance.self.reason.OUTSIDE_ALLOWED_LOCATION":
+    "You are outside the allowed work location.",
+  "attendance.self.reason.WEB_CHECK_IN_NOT_ALLOWED":
+    "Web check-in is not allowed by your attendance policy.",
+  "attendance.self.reason.WEB_WIFI_NOT_AVAILABLE":
+    "This policy requires office Wi-Fi, which browsers cannot verify.",
+  "attendance.self.reason.WEB_WIFI_MANUAL_REVIEW":
+    "Office Wi-Fi cannot be verified in a browser; this attendance will require review.",
+  "attendance.self.reason.PHOTO_REQUIRED":
+    "A live attendance photo is required.",
   "attendance.self.reason.CAMERA_NOT_AVAILABLE": "The camera is not available.",
   "attendance.self.reason.NotAllowedError": "Camera permission was denied.",
   "attendance.self.loadingLocations": "Loading eligible attendance locations",
   "attendance.self.loadingAction": "Loading attendance action",
   "attendance.self.locationSetupTitle": "Attendance location is not configured",
-  "attendance.self.locationSetupRequired": "No active web attendance location is configured for this branch. Ask an administrator to configure Attendance Locations before checking in.",
+  "attendance.self.locationSetupRequired":
+    "No active web attendance location is configured for this branch. Ask an administrator to configure Attendance Locations before checking in.",
   "attendance.self.selectAttendanceLocation": "Select an attendance location",
   "attendance.self.locationSelectionTitle": "Select an attendance location",
-  "attendance.self.locationSelectionRequired": "Select one of the eligible attendance locations before checking in.",
+  "attendance.self.locationSelectionRequired":
+    "Select one of the eligible attendance locations before checking in.",
   "attendance.self.employeeLinkTitle": "Employee profile is not linked",
-  "attendance.self.employeeLinkDescription": "Your account must be linked to an active employee profile before web attendance can be used.",
+  "attendance.self.employeeLinkDescription":
+    "Your account must be linked to an active employee profile before web attendance can be used.",
   "attendance.self.policyBlockedTitle": "Web attendance is blocked by policy",
-  "attendance.self.policyWebDisabled": "Your attendance policy does not allow web check-in.",
-  "attendance.self.policyWifiBlocked": "Your attendance policy requires office Wi-Fi, which cannot be verified in a browser.",
+  "attendance.self.policyWebDisabled":
+    "Your attendance policy does not allow web check-in.",
+  "attendance.self.policyWifiBlocked":
+    "Your attendance policy requires office Wi-Fi, which cannot be verified in a browser.",
   "attendance.self.actionUnavailableTitle": "Attendance action is unavailable",
   "hr360.attendanceScheduleMode": "Attendance schedule mode",
   "hr360.attendanceSchedule": "Work & Attendance Schedule",
-  "hr360.employeeScheduleOverrideHint": "Employee weekly overrides are configured by HR and take precedence over assigned and organization schedules.",
+  "hr360.employeeScheduleOverrideHint":
+    "Employee weekly overrides are configured by HR and take precedence over assigned and organization schedules.",
   "hr360.override.effectiveFrom": "Effective from",
   "hr360.override.effectiveTo": "Effective to",
   "hr360.override.timezone": "Timezone",
@@ -738,14 +815,16 @@ export const messages = {
   "hr360.option.EMPLOYEE_OVERRIDE": "Employee override",
   "provisioning.attendanceOfficeBranch": "Office / Branch",
   "provisioning.unlinkedBranch": "Unlinked branch",
-  "provisioning.unlinkedAttendanceLocations": "Attendance locations not linked to a branch",
+  "provisioning.unlinkedAttendanceLocations":
+    "Attendance locations not linked to a branch",
   "attendance.workspace.teamAttendance": "Team Attendance",
   "attendance.admin.today": "Today",
   "attendance.admin.previousDay": "Previous day",
   "attendance.admin.nextDay": "Next day",
   "attendance.admin.emptyForDate": "No attendance records for this date.",
   "attendance.workspace.noAccessTitle": "Attendance is unavailable",
-  "attendance.workspace.noAccessDescription": "Your account is not linked to an active employee and does not have attendance management access.",
+  "attendance.workspace.noAccessDescription":
+    "Your account is not linked to an active employee and does not have attendance management access.",
   "common.clearFilters": "Clear filters",
   "common.project": "Project",
   "common.visibility": "Visibility",
@@ -933,6 +1012,23 @@ export const messages = {
   "attendance.admin.export": "Export attendance",
   "attendance.admin.exporting": "Exporting...",
   "attendance.admin.exportError": "Attendance export could not be downloaded.",
+  "attendance.monthly.title": "Monthly attendance sheet",
+  "attendance.monthly.description":
+    "View every employee and every day in the month. Select a day to add or edit attendance.",
+  "attendance.monthly.previous": "Previous month",
+  "attendance.monthly.current": "Current month",
+  "attendance.monthly.searchEmployee": "Search by employee name or code",
+  "attendance.monthly.noEmployees": "No matching employees.",
+  "attendance.monthly.editDay": "Edit daily attendance",
+  "attendance.monthly.status.PRESENT": "Present",
+  "attendance.monthly.status.LATE": "Late",
+  "attendance.monthly.status.SEVERE_LATE": "Very late",
+  "attendance.monthly.status.ABSENT": "Absent",
+  "attendance.monthly.status.LEAVE": "Leave",
+  "attendance.monthly.status.OFF": "Off",
+  "attendance.monthly.status.EARLY_LEAVE": "Left early",
+  "attendance.monthly.status.NOT_RECORDED": "Not recorded",
+  "attendance.monthly.status.NOT_EMPLOYED": "Not employed",
   "navigation.moreNavigation": "More navigation",
   "navigation.openMore": "Open more navigation",
   "navigation.more": "More",
@@ -1655,7 +1751,8 @@ export const messages = {
   "hr.quickActions": "HR actions",
   "hr.pagination": "Page {page} of {maxPage}, {total} employees",
   "hr.dashboard.title": "HR Dashboard",
-  "hr.dashboard.description": "Global HR summary scoped to the selected organization.",
+  "hr.dashboard.description":
+    "Global HR summary scoped to the selected organization.",
   "hr.dashboard.totalEmployees": "Total employees",
   "hr.dashboard.activeEmployees": "Active employees",
   "hr.dashboard.onLeaveToday": "On leave today",
@@ -1669,7 +1766,8 @@ export const messages = {
   "hr.dashboard.withoutLogin": "Employees without login access",
   "hr.dashboard.missingFace": "Employees missing face reference photo",
   "hr.employees.title": "Employees",
-  "hr.employees.description": "Global employee list with advanced filters, attendance status, and quick actions.",
+  "hr.employees.description":
+    "Global employee list with advanced filters, attendance status, and quick actions.",
   "hr.filters.title": "Advanced filters",
   "hr.filters.roleAccess": "Role / Access level",
   "hr.filters.todayStatus": "Today status",
@@ -1692,8 +1790,10 @@ export const messages = {
   "hr.quick.resetPassword": "Reset password",
   "hr.quick.documents": "Documents",
   "hr.quick.permissions": "Permissions",
-  "hr.quick.protectedAction": "This action is protected and requires confirmation. Prefer suspend/deactivate unless deletion is explicitly allowed.",
-  "hr.quick.comingSoonDetail": "This quick action opens the foundation modal now. Full workflow support is handled by the Employee 360 form or the action wizard.",
+  "hr.quick.protectedAction":
+    "This action is protected and requires confirmation. Prefer suspend/deactivate unless deletion is explicitly allowed.",
+  "hr.quick.comingSoonDetail":
+    "This quick action opens the foundation modal now. Full workflow support is handled by the Employee 360 form or the action wizard.",
   "hr.quickAction.addEmployee": "Add employee",
   "hr.quickAction.addWorkSchedule": "Add work schedule",
   "hr.quickAction.newAssignment": "New assignment",
@@ -1704,11 +1804,14 @@ export const messages = {
   "hr.quickAction.addBonus": "Add bonus",
   "hr.quickAction.manualCheckIn": "Add manual check-in",
   "hr.workGroups.title": "Work Groups",
-  "hr.workGroups.description": "Manage org-scoped work groups, managers, schedules, and attendance profiles.",
+  "hr.workGroups.description":
+    "Manage org-scoped work groups, managers, schedules, and attendance profiles.",
   "hr.teams.title": "Teams",
-  "hr.teams.description": "Manage teams, work group links, managers, and employee counts.",
+  "hr.teams.description":
+    "Manage teams, work group links, managers, and employee counts.",
   "hr.actions.title": "Employee Actions",
-  "hr.actions.description": "Apply safe employee actions with review and audit. Unsupported engines are marked coming soon.",
+  "hr.actions.description":
+    "Apply safe employee actions with review and audit. Unsupported engines are marked coming soon.",
   "hr.actions.wizard": "Action wizard",
   "hr.actions.employeeIds": "Employee IDs separated by commas",
   "hr.actions.detailsJson": "Action details as JSON",
@@ -1716,18 +1819,22 @@ export const messages = {
   "hr.actions.applied": "Action applied",
   "hr.actions.affected": "Affected employees: {count}",
   "hr.documents.title": "Employee Documents",
-  "hr.documents.description": "Track missing and expired employee documents with manual review status.",
+  "hr.documents.description":
+    "Track missing and expired employee documents with manual review status.",
   "hr.documents.missing": "Missing documents",
   "hr.documents.expired": "Expired documents",
   "hr.documents.upload": "Upload document",
   "hr.documents.none": "No documents in this section",
   "hr.orgChart.title": "Organization Chart",
-  "hr.orgChart.description": "Hierarchy foundation using offices, departments, managers, and employees.",
+  "hr.orgChart.description":
+    "Hierarchy foundation using offices, departments, managers, and employees.",
   "hr.orgChart.tree": "Organization hierarchy",
   "hr.transferLog.title": "Transfer Log",
-  "hr.transferLog.description": "Employee office, department, position, and manager transfer history.",
+  "hr.transferLog.description":
+    "Employee office, department, position, and manager transfer history.",
   "hr.titleChanges.title": "Title Changes",
-  "hr.titleChanges.description": "Employee title, position, and grade change history.",
+  "hr.titleChanges.description":
+    "Employee title, position, and grade change history.",
   "hr360.option.NOT_CONFIGURED": "Not Configured",
   "hr360.option.PENDING_REVIEW": "Pending Review",
   "hr360.option.APPROVED": "Approved",
@@ -1789,8 +1896,10 @@ export const messages = {
   "hr360.step.documents": "Documents & Face Verification",
   "hr360.step.permissions": "Permissions & Access",
   "hr360.step.review": "Review",
-  "hr360.newDescription": "Create a complete global employee profile with login, job, attendance, payroll foundation, documents, and permissions.",
-  "hr360.detailDescription": "View and update the complete Employee 360 profile.",
+  "hr360.newDescription":
+    "Create a complete global employee profile with login, job, attendance, payroll foundation, documents, and permissions.",
+  "hr360.detailDescription":
+    "View and update the complete Employee 360 profile.",
   "hr360.photoFileId": "Employee photo file ID",
   "hr360.faceReferenceFileId": "Face reference photo file ID",
   "hr360.faceVerificationConsent": "Face verification consent",
@@ -1866,7 +1975,8 @@ export const messages = {
   "hr360.documentExpiryDate": "Document expiry date",
   "hr360.aiReviewStatus": "AI review status",
   "hr360.manualReview": "Manual review",
-  "hr360.manualReviewDescription": "AI review is not implemented yet. Use manual review status and metadata until a real integration is connected.",
+  "hr360.manualReviewDescription":
+    "AI review is not implemented yet. Use manual review status and metadata until a real integration is connected.",
   "hr.todayStatus.PRESENT": "PRESENT",
   "hr.todayStatus.LATE": "LATE",
   "hr.todayStatus.ABSENT": "ABSENT",
@@ -1887,23 +1997,32 @@ export const messages = {
   "hr.action.finalize_payment": "Finalize Payment",
   "hr.action.add_grace_minutes": "Add Grace Minutes",
   "hr.foundation.requests.title": "Requests",
-  "hr.foundation.requests.description": "Requests foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.requests.description":
+    "Requests foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.attendance.title": "Attendance",
-  "hr.foundation.attendance.description": "Attendance foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.attendance.description":
+    "Attendance foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.finance.title": "Finance",
-  "hr.foundation.finance.description": "Finance foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.finance.description":
+    "Finance foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.assets.title": "Assets",
-  "hr.foundation.assets.description": "Assets foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.assets.description":
+    "Assets foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.tasks.title": "Tasks",
-  "hr.foundation.tasks.description": "Tasks foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.tasks.description":
+    "Tasks foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.hrDocuments.title": "HR Documents",
-  "hr.foundation.hrDocuments.description": "HR Documents foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.hrDocuments.description":
+    "HR Documents foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.reports.title": "Reports",
-  "hr.foundation.reports.description": "Reports foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.reports.description":
+    "Reports foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.settings.title": "HR Settings",
-  "hr.foundation.settings.description": "HR Settings foundation with permission-gated sections and no fake engine data.",
+  "hr.foundation.settings.description":
+    "HR Settings foundation with permission-gated sections and no fake engine data.",
   "hr.foundation.availableSections": "Available sections",
-  "hr.foundation.comingSoonDescription": "Foundation is visible now. Data will appear when the real engine is implemented.",
+  "hr.foundation.comingSoonDescription":
+    "Foundation is visible now. Data will appear when the real engine is implemented.",
   "hr.foundation.section.inbox": "Inbox",
   "hr.foundation.section.outgoing": "Outgoing",
   "hr.foundation.section.settings": "Settings",
@@ -2011,13 +2130,15 @@ export const messages = {
   "hr360.uploadFailed": "Photo upload failed.",
   "hr360.uploadAuthRequired": "Sign in again before uploading.",
   "hr360.photoPreviewUnavailable": "Photo preview is unavailable.",
-  "hr360.permissionsExplanation": "The employee will only see the selected pages. Direct access is still blocked by permissions.",
+  "hr360.permissionsExplanation":
+    "The employee will only see the selected pages. Direct access is still blocked by permissions.",
   "hr360.roleTemplate": "Role template",
   "hr360.searchPermissions": "Search permissions",
   "hr360.selectAllGroup": "Select all in group",
   "hr360.clearGroup": "Clear group",
   "hr360.previewAccess": "Preview accessible pages",
-  "hr360.noPagesSelected": "No pages selected. The employee will not see HR pages.",
+  "hr360.noPagesSelected":
+    "No pages selected. The employee will not see HR pages.",
   "hr360.loginEnabled": "Login enabled",
   "hr360.loginDisabled": "Login disabled",
   "hr360.enableLogin": "Enable login",
@@ -2025,9 +2146,11 @@ export const messages = {
   "hr360.mustChangePassword": "Must change password",
   "hr360.lastLogin": "Last login",
   "provisioning.addCompany": "Add company",
-  "provisioning.addCompanyDescription": "Create the company profile, subscription, limits, locations, domains, and first admin in one guided flow.",
+  "provisioning.addCompanyDescription":
+    "Create the company profile, subscription, limits, locations, domains, and first admin in one guided flow.",
   "provisioning.wizard.title": "Platform company creation flow",
-  "provisioning.wizard.description": "Complete each section, review the details, and create the organization with its default portal link.",
+  "provisioning.wizard.description":
+    "Complete each section, review the details, and create the organization with its default portal link.",
   "provisioning.step.company": "Company Information",
   "provisioning.step.subscription": "Subscription & Plan",
   "provisioning.step.limits": "Limits",
@@ -2100,7 +2223,8 @@ export const messages = {
   "provisioning.appliesTo": "Applies to",
   "provisioning.required": "Required",
   "provisioning.webWifiPolicy": "Web Wi-Fi policy",
-  "provisioning.browserCannotReadWifi": "Browser check-in cannot reliably read Wi-Fi name. Web check-in will follow the configured Web Wi-Fi policy.",
+  "provisioning.browserCannotReadWifi":
+    "Browser check-in cannot reliably read Wi-Fi name. Web check-in will follow the configured Web Wi-Fi policy.",
   "provisioning.domains": "Domains",
   "provisioning.subdomain": "Subdomain",
   "provisioning.customDomain": "Custom domain",
@@ -2110,7 +2234,8 @@ export const messages = {
   "provisioning.redirectMode": "Redirect mode",
   "provisioning.redirectUrl": "Redirect URL",
   "provisioning.inboundSourceMode": "Inbound source mode",
-  "provisioning.domainFallbackNote": "Wildcard DNS is not assumed. The company always gets a fallback path URL.",
+  "provisioning.domainFallbackNote":
+    "Wildcard DNS is not assumed. The company always gets a fallback path URL.",
   "provisioning.companyPortal": "Company portal",
   "provisioning.publicLink": "Public link",
   "provisioning.createFirstAdmin": "Create first admin",
@@ -2124,9 +2249,11 @@ export const messages = {
   "provisioning.companyAdmin": "Company admin",
   "provisioning.subscriptionExpired": "Subscription expired",
   "provisioning.limitExceeded": "Limit exceeded",
-  "provisioning.reviewCopy": "Review the company setup, then create the organization. A default company portal link and fallback path will be created automatically.",
+  "provisioning.reviewCopy":
+    "Review the company setup, then create the organization. A default company portal link and fallback path will be created automatically.",
   "provisioning.loadingCompany": "Loading company",
-  "provisioning.detailDescription": "Manage the company profile, subscription, limits, workplaces, attendance settings, Wi-Fi rules, domains, and users.",
+  "provisioning.detailDescription":
+    "Manage the company profile, subscription, limits, workplaces, attendance settings, Wi-Fi rules, domains, and users.",
   "provisioning.companyTabs": "Company settings tabs",
   "provisioning.tab.overview": "Overview",
   "provisioning.tab.subscription": "Subscription",
@@ -2139,9 +2266,12 @@ export const messages = {
   "provisioning.companyProfile": "Company profile",
   "provisioning.savedRecords": "Saved records",
   "provisioning.noRecords": "No records yet.",
-  "provisioning.usersAfterCreation": "The first admin can be created in the wizard. Additional user provisioning remains available through HR employee access.",
-  "provisioning.firstAdminCreated": "The first administrator was created and the activation check was refreshed.",
-  "provisioning.firstAdminPlatformForbidden": "First administrators for the Platform organization cannot be created here.",
+  "provisioning.usersAfterCreation":
+    "The first admin can be created in the wizard. Additional user provisioning remains available through HR employee access.",
+  "provisioning.firstAdminCreated":
+    "The first administrator was created and the activation check was refreshed.",
+  "provisioning.firstAdminPlatformForbidden":
+    "First administrators for the Platform organization cannot be created here.",
   "provisioning.organizationUsers": "Organization users",
   "provisioning.reviewCompany": "Review company",
   "provisioning.tab.publicSite": "Public Site",
@@ -2165,7 +2295,8 @@ export const messages = {
   "provisioning.showGallery": "Show gallery",
   "provisioning.showProjects": "Show projects",
   "provisioning.showLeadForm": "Show lead form",
-  "provisioning.redirectResourceNote": "Redirect uses the least POPWAM resources. Portal/gallery is hosted by POPWAM.",
+  "provisioning.redirectResourceNote":
+    "Redirect uses the least POPWAM resources. Portal/gallery is hosted by POPWAM.",
   "provisioning.legalTax": "Legal and tax",
   "provisioning.tradeName": "Trade name",
   "provisioning.commercialRegister": "Commercial register",
@@ -2216,7 +2347,8 @@ export const messages = {
   "navigation.labels.offers": "Offers",
   "navigation.labels.candidate.documents": "Candidate Documents",
   "hr.recruitment.title": "Recruitment",
-  "hr.recruitment.description": "Applicant intake, document review, interviews, offers, and employee conversion.",
+  "hr.recruitment.description":
+    "Applicant intake, document review, interviews, offers, and employee conversion.",
   "hr.recruitment.loading": "Loading recruitment",
   "hr.recruitment.loadError": "Could not load recruitment data",
   "hr.recruitment.totalApplicants": "Total applicants",
@@ -2234,15 +2366,18 @@ export const messages = {
   "hr.recruitment.jobTitle": "Job title",
   "hr.recruitment.publicApplyEnabled": "Public apply enabled",
   "hr.recruitment.applicants": "Applicants",
-  "hr.recruitment.applicantsDescription": "Review candidates before employee creation.",
+  "hr.recruitment.applicantsDescription":
+    "Review candidates before employee creation.",
   "hr.recruitment.noApplicants": "No applicants yet",
-  "hr.recruitment.noApplicantsDescription": "Public and secretary intake applicants will appear here.",
+  "hr.recruitment.noApplicantsDescription":
+    "Public and secretary intake applicants will appear here.",
   "hr.recruitment.generalApplication": "General application",
   "hr.recruitment.aiReviewStatus": "AI/OCR review status",
   "hr.recruitment.submittedAt": "Submitted at",
   "hr.recruitment.pagination": "Page {page} of {maxPage}, {total} applicants",
   "hr.recruitment.secretaryIntake": "Secretary intake",
-  "hr.recruitment.secretaryIntakeDescription": "Register a walk-in or paper applicant without creating an employee login.",
+  "hr.recruitment.secretaryIntakeDescription":
+    "Register a walk-in or paper applicant without creating an employee login.",
   "hr.recruitment.walkInApplicant": "Walk-in applicant",
   "hr.recruitment.fullName": "Full name",
   "hr.recruitment.nationality": "Nationality",
@@ -2255,7 +2390,8 @@ export const messages = {
   "hr.recruitment.applicantCreated": "Applicant created",
   "hr.recruitment.saveError": "Could not save recruitment data",
   "hr.recruitment.applicant": "Applicant",
-  "hr.recruitment.applicantNotEmployee": "This person is an applicant, not an employee yet",
+  "hr.recruitment.applicantNotEmployee":
+    "This person is an applicant, not an employee yet",
   "hr.recruitment.tab.overview": "Overview",
   "hr.recruitment.tab.personal": "Personal data",
   "hr.recruitment.tab.documents": "Documents",
@@ -2278,7 +2414,8 @@ export const messages = {
   "hr.recruitment.uploadOfficialDocument": "Upload official document",
   "hr.recruitment.extractData": "Extract data",
   "hr.recruitment.aiReview": "AI/OCR review",
-  "hr.recruitment.noFakeAi": "No AI or OCR result is approved automatically. HR must manually confirm extracted fields.",
+  "hr.recruitment.noFakeAi":
+    "No AI or OCR result is approved automatically. HR must manually confirm extracted fields.",
   "hr.recruitment.interviews": "Interviews",
   "hr.recruitment.scheduleInterview": "Schedule interview",
   "hr.recruitment.offers": "Offers",
@@ -2290,14 +2427,16 @@ export const messages = {
   "hr.recruitment.salaryCurrency": "Salary currency",
   "hr.recruitment.startDate": "Start date",
   "hr.recruitment.requiredDocuments": "Required documents",
-  "hr.recruitment.requiredDocumentsDescription": "Configure which applicant documents are required by company policy.",
+  "hr.recruitment.requiredDocumentsDescription":
+    "Configure which applicant documents are required by company policy.",
   "hr.recruitment.cv": "CV",
   "hr.recruitment.graduationCertificate": "Graduation certificate",
   "hr.recruitment.nationalId": "National ID",
   "hr.recruitment.militaryCertificate": "Military certificate",
   "hr.recruitment.lastSalaryProof": "Last salary proof",
   "hr.recruitment.experienceCertificate": "Experience certificate",
-  "hr.recruitment.sectionDescription": "Recruitment workflow foundation without fake AI approval.",
+  "hr.recruitment.sectionDescription":
+    "Recruitment workflow foundation without fake AI approval.",
   "hr.recruitment.newApplicant": "New applicant",
   "hr.recruitment.status.pending_review": "Pending review",
   "hr.recruitment.status.documents_missing": "Documents missing",
@@ -2323,7 +2462,8 @@ export const messages = {
   "provisioning.tab.accessLevels": "Access Levels",
   "verification.activationGate": "Activation gate",
   "verification.readyToActivate": "All activation requirements are satisfied.",
-  "verification.activationBlocked": "Company activation is blocked until every required item is approved.",
+  "verification.activationBlocked":
+    "Company activation is blocked until every required item is approved.",
   "verification.requiredDocuments": "Required documents",
   "verification.documentsApproved": "Required documents are approved.",
   "verification.subscription": "Subscription",
@@ -2342,12 +2482,14 @@ export const messages = {
   "mapPicker.title": "Location picker",
   "mapPicker.addressPlaceholder": "Search or enter the address",
   "mapPicker.currentLocation": "Use current location",
-  "mapPicker.providerMissing": "Map provider is not configured. Use browser location or enter coordinates under Advanced.",
+  "mapPicker.providerMissing":
+    "Map provider is not configured. Use browser location or enter coordinates under Advanced.",
   "mapPicker.advanced": "Advanced details",
   "mapPicker.geolocationUnavailable": "Browser location is not available.",
   "mapPicker.geolocationDenied": "Location permission was denied or timed out.",
   "platformSettings.title": "Platform Settings",
-  "platformSettings.description": "Manage plans, subscriptions, verification policies, modules, and domain defaults.",
+  "platformSettings.description":
+    "Manage plans, subscriptions, verification policies, modules, and domain defaults.",
   "platformSettings.error": "Could not load platform settings",
   "platformOrganizations.error.status": "Status: {status}.",
   "platformOrganizations.error.requestId": "Request id: {requestId}.",
@@ -2356,11 +2498,16 @@ export const messages = {
   "platformSettings.verificationPolicies": "Verification policies",
   "platformSettings.modules": "Modules",
   "platformSettings.domains": "Domains",
-  "platformSettings.plans.description": "Create and maintain platform plans, prices, limits, and enabled modules.",
-  "platformSettings.subscriptions.description": "Review organization subscriptions and status.",
-  "platformSettings.verification-policies.description": "Configure required documents by country, type, legal form, and owner role.",
-  "platformSettings.modules.description": "Review modules that can be assigned to plans.",
-  "platformSettings.domains.description": "Review fallback path, wildcard status, and DNS hosting notes.",
+  "platformSettings.plans.description":
+    "Create and maintain platform plans, prices, limits, and enabled modules.",
+  "platformSettings.subscriptions.description":
+    "Review organization subscriptions and status.",
+  "platformSettings.verification-policies.description":
+    "Configure required documents by country, type, legal form, and owner role.",
+  "platformSettings.modules.description":
+    "Review modules that can be assigned to plans.",
+  "platformSettings.domains.description":
+    "Review fallback path, wildcard status, and DNS hosting notes.",
   "platformSettings.domainDefaults": "Domain defaults",
   "platformSettings.wildcardEnabled": "Wildcard subdomains enabled",
   "platformSettings.wildcardDisabled": "Wildcard subdomains disabled",
@@ -2377,9 +2524,11 @@ export const messages = {
   "platformSettings.stagingRootDomain": "Staging root domain",
   "platformSettings.fallbackPath": "Fallback path",
   "platformSettings.wildcard": "Wildcard status",
-  "platformSettings.domainInstructions": "Do not mark a custom domain active until Railway and Cloudflare verification passes. When wildcard is disabled, use /sites/:slug only.",
+  "platformSettings.domainInstructions":
+    "Do not mark a custom domain active until Railway and Cloudflare verification passes. When wildcard is disabled, use /sites/:slug only.",
   "accessLevels.title": "Company access levels",
-  "accessLevels.companyScopedNote": "Access levels are scoped to this company. Company admins cannot assign platform permissions.",
+  "accessLevels.companyScopedNote":
+    "Access levels are scoped to this company. Company admins cannot assign platform permissions.",
   "accessLevels.code": "Code",
   "accessLevels.displayName": "Display name",
   "accessLevels.localizedName": "Localized name",
@@ -2414,11 +2563,13 @@ export const messages = {
   "hr.quickAction.uploadHrDocument": "Upload HR Document",
   "hr.quickAction.openHrSettings": "Open HR Settings",
   "hr.quickAction.openCompanyOffices": "Open Company Offices",
-  "hr.quickAction.openCompanyAttendanceSettings": "Open Company Attendance Settings",
+  "hr.quickAction.openCompanyAttendanceSettings":
+    "Open Company Attendance Settings",
   "hr.quickAction.futureIntegration": "Smart gate vendor integration",
   "hr.quickAction.resetPosition": "Reset position",
   "realEstate.title": "Resident access foundation",
-  "realEstate.description": "Manage compounds, buildings, units, customers, assignments, and safe QR access passes.",
+  "realEstate.description":
+    "Manage compounds, buildings, units, customers, assignments, and safe QR access passes.",
   "realEstate.projects": "Projects",
   "realEstate.buildings": "Buildings",
   "realEstate.units": "Units",
@@ -2439,7 +2590,8 @@ export const messages = {
   "realEstate.generateQr": "Generate QR",
   "realEstate.noActiveQrPass": "No active QR pass",
   "realEstate.qrAccessPass": "QR Access Pass",
-  "realEstate.smartGateNotConfigured": "QR access pass is available. Smart gate integration is not configured.",
+  "realEstate.smartGateNotConfigured":
+    "QR access pass is available. Smart gate integration is not configured.",
   "realEstate.regenerateQr": "Regenerate QR",
   "realEstate.suspendQr": "Suspend QR",
   "realEstate.revokeQr": "Revoke QR",
@@ -2456,7 +2608,8 @@ export const messages = {
   "realEstate.paymentsPlaceholder": "Payments placeholder",
   "realEstate.servicesPlaceholder": "Services placeholder",
   "realEstate.supportPlaceholder": "Support placeholder",
-  "realEstate.placeholderBody": "This area is prepared for the resident portal foundation.",
+  "realEstate.placeholderBody":
+    "This area is prepared for the resident portal foundation.",
   "realEstate.fullName": "Full name",
   "realEstate.phone": "Phone",
   "realEstate.email": "Email",
@@ -2466,34 +2619,44 @@ export const messages = {
   "navigation.groups.advertising": "Advertising",
   "platformWelcome.eyebrow": "Welcome",
   "platformWelcome.title": "Welcome to POPWAM Platform",
-  "platformWelcome.description": "Use this control center to manage organizations, verification, subscriptions, people, and platform readiness from real system data.",
-  "platformWelcome.organizations": "Create organizations through reviewed legal documents and activate them only when requirements pass.",
-  "platformWelcome.operations": "Track subscriptions, users, recruitment, attendance issues, and integration health.",
-  "platformWelcome.security": "Navigation never grants access; permissions are enforced by both the API and the interface.",
+  "platformWelcome.description":
+    "Use this control center to manage organizations, verification, subscriptions, people, and platform readiness from real system data.",
+  "platformWelcome.organizations":
+    "Create organizations through reviewed legal documents and activate them only when requirements pass.",
+  "platformWelcome.operations":
+    "Track subscriptions, users, recruitment, attendance issues, and integration health.",
+  "platformWelcome.security":
+    "Navigation never grants access; permissions are enforced by both the API and the interface.",
   "platformWelcome.doNotShowAgain": "Do not show again",
   "platformWelcome.getStarted": "Get started",
-  "platformWelcome.saveError": "The preference could not be saved. Try again before closing this message permanently.",
+  "platformWelcome.saveError":
+    "The preference could not be saved. Try again before closing this message permanently.",
   "platformDashboard.title": "Platform dashboard",
-  "platformDashboard.description": "Live platform operations, business counts, and infrastructure readiness.",
+  "platformDashboard.description":
+    "Live platform operations, business counts, and infrastructure readiness.",
   "platformDashboard.about": "About Platform",
-  "platformDashboard.realDataDescription": "Calculated from current platform records.",
+  "platformDashboard.realDataDescription":
+    "Calculated from current platform records.",
   "platformDashboard.openDetails": "Open details",
   "platformDashboard.organizations": "Organizations",
-  "platformDashboard.organizationsDescription": "Current organization lifecycle and supported-market coverage.",
+  "platformDashboard.organizationsDescription":
+    "Current organization lifecycle and supported-market coverage.",
   "platformDashboard.totalOrganizations": "Organizations",
   "platformDashboard.activeOrganizations": "Active organizations",
   "platformDashboard.draftOrganizations": "Draft and documents required",
   "platformDashboard.awaitingVerification": "Awaiting verification",
   "platformDashboard.registeredCountries": "Supported countries",
   "platformDashboard.subscriptions": "Subscriptions",
-  "platformDashboard.subscriptionsDescription": "Current subscription state and upcoming expiry workload.",
+  "platformDashboard.subscriptionsDescription":
+    "Current subscription state and upcoming expiry workload.",
   "platformDashboard.activeSubscriptions": "Active subscriptions",
   "platformDashboard.trialSubscriptions": "Trial subscriptions",
   "platformDashboard.expiringSubscriptions": "Expiring in 30 days",
   "platformDashboard.inactiveSubscriptions": "Expired or suspended",
   "platformDashboard.plansInUse": "Plans in use",
   "platformDashboard.peopleAndOperations": "People and operations",
-  "platformDashboard.peopleDescription": "Users, employees, recruitment, offices, attendance, and unresolved alerts.",
+  "platformDashboard.peopleDescription":
+    "Users, employees, recruitment, offices, attendance, and unresolved alerts.",
   "platformDashboard.platformUsers": "Platform users",
   "platformDashboard.companyUsers": "Company users",
   "platformDashboard.employees": "Employees",
@@ -2503,7 +2666,8 @@ export const messages = {
   "platformDashboard.attendanceIssues": "Attendance issues",
   "platformDashboard.unresolvedAlerts": "Unresolved alerts",
   "platformDashboard.health": "Platform health",
-  "platformDashboard.healthDescription": "Configuration and migration readiness without exposing credentials.",
+  "platformDashboard.healthDescription":
+    "Configuration and migration readiness without exposing credentials.",
   "platformDashboard.database": "Database and migrations",
   "platformDashboard.r2": "Private file storage",
   "platformDashboard.cloudflare": "Document extraction",
@@ -2515,14 +2679,17 @@ export const messages = {
   "platformDashboard.disabled": "Disabled",
   "platformDashboard.connected": "Connected",
   "platformDashboard.noneConnected": "No provider account connected",
-  "platformDashboard.emptyOrganizations": "No organization has been created yet.",
+  "platformDashboard.emptyOrganizations":
+    "No organization has been created yet.",
   "platformDashboard.zeroActive": "No active organization.",
   "platformDashboard.zeroDraft": "No draft organization.",
   "platformDashboard.zeroVerification": "The verification queue is clear.",
-  "platformDashboard.zeroCountries": "Add supported countries in Platform Settings.",
+  "platformDashboard.zeroCountries":
+    "Add supported countries in Platform Settings.",
   "platformDashboard.zeroSubscriptions": "No active subscription.",
   "platformDashboard.zeroTrials": "No trial subscription.",
-  "platformDashboard.zeroExpiring": "No subscription expires in the next 30 days.",
+  "platformDashboard.zeroExpiring":
+    "No subscription expires in the next 30 days.",
   "platformDashboard.zeroInactive": "No expired or suspended subscription.",
   "platformDashboard.zeroPlans": "No plan is currently in use.",
   "platformDashboard.zeroPlatformUsers": "No platform users found.",
@@ -2531,51 +2698,67 @@ export const messages = {
   "platformDashboard.zeroApplicants": "No applicant is awaiting review.",
   "platformDashboard.zeroInterviews": "No future interview is scheduled.",
   "platformDashboard.zeroOffices": "No active office has been configured.",
-  "platformDashboard.zeroAttendanceIssues": "No attendance issue requires review.",
+  "platformDashboard.zeroAttendanceIssues":
+    "No attendance issue requires review.",
   "platformDashboard.zeroAlerts": "No unresolved platform alert.",
   "organizationOnboarding.step1": "Step 1 of 7",
-  "organizationOnboarding.identityTitle": "Organization type, country, and responsible submitter",
-  "organizationOnboarding.identityDescription": "Create a secure review draft. Legal profile fields are completed only after document extraction and manual confirmation.",
+  "organizationOnboarding.identityTitle":
+    "Organization type, country, and responsible submitter",
+  "organizationOnboarding.identityDescription":
+    "Create a secure review draft. Legal profile fields are completed only after document extraction and manual confirmation.",
   "organizationOnboarding.workingName": "Working organization name",
   "organizationOnboarding.submitterName": "Responsible submitter name",
   "organizationOnboarding.submitterEmail": "Responsible submitter email",
   "organizationOnboarding.submitterPhone": "Responsible submitter phone",
-  "organizationOnboarding.continueToDocuments": "Create draft and upload documents",
+  "organizationOnboarding.continueToDocuments":
+    "Create draft and upload documents",
   "organizationOnboarding.documentsNext": "Documents are next",
-  "organizationOnboarding.documentsExplanation": "The draft opens directly in protected document upload. Extracted values remain suggestions until a reviewer selects and applies them.",
-  "organizationOnboarding.commercialRegister": "Commercial Register pages or images",
+  "organizationOnboarding.documentsExplanation":
+    "The draft opens directly in protected document upload. Extracted values remain suggestions until a reviewer selects and applies them.",
+  "organizationOnboarding.commercialRegister":
+    "Commercial Register pages or images",
   "organizationOnboarding.taxCard": "Tax Card front and back",
-  "organizationOnboarding.ownerIdentity": "Owner identity document front and back",
-  "organizationOnboarding.responsibleIdentity": "Responsible or authorized person identity document",
-  "organizationOnboarding.authorization": "Authorization document when the responsible person is not the owner",
-  "organizationOnboarding.laterSetup": "Branches, offices, attendance, Wi-Fi, schedules, access levels, and login methods are configured later by the company administrator.",
+  "organizationOnboarding.ownerIdentity":
+    "Owner identity document front and back",
+  "organizationOnboarding.responsibleIdentity":
+    "Responsible or authorized person identity document",
+  "organizationOnboarding.authorization":
+    "Authorization document when the responsible person is not the owner",
+  "organizationOnboarding.laterSetup":
+    "Branches, offices, attendance, Wi-Fi, schedules, access levels, and login methods are configured later by the company administrator.",
   "platformSettings.planType": "Plan type",
   "platformSettings.durationValue": "Duration",
   "platformSettings.durationUnit": "Duration unit",
   "platformSettings.allowsNoExpiry": "Allow no expiry",
   "platformSettings.allowedLoginMethods": "Allowed login methods",
   "platformSettings.metadata": "Countries, currencies, and languages",
-  "platformSettings.metadata.description": "Manage the records available in onboarding, plans, and company configuration.",
+  "platformSettings.metadata.description":
+    "Manage the records available in onboarding, plans, and company configuration.",
   "platformSettings.metadata.country": "Countries",
   "platformSettings.metadata.currency": "Currencies",
   "platformSettings.metadata.language": "Languages",
   "platformSettings.metadata.code": "Code",
   "platformSettings.metadata.order": "Order",
-  "platformSettings.metadata.empty": "No records exist in this category. Add the first record above.",
+  "platformSettings.metadata.empty":
+    "No records exist in this category. Add the first record above.",
   "platformSettings.editPlans": "Edit plans",
-  "platformSettings.createPlanFirst": "Create and activate a Platform plan before assigning a subscription.",
+  "platformSettings.createPlanFirst":
+    "Create and activate a Platform plan before assigning a subscription.",
   "sidebar.dragToReorder": "Drag to reorder section",
   "platformDashboard.loading": "Loading current platform data.",
   "platformDashboard.unavailable": "Unavailable",
-  "platformDashboard.loadError": "Platform dashboard data could not be loaded safely.",
+  "platformDashboard.loadError":
+    "Platform dashboard data could not be loaded safely.",
   "platformDashboard.requestId": "Request ID: {requestId}",
   "platformDashboard.distributions": "Organization distribution",
-  "platformDashboard.distributionsDescription": "Real organization counts grouped by lifecycle status, type, and registered country.",
+  "platformDashboard.distributionsDescription":
+    "Real organization counts grouped by lifecycle status, type, and registered country.",
   "platformDashboard.byStatus": "By status",
   "platformDashboard.byType": "By type",
   "platformDashboard.byCountry": "By country",
   "platformDashboard.planDistribution": "Plan distribution",
-  "platformDashboard.planDistributionDescription": "Organizations grouped by the plans currently assigned to their subscriptions.",
+  "platformDashboard.planDistributionDescription":
+    "Organizations grouped by the plans currently assigned to their subscriptions.",
   "platformDashboard.migrations": "Database migrations",
   "platformDashboard.notReady": "Not ready",
   "platformDashboard.integration.cameras": "Cameras",
@@ -2583,10 +2766,12 @@ export const messages = {
   "platformDashboard.integration.metaAds": "Meta Ads",
   "platformDashboard.integration.tiktokAds": "TikTok Ads",
   "platformDashboard.integrationStatus.connected": "Connected",
-  "platformDashboard.integrationStatus.configuration_required": "Configuration required",
+  "platformDashboard.integrationStatus.configuration_required":
+    "Configuration required",
   "platformDashboard.integrationStatus.disabled": "Disabled",
   "organizationLifecycle.title": "Organization lifecycle",
-  "organizationLifecycle.description": "Archive active organizations safely, restore archived records, suspend access, or permanently remove an eligible draft after reviewing the impact.",
+  "organizationLifecycle.description":
+    "Archive active organizations safely, restore archived records, suspend access, or permanently remove an eligible draft after reviewing the impact.",
   "organizationLifecycle.reason": "Reason or internal note",
   "organizationLifecycle.archive": "Archive organization",
   "organizationLifecycle.restore": "Restore organization",
@@ -2594,10 +2779,13 @@ export const messages = {
   "organizationLifecycle.impact": "Deletion impact preview",
   "organizationLifecycle.confirmName": "Type the exact organization name",
   "organizationLifecycle.deleteDraft": "Permanently delete draft",
-  "organizationLifecycle.deleteDraftWarning": "This draft is eligible for permanent deletion. Type “{name}” to confirm.",
-  "organizationLifecycle.deleteBlocked": "Permanent deletion is blocked by the organization state or linked records. Archive it instead.",
+  "organizationLifecycle.deleteDraftWarning":
+    "This draft is eligible for permanent deletion. Type “{name}” to confirm.",
+  "organizationLifecycle.deleteBlocked":
+    "Permanent deletion is blocked by the organization state or linked records. Archive it instead.",
   "organizationOnboarding.metadataRequired": "Platform metadata is required",
-  "organizationOnboarding.metadataRequiredDescription": "Add at least one supported country and language before creating an organization.",
+  "organizationOnboarding.metadataRequiredDescription":
+    "Add at least one supported country and language before creating an organization.",
   "organizationOnboarding.manageMetadata": "Manage platform metadata",
 } as const;
 

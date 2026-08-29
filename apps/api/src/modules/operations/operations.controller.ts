@@ -411,6 +411,12 @@ export class OperationsController {
   ) {
     return this.operations.listHrAttendance(user, query);
   }
+  @Get('hr/attendance/monthly') listMonthlyHrAttendance(
+    @Query() query: Record<string, unknown>,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.listMonthlyHrAttendance(user, query);
+  }
   @Get('hr/attendance/me/today') myAttendanceToday(
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
@@ -426,9 +432,39 @@ export class OperationsController {
   ) {
     return this.operations.listAttendanceSchedules(user);
   }
-  @Get('hr/employees/:employeeId/attendance-override') getEmployeeAttendanceOverride(@Param('employeeId') employeeId: string, @CurrentUser() user: AuthenticatedRequestUser) { return this.operations.getEmployeeAttendanceOverride(employeeId, user); }
-  @Post('hr/employees/:employeeId/attendance-override') createEmployeeAttendanceOverride(@Param('employeeId') employeeId: string, @Body() body: any, @CurrentUser() user: AuthenticatedRequestUser) { return this.operations.createEmployeeAttendanceOverride(employeeId, body, user); }
-  @Patch('hr/employees/:employeeId/attendance-override/:overrideId') updateEmployeeAttendanceOverride(@Param('employeeId') employeeId: string, @Param('overrideId') overrideId: string, @Body() body: any, @CurrentUser() user: AuthenticatedRequestUser) { return this.operations.updateEmployeeAttendanceOverride(employeeId, overrideId, body, user); }
+  @Get('hr/employees/:employeeId/attendance-override')
+  getEmployeeAttendanceOverride(
+    @Param('employeeId') employeeId: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.getEmployeeAttendanceOverride(employeeId, user);
+  }
+  @Post('hr/employees/:employeeId/attendance-override')
+  createEmployeeAttendanceOverride(
+    @Param('employeeId') employeeId: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.createEmployeeAttendanceOverride(
+      employeeId,
+      body,
+      user,
+    );
+  }
+  @Patch('hr/employees/:employeeId/attendance-override/:overrideId')
+  updateEmployeeAttendanceOverride(
+    @Param('employeeId') employeeId: string,
+    @Param('overrideId') overrideId: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.operations.updateEmployeeAttendanceOverride(
+      employeeId,
+      overrideId,
+      body,
+      user,
+    );
+  }
   @Get('hr/attendance/me/history') myAttendanceHistory(
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
@@ -439,7 +475,8 @@ export class OperationsController {
   ) {
     return this.operations.myWebAttendanceLocations(user);
   }
-  @Get('hr/employees/:employeeId/attendance-references') listEmployeeAttendanceReferences(
+  @Get('hr/employees/:employeeId/attendance-references')
+  listEmployeeAttendanceReferences(
     @Param('employeeId') employeeId: string,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
@@ -452,7 +489,8 @@ export class OperationsController {
   ) {
     return this.operations.reviewAttendanceReference(id, body, user);
   }
-  @Patch('hr/attendance/:id/face-verification') reviewAttendanceFaceVerification(
+  @Patch('hr/attendance/:id/face-verification')
+  reviewAttendanceFaceVerification(
     @Param('id') id: string,
     @Body() body: any,
     @CurrentUser() user: AuthenticatedRequestUser,
@@ -499,7 +537,10 @@ export class OperationsController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.withOperationsRateLimitHeaders(
-      res, req, user, 'hr-attendance-self-check-in-preflight',
+      res,
+      req,
+      user,
+      'hr-attendance-self-check-in-preflight',
       () => this.operations.preflightHrAttendanceCheckIn(body, user),
     );
   }
