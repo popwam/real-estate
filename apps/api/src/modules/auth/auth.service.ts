@@ -4,7 +4,12 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { normalizeOptionalPhoneOrThrow, normalizePhone, normalizePhoneForCountry, phonesMatch } from '../../common/phone-normalization';
+import {
+  normalizeOptionalPhoneOrThrow,
+  normalizePhone,
+  normalizePhoneForCountry,
+  phonesMatch,
+} from '../../common/phone-normalization';
 import { requireCanonicalOrganizationType } from '../../common/organization-types';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PrismaService } from '../database/prisma.service';
@@ -12,7 +17,10 @@ import {
   OWNER_ROLE_BY_ORGANIZATION_TYPE,
   ROLE_NAME_BY_USER_ROLE,
 } from './constants';
-import { AuthResponseDto, CurrentUserResponseDto } from './dto/auth-response.dto';
+import {
+  AuthResponseDto,
+  CurrentUserResponseDto,
+} from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -27,6 +35,14 @@ import {
   isOperationalOrganizationStatus,
 } from '../../common/organization-status';
 
+type LoginRejectionReason =
+  | 'USER_NOT_FOUND'
+  | 'PASSWORD_MISMATCH'
+  | 'USER_INACTIVE'
+  | 'EMPLOYEE_LOGIN_NOT_ALLOWED'
+  | 'ORGANIZATION_INACTIVE'
+  | 'LOGIN_METHOD_MISMATCH';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -40,7 +56,9 @@ export class AuthService {
     this.assertRegisterDto(dto);
 
     const email = dto.email.trim().toLowerCase();
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
     if (existingUser) {
       throw new ConflictException('Email is already registered.');
@@ -139,9 +157,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid login details.');
     }
 
-    const loginMethodAllowed = await this.loginMethodAllowed(user, identifierKind);
+    const loginMethodAllowed = await this.loginMethodAllowed(
+      user,
+      identifierKind,
+    );
     if (!loginMethodAllowed) {
-      await this.recordLoginAudit('auth.login_failed', user, identifierKind, 'login_method_not_allowed');
+      await this.recordLoginAudit(
+        'auth.login_failed',
+        user,
+        identifierKind,
+        'LOGIN_METHOD_MISMATCH',
+      );
       throw new UnauthorizedException('Invalid login details.');
     }
 
@@ -150,7 +176,7 @@ export class AuthService {
         'auth.login_failed',
         user,
         identifierKind,
-        'missing_password',
+        'PASSWORD_MISMATCH',
       );
       throw new UnauthorizedException('Invalid login details.');
     }
@@ -165,7 +191,7 @@ export class AuthService {
         'auth.login_failed',
         user,
         identifierKind,
-        'invalid_password',
+        'PASSWORD_MISMATCH',
       );
       throw new UnauthorizedException('Invalid login details.');
     }
@@ -214,7 +240,11 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive || this.hrEmployeeIsInactive(user.hrEmployeeProfile)) {
+    if (
+      !user ||
+      !user.isActive ||
+      this.hrEmployeeIsInactive(user.hrEmployeeProfile)
+    ) {
       throw new UnauthorizedException('User is not active.');
     }
 
@@ -255,7 +285,9 @@ export class AuthService {
     dto: { currentPassword?: string; newPassword?: string },
   ) {
     if (!dto.currentPassword || !dto.newPassword) {
-      throw new BadRequestException('currentPassword and newPassword are required.');
+      throw new BadRequestException(
+        'currentPassword and newPassword are required.',
+      );
     }
 
     const user = await this.prisma.user.findUnique({
@@ -296,7 +328,9 @@ export class AuthService {
     return { passwordChanged: true };
   }
 
-  async me(currentUser: AuthenticatedRequestUser): Promise<CurrentUserResponseDto> {
+  async me(
+    currentUser: AuthenticatedRequestUser,
+  ): Promise<CurrentUserResponseDto> {
     if (currentUser.session) return currentUser.session;
 
     const user = await this.prisma.user.findUnique({
@@ -316,7 +350,11 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.isActive || this.hrEmployeeIsInactive(user.hrEmployeeProfile)) {
+    if (
+      !user ||
+      !user.isActive ||
+      this.hrEmployeeIsInactive(user.hrEmployeeProfile)
+    ) {
       throw new UnauthorizedException('User is not active.');
     }
 
@@ -408,21 +446,25 @@ export class AuthService {
 
   private toPermissions(role: any) {
     return (
-      role?.permissions?.map((rolePermission: any) => rolePermission.permission.key) ??
-      []
+      role?.permissions?.map(
+        (rolePermission: any) => rolePermission.permission.key,
+      ) ?? []
     );
   }
 
   private roleName(user: any) {
     return (
       user.role?.name ??
-      ROLE_NAME_BY_USER_ROLE[user.userRole as keyof typeof ROLE_NAME_BY_USER_ROLE]
+      ROLE_NAME_BY_USER_ROLE[
+        user.userRole as keyof typeof ROLE_NAME_BY_USER_ROLE
+      ]
     );
   }
 
   private hrEmployeeIsInactive(employee: any) {
     return Boolean(
-      employee && (employee.status !== 'ACTIVE' || employee.loginEnabled === false),
+      employee &&
+      (employee.status !== 'ACTIVE' || employee.loginEnabled === false),
     );
   }
 
@@ -520,10 +562,14 @@ export class AuthService {
 
   private assertNewPassword(password: string, user: any) {
     if (password.length < 8) {
-      throw new BadRequestException('newPassword must be at least 8 characters.');
+      throw new BadRequestException(
+        'newPassword must be at least 8 characters.',
+      );
     }
     if (password === '123456') {
-      throw new BadRequestException('newPassword cannot be the temporary password.');
+      throw new BadRequestException(
+        'newPassword cannot be the temporary password.',
+      );
     }
     if (password === user.email || password === user.phone) {
       throw new BadRequestException('newPassword cannot match email or phone.');
@@ -539,32 +585,50 @@ export class AuthService {
     });
     const conflict = users.some((user) => phonesMatch(user.phone, phone));
     if (conflict) {
-      throw new ConflictException('Phone number cannot be used for this account.');
+      throw new ConflictException(
+        'Phone number cannot be used for this account.',
+      );
     }
   }
 
   private organizationCanLogin(organization: any) {
     if (!organization) return true;
     if (isBlockedOrganizationStatus(organization.status)) return false;
-    if (organization.type !== 'PLATFORM' && !isOperationalOrganizationStatus(organization.status)) {
+    if (
+      organization.type !== 'PLATFORM' &&
+      !isOperationalOrganizationStatus(organization.status)
+    ) {
       return false;
     }
     const subscription = organization.subscription;
-    if (subscription?.status && ['EXPIRED', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)) {
+    if (
+      subscription?.status &&
+      ['EXPIRED', 'SUSPENDED', 'CANCELLED'].includes(subscription.status)
+    ) {
       return false;
     }
-    if (subscription?.endsAt && subscription.endsAt <= new Date() && !subscription.autoRenew) {
+    if (
+      subscription?.endsAt &&
+      subscription.endsAt <= new Date() &&
+      !subscription.autoRenew
+    ) {
       return false;
     }
     return true;
   }
 
-  private async loginMethodAllowed(user: any, identifierKind: 'email' | 'phone') {
+  private async loginMethodAllowed(
+    user: any,
+    identifierKind: 'email' | 'phone',
+  ) {
     const organization = user.organization;
     if (!organization || organization.type === 'PLATFORM') return true;
 
-    const method = identifierKind === 'email' ? 'EMAIL_PASSWORD' : 'PHONE_PASSWORD';
-    const enabledByCompany = this.stringValues(organization.enabledLoginMethods);
+    const method =
+      identifierKind === 'email' ? 'EMAIL_PASSWORD' : 'PHONE_PASSWORD';
+    const enabledByCompany = this.stringValues(
+      organization.enabledLoginMethods,
+    );
     if (!enabledByCompany.includes(method)) return false;
 
     const planCode = organization.subscription?.planCode;
@@ -586,31 +650,49 @@ export class AuthService {
       : [];
   }
 
-  private loginFailureReason(user: any | undefined) {
-    if (!user) return 'unknown_identifier';
-    if (!user.isActive) return 'inactive_user';
-    if (!this.organizationCanLogin(user.organization)) return 'inactive_organization';
-    if (this.hrEmployeeIsInactive(user.hrEmployeeProfile)) return 'inactive_employee';
-    return 'invalid_credentials';
+  private loginFailureReason(user: any | undefined): LoginRejectionReason {
+    if (!user) return 'USER_NOT_FOUND';
+    if (!user.isActive) return 'USER_INACTIVE';
+    if (!this.organizationCanLogin(user.organization)) {
+      return 'ORGANIZATION_INACTIVE';
+    }
+    if (this.hrEmployeeIsInactive(user.hrEmployeeProfile)) {
+      return 'EMPLOYEE_LOGIN_NOT_ALLOWED';
+    }
+    return 'PASSWORD_MISMATCH';
   }
 
   private async recordLoginAudit(
     action: string,
     user: any | undefined,
     identifierKind: string,
-    failureReason?: string,
+    rejectionReason?: LoginRejectionReason,
   ) {
     try {
+      const includeDiagnostic =
+        rejectionReason && this.loginDiagnosticsEnabled();
       await this.auditLogs.record({
         action,
         entityType: 'User',
         entityId: user?.id,
         organizationId: user?.organizationId ?? null,
-        metadata: failureReason ? { identifierKind, failureReason } : { identifierKind },
+        metadata: includeDiagnostic
+          ? { identifierKind, rejectionReason }
+          : { identifierKind },
       });
     } catch {
       // Login should not fail because audit persistence is unavailable.
     }
+  }
+
+  private loginDiagnosticsEnabled() {
+    const deploymentEnvironment =
+      process.env.DEPLOYMENT_ENV?.trim().toLowerCase();
+
+    return (
+      process.env.NODE_ENV !== 'production' ||
+      deploymentEnvironment === 'staging'
+    );
   }
 
   private loginIdentifier(dto: LoginDto) {
