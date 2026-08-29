@@ -61,6 +61,7 @@ export type CurrentOrganization = {
   type: OrganizationType;
   status: OrganizationStatus;
   country?: string | null;
+  timezone?: string | null;
 };
 
 export type AuthSession = {

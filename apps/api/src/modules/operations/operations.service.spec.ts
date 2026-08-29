@@ -91,6 +91,17 @@ describe('OperationsService self attendance', () => {
             employee,
           }),
         ),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: 'attendance_1',
+          organizationId: employee.organizationId,
+          employeeId: employee.id,
+          date: new Date('2026-07-01T00:00:00.000Z'),
+          checkInAt: new Date('2026-07-01T08:00:00.000Z'),
+          checkOutAt: new Date('2026-07-01T17:00:00.000Z'),
+          status: HrAttendanceStatus.PRESENT,
+          employee,
+        }),
       },
       operationsActivity: {
         create: jest.fn().mockResolvedValue({ id: 'activity_1' }),
@@ -167,17 +178,35 @@ describe('OperationsService self attendance', () => {
 
   it('rejects a non-positive GPS accuracy policy value', () => {
     const { service } = setup();
-    expect(() => (service as any).attendanceSettingsData({ maxGpsAccuracyMeters: 0 }))
-      .toThrow('maxGpsAccuracyMeters must be greater than zero.');
-    expect(() => (service as any).attendanceSettingsData({ maxGpsAccuracyMeters: -10 }))
-      .toThrow('maxGpsAccuracyMeters must be greater than zero.');
+    expect(() =>
+      (service as any).attendanceSettingsData({ maxGpsAccuracyMeters: 0 }),
+    ).toThrow('maxGpsAccuracyMeters must be greater than zero.');
+    expect(() =>
+      (service as any).attendanceSettingsData({ maxGpsAccuracyMeters: -10 }),
+    ).toThrow('maxGpsAccuracyMeters must be greater than zero.');
   });
 
   it('uses the nearest active mobile attendance location as the primary source', async () => {
     const { prisma, service } = setup();
     prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([
-      { id: 'far', name: 'Far', latitude: 30.2, longitude: 31.2, exactRadiusMeters: 30, expandedRadiusMeters: 100, requiresReviewOutsideExactRadius: true },
-      { id: 'near', name: 'Near', latitude: 30.0444, longitude: 31.2357, exactRadiusMeters: 30, expandedRadiusMeters: 100, requiresReviewOutsideExactRadius: true },
+      {
+        id: 'far',
+        name: 'Far',
+        latitude: 30.2,
+        longitude: 31.2,
+        exactRadiusMeters: 30,
+        expandedRadiusMeters: 100,
+        requiresReviewOutsideExactRadius: true,
+      },
+      {
+        id: 'near',
+        name: 'Near',
+        latitude: 30.0444,
+        longitude: 31.2357,
+        exactRadiusMeters: 30,
+        expandedRadiusMeters: 100,
+        requiresReviewOutsideExactRadius: true,
+      },
     ]);
 
     const decision = await (service as any).attendanceLocationDecision(
@@ -186,13 +215,26 @@ describe('OperationsService self attendance', () => {
       'org_1',
     );
 
-    expect(decision).toMatchObject({ source: 'ATTENDANCE_LOCATION', matchedLocationId: 'near', mode: 'EXACT', blockingReasons: [] });
+    expect(decision).toMatchObject({
+      source: 'ATTENDANCE_LOCATION',
+      matchedLocationId: 'near',
+      mode: 'EXACT',
+      blockingReasons: [],
+    });
   });
 
   it('marks an expanded-radius location for review rather than verified acceptance', async () => {
     const { prisma, service } = setup();
     prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([
-      { id: 'location_1', name: 'Office', latitude: 30.0444, longitude: 31.2357, exactRadiusMeters: 1, expandedRadiusMeters: 500, requiresReviewOutsideExactRadius: true },
+      {
+        id: 'location_1',
+        name: 'Office',
+        latitude: 30.0444,
+        longitude: 31.2357,
+        exactRadiusMeters: 1,
+        expandedRadiusMeters: 500,
+        requiresReviewOutsideExactRadius: true,
+      },
     ]);
 
     const decision = await (service as any).attendanceLocationDecision(
@@ -220,7 +262,11 @@ describe('OperationsService self attendance', () => {
     expect(denied.blockingReasons).toContain('WEB_CHECK_IN_NOT_ALLOWED');
 
     prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
-      attendanceSettings({ requireLocation: false, requireWifi: true, webWifiPolicy: 'MANUAL_REVIEW' }),
+      attendanceSettings({
+        requireLocation: false,
+        requireWifi: true,
+        webWifiPolicy: 'MANUAL_REVIEW',
+      }),
     );
     const review = await service.preflightHrAttendanceCheckIn(
       { clientPlatform: 'WEB' },
@@ -236,23 +282,50 @@ describe('OperationsService self attendance', () => {
     const policy = attendanceSettings({ requireLocation: true });
     prisma.organizationAttendanceSettings.findUnique.mockResolvedValue(policy);
     prisma.organizationAttendanceLocation.findMany.mockResolvedValue([
-      { id: 'web-office', name: 'Web office', latitude: 30.0444, longitude: 31.2357, exactRadiusMeters: 30, expandedRadiusMeters: 50, requiresReviewOutsideExactRadius: false },
+      {
+        id: 'web-office',
+        name: 'Web office',
+        latitude: 30.0444,
+        longitude: 31.2357,
+        exactRadiusMeters: 30,
+        expandedRadiusMeters: 50,
+        requiresReviewOutsideExactRadius: false,
+      },
     ]);
 
     const preflight = await service.preflightHrAttendanceCheckIn(
-      { latitude: 30.0444, longitude: 31.2357, locationAccuracyMeters: 5, locationCapturedAt: new Date().toISOString(), clientPlatform: 'WEB' },
+      {
+        latitude: 30.0444,
+        longitude: 31.2357,
+        locationAccuracyMeters: 5,
+        locationCapturedAt: new Date().toISOString(),
+        clientPlatform: 'WEB',
+      },
       user,
     );
     expect(preflight.allowed).toBe(true);
 
     await expect(
-      service.checkInHrAttendance({ latitude: 31.2, longitude: 29.9, locationAccuracyMeters: 5, locationCapturedAt: new Date().toISOString(), clientPlatform: 'WEB' }, user),
+      service.checkInHrAttendance(
+        {
+          latitude: 31.2,
+          longitude: 29.9,
+          locationAccuracyMeters: 5,
+          locationCapturedAt: new Date().toISOString(),
+          clientPlatform: 'WEB',
+        },
+        user,
+      ),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ reasons: expect.arrayContaining(['OUTSIDE_ALLOWED_LOCATION']) }),
+      response: expect.objectContaining({
+        reasons: expect.arrayContaining(['OUTSIDE_ALLOWED_LOCATION']),
+      }),
     });
     expect(prisma.hrAttendanceRecord.create).not.toHaveBeenCalled();
     expect(prisma.organizationAttendanceLocation.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ allowedForWeb: true }) }),
+      expect.objectContaining({
+        where: expect.objectContaining({ allowedForWeb: true }),
+      }),
     );
   });
 
@@ -261,13 +334,21 @@ describe('OperationsService self attendance', () => {
     const reviewer = { ...user, permissions: ['hr.attendance.review'] };
     prisma.employeeAttendanceReferencePhoto = {
       findFirstOrThrow: jest.fn().mockResolvedValue({
-        id: 'reference_1', organizationId: 'org_1', employeeId: employee.id, fileId: 'file_1',
+        id: 'reference_1',
+        organizationId: 'org_1',
+        employeeId: employee.id,
+        fileId: 'file_1',
       }),
     };
     const tx = {
       employeeAttendanceReferencePhoto: {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        update: jest.fn().mockResolvedValue({ id: 'reference_1', status: 'APPROVED_REFERENCE' }),
+        update: jest
+          .fn()
+          .mockResolvedValue({
+            id: 'reference_1',
+            status: 'APPROVED_REFERENCE',
+          }),
       },
       hrEmployee: { update: jest.fn().mockResolvedValue(employee) },
     };
@@ -277,12 +358,24 @@ describe('OperationsService self attendance', () => {
       .mockRejectedValueOnce({ code: 'P2002' });
 
     const results = await Promise.allSettled([
-      service.reviewAttendanceReference('reference_1', { approve: true }, reviewer),
-      service.reviewAttendanceReference('reference_1', { approve: true }, reviewer),
+      service.reviewAttendanceReference(
+        'reference_1',
+        { approve: true },
+        reviewer,
+      ),
+      service.reviewAttendanceReference(
+        'reference_1',
+        { approve: true },
+        reviewer,
+      ),
     ]);
 
-    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
-    expect(results.filter((result) => result.status === 'rejected')[0]).toMatchObject({
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected')[0],
+    ).toMatchObject({
       reason: expect.any(ConflictException),
     });
   });
@@ -309,8 +402,10 @@ describe('OperationsService self attendance', () => {
   });
 
   it('blocks duplicate open check-ins', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-01T09:00:00.000Z'));
     const { prisma, service } = setup();
-    prisma.hrAttendanceRecord.findFirst.mockResolvedValueOnce({
+    prisma.hrAttendanceRecord.findFirst.mockResolvedValue({
       id: 'attendance_1',
       organizationId: employee.organizationId,
       employeeId: employee.id,
@@ -347,9 +442,9 @@ describe('OperationsService self attendance', () => {
 
     expect(result.employeeId).toBe(employee.id);
     expect(result.canCheckOut).toBe(false);
-    expect(prisma.hrAttendanceRecord.update).toHaveBeenCalledWith(
+    expect(prisma.hrAttendanceRecord.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'attendance_1' },
+        where: { id: 'attendance_1', checkOutAt: null },
         data: expect.objectContaining({
           checkOutAt: expect.any(Date),
           note: 'Leaving',
@@ -407,7 +502,9 @@ describe('OperationsService self attendance', () => {
 
     const result = await service.myAttendancePolicy(user);
 
-    expect(prisma.organizationAttendanceSettings.findUnique).toHaveBeenCalledWith({
+    expect(
+      prisma.organizationAttendanceSettings.findUnique,
+    ).toHaveBeenCalledWith({
       where: { organizationId: employee.organizationId },
     });
     expect(result).toEqual({
@@ -429,7 +526,11 @@ describe('OperationsService self attendance', () => {
   it('reports explicit self-service policy blocks without exposing admin settings', async () => {
     const { prisma, service } = setup();
     prisma.organizationAttendanceSettings.findUnique.mockResolvedValueOnce(
-      attendanceSettings({ allowWebCheckIn: false, requireWifi: true, webWifiPolicy: 'BLOCK' }),
+      attendanceSettings({
+        allowWebCheckIn: false,
+        requireWifi: true,
+        webWifiPolicy: 'BLOCK',
+      }),
     );
 
     await expect(service.myAttendancePolicy(user)).resolves.toMatchObject({
@@ -442,35 +543,70 @@ describe('OperationsService self attendance', () => {
     const { prisma, service } = setup();
     prisma.hrEmployee.findFirst.mockResolvedValueOnce(null);
 
-    await expect(service.myAttendancePolicy(user)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.myAttendancePolicy(user)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('keeps the administrative attendance settings endpoint permission-gated', async () => {
     const { service } = setup();
 
-    await expect(service.getAttendanceSettings({}, user)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.getAttendanceSettings({}, user),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('returns only active web-enabled attendance locations linked to an active branch', async () => {
     const { prisma, service } = setup();
     prisma.organizationAttendanceLocation.findMany.mockResolvedValueOnce([
       {
-        id: 'location_1', organizationId: employee.organizationId, officeId: 'branch_1', name: 'Head office', latitude: 30.0444, longitude: 31.2357,
-        exactRadiusMeters: 30, expandedRadiusMeters: 100, isActive: true, allowedForWeb: true,
+        id: 'location_1',
+        organizationId: employee.organizationId,
+        officeId: 'branch_1',
+        name: 'Head office',
+        latitude: 30.0444,
+        longitude: 31.2357,
+        exactRadiusMeters: 30,
+        expandedRadiusMeters: 100,
+        isActive: true,
+        allowedForWeb: true,
         office: { id: 'branch_1', name: 'Head office', isActive: true },
       },
       {
-        id: 'location_2', organizationId: employee.organizationId, officeId: 'branch_2', name: 'Inactive branch', latitude: 30.0444, longitude: 31.2357,
-        exactRadiusMeters: 30, expandedRadiusMeters: 100, isActive: true, allowedForWeb: true,
+        id: 'location_2',
+        organizationId: employee.organizationId,
+        officeId: 'branch_2',
+        name: 'Inactive branch',
+        latitude: 30.0444,
+        longitude: 31.2357,
+        exactRadiusMeters: 30,
+        expandedRadiusMeters: 100,
+        isActive: true,
+        allowedForWeb: true,
         office: { id: 'branch_2', name: 'Inactive branch', isActive: false },
       },
     ]);
 
     await expect(service.myWebAttendanceLocations(user)).resolves.toEqual([
-      expect.objectContaining({ id: 'location_1', branchId: 'branch_1', radiusMeters: 30, allowedForWeb: true }),
+      expect.objectContaining({
+        id: 'location_1',
+        branchId: 'branch_1',
+        radiusMeters: 30,
+        allowedForWeb: true,
+      }),
     ]);
     expect(prisma.organizationAttendanceLocation.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ organizationId: employee.organizationId, isActive: true, allowedForWeb: true, officeId: { not: null }, office: { is: { organizationId: employee.organizationId, isActive: true } } }) }),
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: employee.organizationId,
+          isActive: true,
+          allowedForWeb: true,
+          officeId: { not: null },
+          office: {
+            is: { organizationId: employee.organizationId, isActive: true },
+          },
+        }),
+      }),
     );
   });
 
@@ -500,7 +636,9 @@ describe('OperationsService self attendance', () => {
 
     expect(prisma.hrAttendanceRecord.create).not.toHaveBeenCalled();
     expect(prisma.hrAttendanceAttempt.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ decision: 'REJECTED' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ decision: 'REJECTED' }),
+      }),
     );
   });
 
@@ -518,7 +656,10 @@ describe('OperationsService self attendance', () => {
     });
 
     await expect(
-      service.checkInHrAttendance({ wifiSsid: 'Guest', clientPlatform: 'MOBILE' }, user),
+      service.checkInHrAttendance(
+        { wifiSsid: 'Guest', clientPlatform: 'MOBILE' },
+        user,
+      ),
     ).rejects.toMatchObject({
       response: expect.objectContaining({
         reasons: expect.arrayContaining(['WIFI_NOT_ALLOWED']),
@@ -717,21 +858,163 @@ describe('OperationsService self attendance', () => {
   });
 });
 
+describe('Attendance auto-close policy', () => {
+  const policy = (overrides: Record<string, unknown> = {}) => ({
+    autoCloseOpenAttendance: true,
+    regularShiftAutoCloseMode: 'END_OF_WORK_DAY',
+    autoCloseGraceMinutes: 60,
+    autoCloseAtLocalMidnight: true,
+    ...overrides,
+  });
+  const record = (overrides: Record<string, unknown> = {}) => ({
+    id: 'attendance_1',
+    organizationId: 'org_1',
+    checkInAt: new Date('2026-07-01T08:00:00.000Z'),
+    actualCheckInAt: null,
+    checkOutAt: null,
+    overnightShift: false,
+    plannedCheckOutAt: null,
+    autoCloseWarningSentAt: null,
+    employee: { userId: 'user_1' },
+    ...overrides,
+  });
+
+  it('closes a regular open record at the organization-local end of day', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record(),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-02T00:10:00.000Z'),
+    );
+    expect(plan.reason).toBe('MISSED_CHECK_OUT_END_OF_DAY');
+    expect(plan.checkOutAt.toISOString()).toBe('2026-07-01T20:59:59.000Z');
+  });
+
+  it('does not use UTC midnight for an organization in another timezone', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({ checkInAt: new Date('2026-07-02T06:00:00.000Z') }),
+      policy(),
+      'America/Los_Angeles',
+      new Date('2026-07-02T06:30:00.000Z'),
+    );
+    // It is still July 1 locally; a UTC-midnight implementation would close it.
+    expect(plan.reason).toBe('STALE_OPEN_RECORD');
+  });
+
+  it('never closes an overnight shift at midnight', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({
+        overnightShift: true,
+        plannedCheckOutAt: new Date('2026-07-02T03:00:00.000Z'),
+      }),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-02T00:10:00.000Z'),
+    );
+    expect(plan.reason).toBe('MISSED_CHECK_OUT_AFTER_SHIFT');
+    expect(plan.dueAt.toISOString()).toBe('2026-07-02T04:00:00.000Z');
+  });
+
+  it('uses the documented safety limit for an overnight record without a checkout snapshot', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({ overnightShift: true }),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-01T10:00:00.000Z'),
+    );
+    expect(plan.reason).toBe('STALE_OPEN_RECORD');
+    expect(plan.dueAt.toISOString()).toBe('2026-07-02T20:00:00.000Z');
+  });
+
+  it('uses planned check-out plus grace when configured for a regular shift', () => {
+    const service = new OperationsService({} as any);
+    const plan = (service as any).autoClosePlan(
+      record({ plannedCheckOutAt: new Date('2026-07-01T15:00:00.000Z') }),
+      policy({
+        regularShiftAutoCloseMode: 'PLANNED_CHECK_OUT_PLUS_GRACE',
+        autoCloseGraceMinutes: 45,
+      }),
+      'Europe/Chisinau',
+      new Date('2026-07-01T16:00:00.000Z'),
+    );
+    expect(plan.reason).toBe('MISSED_CHECK_OUT_AFTER_SHIFT');
+    expect(plan.checkOutAt.toISOString()).toBe('2026-07-01T15:45:00.000Z');
+  });
+
+  it('is idempotent and never marks an auto-close as location verified', async () => {
+    const prisma = {
+      hrAttendanceRecord: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const service = new OperationsService(prisma as any);
+    const result = await (service as any).autoCloseRecordIfDue(
+      record(),
+      policy(),
+      'Europe/Chisinau',
+      new Date('2026-07-02T00:10:00.000Z'),
+    );
+    expect(result.closed).toBe(false);
+    expect(prisma.hrAttendanceRecord.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          checkOutVerificationStatus: 'AUTO_CLOSED',
+          requiresManualReview: true,
+        }),
+      }),
+    );
+  });
+});
+
 describe('Employee attendance schedule overrides', () => {
   const manager = {
-    userId: 'manager_1', organizationId: 'org_1', role: 'developer_admin',
+    userId: 'manager_1',
+    organizationId: 'org_1',
+    role: 'developer_admin',
     permissions: ['hr.employees.view', 'hr.employees.update'],
   } as unknown as AuthenticatedRequestUser;
-  const employee = { id: 'employee_1', organizationId: 'org_1', attendanceScheduleMode: 'EMPLOYEE_OVERRIDE', attendanceScheduleId: 'schedule_1' };
-  const validRule = { dayOfWeek: 1, isWorkingDay: true, startTime: '09:00', endTime: '17:00', lateUntilMinutes: 15, severeLateUntilMinutes: 60, absentAfterMinutes: 60, earlyLeaveGraceMinutes: 0, overnightShift: false };
-  const validInput = { effectiveFrom: '2026-08-03', effectiveTo: null, timezone: 'Europe/Chisinau', weeklyRules: [validRule] };
+  const employee = {
+    id: 'employee_1',
+    organizationId: 'org_1',
+    attendanceScheduleMode: 'EMPLOYEE_OVERRIDE',
+    attendanceScheduleId: 'schedule_1',
+  };
+  const validRule = {
+    dayOfWeek: 1,
+    isWorkingDay: true,
+    startTime: '09:00',
+    endTime: '17:00',
+    lateUntilMinutes: 15,
+    severeLateUntilMinutes: 60,
+    absentAfterMinutes: 60,
+    earlyLeaveGraceMinutes: 0,
+    overnightShift: false,
+  };
+  const validInput = {
+    effectiveFrom: '2026-08-03',
+    effectiveTo: null,
+    timezone: 'Europe/Chisinau',
+    weeklyRules: [validRule],
+  };
 
   function setup(overrides: any[] = []) {
     const prisma = {
       hrEmployeeAttendanceScheduleOverride: {
         findFirst: jest.fn().mockResolvedValue(null),
-        create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'override_1', ...data })),
-        update: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'override_1', ...data })),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }) =>
+            Promise.resolve({ id: 'override_1', ...data }),
+          ),
+        update: jest
+          .fn()
+          .mockImplementation(({ data }) =>
+            Promise.resolve({ id: 'override_1', ...data }),
+          ),
       },
       hrAttendanceSchedule: { findFirst: jest.fn().mockResolvedValue(null) },
       hrEmployee: { findFirstOrThrow: jest.fn().mockResolvedValue(employee) },
@@ -742,78 +1025,523 @@ describe('Employee attendance schedule overrides', () => {
   it('GET returns null when no scoped override exists', async () => {
     const { prisma, service } = setup();
     jest.spyOn(service as any, 'assertExists').mockResolvedValue(employee);
-    await expect(service.getEmployeeAttendanceOverride(employee.id, manager)).resolves.toBeNull();
-    expect(prisma.hrEmployeeAttendanceScheduleOverride.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ employeeId: employee.id, organizationId: 'org_1' }) }));
+    await expect(
+      service.getEmployeeAttendanceOverride(employee.id, manager),
+    ).resolves.toBeNull();
+    expect(
+      prisma.hrEmployeeAttendanceScheduleOverride.findFirst,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          employeeId: employee.id,
+          organizationId: 'org_1',
+        }),
+      }),
+    );
   });
 
   it('POST creates and GET reloads a valid override', async () => {
     const { prisma, service } = setup();
     jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
-    const created = await service.createEmployeeAttendanceOverride(employee.id, validInput, manager);
-    expect(created).toMatchObject({ employeeId: employee.id, organizationId: 'org_1', timezone: 'Europe/Chisinau' });
-    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(created).mockResolvedValueOnce(created);
+    const created = await service.createEmployeeAttendanceOverride(
+      employee.id,
+      validInput,
+      manager,
+    );
+    expect(created).toMatchObject({
+      employeeId: employee.id,
+      organizationId: 'org_1',
+      timezone: 'Europe/Chisinau',
+    });
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst
+      .mockResolvedValueOnce(created)
+      .mockResolvedValueOnce(created);
     jest.spyOn(service as any, 'assertExists').mockResolvedValue(employee);
-    await expect(service.getEmployeeAttendanceOverride(employee.id, manager)).resolves.toMatchObject({ id: 'override_1', weeklyRules: [validRule] });
+    await expect(
+      service.getEmployeeAttendanceOverride(employee.id, manager),
+    ).resolves.toMatchObject({ id: 'override_1', weeklyRules: [validRule] });
   });
 
   it('PATCH updates a scoped override and excludes itself from overlap validation', async () => {
     const { prisma, service } = setup();
     jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
-    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'override_1' }).mockResolvedValueOnce(null);
-    await expect(service.updateEmployeeAttendanceOverride(employee.id, 'override_1', { ...validInput, weeklyRules: [{ ...validRule, lateUntilMinutes: 10 }] }, manager)).resolves.toMatchObject({ id: 'override_1' });
-    expect(prisma.hrEmployeeAttendanceScheduleOverride.findFirst).toHaveBeenLastCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: { not: 'override_1' } }) }));
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst
+      .mockResolvedValueOnce({ id: 'override_1' })
+      .mockResolvedValueOnce(null);
+    await expect(
+      service.updateEmployeeAttendanceOverride(
+        employee.id,
+        'override_1',
+        {
+          ...validInput,
+          weeklyRules: [{ ...validRule, lateUntilMinutes: 10 }],
+        },
+        manager,
+      ),
+    ).resolves.toMatchObject({ id: 'override_1' });
+    expect(
+      prisma.hrEmployeeAttendanceScheduleOverride.findFirst,
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { not: 'override_1' } }),
+      }),
+    );
   });
 
   it.each([
     ['empty weekly rules', { ...validInput, weeklyRules: [] }],
-    ['duplicate weekdays', { ...validInput, weeklyRules: [validRule, validRule] }],
-    ['invalid threshold order', { ...validInput, weeklyRules: [{ ...validRule, lateUntilMinutes: 60, severeLateUntilMinutes: 15 }] }],
-    ['negative threshold', { ...validInput, weeklyRules: [{ ...validRule, absentAfterMinutes: -1 }] }],
-    ['missing working-day time', { ...validInput, weeklyRules: [{ ...validRule, startTime: undefined }] }],
-    ['end before start without overnight', { ...validInput, weeklyRules: [{ ...validRule, startTime: '17:00', endTime: '09:00' }] }],
+    [
+      'duplicate weekdays',
+      { ...validInput, weeklyRules: [validRule, validRule] },
+    ],
+    [
+      'invalid threshold order',
+      {
+        ...validInput,
+        weeklyRules: [
+          { ...validRule, lateUntilMinutes: 60, severeLateUntilMinutes: 15 },
+        ],
+      },
+    ],
+    [
+      'negative threshold',
+      {
+        ...validInput,
+        weeklyRules: [{ ...validRule, absentAfterMinutes: -1 }],
+      },
+    ],
+    [
+      'missing working-day time',
+      { ...validInput, weeklyRules: [{ ...validRule, startTime: undefined }] },
+    ],
+    [
+      'end before start without overnight',
+      {
+        ...validInput,
+        weeklyRules: [{ ...validRule, startTime: '17:00', endTime: '09:00' }],
+      },
+    ],
     ['effective dates reversed', { ...validInput, effectiveTo: '2026-08-02' }],
     ['invalid timezone', { ...validInput, timezone: 'Invalid/Timezone' }],
   ])('rejects %s', async (_name, input) => {
     const { service } = setup();
     jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
-    await expect(service.createEmployeeAttendanceOverride(employee.id, input, manager)).rejects.toBeDefined();
+    await expect(
+      service.createEmployeeAttendanceOverride(employee.id, input, manager),
+    ).rejects.toBeDefined();
   });
 
   it('allows a non-working day without times and an overnight working day', async () => {
     const { service } = setup();
     jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
-    await expect(service.createEmployeeAttendanceOverride(employee.id, { ...validInput, weeklyRules: [{ dayOfWeek: 0, isWorkingDay: false }, { ...validRule, dayOfWeek: 1, startTime: '22:00', endTime: '06:00', overnightShift: true }] }, manager)).resolves.toMatchObject({ id: 'override_1' });
+    await expect(
+      service.createEmployeeAttendanceOverride(
+        employee.id,
+        {
+          ...validInput,
+          weeklyRules: [
+            { dayOfWeek: 0, isWorkingDay: false },
+            {
+              ...validRule,
+              dayOfWeek: 1,
+              startTime: '22:00',
+              endTime: '06:00',
+              overnightShift: true,
+            },
+          ],
+        },
+        manager,
+      ),
+    ).resolves.toMatchObject({ id: 'override_1' });
   });
 
   it('rejects inclusive touching effective-date boundaries and accepts different employees', async () => {
     const { prisma, service } = setup();
     jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue(employee);
-    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'other' });
-    await expect(service.createEmployeeAttendanceOverride(employee.id, validInput, manager)).rejects.toBeInstanceOf(ConflictException);
-    jest.spyOn(service as any, 'overrideEmployee').mockResolvedValue({ ...employee, id: 'employee_2' });
-    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(null);
-    await expect(service.createEmployeeAttendanceOverride('employee_2', validInput, manager)).resolves.toMatchObject({ employeeId: 'employee_2' });
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(
+      { id: 'other' },
+    );
+    await expect(
+      service.createEmployeeAttendanceOverride(
+        employee.id,
+        validInput,
+        manager,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    jest
+      .spyOn(service as any, 'overrideEmployee')
+      .mockResolvedValue({ ...employee, id: 'employee_2' });
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(
+      null,
+    );
+    await expect(
+      service.createEmployeeAttendanceOverride(
+        'employee_2',
+        validInput,
+        manager,
+      ),
+    ).resolves.toMatchObject({ employeeId: 'employee_2' });
   });
 
   it('resolves override before assigned, returns no fake times for a non-working day, and supports overnight checkout', async () => {
     const { prisma, service } = setup();
-    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'override_1', timezone: 'UTC', weeklyRules: [{ ...validRule, dayOfWeek: 1, startTime: '22:00', endTime: '06:00', overnightShift: true }] });
-    const resolved = await service.resolveEffectiveAttendanceSchedule({ organizationId: 'org_1', employeeId: employee.id, attendanceDate: new Date('2026-08-03T12:00:00Z') }, employee, {});
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(
+      {
+        id: 'override_1',
+        timezone: 'UTC',
+        weeklyRules: [
+          {
+            ...validRule,
+            dayOfWeek: 1,
+            startTime: '22:00',
+            endTime: '06:00',
+            overnightShift: true,
+          },
+        ],
+      },
+    );
+    const resolved = await service.resolveEffectiveAttendanceSchedule(
+      {
+        organizationId: 'org_1',
+        employeeId: employee.id,
+        attendanceDate: new Date('2026-08-03T12:00:00Z'),
+      },
+      employee,
+      {},
+    );
     expect(resolved.scheduleSource).toBe('EMPLOYEE_OVERRIDE');
-    expect(resolved.plannedCheckOutAt.getTime()).toBeGreaterThan(resolved.plannedCheckInAt.getTime());
-    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce({ id: 'override_1', timezone: 'UTC', weeklyRules: [{ dayOfWeek: 1, isWorkingDay: false }] });
-    const nonWorking = await service.resolveEffectiveAttendanceSchedule({ organizationId: 'org_1', employeeId: employee.id, attendanceDate: new Date('2026-08-03T12:00:00Z') }, employee, {});
-    expect(nonWorking).toMatchObject({ isWorkingDay: false, plannedCheckInAt: null, lateUntilAt: null });
+    expect(resolved.plannedCheckOutAt.getTime()).toBeGreaterThan(
+      resolved.plannedCheckInAt.getTime(),
+    );
+    prisma.hrEmployeeAttendanceScheduleOverride.findFirst.mockResolvedValueOnce(
+      {
+        id: 'override_1',
+        timezone: 'UTC',
+        weeklyRules: [{ dayOfWeek: 1, isWorkingDay: false }],
+      },
+    );
+    const nonWorking = await service.resolveEffectiveAttendanceSchedule(
+      {
+        organizationId: 'org_1',
+        employeeId: employee.id,
+        attendanceDate: new Date('2026-08-03T12:00:00Z'),
+      },
+      employee,
+      {},
+    );
+    expect(nonWorking).toMatchObject({
+      isWorkingDay: false,
+      plannedCheckInAt: null,
+      lateUntilAt: null,
+    });
   });
 
   it('calculates all lateness tiers without blocking an absent check-in', () => {
     const { service } = setup();
     const base = new Date('2026-08-03T09:00:00Z');
-    const schedule = { source: 'EMPLOYEE_OVERRIDE', isWorkingDay: true, plannedCheckIn: base, lateUntilAt: new Date(base.getTime() + 15 * 60000), severeLateUntilAt: new Date(base.getTime() + 60 * 60000), absentAfterAt: new Date(base.getTime() + 60 * 60000) };
-    expect((service as any).calculateScheduleLatePenalty(base, schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.PRESENT);
-    expect((service as any).calculateScheduleLatePenalty(new Date(base.getTime() + 10 * 60000), schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.LATE);
-    expect((service as any).calculateScheduleLatePenalty(new Date(base.getTime() + 20 * 60000), schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.SEVERE_LATE);
-    expect((service as any).calculateScheduleLatePenalty(new Date(base.getTime() + 61 * 60000), schedule, {}).attendanceStatus).toBe(HrAttendanceStatus.ABSENT);
+    const schedule = {
+      source: 'EMPLOYEE_OVERRIDE',
+      isWorkingDay: true,
+      plannedCheckIn: base,
+      lateUntilAt: new Date(base.getTime() + 15 * 60000),
+      severeLateUntilAt: new Date(base.getTime() + 60 * 60000),
+      absentAfterAt: new Date(base.getTime() + 60 * 60000),
+    };
+    expect(
+      (service as any).calculateScheduleLatePenalty(base, schedule, {})
+        .attendanceStatus,
+    ).toBe(HrAttendanceStatus.PRESENT);
+    expect(
+      (service as any).calculateScheduleLatePenalty(
+        new Date(base.getTime() + 10 * 60000),
+        schedule,
+        {},
+      ).attendanceStatus,
+    ).toBe(HrAttendanceStatus.LATE);
+    expect(
+      (service as any).calculateScheduleLatePenalty(
+        new Date(base.getTime() + 20 * 60000),
+        schedule,
+        {},
+      ).attendanceStatus,
+    ).toBe(HrAttendanceStatus.SEVERE_LATE);
+    expect(
+      (service as any).calculateScheduleLatePenalty(
+        new Date(base.getTime() + 61 * 60000),
+        schedule,
+        {},
+      ).attendanceStatus,
+    ).toBe(HrAttendanceStatus.ABSENT);
+  });
+});
+
+describe('HR attendance date filtering', () => {
+  const manager = {
+    userId: 'manager_1',
+    organizationId: 'org_1',
+    role: 'developer_admin',
+    permissions: ['hr.view'],
+  } as unknown as AuthenticatedRequestUser;
+
+  function setup(timezone = 'Europe/Chisinau') {
+    const prisma = {
+      organization: { findUnique: jest.fn().mockResolvedValue({ timezone }) },
+      hrAttendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+      organizationAttendanceSettings: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+    };
+    return { prisma, service: new OperationsService(prisma as any) };
+  }
+
+  it('filters a selected date using organization-local day boundaries, not UTC midnight', async () => {
+    const { prisma, service } = setup('Europe/Chisinau');
+    await service.listHrAttendance(manager, { date: '2026-08-03' });
+    expect(prisma.hrAttendanceRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: 'org_1',
+          OR: [
+            {
+              checkInAt: {
+                gte: new Date('2026-08-02T21:00:00.000Z'),
+                lt: new Date('2026-08-03T21:00:00.000Z'),
+              },
+            },
+            {
+              checkInAt: null,
+              date: {
+                gte: new Date('2026-08-02T21:00:00.000Z'),
+                lt: new Date('2026-08-03T21:00:00.000Z'),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+  });
+
+  it('uses exactly one check-in day range so overnight attendance cannot be duplicated', async () => {
+    const { prisma, service } = setup('UTC');
+    await service.listHrAttendance(manager, { date: '2026-08-03' });
+    const where = prisma.hrAttendanceRecord.findMany.mock.calls[0][0].where;
+    expect(where.OR).toEqual([
+      {
+        checkInAt: {
+          gte: new Date('2026-08-03T00:00:00.000Z'),
+          lt: new Date('2026-08-04T00:00:00.000Z'),
+        },
+      },
+      {
+        checkInAt: null,
+        date: {
+          gte: new Date('2026-08-03T00:00:00.000Z'),
+          lt: new Date('2026-08-04T00:00:00.000Z'),
+        },
+      },
+    ]);
+  });
+
+  it('rejects invalid date values safely', async () => {
+    const { service } = setup();
+    await expect(
+      service.listHrAttendance(manager, { date: '2026-02-30' }),
+    ).rejects.toThrow('valid calendar date');
+    await expect(
+      service.listHrAttendance(manager, { date: '03-08-2026' }),
+    ).rejects.toThrow('YYYY-MM-DD');
+  });
+});
+
+describe('HR attendance roster export', () => {
+  const manager = {
+    userId: 'manager_1',
+    organizationId: 'org_1',
+    role: 'developer_admin',
+    permissions: ['hr.view', 'hr.attendance.export'],
+  } as unknown as AuthenticatedRequestUser;
+
+  it('exports the complete selected month with organization-local day bounds', async () => {
+    const prisma = {
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }),
+      },
+      hrAttendanceRecord: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new OperationsService(prisma as any);
+
+    await service.exportHrAttendance(
+      { dateFrom: '2026-08-01', dateTo: '2026-08-31', format: 'csv' },
+      manager,
+    );
+
+    expect(prisma.hrAttendanceRecord.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            {
+              checkInAt: {
+                gte: new Date('2026-08-01T00:00:00.000Z'),
+                lt: new Date('2026-09-01T00:00:00.000Z'),
+              },
+            },
+            {
+              checkInAt: null,
+              date: {
+                gte: new Date('2026-08-01T00:00:00.000Z'),
+                lt: new Date('2026-09-01T00:00:00.000Z'),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+    expect(
+      prisma.hrAttendanceRecord.findMany.mock.calls[0][0],
+    ).not.toHaveProperty('take');
+  });
+
+  it('exports every active employee with channel and monthly late allowance balance', async () => {
+    const employee = {
+      id: 'employee_1',
+      organizationId: 'org_1',
+      name: 'Example Employee',
+      employeeCode: 'EMP-1',
+      status: 'ACTIVE',
+      attendanceScheduleMode: 'ORGANIZATION_DEFAULT',
+      attendanceScheduleId: null,
+      workStartDate: null,
+      hireDate: null,
+    };
+    const attendance = {
+      id: 'attendance_1',
+      employeeId: employee.id,
+      date: new Date('2026-08-04T00:00:00.000Z'),
+      plannedCheckInAt: new Date('2026-08-04T11:15:00.000Z'),
+      checkInAt: new Date('2026-08-04T11:20:00.000Z'),
+      plannedCheckOutAt: new Date('2026-08-04T19:00:00.000Z'),
+      checkOutAt: new Date('2026-08-04T19:00:00.000Z'),
+      status: 'LATE',
+      entryChannel: 'WEB',
+      attendanceSource: 'SELF_SERVICE',
+      minutesLate: 5,
+      note: null,
+    };
+    const prisma = {
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({ timezone: 'UTC' }),
+      },
+      organizationAttendanceSettings: {
+        findUnique: jest.fn().mockResolvedValue({
+          workStartTime: '11:15',
+          workEndTime: '19:00',
+          monthlyLateAllowanceHours: 4,
+          lateAllowanceChargeHoursPerDay: 1,
+          missingAttendanceDisposition: 'ABSENT',
+        }),
+      },
+      hrEmployee: { findMany: jest.fn().mockResolvedValue([employee]) },
+      hrAttendanceRecord: {
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([attendance])
+          .mockResolvedValueOnce([
+            {
+              employeeId: employee.id,
+              date: new Date('2026-08-01T00:00:00.000Z'),
+            },
+            {
+              employeeId: employee.id,
+              date: new Date('2026-08-02T00:00:00.000Z'),
+            },
+            {
+              employeeId: employee.id,
+              date: new Date('2026-08-03T00:00:00.000Z'),
+            },
+            {
+              employeeId: employee.id,
+              date: new Date('2026-08-04T00:00:00.000Z'),
+            },
+          ]),
+      },
+    };
+    const service = new OperationsService(prisma as any);
+
+    const csv = await service.exportHrAttendance(
+      {
+        date: '2026-08-04',
+        dateFrom: '2026-08-04',
+        dateTo: '2026-08-04',
+        format: 'csv',
+      },
+      manager,
+    );
+
+    expect(csv).toContain('employeeName');
+    expect(csv).toContain('Example Employee');
+    expect(csv).toContain('WEB');
+    expect(csv).toContain('lateAllowanceRemainingMinutes');
+    expect(csv).toContain(',60,240,0,');
+  });
+
+  it('classifies a missing working day using the configured leave policy', async () => {
+    const employee = {
+      id: 'employee_1',
+      organizationId: 'org_1',
+      status: 'ACTIVE',
+      workStartDate: null,
+      hireDate: null,
+    };
+    const prisma = {
+      organization: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 'org_1', timezone: 'UTC' }]),
+      },
+      organizationAttendanceSettings: {
+        findUnique: jest.fn().mockResolvedValue({
+          workStartTime: '11:15',
+          workEndTime: '19:00',
+          missingAttendanceDisposition: 'LEAVE',
+        }),
+      },
+      hrEmployee: { findMany: jest.fn().mockResolvedValue([employee]) },
+      hrAttendanceRecord: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'attendance_1' }),
+      },
+    };
+    const service = new OperationsService(prisma as any);
+    jest
+      .spyOn(service, 'resolveEffectiveAttendanceSchedule')
+      .mockResolvedValue({
+        isWorkingDay: true,
+        scheduleSource: 'ORGANIZATION_DEFAULT',
+        scheduleId: null,
+        timezone: 'UTC',
+        overnightShift: false,
+        plannedCheckInAt: new Date('2026-08-04T11:15:00.000Z'),
+        plannedCheckOutAt: new Date('2026-08-04T19:00:00.000Z'),
+        graceMinutes: 0,
+        expectedWorkMinutes: 465,
+        lateUntilAt: new Date('2026-08-04T11:30:00.000Z'),
+        severeLateUntilAt: new Date('2026-08-04T12:15:00.000Z'),
+        absentAfterAt: new Date('2026-08-04T12:15:00.000Z'),
+      } as any);
+
+    await expect(
+      service.reconcileMissingAttendanceRecords(
+        new Date('2026-08-05T01:00:00.000Z'),
+      ),
+    ).resolves.toMatchObject({ created: 1 });
+    expect(prisma.hrAttendanceRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        date: new Date('2026-08-04T00:00:00.000Z'),
+        status: 'LEAVE',
+        attendanceSource: 'AUTO_GENERATED',
+        entryChannel: 'AUTO',
+      }),
+    });
   });
 });
 
@@ -870,12 +1598,16 @@ describe('OperationsService employee access management', () => {
         update: jest.fn().mockResolvedValue({ id: 'employee_user_1' }),
       },
       role: {
-        upsert: jest.fn().mockResolvedValue({ id: 'role_1', name: 'employee_self_service' }),
+        upsert: jest
+          .fn()
+          .mockResolvedValue({ id: 'role_1', name: 'employee_self_service' }),
       },
       permission: {
-        upsert: jest.fn().mockImplementation(({ where }) =>
-          Promise.resolve({ id: `perm_${where.key}`, key: where.key }),
-        ),
+        upsert: jest
+          .fn()
+          .mockImplementation(({ where }) =>
+            Promise.resolve({ id: `perm_${where.key}`, key: where.key }),
+          ),
       },
       rolePermission: {
         upsert: jest.fn().mockResolvedValue({}),
@@ -920,7 +1652,12 @@ describe('OperationsService employee access management', () => {
       prisma,
       hashService,
       auditLogs,
-      service: new OperationsService(prisma, undefined, hashService as any, auditLogs as any),
+      service: new OperationsService(
+        prisma,
+        undefined,
+        hashService as any,
+        auditLogs as any,
+      ),
     };
   }
 
@@ -976,8 +1713,12 @@ describe('OperationsService employee access management', () => {
       companyAdmin,
     );
 
-    expect(hashService.hash).toHaveBeenCalledWith(expect.stringMatching(/^Pw-[A-Za-z0-9_-]{12}$/));
-    expect(result.temporaryPassword).toEqual(expect.stringMatching(/^Pw-[A-Za-z0-9_-]{12}$/));
+    expect(hashService.hash).toHaveBeenCalledWith(
+      expect.stringMatching(/^Pw-[A-Za-z0-9_-]{12}$/),
+    );
+    expect(result.temporaryPassword).toEqual(
+      expect.stringMatching(/^Pw-[A-Za-z0-9_-]{12}$/),
+    );
     expect(tx.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

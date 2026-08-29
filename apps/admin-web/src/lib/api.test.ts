@@ -20,14 +20,49 @@ import {
   ApiError,
   apiRequest,
   createOrganizationFirstAdminApi,
+  loginApi,
 } from "@/lib/api";
 import { getMyAttendancePolicyApi } from "@/lib/hr-settings-api";
 import { localizedApiError } from "@/lib/api-errors";
+import type { LoginPayload } from "../../../api/src/modules/auth/dto/login-payload";
 
 describe("API authentication error handling", () => {
   beforeEach(() => {
     auth.accessToken = "old-token";
     vi.stubGlobal("fetch", vi.fn());
+  });
+
+  it("sends the login DTO contract used by the Admin Web form", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          user: { id: "user-1", email: "user@example.test", role: "employee" },
+          organization: null,
+          permissions: [],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const payload = {
+      identifier: "+37369123456",
+      password: "not-a-real-password",
+    } satisfies LoginPayload;
+
+    await loginApi({
+      ...payload,
+      keepSignedIn: true,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/login$/),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    );
   });
 
   it.each([403, 500])(
@@ -36,10 +71,7 @@ describe("API authentication error handling", () => {
       vi.mocked(fetch).mockResolvedValue(
         new Response(
           JSON.stringify({
-            code:
-              status === 403
-                ? "PERMISSION_REQUIRED"
-                : "INTERNAL_ERROR",
+            code: status === 403 ? "PERMISSION_REQUIRED" : "INTERNAL_ERROR",
             message: "raw",
           }),
           {
@@ -52,9 +84,7 @@ describe("API authentication error handling", () => {
         ),
       );
 
-      await expect(apiRequest("/protected")).rejects.toBeInstanceOf(
-        ApiError,
-      );
+      await expect(apiRequest("/protected")).rejects.toBeInstanceOf(ApiError);
 
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(auth.clearTokens).not.toHaveBeenCalled();
@@ -62,130 +92,24 @@ describe("API authentication error handling", () => {
     },
   );
 
-  it(
-    "deduplicates concurrent refreshes and retries each request once",
-    async () => {
-      vi.mocked(fetch).mockImplementation(async (input, init) => {
-        const url = String(input);
+  it("deduplicates concurrent refreshes and retries each request once", async () => {
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const url = String(input);
 
-        if (url.endsWith("/auth/refresh")) {
-          return new Response(
-            JSON.stringify({
-              accessToken: "new-token",
-              refreshToken: "new-refresh-token",
-              user: {
-                id: "owner",
-                email: "owner@example.test",
-                role: "platform_owner",
-                mustChangePassword: false,
-              },
-              organization: null,
-              permissions: ["platform.settings.view"],
-              accessVersion: "v2",
-            }),
-            {
-              status: 200,
-              headers: {
-                "Content-Type": "application/json",
-              },
-            },
-          );
-        }
-
-        const authorization = new Headers(
-          init?.headers,
-        ).get("Authorization");
-
-        return authorization === "Bearer new-token"
-          ? new Response(JSON.stringify({ ok: true }), {
-              status: 200,
-              headers: {
-                "Content-Type": "application/json",
-              },
-            })
-          : new Response(
-              JSON.stringify({
-                message: "expired",
-              }),
-              {
-                status: 401,
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              },
-            );
-      });
-
-      await expect(
-        Promise.all([
-          apiRequest("/protected/one"),
-          apiRequest("/protected/two"),
-        ]),
-      ).resolves.toEqual([{ ok: true }, { ok: true }]);
-
-      const refreshCalls = vi
-        .mocked(fetch)
-        .mock.calls.filter(([input]) =>
-          String(input).endsWith("/auth/refresh"),
-        );
-
-      expect(refreshCalls).toHaveLength(1);
-      expect(auth.storeTokens).toHaveBeenCalledTimes(1);
-    },
-  );
-
-  it(
-    "maps permission failures to Arabic without exposing the raw English message",
-    () => {
-      const error = new ApiError(
-        403,
-        "Required permission is missing.",
-        {
-          code: "PERMISSION_REQUIRED",
-          requiredPermission: "platform.settings.view",
-        },
-        "request-2",
-      );
-
-      const messages: Record<string, string> = {
-        "apiErrors.permissionRequired":
-          "لا تملك الصلاحية المطلوبة لعرض هذا المحتوى.",
-        "apiErrors.requestId":
-          "معرّف الطلب: {requestId}.",
-      };
-
-      const translated = localizedApiError(
-        error,
-        (key, values) =>
-          (messages[key] ?? key).replace(
-            "{requestId}",
-            String(values?.requestId ?? ""),
-          ),
-      );
-
-      expect(translated).toContain(
-        "لا تملك الصلاحية",
-      );
-      expect(translated).toContain("request-2");
-      expect(translated).not.toContain(
-        "Required permission is missing",
-      );
-    },
-  );
-
-  it(
-    "posts the complete first-admin payload to the platform settings endpoint",
-    async () => {
-      vi.mocked(fetch).mockResolvedValue(
-        new Response(
+      if (url.endsWith("/auth/refresh")) {
+        return new Response(
           JSON.stringify({
+            accessToken: "new-token",
+            refreshToken: "new-refresh-token",
             user: {
-              id: "user-1",
-              organizationId: "company/one",
+              id: "owner",
+              email: "owner@example.test",
+              role: "platform_owner",
+              mustChangePassword: false,
             },
-            activationCheck: {
-              canActivate: true,
-            },
+            organization: null,
+            permissions: ["platform.settings.view"],
+            accessVersion: "v2",
           }),
           {
             status: 200,
@@ -193,35 +117,114 @@ describe("API authentication error handling", () => {
               "Content-Type": "application/json",
             },
           },
-        ),
-      );
+        );
+      }
 
-      const input = {
-        name: "Company Owner",
-        email: "owner@example.test",
-        phoneCountry: "MD",
-        phone: "69123456",
-        temporaryPassword:
-          "temporary-password-123",
-        roleTemplate: "company_owner" as const,
-      };
+      const authorization = new Headers(init?.headers).get("Authorization");
 
-      await createOrganizationFirstAdminApi(
-        "company/one",
-        input,
-      );
+      return authorization === "Bearer new-token"
+        ? new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+        : new Response(
+            JSON.stringify({
+              message: "expired",
+            }),
+            {
+              status: 401,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          );
+    });
 
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringMatching(
-          /\/platform\/settings\/company%2Fone\/first-admin$/,
-        ),
-        expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
+    await expect(
+      Promise.all([apiRequest("/protected/one"), apiRequest("/protected/two")]),
+    ).resolves.toEqual([{ ok: true }, { ok: true }]);
+
+    const refreshCalls = vi
+      .mocked(fetch)
+      .mock.calls.filter(([input]) => String(input).endsWith("/auth/refresh"));
+
+    expect(refreshCalls).toHaveLength(1);
+    expect(auth.storeTokens).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps permission failures to Arabic without exposing the raw English message", () => {
+    const error = new ApiError(
+      403,
+      "Required permission is missing.",
+      {
+        code: "PERMISSION_REQUIRED",
+        requiredPermission: "platform.settings.view",
+      },
+      "request-2",
     );
-  },
-  );
+
+    const messages: Record<string, string> = {
+      "apiErrors.permissionRequired":
+        "لا تملك الصلاحية المطلوبة لعرض هذا المحتوى.",
+      "apiErrors.requestId": "معرّف الطلب: {requestId}.",
+    };
+
+    const translated = localizedApiError(error, (key, values) =>
+      (messages[key] ?? key).replace(
+        "{requestId}",
+        String(values?.requestId ?? ""),
+      ),
+    );
+
+    expect(translated).toContain("لا تملك الصلاحية");
+    expect(translated).toContain("request-2");
+    expect(translated).not.toContain("Required permission is missing");
+  });
+
+  it("posts the complete first-admin payload to the platform settings endpoint", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          user: {
+            id: "user-1",
+            organizationId: "company/one",
+          },
+          activationCheck: {
+            canActivate: true,
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+
+    const input = {
+      name: "Company Owner",
+      email: "owner@example.test",
+      phoneCountry: "MD",
+      phone: "69123456",
+      temporaryPassword: "temporary-password-123",
+      roleTemplate: "company_owner" as const,
+    };
+
+    await createOrganizationFirstAdminApi("company/one", input);
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /\/platform\/settings\/company%2Fone\/first-admin$/,
+      ),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+  });
 
   it("calls the limited self-service attendance policy endpoint", async () => {
     vi.mocked(fetch).mockResolvedValue(
@@ -237,7 +240,9 @@ describe("API authentication error handling", () => {
       expect.stringMatching(/\/hr\/attendance\/me\/policy$/),
       expect.anything(),
     );
-    expect(String(vi.mocked(fetch).mock.calls[0][0])).not.toContain("/hr/attendance/settings");
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).not.toContain(
+      "/hr/attendance/settings",
+    );
   });
 
   it("does not refresh or retry an expired self-service policy request", async () => {
@@ -248,9 +253,13 @@ describe("API authentication error handling", () => {
       }),
     );
 
-    await expect(getMyAttendancePolicyApi()).rejects.toMatchObject({ status: 401 });
+    await expect(getMyAttendancePolicyApi()).rejects.toMatchObject({
+      status: 401,
+    });
 
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(/\/hr\/attendance\/me\/policy$/);
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toMatch(
+      /\/hr\/attendance\/me\/policy$/,
+    );
   });
 });

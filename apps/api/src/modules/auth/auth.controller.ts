@@ -1,17 +1,25 @@
-import { Body, Controller, Get, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { Response } from 'express';
 import { assertRateLimit } from '../../common/rate-limit/rate-limit-check';
 import { rateLimitOptionsFromEnv } from '../../common/rate-limit/rate-limit-config';
 import { RateLimitExceededException } from '../../common/rate-limit/rate-limit-exceeded.exception';
 import { setRateLimitHeaders } from '../../common/rate-limit/rate-limit-headers';
-import { buildRateLimitKey, normalizedEmailForRateLimit, requestIpHash } from '../../common/rate-limit/rate-limit-keys';
+import {
+  buildRateLimitKey,
+  normalizedEmailForRateLimit,
+  requestIpHash,
+} from '../../common/rate-limit/rate-limit-keys';
 import { RATE_LIMITER } from '../../common/rate-limit/rate-limiter';
 import type { RateLimiter } from '../../common/rate-limit/rate-limiter';
 import { AuthenticatedRequestUser } from './types/jwt-payload';
@@ -58,15 +66,18 @@ export class AuthController {
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Login with email and password.' })
+  @ApiOperation({
+    summary: 'Login with an email or phone identifier and password.',
+  })
   @ApiBody({ type: LoginDto })
   async login(
     @Body() dto: LoginDto,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
+    const identifier = dto.identifier ?? dto.email ?? dto.phone;
     const key = buildRateLimitKey('auth-login', {
-      email: normalizedEmailForRateLimit(dto.email),
+      identifier: normalizedEmailForRateLimit(identifier),
       ip: requestIpHash(request),
     });
 

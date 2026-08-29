@@ -55,7 +55,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         locationCapturedAt: location.capturedAt,
       );
       setState(() => _flowState = _AttendanceFlowState.validatingLocation);
-      final preflight = await ref.read(attendanceRepositoryProvider).checkInPreflight(locationPayload);
+      final repository = ref.read(attendanceRepositoryProvider);
+      final preflight = checkIn
+          ? await repository.checkInPreflight(locationPayload)
+          : await repository.checkOutPreflight(locationPayload);
       if (!mounted) return;
       if (!preflight.allowed) {
         setState(() {
@@ -74,12 +77,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           );
       if (!mounted) return;
       setState(() => _flowState = _AttendanceFlowState.uploadingPhoto);
-      final repository = ref.read(attendanceRepositoryProvider);
       setState(() => _flowState = _AttendanceFlowState.submitting);
       if (checkIn) {
         await repository.checkIn(payload: evidence.payload);
       } else {
-        await repository.checkOut(payload: evidence.payload);
+        await repository.checkOut(
+          attendanceRecordId:
+              ref.read(attendanceTodayProvider).asData?.value.id,
+          payload: evidence.payload,
+        );
       }
       setState(() => _evidenceIssues = evidence.issues);
       await _refresh();
@@ -267,6 +273,20 @@ class _TodayAttendanceCard extends StatelessWidget {
               label: l10n.attendanceVerificationStatus,
               value: record.verificationStatus ?? '-',
             ),
+            if (record.autoClosed) ...[
+              const _AttendanceRow(
+                label: 'Check-out method',
+                value: 'Auto-close',
+              ),
+              _AttendanceRow(
+                label: 'Location verification',
+                value: record.checkOutVerificationStatus ?? 'Not verified',
+              ),
+              _AttendanceRow(
+                label: 'Auto-close reason',
+                value: record.autoCloseReason ?? '-',
+              ),
+            ],
             _AttendanceRow(
               label: l10n.attendanceDvrStatus,
               value: record.dvrVerificationStatus ?? '-',

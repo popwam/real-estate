@@ -46,15 +46,26 @@ class AttendanceRepository {
   }
 
   Future<AttendancePreflight> checkInPreflight(AttendanceVerificationPayload payload) async {
-    final response = await _dio.post<Map<String, dynamic>>(
+    try { final response = await _dio.post<Map<String, dynamic>>(
       '/hr/attendance/check-in/preflight',
       data: {...payload.toJson(), 'clientPlatform': 'MOBILE'},
     );
     return AttendancePreflight.fromJson(response.data ?? const {});
+    } on DioException catch (error) { throw _attendanceException(error); }
+  }
+
+  Future<AttendancePreflight> checkOutPreflight(AttendanceVerificationPayload payload) async {
+    try { final response = await _dio.post<Map<String, dynamic>>(
+      '/hr/attendance/check-out/preflight',
+      data: {...payload.toJson(), 'clientPlatform': 'MOBILE'},
+    );
+    return AttendancePreflight.fromJson(response.data ?? const {});
+    } on DioException catch (error) { throw _attendanceException(error); }
   }
 
   Future<AttendanceRecord> checkOut({
     String? note,
+    String? attendanceRecordId,
     AttendanceVerificationPayload payload =
         const AttendanceVerificationPayload(),
   }) async {
@@ -63,6 +74,8 @@ class AttendanceRepository {
       data: {
         ...payload.toJson(),
         'clientPlatform': 'MOBILE',
+        if (attendanceRecordId != null && attendanceRecordId.trim().isNotEmpty)
+          'attendanceRecordId': attendanceRecordId.trim(),
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
       },
     );
@@ -113,6 +126,7 @@ class AttendanceVerificationPayload {
     this.deviceId,
     this.developerOptionsEnabled,
     this.usbDebuggingEnabled,
+    this.attendanceLocationId,
   });
 
   final double? latitude;
@@ -125,6 +139,7 @@ class AttendanceVerificationPayload {
   final String? deviceId;
   final bool? developerOptionsEnabled;
   final bool? usbDebuggingEnabled;
+  final String? attendanceLocationId;
 
   Map<String, dynamic> toJson() {
     return {
@@ -146,6 +161,8 @@ class AttendanceVerificationPayload {
         'developerOptionsEnabled': developerOptionsEnabled,
       if (usbDebuggingEnabled != null)
         'usbDebuggingEnabled': usbDebuggingEnabled,
+      if (attendanceLocationId != null && attendanceLocationId!.trim().isNotEmpty)
+        'attendanceLocationId': attendanceLocationId!.trim(),
     };
   }
 }

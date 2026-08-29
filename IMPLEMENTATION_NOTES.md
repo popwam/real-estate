@@ -1,5 +1,19 @@
 # Release candidate stabilization — 2026-07-13
 
+## Attendance auto-close and verified check-out (2026-08-05)
+
+Added and applied the additive migration `20260805120000_attendance_auto_close_and_checkout_verification` to the linked Railway environment. It adds organization attendance controls with safe defaults: `autoCloseOpenAttendance=true`, `regularShiftAutoCloseMode=END_OF_WORK_DAY`, `autoCloseGraceMinutes=60`, `autoCloseAtLocalMidnight=true`, and a tenant-selectable `checkOutOutsideLocationPolicy=BLOCK`. It also adds nullable historical-safe check-out provenance, automatic-close/review, schedule snapshot, calculated/approved-minute, and rejected-attempt linkage fields. No historical attendance or payroll data was altered.
+
+The unified auto-close planner uses the organization IANA timezone and DST-aware local-day bounds. Regular non-overnight records close at 23:59:59 of their check-in local day (or a planned check-out plus grace when selected). Explicit overnight snapshots never close at midnight; they close at planned check-out plus policy grace. Missing overnight planned checkout uses a documented 36-hour safety bound and always requires manual review. Auto-close writes `AUTO_CLOSE`, `AUTO_CLOSED`, a reason, calculated minutes, and review flags; it deliberately leaves approved minutes null and never claims location verification.
+
+`pnpm --filter api attendance:auto-close` runs the batch-safe, idempotent worker entrypoint. The `jobs-worker` invokes it independently of Admin Web on startup and every configurable 10 minutes (minimum five); it can also be used as the Railway cron command. It logs aggregate counts and shortened IDs only. Warning and completion notification events are best effort and cannot block closure.
+
+Before a new self-service check-in the API checks the employee's single open accepted record and conditionally auto-closes it with the same planner. If it is still active, the API returns `ATTENDANCE_ALREADY_CHECKED_IN` and `nextAction=CHECK_OUT`, avoiding a late P2002.
+
+Added `POST /hr/attendance/check-out/preflight`; Web and Android now capture fresh location and use it before final check-out. The final endpoint reloads the employee's open record and eligible active organization location, recomputes geofence/accuracy/freshness/Wi-Fi/photo checks, and uses a conditional update for duplicate-safe check-out. A `BLOCK` outside-location decision leaves the record open and records only an `HrAttendanceAttempt` linked to that attendance record. `MANUAL_REVIEW` closes as pending review, while `ALLOW_WITH_EVIDENCE` requires evidence and records the explicit review reason. Auto-closed state, time, reason, planned checkout, review requirement, method, and location-verification status are exposed in the attendance views; English, Arabic, and French Auto-closed badges are included.
+
+Validation passed: Prisma generate, API test suite (34 suites, 220 passed, 1 skipped), API build, Admin Web tests (14 files, 62 passed), Admin Web build, and `flutter analyze`. Railway `migrate deploy`, API deployment, and Admin Web deployment succeeded; their public health/root checks returned HTTP 200. No commit, push, deletion, or historical data modification was performed.
+
 ## Scope and outcome
 
 This slice stabilizes platform maintenance, organization provisioning, HR employee login, attendance integrity, recruitment readiness, private company-document review, RBAC, critical EN/AR/FR copy, and the production accessibility panel. No database reset, destructive migration, owner deletion, password overwrite, commit, push, or deployment was performed.
@@ -638,6 +652,18 @@ The un-applied additive schedule migration now defines required IANA timezones f
 The resolver honors the selected employee mode (`EMPLOYEE_OVERRIDE`, then active assigned schedule, then the organization policy), validates weekly schedule rules, handles IANA timezone calendar dates and overnight checkout, and returns no planned timestamps for non-working or missing-weekday rules. A selected but unavailable override/schedule returns an explicit configuration warning while safely falling back. New check-ins snapshot every resolved schedule field; arrival after `absentAfterAt` is still persisted with `ABSENT`, independently of verification and review state.
 
 The employee editor now loads the retained active override, supplies all seven editable days, validates times/thresholds before save, shows live ON_TIME/LATE/SEVERE_LATE/ABSENT boundaries, uses an active schedule dropdown for assigned mode, and uses POST for new overrides/PATCH for saved overrides. It saves an override before enabling employee-override mode, so failed partial saves do not report success or leave that mode without a valid override. Switching away retains the override for later reuse. Team attendance displays available planned/actual/snapshot thresholds with safe fallbacks for legacy rows.
+
+### Staging schema-drift repair — 2026-08-03
+
+Staging recorded `20260803090000_employee_attendance_schedules` as applied at `2026-08-03T11:29:15.256Z`, but its recorded checksum differed from the local file checksum. Read-only `information_schema`, `pg_catalog`, and a Prisma read confirmed `HrAttendanceRecord.lateUntilAt` was the P2022 column (model `HrAttendanceRecord`); `severeLateUntilAt`, `absentAfterAt`, `attendanceStatusAtCheckIn`, and enum value `SEVERE_LATE` were also absent. The existing schedule tables, employee schedule fields, and earlier snapshot columns were present.
+
+Added and applied `20260803160000_repair_employee_attendance_schedule_schema`. It only uses `ADD VALUE IF NOT EXISTS` for `SEVERE_LATE` and nullable `ADD COLUMN IF NOT EXISTS` statements for the four missing snapshot fields; it neither updates nor recalculates historical attendance. The deployed API filter now emits bounded, once-per-minute P2022 metadata only (model and column-safe identifiers), preventing repetitive Railway logs. Post-deploy authenticated reads for the Platform Owner attendance list and an active employee's today/history endpoints returned HTTP 200; the two pre-existing records retain null snapshot values.
+
+### HR Attendance organization-local date filter — 2026-08-03
+
+`GET /hr/attendance` now accepts `date=YYYY-MM-DD`. The service resolves the current organization timezone, converts the selected local calendar day to DST-aware `[start, end)` instants, and filters by check-in timestamp. Manual rows with no check-in retain their work-date fallback. This places an overnight record only on its check-in/work day, never on both days. Invalid date strings and impossible calendar dates are rejected safely.
+
+The Team Attendance filter bar now begins with Date and Previous day/Today/Next day controls. Its default comes from the authenticated organization timezone exposed in the session response, never from browser-local time or `toISOString()`. The date is normalized into `?date=YYYY-MM-DD`, survives refresh/share, resets safely to organization-local today when invalid, and participates with the existing search/status/verification filters in the stable debounced attendance query identity. Empty selected days show a date-specific message. English, Arabic, and French labels are included. No migration or database/data changes were made for this feature.
 
 ## Self-service attendance policy authorization
 

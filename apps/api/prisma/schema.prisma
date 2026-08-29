@@ -531,6 +531,7 @@ enum HrEmployeeStatus {
 enum HrAttendanceStatus {
   PRESENT
   ABSENT
+  LEAVE
   LATE
   SEVERE_LATE
   OFF
@@ -718,6 +719,36 @@ enum AttendanceVerificationStatus {
   FAILED
 }
 
+enum RegularShiftAutoCloseMode {
+  END_OF_WORK_DAY
+  PLANNED_CHECK_OUT_PLUS_GRACE
+}
+
+enum CheckOutMethod {
+  SELF_SERVICE
+  ADMIN_MANUAL
+  AUTO_CLOSE
+}
+
+enum AutoCloseReason {
+  MISSED_CHECK_OUT_END_OF_DAY
+  MISSED_CHECK_OUT_AFTER_SHIFT
+  STALE_OPEN_RECORD
+}
+
+enum CheckOutVerificationStatus {
+  VERIFIED
+  PENDING_REVIEW
+  NOT_VERIFIED
+  AUTO_CLOSED
+}
+
+enum CheckOutOutsideLocationPolicy {
+  BLOCK
+  MANUAL_REVIEW
+  ALLOW_WITH_EVIDENCE
+}
+
 enum AttendanceFaceVerificationStatus {
   NOT_REQUIRED
   PENDING
@@ -747,6 +778,19 @@ enum DvrVerificationStatus {
 enum AttendanceSource {
   SELF_SERVICE
   MANUAL_ADMIN
+  AUTO_GENERATED
+}
+
+enum AttendanceEntryChannel {
+  WEB
+  MOBILE_APP
+  MANUAL_ADMIN
+  AUTO
+}
+
+enum MissingAttendanceDisposition {
+  ABSENT
+  LEAVE
 }
 
 enum AttendancePenaltyType {
@@ -3252,6 +3296,19 @@ model HrAttendanceRecord {
   date                       DateTime
   checkInAt                  DateTime?
   checkOutAt                 DateTime?
+  actualCheckInAt            DateTime?
+  actualCheckOutAt           DateTime?
+  calculatedWorkMinutes      Int?
+  approvedWorkMinutes        Int?
+  overnightShift             Boolean?
+  checkOutMethod             CheckOutMethod?
+  checkOutVerificationStatus CheckOutVerificationStatus?
+  autoClosed                 Boolean                      @default(false)
+  autoClosedAt               DateTime?
+  autoCloseReason            AutoCloseReason?
+  autoCloseWarningSentAt     DateTime?
+  requiresManualReview       Boolean                      @default(false)
+  reviewReason               String?
   status                     HrAttendanceStatus
   note                       String?
   checkInLatitude            Float?
@@ -3291,6 +3348,7 @@ model HrAttendanceRecord {
   penaltyValue               String?
   requiresReview             Boolean                      @default(false)
   attendanceSource           AttendanceSource             @default(MANUAL_ADMIN)
+  entryChannel               AttendanceEntryChannel       @default(MANUAL_ADMIN)
   scheduleSource             AttendanceScheduleMode?
   scheduleId                 String?
   scheduleTimezone           String?
@@ -3309,6 +3367,7 @@ model HrAttendanceRecord {
   capturedImage              UploadedFile?                @relation("AttendanceRecordCapturedImage", fields: [capturedImageId], references: [id], onDelete: Restrict)
   faceVerificationReviewedBy User?                         @relation("AttendanceFaceVerificationReviewedBy", fields: [faceVerificationReviewedById], references: [id], onDelete: SetNull)
   attendanceReferenceSources EmployeeAttendanceReferencePhoto[] @relation("AttendanceReferenceSourceAttendance")
+  attempts                   HrAttendanceAttempt[]
 
   @@index([organizationId, date])
   @@index([employeeId, date])
@@ -3321,10 +3380,13 @@ model HrAttendanceAttempt {
   id                 String   @id @default(cuid())
   organizationId     String
   employeeId         String
+  attendanceRecordId String?
   attemptedAt        DateTime @default(now())
   action             String
+  actionType         String?
   source             String
   decision           String
+  result             String?
   failureReasons     Json?
   matchedLocationId  String?
   distanceMeters     Int?
@@ -3333,8 +3395,11 @@ model HrAttendanceAttempt {
   requestId          String?
   createdAt          DateTime @default(now())
 
+  attendanceRecord   HrAttendanceRecord? @relation(fields: [attendanceRecordId], references: [id], onDelete: SetNull)
+
   @@index([organizationId, employeeId, attemptedAt])
   @@index([employeeId, requestId])
+  @@index([attendanceRecordId, createdAt])
   @@map("hr_attendance_attempts")
 }
 
@@ -3395,8 +3460,16 @@ model OrganizationAttendanceSettings {
   allowMobileCheckIn            Boolean               @default(true)
   allowExpandedRadiusWithReview Boolean               @default(true)
   webWifiPolicy                 WebWifiPolicy         @default(MANUAL_REVIEW)
-  workStartTime                 String                @default("09:00")
-  workEndTime                   String                @default("17:00")
+  workStartTime                 String                @default("11:15")
+  workEndTime                   String                @default("19:00")
+  monthlyLateAllowanceHours     Int                   @default(4)
+  lateAllowanceChargeHoursPerDay Int                 @default(1)
+  missingAttendanceDisposition MissingAttendanceDisposition @default(ABSENT)
+  autoCloseOpenAttendance       Boolean               @default(true)
+  regularShiftAutoCloseMode     RegularShiftAutoCloseMode @default(END_OF_WORK_DAY)
+  autoCloseGraceMinutes         Int                   @default(60)
+  autoCloseAtLocalMidnight      Boolean               @default(true)
+  checkOutOutsideLocationPolicy CheckOutOutsideLocationPolicy @default(BLOCK)
   createdAt                     DateTime              @default(now())
   updatedAt                     DateTime              @updatedAt
   organization                  Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)

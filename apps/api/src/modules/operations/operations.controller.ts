@@ -406,9 +406,10 @@ export class OperationsController {
   }
 
   @Get('hr/attendance') listHrAttendance(
+    @Query() query: Record<string, unknown>,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
-    return this.operations.listHrAttendance(user);
+    return this.operations.listHrAttendance(user, query);
   }
   @Get('hr/attendance/me/today') myAttendanceToday(
     @CurrentUser() user: AuthenticatedRequestUser,
@@ -514,6 +515,20 @@ export class OperationsController {
       user,
       'hr-attendance-self-check-out',
       () => this.operations.checkOutHrAttendance(body, user),
+    );
+  }
+  @Post('hr/attendance/check-out/preflight') preflightHrAttendanceCheckOut(
+    @Body() body: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.withOperationsRateLimitHeaders(
+      res,
+      req,
+      user,
+      'hr-attendance-self-check-out-preflight',
+      () => this.operations.preflightHrAttendanceCheckOut(body, user),
     );
   }
   @Get('hr/attendance/:id') getHrAttendance(

@@ -14,6 +14,7 @@ type RequestWithId = Request & { requestId?: string };
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiExceptionFilter.name);
+  private readonly prismaDiagnosticLogAt = new Map<string, number>();
 
   catch(exception: unknown, host: ArgumentsHost) {
     const http = host.switchToHttp();
@@ -26,14 +27,17 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const requestId = request.requestId ?? response.getHeader('x-request-id');
     const body = this.responseBody(exception, status, requestId);
 
-    if (status >= 500) {
+    const prismaCode = this.prismaCode(exception);
+    if (status >= 500 && this.shouldLog(exception, prismaCode, request)) {
+      const prismaMeta = prismaCode === 'P2022' ? this.safePrismaMeta(exception) : undefined;
       this.logger.error({
         event: 'api_request_failed',
         requestId: requestId ?? null,
         method: request.method,
         path: sanitizeRequestPath(request.originalUrl ?? request.url ?? request.path),
         errorName: this.errorName(exception),
-        prismaCode: this.prismaCode(exception),
+        prismaCode,
+        ...(prismaMeta ? { prismaMeta, ...prismaMeta } : {}),
       });
     }
 
@@ -79,6 +83,37 @@ export class ApiExceptionFilter implements ExceptionFilter {
       if ('code' in current) {
         const code = (current as { code?: unknown }).code;
         if (typeof code === 'string' && /^P\d{4}$/.test(code)) return code;
+      }
+      current = 'cause' in current ? (current as { cause?: unknown }).cause : undefined;
+    }
+    return null;
+  }
+
+  /** P2022 diagnostics are safe, bounded and logged once per path/metadata/minute. */
+  private shouldLog(exception: unknown, prismaCode: string | null, request: RequestWithId) {
+    if (prismaCode !== 'P2022') return true;
+    const meta = this.safePrismaMeta(exception) ?? {};
+    const key = `${request.method}:${sanitizeRequestPath(request.originalUrl ?? request.url ?? request.path)}:${JSON.stringify(meta)}`;
+    const now = Date.now();
+    const previous = this.prismaDiagnosticLogAt.get(key) ?? 0;
+    if (now - previous < 60_000) return false;
+    this.prismaDiagnosticLogAt.set(key, now);
+    return true;
+  }
+
+  private safePrismaMeta(exception: unknown) {
+    let current = exception;
+    for (let depth = 0; depth < 4 && current && typeof current === 'object'; depth += 1) {
+      const meta = 'meta' in current ? (current as { meta?: unknown }).meta : undefined;
+      if (meta && typeof meta === 'object') {
+        const result: Record<string, string> = {};
+        for (const key of ['modelName', 'column', 'field_name', 'target']) {
+          const value = (meta as Record<string, unknown>)[key];
+          if (typeof value === 'string' && /^[A-Za-z0-9_.-]{1,160}$/.test(value)) result[key] = value;
+        }
+        const adapterColumn = (meta as { driverAdapterError?: { cause?: { column?: unknown } } }).driverAdapterError?.cause?.column;
+        if (typeof adapterColumn === 'string' && /^[A-Za-z0-9_.-]{1,160}$/.test(adapterColumn)) result.column = adapterColumn;
+        return Object.keys(result).length ? result : null;
       }
       current = 'cause' in current ? (current as { cause?: unknown }).cause : undefined;
     }

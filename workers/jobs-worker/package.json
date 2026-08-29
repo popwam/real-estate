@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "claim-expiry:dry-run": "node src/index.js claim-expiry --dry-run",
+    "attendance:auto-close": "node src/index.js attendance:auto-close",
     "health": "node src/index.js health",
     "start": "node src/index.js start",
     "start:once": "node src/index.js start --once"

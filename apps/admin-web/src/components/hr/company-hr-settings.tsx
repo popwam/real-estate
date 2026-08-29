@@ -186,6 +186,28 @@ function AttendanceSettingsForm({ settings, isPending, onSubmit }: { settings: A
       <Field id="secondSlice" label={t("companySettings.secondLateSlice")}><Input id="secondSlice" type="number" value={values.secondLateSliceMinutes} onChange={(event) => setValues((current) => ({ ...current, secondLateSliceMinutes: Number(event.target.value) }))} /></Field>
       <Field id="workStart" label={t("companySettings.workStartTime")}><Input id="workStart" value={values.workStartTime} onChange={(event) => setValues((current) => ({ ...current, workStartTime: event.target.value }))} /></Field>
       <Field id="workEnd" label={t("companySettings.workEndTime")}><Input id="workEnd" value={values.workEndTime} onChange={(event) => setValues((current) => ({ ...current, workEndTime: event.target.value }))} /></Field>
+      <Field id="monthlyLateAllowanceHours" label={t("companySettings.monthlyLateAllowanceHours")}><Input id="monthlyLateAllowanceHours" type="number" min="0" value={values.monthlyLateAllowanceHours} onChange={(event) => setValues((current) => ({ ...current, monthlyLateAllowanceHours: Number(event.target.value) }))} /></Field>
+      <Field id="lateAllowanceChargeHoursPerDay" label={t("companySettings.lateAllowanceChargeHoursPerDay")}><Input id="lateAllowanceChargeHoursPerDay" type="number" min="1" value={values.lateAllowanceChargeHoursPerDay} onChange={(event) => setValues((current) => ({ ...current, lateAllowanceChargeHoursPerDay: Number(event.target.value) }))} /></Field>
+      <Field id="missingAttendanceDisposition" label={t("companySettings.missingAttendanceDisposition")}>
+        <select id="missingAttendanceDisposition" className="ui-input" value={values.missingAttendanceDisposition} onChange={(event) => setValues((current) => ({ ...current, missingAttendanceDisposition: event.target.value as AttendanceSettings["missingAttendanceDisposition"] }))}>
+          <option value="ABSENT">{t("companySettings.missingAttendanceAbsent")}</option>
+          <option value="LEAVE">{t("companySettings.missingAttendanceLeave")}</option>
+        </select>
+      </Field>
+      <Field id="autoCloseGraceMinutes" label={t("companySettings.autoCloseGraceMinutes")}><Input id="autoCloseGraceMinutes" type="number" min="0" value={values.autoCloseGraceMinutes} onChange={(event) => setValues((current) => ({ ...current, autoCloseGraceMinutes: Number(event.target.value) }))} /></Field>
+      <Field id="regularShiftAutoCloseMode" label={t("companySettings.regularShiftAutoCloseMode")}>
+        <select id="regularShiftAutoCloseMode" className="ui-input" value={values.regularShiftAutoCloseMode} onChange={(event) => setValues((current) => ({ ...current, regularShiftAutoCloseMode: event.target.value as AttendanceSettings["regularShiftAutoCloseMode"] }))}>
+          <option value="END_OF_WORK_DAY">{t("companySettings.autoCloseEndOfDay")}</option>
+          <option value="PLANNED_CHECK_OUT_PLUS_GRACE">{t("companySettings.autoCloseAfterShift")}</option>
+        </select>
+      </Field>
+      <Field id="checkOutOutsideLocationPolicy" label={t("companySettings.checkOutOutsideLocationPolicy")}>
+        <select id="checkOutOutsideLocationPolicy" className="ui-input" value={values.checkOutOutsideLocationPolicy} onChange={(event) => setValues((current) => ({ ...current, checkOutOutsideLocationPolicy: event.target.value as AttendanceSettings["checkOutOutsideLocationPolicy"] }))}>
+          <option value="BLOCK">{t("companySettings.blockWeb")}</option>
+          <option value="MANUAL_REVIEW">{t("companySettings.manualReview")}</option>
+          <option value="ALLOW_WITH_EVIDENCE">{t("companySettings.allowWithEvidence")}</option>
+        </select>
+      </Field>
       <Field id="webWifiPolicy" label={t("companySettings.webWifiPolicy")}>
         <select id="webWifiPolicy" className="ui-input" value={values.webWifiPolicy} onChange={(event) => setValues((current) => ({ ...current, webWifiPolicy: event.target.value as AttendanceSettings["webWifiPolicy"] }))}>
           <option value="MANUAL_REVIEW">{t("companySettings.manualReview")}</option>
@@ -193,7 +215,7 @@ function AttendanceSettingsForm({ settings, isPending, onSubmit }: { settings: A
           <option value="IGNORE_FOR_WEB">{t("companySettings.ignoreForWeb")}</option>
         </select>
       </Field>
-      {(["requireLocation", "requireWifi", "requirePhoto", "requireDvrReview", "allowWebCheckIn", "allowMobileCheckIn"] as const).map((key) => (
+      {(["requireLocation", "requireWifi", "requirePhoto", "requireDvrReview", "allowWebCheckIn", "allowMobileCheckIn", "autoCloseOpenAttendance", "autoCloseAtLocalMidnight"] as const).map((key) => (
         <label key={key} className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={Boolean(values[key])} onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.checked }))} />
           {t(`companySettings.${key}`)}

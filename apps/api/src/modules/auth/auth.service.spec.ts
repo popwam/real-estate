@@ -2,6 +2,8 @@ import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalDeploymentEnv = process.env.DEPLOYMENT_ENV;
   const activeUser = {
     id: 'user_1',
     organizationId: 'org_1',
@@ -38,7 +40,13 @@ describe('AuthService', () => {
         create: jest.fn().mockResolvedValue({ id: 'refresh_1' }),
       },
       platformPlan: {
-        findUnique: jest.fn().mockResolvedValue({ isActive: true, isArchived: false, allowedLoginMethods: ['EMAIL_PASSWORD', 'PHONE_PASSWORD'] }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            isActive: true,
+            isArchived: false,
+            allowedLoginMethods: ['EMAIL_PASSWORD', 'PHONE_PASSWORD'],
+          }),
       },
       ...overrides,
     } as any;
@@ -69,11 +77,32 @@ describe('AuthService', () => {
     };
   }
 
+  beforeEach(() => {
+    process.env.NODE_ENV = 'test';
+    delete process.env.DEPLOYMENT_ENV;
+  });
+
+  afterAll(() => {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+    if (originalDeploymentEnv === undefined) {
+      delete process.env.DEPLOYMENT_ENV;
+    } else {
+      process.env.DEPLOYMENT_ENV = originalDeploymentEnv;
+    }
+  });
+
   it('keeps email and password login working', async () => {
     const { service, prisma } = makeService();
 
     await expect(
-      service.login({ email: 'OWNER@example.com', password: 'secret-password' }),
+      service.login({
+        email: 'OWNER@example.com',
+        password: 'secret-password',
+      }),
     ).resolves.toMatchObject({
       accessToken: 'access.jwt',
       refreshToken: 'refresh.jwt',
@@ -89,7 +118,10 @@ describe('AuthService', () => {
     const { service, prisma } = makeService();
 
     await expect(
-      service.login({ identifier: '+201001234567', password: 'secret-password' }),
+      service.login({
+        identifier: '+201001234567',
+        password: 'secret-password',
+      }),
     ).resolves.toMatchObject({
       user: { email: 'owner@example.com', phone: '+20 100 123 4567' },
     });
@@ -107,46 +139,90 @@ describe('AuthService', () => {
     });
 
     await expect(
-      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+      service.login({
+        email: 'owner@example.com',
+        password: 'secret-password',
+      }),
     ).resolves.toMatchObject({
       user: { mustChangePassword: true },
     });
   });
 
   it('uses a generic error for wrong passwords', async () => {
-    const { service, hashService } = makeService();
+    const { service, hashService, auditLogs } = makeService();
     hashService.verify.mockResolvedValue(false);
 
     await expect(
-      service.login({ identifier: '+201001234567', password: 'wrong-password' }),
+      service.login({
+        identifier: '+201001234567',
+        password: 'wrong-password',
+      }),
     ).rejects.toThrow(new UnauthorizedException('Invalid login details.'));
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'phone',
+          rejectionReason: 'PASSWORD_MISMATCH',
+        },
+      }),
+    );
   });
 
   it('uses a generic error for unknown phone numbers', async () => {
-    const { service, prisma, hashService } = makeService();
+    const { service, prisma, hashService, auditLogs } = makeService();
     prisma.user.findMany.mockResolvedValue([]);
 
     await expect(
-      service.login({ identifier: '+201009999999', password: 'secret-password' }),
+      service.login({
+        identifier: '+201009999999',
+        password: 'secret-password',
+      }),
     ).rejects.toThrow('Invalid login details.');
     expect(hashService.verify).not.toHaveBeenCalled();
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'phone',
+          rejectionReason: 'USER_NOT_FOUND',
+        },
+      }),
+    );
   });
 
   it('blocks inactive users', async () => {
-    const { service, prisma } = makeService();
-    prisma.user.findMany.mockResolvedValue([{ ...activeUser, isActive: false }]);
+    const { service, prisma, auditLogs } = makeService();
+    prisma.user.findMany.mockResolvedValue([
+      { ...activeUser, isActive: false },
+    ]);
 
     await expect(
-      service.login({ identifier: '+201001234567', password: 'secret-password' }),
+      service.login({
+        identifier: '+201001234567',
+        password: 'secret-password',
+      }),
     ).rejects.toThrow('Invalid login details.');
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'phone',
+          rejectionReason: 'USER_INACTIVE',
+        },
+      }),
+    );
   });
 
   it('blocks login for users missing a password and records a safe diagnostic', async () => {
     const { service, prisma, hashService, auditLogs } = makeService();
-    prisma.user.findUnique.mockResolvedValue({ ...activeUser, passwordHash: null });
+    prisma.user.findUnique.mockResolvedValue({
+      ...activeUser,
+      passwordHash: null,
+    });
 
     await expect(
-      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+      service.login({
+        email: 'owner@example.com',
+        password: 'secret-password',
+      }),
     ).rejects.toThrow('Invalid login details.');
     expect(hashService.verify).not.toHaveBeenCalled();
     expect(auditLogs.record).toHaveBeenCalledWith(
@@ -154,14 +230,14 @@ describe('AuthService', () => {
         action: 'auth.login_failed',
         metadata: {
           identifierKind: 'email',
-          failureReason: 'missing_password',
+          rejectionReason: 'PASSWORD_MISMATCH',
         },
       }),
     );
   });
 
   it('blocks suspended organizations', async () => {
-    const { service, prisma } = makeService();
+    const { service, prisma, auditLogs } = makeService();
     prisma.user.findMany.mockResolvedValue([
       {
         ...activeUser,
@@ -170,30 +246,140 @@ describe('AuthService', () => {
     ]);
 
     await expect(
-      service.login({ identifier: '+201001234567', password: 'secret-password' }),
+      service.login({
+        identifier: '+201001234567',
+        password: 'secret-password',
+      }),
     ).rejects.toThrow('Invalid login details.');
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'phone',
+          rejectionReason: 'ORGANIZATION_INACTIVE',
+        },
+      }),
+    );
+  });
+
+  it('blocks identifiers disabled by the organization login contract', async () => {
+    const emailOnlyUser = {
+      ...activeUser,
+      organization: {
+        ...activeUser.organization,
+        enabledLoginMethods: ['EMAIL_PASSWORD'],
+      },
+    };
+    const { service, prisma, auditLogs } = makeService();
+    prisma.user.findMany.mockResolvedValue([emailOnlyUser]);
+
+    await expect(
+      service.login({
+        identifier: '+201001234567',
+        password: 'secret-password',
+      }),
+    ).rejects.toThrow('Invalid login details.');
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'phone',
+          rejectionReason: 'LOGIN_METHOD_MISMATCH',
+        },
+      }),
+    );
   });
 
   it('blocks company login while the organization is awaiting verification', async () => {
     const { service, prisma } = makeService();
     prisma.user.findUnique.mockResolvedValue({
       ...activeUser,
-      organization: { ...activeUser.organization, status: 'DOCUMENTS_REQUIRED' },
+      organization: {
+        ...activeUser.organization,
+        status: 'DOCUMENTS_REQUIRED',
+      },
     });
     await expect(
-      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+      service.login({
+        email: 'owner@example.com',
+        password: 'secret-password',
+      }),
     ).rejects.toThrow('Invalid login details.');
   });
 
   it('blocks a login-disabled employee account', async () => {
-    const { service, prisma } = makeService();
+    const { service, prisma, auditLogs } = makeService();
     prisma.user.findUnique.mockResolvedValue({
       ...activeUser,
       hrEmployeeProfile: { status: 'ACTIVE', loginEnabled: false },
     });
     await expect(
-      service.login({ email: 'owner@example.com', password: 'secret-password' }),
+      service.login({
+        email: 'owner@example.com',
+        password: 'secret-password',
+      }),
     ).rejects.toThrow('Invalid login details.');
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'email',
+          rejectionReason: 'EMPLOYEE_LOGIN_NOT_ALLOWED',
+        },
+      }),
+    );
+  });
+
+  it('allows an active employee to use a supported phone identifier', async () => {
+    const employeeUser = {
+      ...activeUser,
+      hrEmployeeProfile: { status: 'ACTIVE', loginEnabled: true },
+    };
+    const { service, prisma } = makeService();
+    prisma.user.findMany.mockResolvedValue([employeeUser]);
+
+    await expect(
+      service.login({
+        identifier: '+201001234567',
+        password: 'secret-password',
+      }),
+    ).resolves.toMatchObject({ user: { phone: '+20 100 123 4567' } });
+  });
+
+  it('does not persist rejection diagnostics in production', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.DEPLOYMENT_ENV;
+    const { service, prisma, auditLogs } = makeService();
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.login({
+        email: 'missing@example.com',
+        password: 'secret-password',
+      }),
+    ).rejects.toThrow('Invalid login details.');
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: { identifierKind: 'email' } }),
+    );
+  });
+
+  it('persists safe rejection diagnostics in staging', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.DEPLOYMENT_ENV = 'staging';
+    const { service, prisma, auditLogs } = makeService();
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.login({
+        email: 'missing@example.com',
+        password: 'secret-password',
+      }),
+    ).rejects.toThrow('Invalid login details.');
+    expect(auditLogs.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: {
+          identifierKind: 'email',
+          rejectionReason: 'USER_NOT_FOUND',
+        },
+      }),
+    );
   });
 
   it('changes a temporary password and clears the forced-change flag', async () => {
@@ -206,7 +392,10 @@ describe('AuthService', () => {
 
     await expect(
       service.changePassword(
-        { userId: activeUser.id, organizationId: activeUser.organizationId } as any,
+        {
+          userId: activeUser.id,
+          organizationId: activeUser.organizationId,
+        } as any,
         {
           currentPassword: 'temporary-password',
           newPassword: 'private-password-1',

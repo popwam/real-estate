@@ -11,9 +11,9 @@ import {
   type OperationRecord,
 } from "@/lib/admin-operations-api";
 
-export function useOperationList(key: string, path: string) {
+export function useOperationList(key: string | readonly unknown[], path: string) {
   return useQuery({
-    queryKey: ["operations", key, path],
+    queryKey: ["operations", ...(Array.isArray(key) ? key : [key]), path],
     queryFn: () => listOperationApi(path),
   });
 }
